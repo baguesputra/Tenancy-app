@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             BranchSeeder::class, // opsional, isi 3-4 cabang kamu
+            UserSeeder::class,
         ]);
 
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 
 class LocalLoginController extends Controller
@@ -20,26 +21,31 @@ class LocalLoginController extends Controller
     {
         abort_unless(config('app.allow_local_login'), 403, 'Login lokal dinonaktifkan di environment ini.');
 
+        $key = 'login:' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            return back()->withErrors([
+                'employee_number' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
+            ]);
+        }
+
         $credentials = $request->validate([
             'employee_number' => 'required|string',
             'password' => 'required|string',
         ]);
 
         if (! Auth::attempt($credentials)) {
+            RateLimiter::hit($key, 60);
             return back()->withErrors([
                 'employee_number' => 'Employee number atau password salah.',
             ]);
         }
 
+        RateLimiter::clear($key);
         $request->session()->regenerate();
 
-        $user = Auth::user();
-
-        if ($user->must_change_password) {
-            return redirect()->route('password.change.form');
-        }
-
-        return redirect()->route('dashboard');
+        return redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request)
