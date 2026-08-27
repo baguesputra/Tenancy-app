@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Services\SSO\PerusahaanProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Socialite::extend('sso', function ($app) {
+            $config = $app['config']['services.sso'];
+
+            return Socialite::buildProvider(PerusahaanProvider::class, $config);
+        });
     }
 }
