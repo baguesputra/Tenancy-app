@@ -121,6 +121,7 @@ return [
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        'allow_local_login' => env('ALLOW_LOCAL_LOGIN', false),
     ],
 
 ];
