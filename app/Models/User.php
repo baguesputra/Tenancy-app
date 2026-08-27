@@ -39,4 +39,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Branch::class);
     }
+
+    public function canViewAllBranches(): bool
+    {
+        return $this->hasAnyRole(['manager', 'admin_pusat']);
+    }
 }
