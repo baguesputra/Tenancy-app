@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Laravel\Socialite\Facades\Socialite;
 use App\Services\SSO\PerusahaanProvider;
 
 class AppServiceProvider extends ServiceProvider
