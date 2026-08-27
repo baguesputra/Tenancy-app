@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: sidak_app
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+    networks:
+      - sidak_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: sidak_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sidak_tenant
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_USER: sidak_user
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - sidak_mysql_data:/var/lib/mysql
+    networks:
+      - sidak_network
+
+  adminer:
+    image: adminer
+    container_name: sidak_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    networks:
+      - sidak_network
+
+networks:
+  sidak_network:
+    driver: bridge
+
+volumes:
+  sidak_mysql_data:
