@@ -8,10 +8,8 @@ use Illuminate\Support\Str;
 
 class InspectionSessionService
 {
-    /**
-     * Mulai sesi baru, atau sinkronkan sesi yang sudah ada (idempotent).
-     * $uuid null => web (server generate). $uuid terisi => mobile (dari client).
-     */
+    public function __construct(private BranchScopeService $branchScope) {}
+
     public function startOrSync(User $user, ?string $uuid, array $data = []): InspectionSession
     {
         $id = $uuid ?? (string) Str::uuid();
@@ -19,12 +17,21 @@ class InspectionSessionService
         return InspectionSession::updateOrCreate(
             ['id' => $id],
             [
-                'branch_id' => $user->branch_id, // selalu dari user, bukan dari $data
+                'branch_id' => $user->branch_id,
                 'user_id' => $user->id,
                 'started_at' => $data['started_at'] ?? now(),
                 'status' => $data['status'] ?? 'in_progress',
             ]
         );
+    }
+
+    public function getOrCreateActiveSession(User $user): InspectionSession
+    {
+        $active = InspectionSession::where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->first();
+
+        return $active ?? $this->startOrSync($user, null);
     }
 
     public function markCompleted(InspectionSession $session): InspectionSession
@@ -37,14 +44,11 @@ class InspectionSessionService
         return $session;
     }
 
-    /**
-     * Query dengan branch-scoping otomatis (staff cuma lihat cabangnya, manager+ lihat semua).
-     */
-    public function getSessionsForUser(User $user, BranchScopeService $branchScope)
+    public function getSessionsForUser(User $user)
     {
         $query = InspectionSession::with(['branch', 'user', 'inspections.tenant'])
             ->latest('started_at');
 
-        return $branchScope->apply($query, $user)->paginate(20);
+        return $this->branchScope->apply($query, $user)->paginate(20);
     }
 }

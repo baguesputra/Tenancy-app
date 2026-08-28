@@ -5,6 +5,8 @@ use Inertia\Inertia;
 use App\Http\Controllers\Auth\LocalLoginController;
 use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\Auth\PasswordChangeController;
+use App\Http\Controllers\InspectionSessionController;
+use App\Http\Controllers\InspectionController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LocalLoginController::class, 'create'])->name('login');
@@ -19,6 +21,16 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
     Route::put('/password/change', [PasswordChangeController::class, 'update'])->name('password.change.update');
+
+    Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
+    Route::get('/inspection-sessions/current', [InspectionSessionController::class, 'current'])->name('sessions.current');
+    Route::get('/inspection-sessions/{session}', [InspectionSessionController::class, 'show'])->name('sessions.show');
+    Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
+    Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
+
+    Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
+    Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
+    Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
