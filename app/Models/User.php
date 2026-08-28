@@ -44,4 +44,9 @@ class User extends Authenticatable
     {
         return $this->hasAnyRole(['manager', 'admin_pusat']);
     }
+
+    public function inspectionSessions()
+    {
+        return $this->hasMany(InspectionSession::class);
+    }
 }

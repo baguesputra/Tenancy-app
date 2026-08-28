@@ -44,4 +44,9 @@ class Tenant extends Model
             $query->where('business_type', $this->business_type);
         })->where('is_active', true)->get();
     }
+
+    public function inspections()
+    {
+        return $this->hasMany(Inspection::class);
+    }
 }
