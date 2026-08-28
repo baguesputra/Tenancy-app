@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             BranchSeeder::class, // opsional, isi 3-4 cabang kamu
             UserSeeder::class,
+            ChecklistSeeder::class,
         ]);
 
     }
