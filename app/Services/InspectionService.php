@@ -10,27 +10,34 @@ use App\Models\InspectionPhoto;
 use App\Models\InspectionSession;
 use App\Models\Tenant;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InspectionService
 {
-    /**
-     * Tambah inspeksi baru untuk 1 tenant dalam sebuah sesi.
-     */
     public function addInspection(InspectionSession $session, Tenant $tenant, ?string $uuid = null): Inspection
     {
-        // Validasi: tenant harus di cabang yang sama dengan sesi
+        $this->ensureSessionIsEditable($session);
+
         if ($tenant->branch_id !== $session->branch_id) {
             throw ValidationException::withMessages([
                 'tenant_id' => 'Tenant tidak berada di cabang yang sama dengan sesi ini.',
             ]);
         }
 
-        $template = ChecklistTemplate::whereHas('businessTypes', function ($q) use ($tenant) {
-            $q->where('business_type', $tenant->business_type);
-        })->where('is_active', true)->first();
+        if (! $uuid) {
+            $existing = Inspection::where('inspection_session_id', $session->id)
+                ->where('tenant_id', $tenant->id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        $template = ChecklistTemplate::whereHas('businessTypes', fn ($q) =>
+            $q->where('business_type', $tenant->business_type)
+        )->where('is_active', true)->first();
 
         if (! $template) {
             throw ValidationException::withMessages([
@@ -52,9 +59,6 @@ class InspectionService
         );
     }
 
-    /**
-     * Simpan/update satu jawaban checklist item (idempotent by inspection+item).
-     */
     public function saveAnswer(
         Inspection $inspection,
         ChecklistItem $item,
@@ -63,6 +67,8 @@ class InspectionService
         ?UploadedFile $photo = null,
         ?string $answerUuid = null
     ): InspectionAnswer {
+        $this->ensureSessionIsEditable($inspection->session);
+
         $answer = InspectionAnswer::updateOrCreate(
             [
                 'inspection_id' => $inspection->id,
@@ -84,6 +90,8 @@ class InspectionService
 
     public function attachPhoto(InspectionAnswer $answer, UploadedFile $photo): InspectionPhoto
     {
+        $this->ensureSessionIsEditable($answer->inspection->session);
+
         $path = $photo->store('inspection-photos', 'public');
 
         return InspectionPhoto::create([
@@ -93,12 +101,10 @@ class InspectionService
         ]);
     }
 
-    /**
-     * Tandai inspeksi selesai, hitung ulang status is_flagged
-     * berdasarkan jawaban negatif yang belum ada fotonya.
-     */
     public function markCompleted(Inspection $inspection): Inspection
     {
+        $this->ensureSessionIsEditable($inspection->session);
+
         $inspection->load('answers.checklistItem', 'answers.photos');
 
         $isFlagged = $inspection->answers->contains(function (InspectionAnswer $answer) {
@@ -116,5 +122,18 @@ class InspectionService
         ]);
 
         return $inspection;
+    }
+
+    /**
+     * Guard utama: begitu sesi ditandai selesai, semua inspeksi di dalamnya
+     * (apa pun statusnya) tidak boleh diubah lagi.
+     */
+    private function ensureSessionIsEditable(InspectionSession $session): void
+    {
+        if ($session->status !== 'in_progress') {
+            throw ValidationException::withMessages([
+                'session' => 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.',
+            ]);
+        }
     }
 }

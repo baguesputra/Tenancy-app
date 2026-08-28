@@ -66,6 +66,32 @@ class TestInspectionFlow extends Command
         $this->newLine();
         $this->info('Testing selesai.');
 
+        // 7. Test guard — tandai sesi selesai, lalu coba edit jawaban (harus GAGAL)
+        $sessionService = app(\App\Services\InspectionSessionService::class);
+        $sessionService->markCompleted($session);
+
+        // Ambil ulang inspection dari database (fresh), hindari cache relasi lama
+        $inspection = \App\Models\Inspection::find($inspection->id);
+        $this->line("  [debug] Status session di DB sekarang: " . $inspection->session->status);
+
+        try {
+            $inspectionService->saveAnswer($inspection, $items[0], $items[0]->option_negative);
+            $this->error("  Guard saveAnswer TIDAK bekerja ✗");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->info("  Guard saveAnswer bekerja ✓ (ditolak: " . $e->getMessage() . ")");
+        }
+
+        // 8. Test guard di addInspection juga
+        try {
+            $inspectionService->addInspection($session, $tenant);
+            $this->error("  Guard addInspection TIDAK bekerja ✗");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->info("  Guard addInspection bekerja ✓ (ditolak: " . $e->getMessage() . ")");
+        }
+
+        $this->newLine();
+        $this->info('Testing selesai.');
+
         return 0;
     }
 }
