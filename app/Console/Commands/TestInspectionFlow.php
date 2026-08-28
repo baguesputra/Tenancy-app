@@ -66,6 +66,17 @@ class TestInspectionFlow extends Command
         $this->newLine();
         $this->info('Testing selesai.');
 
+        // 6.5. Test auto-hapus foto saat jawaban berubah dari negatif ke positif
+        // (pakai item[1] yang sebelumnya kita isi negatif tanpa foto — sekarang ganti jadi positif)
+        $answerBefore = $inspection->answers()->where('checklist_item_id', $items[1]->id)->first();
+        $this->line("  [debug] Jawaban item[1] sebelum: {$answerBefore->value}");
+
+        $inspectionService->saveAnswer($inspection, $items[1], $items[1]->option_positive);
+
+        $answerAfter = $inspection->answers()->where('checklist_item_id', $items[1]->id)->first();
+        $this->line("  [debug] Jawaban item[1] sesudah: {$answerAfter->value}");
+        $this->info("  Ganti jawaban negatif→positif: " . ($answerAfter->value === $items[1]->option_positive ? 'OK ✓' : 'GAGAL ✗'));
+
         // 7. Test guard — tandai sesi selesai, lalu coba edit jawaban (harus GAGAL)
         $sessionService = app(\App\Services\InspectionSessionService::class);
         $sessionService->markCompleted($session);

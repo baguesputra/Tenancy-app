@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class InspectionService
 {
@@ -81,11 +82,25 @@ class InspectionService
             ]
         );
 
+        // Kalau jawaban sekarang positif (atau bukan lagi option_negative),
+        // foto lama yang menempel jadi tidak relevan — hapus otomatis
+        if ($item->type === 'binary_choice' && $value !== $item->option_negative) {
+            $this->clearPhotos($answer);
+        }
+
         if ($photo) {
             $this->attachPhoto($answer, $photo);
         }
 
         return $answer;
+    }
+
+    public function clearPhotos(InspectionAnswer $answer): void
+    {
+        foreach ($answer->photos as $photo) {
+            Storage::disk('public')->delete($photo->path);
+            $photo->delete();
+        }
     }
 
     public function attachPhoto(InspectionAnswer $answer, UploadedFile $photo): InspectionPhoto
@@ -135,5 +150,18 @@ class InspectionService
                 'session' => 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.',
             ]);
         }
+    }
+
+    public function getOrCreateActiveSession(User $user): InspectionSession
+    {
+        $active = InspectionSession::where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->first();
+
+        if ($active) {
+            return $active;
+        }
+
+        return $this->startOrSync($user, null);
     }
 }
