@@ -4,6 +4,7 @@ const menuItems = [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Sesi Sidak', href: '/inspection-sessions' },
     { label: 'Master Tenant', href: '/tenants' },
+    { label: 'Master Unit', href: '/units' },
 ];
 
 export default function AppLayout({ children }) {

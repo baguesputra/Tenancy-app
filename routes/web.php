@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\UnitController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LocalLoginController::class, 'create'])->name('login');
@@ -34,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
 
     Route::resource('tenants', TenantController::class)->except(['show']);
+    Route::resource('units', UnitController::class)->except(['show']);
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
