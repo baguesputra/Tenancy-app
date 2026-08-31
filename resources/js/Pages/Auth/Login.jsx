@@ -22,7 +22,7 @@ export default function Login({ allowLocalLogin }) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <form onSubmit={submit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
-                <h1 className="text-xl font-bold mb-6">Login — Sidak Tenant</h1>
+                <h1 className="text-xl font-bold mb-6">Login — Tenant</h1>
 
                 <label className="block mb-2 text-sm font-medium">Employee Number</label>
                 <input

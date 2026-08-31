@@ -14,14 +14,14 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
-    public function share(Request $request): array
+   public function share(Request $request): array
     {
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->load('branch'),
             ],
-                'flash' => [
+            'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'answer' => fn () => $request->session()->get('answer'),
             ],
