@@ -16,7 +16,8 @@ class ChecklistSeeder extends Seeder
     private function seedFnb(): void
     {
         $template = ChecklistTemplate::create(['name' => 'Form Sidak F&B']);
-        $template->businessTypes()->create(['business_type' => 'f&b']);
+        $fnbCategory = \App\Models\ProductCategory::where('name', 'F&B')->firstOrFail();
+        $template->productCategories()->attach($fnbCategory->id);
 
         $sections = [
             'Civil' => ['Lantai', 'Dinding', 'Plafond', 'Rolling Door'],
@@ -38,7 +39,8 @@ class ChecklistSeeder extends Seeder
     private function seedFashion(): void
     {
         $template = ChecklistTemplate::create(['name' => 'Form Sidak Fashion']);
-        $template->businessTypes()->create(['business_type' => 'fashion']);
+        $fashionCategory = \App\Models\ProductCategory::where('name', 'Fashion')->firstOrFail();
+        $template->productCategories()->attach($fashionCategory->id);
 
         $order = 1;
 

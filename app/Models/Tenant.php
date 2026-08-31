@@ -9,23 +9,20 @@ class Tenant extends Model
     protected $fillable = [
         'branch_id',
         'name',
-        'business_type',
-        'is_anchor',
-        'floor',
-        'block',
-        'unit_number',
-        'pic_name',
-        'pic_position',
-        'pic_phone',
+        'legal_entity_name',
+        'npwp_number',
+        'siup_number',
+        'company_phone',
+        'company_email',
+        'company_address',
+        'tenant_category_id',
+        'product_category_id',
         'is_active',
     ];
 
     protected function casts(): array
     {
-        return [
-            'is_anchor' => 'boolean',
-            'is_active' => 'boolean',
-        ];
+        return ['is_active' => 'boolean'];
     }
 
     public function branch()
@@ -33,20 +30,44 @@ class Tenant extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    /**
-     * Template checklist yang relevan untuk tenant ini,
-     * berdasarkan business_type (belum termasuk logic anchor,
-     * sesuai keputusan: is_anchor cuma metadata, tidak pengaruhi checklist).
-     */
-    public function checklistTemplates()
+    public function tenantCategory()
     {
-        return ChecklistTemplate::whereHas('businessTypes', function ($query) {
-            $query->where('business_type', $this->business_type);
-        })->where('is_active', true)->get();
+        return $this->belongsTo(TenantCategory::class);
+    }
+
+    public function productCategory()
+    {
+        return $this->belongsTo(ProductCategory::class);
+    }
+
+    public function contacts()
+    {
+        return $this->hasMany(TenantContact::class);
+    }
+
+    public function tenancies()
+    {
+        return $this->hasMany(Tenancy::class);
+    }
+
+    public function activeTenancy()
+    {
+        return $this->hasOne(Tenancy::class)->where('status', 'active');
     }
 
     public function inspections()
     {
         return $this->hasMany(Inspection::class);
+    }
+
+    /**
+     * Template checklist yang relevan, sekarang dicocokkan lewat product_category_id
+     * (menggantikan business_type string yang lama).
+     */
+    public function checklistTemplates()
+    {
+        return ChecklistTemplate::whereHas('productCategories', function ($query) {
+            $query->where('product_categories.id', $this->product_category_id);
+        })->where('is_active', true)->get();
     }
 }

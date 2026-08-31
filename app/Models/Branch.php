@@ -17,4 +17,9 @@ class Branch extends Model
     {
         return $this->hasMany(InspectionSession::class);
     }
+
+    public function units()
+    {
+        return $this->hasMany(Unit::class);
+    }
 }

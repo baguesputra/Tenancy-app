@@ -47,4 +47,12 @@ class ChecklistTemplate extends Model
             }),
         ];
     }
+
+    public function productCategories()
+    {
+        return $this->belongsToMany(
+            ProductCategory::class,
+            'checklist_template_product_categories'
+        );
+    }
 }

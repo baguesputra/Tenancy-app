@@ -17,7 +17,7 @@ class TestInspectionFlow extends Command
     public function handle(InspectionSessionService $sessionService, InspectionService $inspectionService)
     {
         $user = User::where('employee_number', 'TOP-000001')->first();
-        $tenant = Tenant::where('business_type', 'f&b')->first();
+        $tenant = \App\Models\Tenant::whereHas('productCategory', fn ($q) => $q->where('name', 'F&B'))->first();
 
         if (! $user || ! $tenant) {
             $this->error('User atau Tenant testing tidak ditemukan. Jalankan seeder dulu.');

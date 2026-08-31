@@ -36,8 +36,8 @@ class InspectionService
             }
         }
 
-        $template = ChecklistTemplate::whereHas('businessTypes', fn ($q) =>
-            $q->where('business_type', $tenant->business_type)
+        $template = ChecklistTemplate::whereHas('productCategories', fn ($q) =>
+            $q->where('product_categories.id', $tenant->product_category_id)
         )->where('is_active', true)->first();
 
         if (! $template) {
