@@ -10,14 +10,14 @@ class TenantCategoryController extends Controller
 {
     public function index()
     {
-        return Inertia::render('TenantCategories/Index', [
+        return Inertia::render('Master/TenantCategories/Index', [
             'categories' => TenantCategory::withCount('tenants')->orderBy('name')->get(),
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('TenantCategories/Create');
+        return Inertia::render('Master/TenantCategories/Create');
     }
 
     public function store(Request $request)
@@ -31,7 +31,7 @@ class TenantCategoryController extends Controller
 
     public function edit(TenantCategory $tenantCategory)
     {
-        return Inertia::render('TenantCategories/Edit', [
+        return Inertia::render('Master/TenantCategories/Edit', [
             'category' => $tenantCategory,
         ]);
     }

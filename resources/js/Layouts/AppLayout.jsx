@@ -5,6 +5,7 @@ const menuItems = [
     { label: 'Sesi Sidak', href: '/inspection-sessions' },
     { label: 'Master Tenant', href: '/tenants' },
     { label: 'Master Unit', href: '/units' },
+    { label: 'Kontrak / Tenancy', href: '/tenancies' },
     { label: 'Kategori Tenant', href: '/tenant-categories' },
     { label: 'Kategori Produk', href: '/product-categories' },
 ];

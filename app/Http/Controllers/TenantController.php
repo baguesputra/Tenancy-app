@@ -24,7 +24,7 @@ class TenantController extends Controller
 
         $this->branchScope->apply($query, $request->user());
 
-        return Inertia::render('Tenants/Index', [
+        return Inertia::render('Master/Tenants/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
@@ -34,7 +34,7 @@ class TenantController extends Controller
 
     public function create(Request $request)
     {
-        return Inertia::render('Tenants/Create', $this->formProps($request));
+        return Inertia::render('Master/Tenants/Create', $this->formProps($request));
     }
 
     public function store(Request $request)
@@ -59,7 +59,7 @@ class TenantController extends Controller
 
         $tenant->load('contacts');
 
-        return Inertia::render('Tenants/Edit', [
+        return Inertia::render('Master/Tenants/Edit', [
             ...$this->formProps($request),
             'tenant' => $tenant,
         ]);

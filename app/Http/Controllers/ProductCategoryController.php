@@ -10,14 +10,14 @@ class ProductCategoryController extends Controller
 {
     public function index()
     {
-        return Inertia::render('ProductCategories/Index', [
+        return Inertia::render('Master/ProductCategories/Index', [
             'categories' => ProductCategory::withCount('tenants')->orderBy('name')->get(),
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('ProductCategories/Create');
+        return Inertia::render('Master/ProductCategories/Create');
     }
 
     public function store(Request $request)
@@ -31,7 +31,7 @@ class ProductCategoryController extends Controller
 
     public function edit(ProductCategory $productCategory)
     {
-        return Inertia::render('ProductCategories/Edit', [
+        return Inertia::render('Master/ProductCategories/Edit', [
             'category' => $productCategory,
         ]);
     }

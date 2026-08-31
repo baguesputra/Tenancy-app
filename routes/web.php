@@ -11,7 +11,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\ProductCategoryController;
-
+use App\Http\Controllers\TenancyController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LocalLoginController::class, 'create'])->name('login');
@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('units', UnitController::class)->except(['show']);
     Route::resource('tenant-categories', TenantCategoryController::class)->except(['show']);
     Route::resource('product-categories', ProductCategoryController::class)->except(['show']);
+    Route::resource('tenancies', TenancyController::class)->except(['show']);
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

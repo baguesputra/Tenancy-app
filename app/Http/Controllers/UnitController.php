@@ -33,7 +33,7 @@ class UnitController extends Controller
             return $unit;
         });
 
-        return Inertia::render('Units/Index', [
+        return Inertia::render('Master/Units/Index', [
             'units' => $units,
             'filters' => $request->only(['search']),
         ]);
@@ -41,7 +41,7 @@ class UnitController extends Controller
 
     public function create(Request $request)
     {
-        return Inertia::render('Units/Create', $this->formProps($request));
+        return Inertia::render('Master/Units/Create', $this->formProps($request));
     }
 
     public function store(Request $request)
@@ -62,7 +62,7 @@ class UnitController extends Controller
     {
         $this->authorizeAccess($unit, $request);
 
-        return Inertia::render('Units/Edit', [
+        return Inertia::render('Master/Units/Edit', [
             ...$this->formProps($request),
             'unit' => $unit,
         ]);
