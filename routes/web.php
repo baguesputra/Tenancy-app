@@ -9,6 +9,9 @@ use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\TenantCategoryController;
+use App\Http\Controllers\ProductCategoryController;
+
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LocalLoginController::class, 'create'])->name('login');
@@ -36,6 +39,8 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('tenants', TenantController::class)->except(['show']);
     Route::resource('units', UnitController::class)->except(['show']);
+    Route::resource('tenant-categories', TenantCategoryController::class)->except(['show']);
+    Route::resource('product-categories', ProductCategoryController::class)->except(['show']);
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
