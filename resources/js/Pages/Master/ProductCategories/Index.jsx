@@ -4,7 +4,7 @@ import { Link, router } from '@inertiajs/react';
 export default function Index({ categories }) {
     const handleDelete = (id) => {
         if (confirm('Hapus kategori ini?')) {
-            router.delete(`/tenant-categories/${id}`);
+            router.delete(`/product-categories/${id}`);
         }
     };
 
@@ -13,7 +13,7 @@ export default function Index({ categories }) {
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold text-gray-800">Kategori Produk</h1>
-                    <Link href="/tenant-categories/create" className="bg-blue-600 text-white px-4 py-2 rounded">
+                    <Link href="/product-categories/create" className="bg-blue-600 text-white px-4 py-2 rounded">
                         + Tambah Kategori
                     </Link>
                 </div>
@@ -34,7 +34,7 @@ export default function Index({ categories }) {
                             </div>
                             <div className="flex gap-3">
                                 <Link
-                                    href={`/tenant-categories/${cat.id}/edit`}
+                                    href={`/product-categories/${cat.id}/edit`}
                                     className="text-sm text-blue-600"
                                 >
                                     Edit
