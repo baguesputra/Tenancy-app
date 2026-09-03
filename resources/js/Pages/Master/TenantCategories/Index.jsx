@@ -1,10 +1,10 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
 
-export default function Index({ categories }) {
+export default function Index({ categories, routePrefix, pageTitle }) {
     const handleDelete = (id) => {
         if (confirm('Hapus kategori ini?')) {
-            router.delete(`/tenant-categories/${id}`);
+            router.delete(`/${routePrefix}/${id}`);
         }
     };
 
@@ -12,8 +12,8 @@ export default function Index({ categories }) {
         <AppLayout>
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">Kategori Tenant</h1>
-                    <Link href="/tenant-categories/create" className="bg-blue-600 text-white px-4 py-2 rounded">
+                    <h1 className="text-2xl font-bold text-gray-800">{pageTitle}</h1>
+                    <Link href={`/${routePrefix}/create`} className="bg-blue-600 text-white px-4 py-2 rounded">
                         + Tambah Kategori
                     </Link>
                 </div>
@@ -33,16 +33,10 @@ export default function Index({ categories }) {
                                 )}
                             </div>
                             <div className="flex gap-3">
-                                <Link
-                                    href={`/tenant-categories/${cat.id}/edit`}
-                                    className="text-sm text-blue-600"
-                                >
+                                <Link href={`/${routePrefix}/${cat.id}/edit`} className="text-sm text-blue-600">
                                     Edit
                                 </Link>
-                                <button
-                                    onClick={() => handleDelete(cat.id)}
-                                    className="text-sm text-red-500"
-                                >
+                                <button onClick={() => handleDelete(cat.id)} className="text-sm text-red-500">
                                     Hapus
                                 </button>
                             </div>

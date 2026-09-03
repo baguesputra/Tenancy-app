@@ -22,11 +22,7 @@ class PermitRequest extends Model
         'access_route', 'notes',
         'requested_by_type', 'requested_by_id',
         'status',
-        'tenancy_approved_by', 'tenancy_approved_at', 'tenancy_notes',
-        'bs_approved_by', 'bs_approved_at',
-        'security_checked_by', 'security_checked_at', 'security_notes',
         'barcode_token',
-        'rejected_by', 'rejected_at', 'rejection_reason',
     ];
 
     protected function casts(): array
@@ -84,5 +80,10 @@ class PermitRequest extends Model
     public function securityCheckedBy()
     {
         return $this->belongsTo(User::class, 'security_checked_by');
+    }
+
+    public function approvals()
+    {
+        return $this->morphMany(Approval::class, 'approvable')->orderBy('order');
     }
 }

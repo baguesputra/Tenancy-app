@@ -3,66 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\TenantCategory;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 
-class TenantCategoryController extends Controller
+class TenantCategoryController extends BaseCategoryController
 {
-    public function index()
+    protected function model(): string
     {
-        return Inertia::render('Master/TenantCategories/Index', [
-            'categories' => TenantCategory::withCount('tenants')->orderBy('name')->get(),
-        ]);
+        return TenantCategory::class;
     }
 
-    public function create()
+    protected function routePrefix(): string
     {
-        return Inertia::render('Master/TenantCategories/Create');
+        return 'tenant-categories';
     }
 
-    public function store(Request $request)
+    protected function viewFolder(): string
     {
-        $validated = $this->validateCategory($request);
-
-        TenantCategory::create($validated);
-
-        return redirect()->route('tenant-categories.index')->with('success', 'Kategori tenant berhasil ditambahkan.');
+        return 'Master/TenantCategories';
     }
 
-    public function edit(TenantCategory $tenantCategory)
+    protected function pageTitle(): string
     {
-        return Inertia::render('Master/TenantCategories/Edit', [
-            'category' => $tenantCategory,
-        ]);
-    }
-
-    public function update(TenantCategory $tenantCategory, Request $request)
-    {
-        $validated = $this->validateCategory($request);
-
-        $tenantCategory->update($validated);
-
-        return redirect()->route('tenant-categories.index')->with('success', 'Kategori tenant berhasil diperbarui.');
-    }
-
-    public function destroy(TenantCategory $tenantCategory)
-    {
-        if ($tenantCategory->tenants()->exists()) {
-            return back()->withErrors([
-                'category' => 'Kategori ini masih dipakai oleh tenant, tidak bisa dihapus.',
-            ]);
-        }
-
-        $tenantCategory->delete();
-
-        return redirect()->route('tenant-categories.index')->with('success', 'Kategori tenant berhasil dihapus.');
-    }
-
-    private function validateCategory(Request $request): array
-    {
-        return $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
+        return 'Kategori Tenant';
     }
 }

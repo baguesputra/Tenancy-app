@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 
-export default function CategoryForm({ category, endpoint }) {
+export default function CategoryForm({ category, routePrefix }) {
     const isEdit = !!category;
 
     const { data, setData, post, put, processing, errors } = useForm({
@@ -11,9 +11,9 @@ export default function CategoryForm({ category, endpoint }) {
     const submit = (e) => {
         e.preventDefault();
         if (isEdit) {
-            put(`${endpoint}/${category.id}`);
+            put(`/${routePrefix}/${category.id}`);
         } else {
-            post(endpoint);
+            post(`/${routePrefix}`);
         }
     };
 
@@ -36,16 +36,11 @@ export default function CategoryForm({ category, endpoint }) {
                     onChange={(e) => setData('description', e.target.value)}
                     className="w-full border rounded px-3 py-2"
                     rows={3}
-                    placeholder="Jelaskan maksud kategori ini..."
                 />
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
-            <button
-                type="submit"
-                disabled={processing}
-                className="bg-blue-600 text-white px-6 py-2 rounded font-medium"
-            >
+            <button type="submit" disabled={processing} className="bg-blue-600 text-white px-6 py-2 rounded font-medium">
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Kategori'}
             </button>
         </form>
