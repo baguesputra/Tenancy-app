@@ -71,6 +71,9 @@ export default function AppLayout({ children }) {
                             </div>
                         )}
                     </div>
+                    <SidebarLink href="/permit-requests" currentUrl={currentUrl}>
+                        Surat Izin
+                    </SidebarLink>
                 </nav>
 
                 <div className="p-3 border-t border-white/10">

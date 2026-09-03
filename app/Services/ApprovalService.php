@@ -83,5 +83,17 @@ class ApprovalService
                 'approval' => 'Tahap approval ini sudah diproses sebelumnya.',
             ]);
         }
+
+        $hasPendingEarlierStep = Approval::where('approvable_type', $approval->approvable_type)
+            ->where('approvable_id', $approval->approvable_id)
+            ->where('order', '<', $approval->order)
+            ->where('status', '!=', 'approved')
+            ->exists();
+
+        if ($hasPendingEarlierStep) {
+            throw ValidationException::withMessages([
+                'approval' => 'Tahap approval sebelumnya belum selesai, tidak bisa lompat urutan.',
+            ]);
+        }
     }
 }

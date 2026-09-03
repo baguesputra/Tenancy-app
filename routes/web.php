@@ -13,6 +13,10 @@ use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\Auth\TenantLoginController;
+use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\PermitCheckController;
+use App\Http\Controllers\PermitRequestController;
+use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
 
 Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('guest:tenant')->group(function () {
@@ -59,9 +63,21 @@ Route::middleware('auth')->group(function () {
     Route::resource('product-categories', ProductCategoryController::class)->except(['show']);
     Route::resource('tenancies', TenancyController::class)->except(['show']);
 
+    Route::resource('permit-requests', PermitRequestController::class)->except(['edit', 'update', 'destroy']);
+    Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
+    Route::post('/permit-workers/{worker}/toggle', [PermitCheckController::class, 'toggleWorker'])->name('permit-workers.toggle');
+    Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+});
+
+
+// Portal (staff toko)
+Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
+    Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });
 
 
