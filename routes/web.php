@@ -12,6 +12,22 @@ use App\Http\Controllers\UnitController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\TenancyController;
+use App\Http\Controllers\Auth\TenantLoginController;
+
+Route::prefix('portal')->name('tenant-portal.')->group(function () {
+    Route::middleware('guest:tenant')->group(function () {
+        Route::get('/login', [TenantLoginController::class, 'create'])->name('login');
+        Route::post('/login', [TenantLoginController::class, 'store']);
+    });
+
+    Route::middleware('auth:tenant')->group(function () {
+        Route::post('/logout', [TenantLoginController::class, 'destroy'])->name('logout');
+
+        Route::get('/dashboard', function () {
+            return Inertia::render('TenantPortal/Dashboard');
+        })->name('dashboard');
+    });
+});
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LocalLoginController::class, 'create'])->name('login');

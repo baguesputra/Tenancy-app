@@ -42,6 +42,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Guard staff toko
+        'tenant' => [
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
     ],
 
     /*
@@ -65,6 +71,12 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        // Provider baru khusus staff toko
+        'tenant_users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\TenantUser::class,
         ],
 
         // 'users' => [

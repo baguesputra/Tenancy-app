@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class TenantUser extends Authenticatable
 {
@@ -21,5 +22,19 @@ class TenantUser extends Authenticatable
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public static function generateUsernameFrom(string $tenantName): string
+    {
+        $base = Str::slug($tenantName, ''); // "Turkish Carpet" -> "turkishcarpet"
+        $username = $base;
+        $counter = 2;
+
+        while (self::where('username', $username)->exists()) {
+            $username = $base . $counter;
+            $counter++;
+        }
+
+        return $username;
     }
 }

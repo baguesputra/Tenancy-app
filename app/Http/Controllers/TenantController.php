@@ -7,6 +7,8 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Services\BranchScopeService;
+use App\Models\TenantUser;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -50,7 +52,18 @@ class TenantController extends Controller
 
         $this->syncContacts($tenant, $request->input('contacts', []));
 
-        return redirect()->route('tenants.index')->with('success', 'Tenant berhasil ditambahkan.');
+        // Auto-buat akun login untuk staff toko
+        $generatedPassword = Str::random(10);
+        $tenantUser = TenantUser::create([
+            'tenant_id' => $tenant->id,
+            'username' => TenantUser::generateUsernameFrom($tenant->name),
+            'password' => bcrypt($generatedPassword),
+            'is_active' => true,
+        ]);
+
+        return redirect()->route('tenants.index')->with('success',
+            "Tenant berhasil ditambahkan. Akun login toko: username \"{$tenantUser->username}\", password \"{$generatedPassword}\" — catat sekarang, password tidak akan ditampilkan lagi."
+        );
     }
 
     public function edit(Tenant $tenant, Request $request)
