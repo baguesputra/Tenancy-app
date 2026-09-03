@@ -70,4 +70,14 @@ class Tenant extends Model
             $query->where('product_categories.id', $this->product_category_id);
         })->where('is_active', true)->get();
     }
+
+    public function tenantUser()
+    {
+        return $this->hasOne(TenantUser::class);
+    }
+
+    public function permitRequests()
+    {
+        return $this->hasMany(PermitRequest::class);
+    }
 }
