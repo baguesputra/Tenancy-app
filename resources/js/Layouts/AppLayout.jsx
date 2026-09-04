@@ -36,10 +36,6 @@ export default function AppLayout({ children }) {
                         Dashboard
                     </SidebarLink>
 
-                    <SidebarLink href="/inspection-sessions" currentUrl={currentUrl}>
-                        Sesi Sidak
-                    </SidebarLink>
-
                     {/* Grup Master — dropdown */}
                     <div>
                         <button
@@ -73,6 +69,9 @@ export default function AppLayout({ children }) {
                     </div>
                     <SidebarLink href="/permit-requests" currentUrl={currentUrl}>
                         Surat Izin
+                    </SidebarLink>
+                     <SidebarLink href="/inspection-sessions" currentUrl={currentUrl}>
+                        Sesi Sidak
                     </SidebarLink>
                 </nav>
 

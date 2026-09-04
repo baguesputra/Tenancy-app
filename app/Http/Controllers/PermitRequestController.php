@@ -35,6 +35,10 @@ class PermitRequestController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge([
+            'tenant_id' => $request->tenant_id ?: null,
+        ]);
+
         $validated = $this->validatePermit($request);
 
         $permit = $this->service->create($validated, $request->user());
@@ -43,12 +47,12 @@ class PermitRequestController extends Controller
             ->with('success', 'Surat izin berhasil diajukan atas nama tenant.');
     }
 
-    public function show(PermitRequest $permit, Request $request)
+    public function show(PermitRequest $permitRequest, Request $request)
     {
-        $permit->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
+        $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
         return Inertia::render('PermitRequests/Show', [
-            'permit' => $permit,
+            'permit' => $permitRequest,
             'currentUserDepartmentId' => $request->user()->department_id,
         ]);
     }
@@ -57,7 +61,7 @@ class PermitRequestController extends Controller
     {
         return $request->validate([
             'tenant_id' => 'nullable|exists:tenants,id',
-            'store_name_snapshot' => 'required_without:tenant_id|string|max:255',
+            'store_name_snapshot' => 'nullable|required_without:tenant_id|string|max:255',
             'floor_snapshot' => 'nullable|string|max:50',
             'block_snapshot' => 'nullable|string|max:50',
             'unit_number_snapshot' => 'nullable|string|max:50',

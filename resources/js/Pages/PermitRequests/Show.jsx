@@ -49,7 +49,7 @@ export default function Show({ permit, currentUserDepartmentId }) {
                                     <span className="text-sm font-medium">{a.label}</span>
                                     <span className={`text-xs ${statusColors[a.status]}`}>{a.status}</span>
                                 </div>
-                                {a.status === 'pending' && a.department_id === currentUserDepartmentId && (
+                                {a.status === 'pending' && Number(a.department_id) === Number(currentUserDepartmentId) && (
                                     <div className="mt-2 flex gap-2">
                                         <button onClick={() => approve(a.id)} className="text-xs bg-green-600 text-white px-3 py-1 rounded">
                                             Approve

@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import PermitFormFields from '@/Pages/TenantPortal/Permits/Partials/PermitFormFields';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 
 export default function Create({ tenants, departments }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -43,10 +43,23 @@ export default function Create({ tenants, departments }) {
             : [...current, id]);
     };
 
+    const { errors: pageErrors } = usePage().props;
+    
+
     return (
         <AppLayout>
             <div className="p-6 max-w-2xl">
                 <h1 className="text-2xl font-bold text-gray-800 mb-6">Ajukan Surat Izin Atas Nama Tenant</h1>
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded mb-4">
+                        <p className="font-medium mb-1">Ada kesalahan input:</p>
+                        <ul className="list-disc list-inside">
+                            {Object.entries(errors).map(([key, message]) => (
+                                <li key={key}>{message}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
                 <form onSubmit={submit}>
                     <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">Tenant</label>
