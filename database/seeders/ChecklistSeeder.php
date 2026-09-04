@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ChecklistTemplate;
+use App\Models\ProductCategory;
 use Illuminate\Database\Seeder;
 
 class ChecklistSeeder extends Seeder
@@ -10,7 +11,7 @@ class ChecklistSeeder extends Seeder
     public function run(): void
     {
         $this->seedFnb();
-        $this->seedFashion();
+        $this->seedLifestyle();
     }
 
     private function seedFnb(): void
@@ -36,11 +37,11 @@ class ChecklistSeeder extends Seeder
         $this->createSections($template, $sections, optionPositive: 'Ok', optionNegative: 'Tidak');
     }
 
-    private function seedFashion(): void
+    private function seedLifestyle(): void
     {
-        $template = ChecklistTemplate::create(['name' => 'Form Sidak Fashion']);
-        $fashionCategory = \App\Models\ProductCategory::where('name', 'Fashion')->firstOrFail();
-        $template->productCategories()->attach($fashionCategory->id);
+        $template = ChecklistTemplate::create(['name' => 'Form Sidak Lifestyle']);
+        $lifestyleCategory = \App\Models\ProductCategory::where('name', 'Lifestyle')->firstOrFail();
+        $template->productCategories()->attach($lifestyleCategory->id);
 
         $order = 1;
 
