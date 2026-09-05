@@ -1,5 +1,12 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import FormField from '@/Components/Form/FormField';
+import FormSection from '@/Components/Form/FormSection';
+import TextInput from '@/Components/Form/TextInput';
+import NumberInput from '@/Components/Form/NumberInput';
+import SelectInput from '@/Components/Form/SelectInput';
+import Checkbox from '@/Components/Form/Checkbox';
+import Button from '@/Components/Form/Button';
 
 export default function UnitForm({ unit, branches, canPickBranch }) {
     const isEdit = !!unit;
@@ -15,117 +22,63 @@ export default function UnitForm({ unit, branches, canPickBranch }) {
         is_active: unit?.is_active ?? true,
     });
 
-    // Auto-suggest unit_code dari floor+block+unit_number, kecuali user sudah edit manual
     useEffect(() => {
         if (!codeManuallyEdited) {
-            const suggested = [data.floor, data.block, data.unit_number].filter(Boolean).join('-');
-            setData('unit_code', suggested);
+            setData('unit_code', [data.floor, data.block, data.unit_number].filter(Boolean).join('-'));
         }
     }, [data.floor, data.block, data.unit_number]);
 
     const submit = (e) => {
         e.preventDefault();
-        if (isEdit) {
-            put(`/units/${unit.id}`);
-        } else {
-            post('/units');
-        }
+        isEdit ? put(`/units/${unit.id}`) : post('/units');
     };
 
     return (
-        <form onSubmit={submit} className="max-w-lg space-y-4 bg-white rounded-lg shadow-sm p-5">
-            {canPickBranch && (
-                <Field label="Cabang" error={errors.branch_id}>
-                    <select
-                        value={data.branch_id}
-                        onChange={(e) => setData('branch_id', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                    >
-                        <option value="">Pilih...</option>
-                        {branches.map((b) => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                    </select>
-                </Field>
-            )}
+        <form onSubmit={submit} className="max-w-lg">
+            <FormSection>
+                {canPickBranch && (
+                    <FormField label="Cabang" error={errors.branch_id} required>
+                        <SelectInput value={data.branch_id} onChange={(e) => setData('branch_id', e.target.value)}>
+                            <option value="">Pilih...</option>
+                            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </SelectInput>
+                    </FormField>
+                )}
 
-            <div className="grid grid-cols-3 gap-3">
-                <Field label="Lantai" error={errors.floor}>
-                    <input
-                        value={data.floor}
-                        onChange={(e) => setData('floor', e.target.value)}
-                        placeholder="GF, LG, 1, dst"
-                        className="w-full border rounded px-3 py-2"
+                <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Lantai" error={errors.floor} required>
+                        <TextInput value={data.floor} onChange={(e) => setData('floor', e.target.value)} placeholder="GF, 1" />
+                    </FormField>
+                    <FormField label="Blok" error={errors.block}>
+                        <TextInput value={data.block} onChange={(e) => setData('block', e.target.value)} placeholder="A" />
+                    </FormField>
+                    <FormField label="No. Unit" error={errors.unit_number} required>
+                        <TextInput value={data.unit_number} onChange={(e) => setData('unit_number', e.target.value)} placeholder="01" />
+                    </FormField>
+                </div>
+
+                <FormField label="Kode Unit" error={errors.unit_code} hint="Otomatis dari Lantai-Blok-Nomor, bisa diedit manual.">
+                    <TextInput
+                        value={data.unit_code}
+                        onChange={(e) => { setCodeManuallyEdited(true); setData('unit_code', e.target.value); }}
                     />
-                </Field>
-                <Field label="Blok" error={errors.block}>
-                    <input
-                        value={data.block}
-                        onChange={(e) => setData('block', e.target.value)}
-                        placeholder="A, B, dst"
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
-                <Field label="Nomor Unit" error={errors.unit_number}>
-                    <input
-                        value={data.unit_number}
-                        onChange={(e) => setData('unit_number', e.target.value)}
-                        placeholder="01, 05, dst"
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
-            </div>
+                </FormField>
 
-            <Field label="Kode Unit" error={errors.unit_code}>
-                <input
-                    value={data.unit_code}
-                    onChange={(e) => {
-                        setCodeManuallyEdited(true);
-                        setData('unit_code', e.target.value);
-                    }}
-                    className="w-full border rounded px-3 py-2"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                    Otomatis dibuat dari Lantai-Blok-Nomor, bisa diedit manual kalau perlu format lain.
-                </p>
-            </Field>
+                <FormField label="Luas Unit (m²)" error={errors.size}>
+                    <NumberInput step="0.01" value={data.size} onChange={(e) => setData('size', e.target.value)} />
+                </FormField>
 
-            <Field label="Luas Unit (m²)" error={errors.size}>
-                <input
-                    type="number"
-                    step="0.01"
-                    value={data.size}
-                    onChange={(e) => setData('size', e.target.value)}
-                    className="w-full border rounded px-3 py-2"
-                />
-            </Field>
-
-            <label className="flex items-center gap-2">
-                <input
-                    type="checkbox"
+                <Checkbox
+                    label="Unit aktif"
                     checked={data.is_active}
                     onChange={(e) => setData('is_active', e.target.checked)}
+                    className="mt-2"
                 />
-                <span className="text-sm text-gray-600">Unit aktif</span>
-            </label>
+            </FormSection>
 
-            <button
-                type="submit"
-                disabled={processing}
-                className="bg-blue-600 text-white px-6 py-2 rounded font-medium"
-            >
+            <Button type="submit" disabled={processing}>
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Unit'}
-            </button>
+            </Button>
         </form>
-    );
-}
-
-function Field({ label, error, children }) {
-    return (
-        <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-            {children}
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        </div>
     );
 }

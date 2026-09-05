@@ -1,47 +1,52 @@
 import PortalLayout from '@/Layouts/PortalLayout';
+import FormSection from '@/Components/Form/FormSection';
+import Badge from '@/Components/Badge';
 
-const statusColors = {
-    pending: 'text-yellow-600',
-    approved: 'text-green-600',
-    rejected: 'text-red-600',
-};
+const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
 
 export default function Show({ permit }) {
     return (
         <PortalLayout>
             <div className="p-6 max-w-2xl">
-                <h1 className="text-2xl font-bold text-gray-800 mb-1">{permit.permit_number}</h1>
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">{permit.permit_number}</h1>
                 <p className="text-sm text-gray-500 mb-6">{permit.job_type} — {permit.request_date}</p>
 
-                <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-                    <h2 className="font-semibold text-gray-700 mb-3">Progress Approval</h2>
-                    <ul className="space-y-2">
+                <FormSection title="Progress Approval">
+                    <ul className="space-y-2.5">
                         {permit.approvals.map((a) => (
-                            <li key={a.id} className="flex justify-between text-sm">
-                                <span>{a.label}</span>
-                                <span className={statusColors[a.status]}>{a.status}</span>
+                            <li key={a.id} className="flex justify-between items-center">
+                                <span className="text-sm text-gray-700">{a.label}</span>
+                                <Badge color={approvalColor[a.status]}>{a.status}</Badge>
                             </li>
                         ))}
                     </ul>
-                </div>
+                </FormSection>
 
-                <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-                    <h2 className="font-semibold text-gray-700 mb-3">Daftar Pekerja</h2>
-                    {permit.workers.map((w) => (
-                        <p key={w.id} className="text-sm">
-                            {w.name} — {w.is_present ? '✓ Hadir' : 'Belum dicek'}
-                        </p>
-                    ))}
-                </div>
+                <FormSection title="Daftar Pekerja">
+                    <div className="space-y-1.5">
+                        {permit.workers.map((w) => (
+                            <p key={w.id} className="text-sm text-gray-700 flex justify-between">
+                                <span>{w.name}</span>
+                                <span className={w.is_present ? 'text-emerald-600' : 'text-gray-400'}>
+                                    {w.is_present ? '✓ Hadir' : 'Belum dicek'}
+                                </span>
+                            </p>
+                        ))}
+                    </div>
+                </FormSection>
 
-                <div className="bg-white rounded-lg shadow-sm p-5">
-                    <h2 className="font-semibold text-gray-700 mb-3">Daftar Barang</h2>
-                    {permit.goods.map((g) => (
-                        <p key={g.id} className="text-sm">
-                            {g.description} ({g.quantity_note}) — {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
-                        </p>
-                    ))}
-                </div>
+                <FormSection title="Daftar Barang">
+                    <div className="space-y-1.5">
+                        {permit.goods.map((g) => (
+                            <p key={g.id} className="text-sm text-gray-700 flex justify-between">
+                                <span>{g.description} ({g.quantity_note})</span>
+                                <span className={g.is_verified ? 'text-emerald-600' : 'text-gray-400'}>
+                                    {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
+                                </span>
+                            </p>
+                        ))}
+                    </div>
+                </FormSection>
             </div>
         </PortalLayout>
     );

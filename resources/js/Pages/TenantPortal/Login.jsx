@@ -1,4 +1,7 @@
 import { useForm } from '@inertiajs/react';
+import TextInput from '@/Components/Form/TextInput';
+import FormField from '@/Components/Form/FormField';
+import Button from '@/Components/Form/Button';
 
 export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
@@ -12,36 +15,40 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <form onSubmit={submit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
-                <h1 className="text-xl font-bold mb-1">Portal Tenant</h1>
-                <p className="text-sm text-gray-500 mb-6">Login untuk mengajukan surat izin</p>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+            <div className="w-full max-w-sm">
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#0F1E36] text-white font-bold text-lg mb-4">
+                        T
+                    </div>
+                    <h1 className="text-xl font-semibold text-gray-900">Portal Tenant</h1>
+                    <p className="text-sm text-gray-500 mt-1">Masuk untuk mengajukan surat izin</p>
+                </div>
 
-                <label className="block mb-2 text-sm font-medium">Username</label>
-                <input
-                    type="text"
-                    value={data.username}
-                    onChange={(e) => setData('username', e.target.value)}
-                    className="w-full border rounded px-3 py-2 mb-4"
-                />
-                {errors.username && <p className="text-red-500 text-sm mb-2">{errors.username}</p>}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
+                    <form onSubmit={submit}>
+                        <FormField label="Username" error={errors.username} required>
+                            <TextInput
+                                value={data.username}
+                                onChange={(e) => setData('username', e.target.value)}
+                                autoFocus
+                            />
+                        </FormField>
 
-                <label className="block mb-2 text-sm font-medium">Password</label>
-                <input
-                    type="password"
-                    value={data.password}
-                    onChange={(e) => setData('password', e.target.value)}
-                    className="w-full border rounded px-3 py-2 mb-4"
-                />
+                        <FormField label="Password" error={errors.password} required>
+                            <TextInput
+                                type="password"
+                                value={data.password}
+                                onChange={(e) => setData('password', e.target.value)}
+                            />
+                        </FormField>
 
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="w-full bg-blue-600 text-white rounded py-2 font-medium"
-                >
-                    Masuk
-                </button>
-            </form>
+                        <Button type="submit" disabled={processing} className="w-full mt-2">
+                            {processing ? 'Memproses...' : 'Masuk'}
+                        </Button>
+                    </form>
+                </div>
+            </div>
         </div>
     );
 }

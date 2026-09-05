@@ -1,9 +1,18 @@
 import { useForm } from '@inertiajs/react';
+import FormField from '@/Components/Form/FormField';
+import FormSection from '@/Components/Form/FormSection';
+import TextInput from '@/Components/Form/TextInput';
+import Textarea from '@/Components/Form/Textarea';
+import SelectInput from '@/Components/Form/SelectInput';
+import DateInput from '@/Components/Form/DateInput';
+import NumberInput from '@/Components/Form/NumberInput';
+import FileInput from '@/Components/Form/FileInput';
+import Button from '@/Components/Form/Button';
 
 export default function TenancyForm({ tenancy, units, tenants }) {
     const isEdit = !!tenancy;
 
-    const { data, setData, post, put, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         unit_id: tenancy?.unit_id ?? '',
         tenant_id: tenancy?.tenant_id ?? '',
         contract_number: tenancy?.contract_number ?? '',
@@ -24,9 +33,7 @@ export default function TenancyForm({ tenancy, units, tenants }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         const options = { forceFormData: true };
-
         if (isEdit) {
             post(`/tenancies/${tenancy.id}`, { ...options, data: { ...data, _method: 'put' } });
         } else {
@@ -35,216 +42,111 @@ export default function TenancyForm({ tenancy, units, tenants }) {
     };
 
     return (
-        <form onSubmit={submit} className="max-w-2xl space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <h2 className="font-semibold text-gray-700 mb-4">Unit & Tenant</h2>
-
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                    <Field label="Unit" error={errors.unit_id}>
-                        <select
-                            value={data.unit_id}
-                            onChange={(e) => setData('unit_id', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+        <form onSubmit={submit} className="max-w-2xl">
+            <FormSection title="Unit & Tenant">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Unit" error={errors.unit_id} required>
+                        <SelectInput value={data.unit_id} onChange={(e) => setData('unit_id', e.target.value)}>
                             <option value="">Pilih unit...</option>
-                            {units.map((u) => (
-                                <option key={u.id} value={u.id}>{u.unit_code}</option>
-                            ))}
-                        </select>
-                    </Field>
+                            {units.map((u) => <option key={u.id} value={u.id}>{u.unit_code}</option>)}
+                        </SelectInput>
+                    </FormField>
 
-                    <Field label="Tenant" error={errors.tenant_id}>
-                        <select
-                            value={data.tenant_id}
-                            onChange={(e) => setData('tenant_id', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+                    <FormField label="Tenant" error={errors.tenant_id} required>
+                        <SelectInput value={data.tenant_id} onChange={(e) => setData('tenant_id', e.target.value)}>
                             <option value="">Pilih tenant...</option>
-                            {tenants.map((t) => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                        </select>
-                    </Field>
+                            {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </SelectInput>
+                    </FormField>
                 </div>
 
-                <Field label="Status" error={errors.status}>
-                    <select
-                        value={data.status}
-                        onChange={(e) => setData('status', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                    >
+                <FormField
+                    label="Status"
+                    error={errors.status}
+                    hint={data.status === 'active' ? 'Tenancy aktif lain di unit yang sama akan otomatis diakhiri.' : null}
+                >
+                    <SelectInput value={data.status} onChange={(e) => setData('status', e.target.value)}>
                         <option value="draft">Draft</option>
                         <option value="active">Aktif</option>
                         <option value="ended">Berakhir</option>
                         <option value="terminated">Diakhiri Sepihak</option>
-                    </select>
-                    {data.status === 'active' && (
-                        <p className="text-xs text-amber-600 mt-1">
-                            Tenancy aktif lain di unit yang sama akan otomatis diakhiri.
-                        </p>
-                    )}
-                </Field>
-            </div>
+                    </SelectInput>
+                </FormField>
+            </FormSection>
 
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <h2 className="font-semibold text-gray-700 mb-4">Kontrak</h2>
+            <FormSection title="Kontrak">
+                <FormField label="Nomor Kontrak" error={errors.contract_number}>
+                    <TextInput value={data.contract_number} onChange={(e) => setData('contract_number', e.target.value)} />
+                </FormField>
 
-                <Field label="Nomor Kontrak" error={errors.contract_number}>
-                    <input
-                        value={data.contract_number}
-                        onChange={(e) => setData('contract_number', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
-
-                <Field label="Dokumen Kontrak (PDF/Gambar)" error={errors.contract_document}>
-                    <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => setData('contract_document', e.target.files[0])}
-                        className="w-full text-sm"
-                    />
+                <FormField label="Dokumen Kontrak (PDF/Gambar)" error={errors.contract_document}>
+                    <FileInput accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setData('contract_document', e.target.files[0])} />
                     {tenancy?.contract_document_path && (
-                        <a
-                            href={`/storage/${tenancy.contract_document_path}`}
-                            target="_blank"
-                            className="text-xs text-blue-600 mt-1 inline-block"
-                        >
+                        <a href={`/storage/${tenancy.contract_document_path}`} target="_blank" className="text-xs text-[#0F1E36] underline mt-1.5 inline-block">
                             Lihat dokumen saat ini
                         </a>
                     )}
-                </Field>
+                </FormField>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <Field label="Tanggal Mulai" error={errors.start_date}>
-                        <input
-                            type="date"
-                            value={data.start_date}
-                            onChange={(e) => setData('start_date', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Tanggal Berakhir" error={errors.end_date}>
-                        <input
-                            type="date"
-                            value={data.end_date}
-                            onChange={(e) => setData('end_date', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Tanggal TTD" error={errors.signed_date}>
-                        <input
-                            type="date"
-                            value={data.signed_date}
-                            onChange={(e) => setData('signed_date', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <FormField label="Tanggal Mulai" error={errors.start_date} required>
+                        <DateInput value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
+                    </FormField>
+                    <FormField label="Tanggal Berakhir" error={errors.end_date}>
+                        <DateInput value={data.end_date} onChange={(e) => setData('end_date', e.target.value)} />
+                    </FormField>
+                    <FormField label="Tanggal TTD" error={errors.signed_date}>
+                        <DateInput value={data.signed_date} onChange={(e) => setData('signed_date', e.target.value)} />
+                    </FormField>
                 </div>
-            </div>
+            </FormSection>
 
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <h2 className="font-semibold text-gray-700 mb-4">Finansial</h2>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Nilai Sewa (Rp)" error={errors.rent_value}>
-                        <input
-                            type="number"
-                            value={data.rent_value}
-                            onChange={(e) => setData('rent_value', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Periode Sewa" error={errors.rent_period}>
-                        <select
-                            value={data.rent_period}
-                            onChange={(e) => setData('rent_period', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+            <FormSection title="Finansial">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Nilai Sewa (Rp)" error={errors.rent_value}>
+                        <NumberInput value={data.rent_value} onChange={(e) => setData('rent_value', e.target.value)} />
+                    </FormField>
+                    <FormField label="Periode Sewa" error={errors.rent_period}>
+                        <SelectInput value={data.rent_period} onChange={(e) => setData('rent_period', e.target.value)}>
                             <option value="">Pilih...</option>
                             <option value="bulanan">Bulanan</option>
                             <option value="tahunan">Tahunan</option>
-                        </select>
-                    </Field>
+                        </SelectInput>
+                    </FormField>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Service Charge (Rp)" error={errors.service_charge}>
-                        <input
-                            type="number"
-                            value={data.service_charge}
-                            onChange={(e) => setData('service_charge', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Deposit (Rp)" error={errors.deposit_value}>
-                        <input
-                            type="number"
-                            value={data.deposit_value}
-                            onChange={(e) => setData('deposit_value', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Service Charge (Rp)" error={errors.service_charge}>
+                        <NumberInput value={data.service_charge} onChange={(e) => setData('service_charge', e.target.value)} />
+                    </FormField>
+                    <FormField label="Deposit (Rp)" error={errors.deposit_value}>
+                        <NumberInput value={data.deposit_value} onChange={(e) => setData('deposit_value', e.target.value)} />
+                    </FormField>
                 </div>
 
-                <Field label="Termin Pembayaran" error={errors.payment_term}>
-                    <input
-                        value={data.payment_term}
-                        onChange={(e) => setData('payment_term', e.target.value)}
-                        placeholder="Bulanan, per-3 bulan, dst"
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
+                <FormField label="Termin Pembayaran" error={errors.payment_term}>
+                    <TextInput value={data.payment_term} onChange={(e) => setData('payment_term', e.target.value)} placeholder="Bulanan, per-3 bulan, dst" />
+                </FormField>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Percentage Rent (%)" error={errors.percentage_rent_rate}>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={data.percentage_rent_rate}
-                            onChange={(e) => setData('percentage_rent_rate', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Breakpoint Omzet (Rp)" error={errors.percentage_rent_breakpoint}>
-                        <input
-                            type="number"
-                            value={data.percentage_rent_breakpoint}
-                            onChange={(e) => setData('percentage_rent_breakpoint', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Percentage Rent (%)" error={errors.percentage_rent_rate}>
+                        <NumberInput step="0.01" value={data.percentage_rent_rate} onChange={(e) => setData('percentage_rent_rate', e.target.value)} />
+                    </FormField>
+                    <FormField label="Breakpoint Omzet (Rp)" error={errors.percentage_rent_breakpoint}>
+                        <NumberInput value={data.percentage_rent_breakpoint} onChange={(e) => setData('percentage_rent_breakpoint', e.target.value)} />
+                    </FormField>
                 </div>
-            </div>
+            </FormSection>
 
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <Field label="Catatan" error={errors.notes}>
-                    <textarea
-                        value={data.notes}
-                        onChange={(e) => setData('notes', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                        rows={3}
-                    />
-                </Field>
-            </div>
+            <FormSection>
+                <FormField label="Catatan" error={errors.notes}>
+                    <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
+                </FormField>
+            </FormSection>
 
-            <button
-                type="submit"
-                disabled={processing}
-                className="bg-blue-600 text-white px-6 py-2 rounded font-medium"
-            >
+            <Button type="submit" disabled={processing}>
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Tenancy'}
-            </button>
+            </Button>
         </form>
-    );
-}
-
-function Field({ label, error, children }) {
-    return (
-        <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-            {children}
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        </div>
     );
 }

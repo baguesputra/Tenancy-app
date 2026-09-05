@@ -1,4 +1,9 @@
 import { useForm } from '@inertiajs/react';
+import FormField from '@/Components/Form/FormField';
+import FormSection from '@/Components/Form/FormSection';
+import TextInput from '@/Components/Form/TextInput';
+import Textarea from '@/Components/Form/Textarea';
+import Button from '@/Components/Form/Button';
 
 export default function CategoryForm({ category, routePrefix }) {
     const isEdit = !!category;
@@ -10,39 +15,28 @@ export default function CategoryForm({ category, routePrefix }) {
 
     const submit = (e) => {
         e.preventDefault();
-        if (isEdit) {
-            put(`/${routePrefix}/${category.id}`);
-        } else {
-            post(`/${routePrefix}`);
-        }
+        isEdit ? put(`/${routePrefix}/${category.id}`) : post(`/${routePrefix}`);
     };
 
     return (
-        <form onSubmit={submit} className="max-w-lg space-y-4 bg-white rounded-lg shadow-sm p-5">
-            <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Nama Kategori</label>
-                <input
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                    className="w-full border rounded px-3 py-2"
-                />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
+        <form onSubmit={submit} className="max-w-lg">
+            <FormSection>
+                <FormField label="Nama Kategori" error={errors.name} required>
+                    <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                </FormField>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                <textarea
-                    value={data.description}
-                    onChange={(e) => setData('description', e.target.value)}
-                    className="w-full border rounded px-3 py-2"
-                    rows={3}
-                />
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-            </div>
+                <FormField label="Keterangan" error={errors.description}>
+                    <Textarea
+                        value={data.description}
+                        onChange={(e) => setData('description', e.target.value)}
+                        placeholder="Jelaskan maksud kategori ini..."
+                    />
+                </FormField>
+            </FormSection>
 
-            <button type="submit" disabled={processing} className="bg-blue-600 text-white px-6 py-2 rounded font-medium">
+            <Button type="submit" disabled={processing}>
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Kategori'}
-            </button>
+            </Button>
         </form>
     );
 }

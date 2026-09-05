@@ -1,4 +1,11 @@
 import { useForm } from '@inertiajs/react';
+import FormField from '@/Components/Form/FormField';
+import FormSection from '@/Components/Form/FormSection';
+import TextInput from '@/Components/Form/TextInput';
+import Textarea from '@/Components/Form/Textarea';
+import SelectInput from '@/Components/Form/SelectInput';
+import Checkbox from '@/Components/Form/Checkbox';
+import Button from '@/Components/Form/Button';
 
 export default function TenantForm({ tenant, tenantCategories, productCategories, branches, canPickBranch }) {
     const isEdit = !!tenant;
@@ -22,11 +29,7 @@ export default function TenantForm({ tenant, tenantCategories, productCategories
 
     const submit = (e) => {
         e.preventDefault();
-        if (isEdit) {
-            put(`/tenants/${tenant.id}`);
-        } else {
-            post('/tenants');
-        }
+        isEdit ? put(`/tenants/${tenant.id}`) : post('/tenants');
     };
 
     const updateContact = (idx, field, value) => {
@@ -34,214 +37,111 @@ export default function TenantForm({ tenant, tenantCategories, productCategories
         next[idx] = { ...next[idx], [field]: value };
         setData('contacts', next);
     };
-
-    const addContact = () => {
-        setData('contacts', [...data.contacts, { name: '', position: '', phone: '', email: '', type: '' }]);
-    };
-
-    const removeContact = (idx) => {
-        setData('contacts', data.contacts.filter((_, i) => i !== idx));
-    };
+    const addContact = () => setData('contacts', [...data.contacts, { name: '', position: '', phone: '', email: '', type: '' }]);
+    const removeContact = (idx) => setData('contacts', data.contacts.filter((_, i) => i !== idx));
 
     return (
-        <form onSubmit={submit} className="max-w-2xl space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <h2 className="font-semibold text-gray-700 mb-4">Identitas Bisnis</h2>
+        <form onSubmit={submit} className="max-w-2xl">
+            <FormSection title="Identitas Bisnis">
+                <FormField label="Nama Toko/Brand" error={errors.name} required>
+                    <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                </FormField>
 
-                <Field label="Nama Toko/Brand" error={errors.name}>
-                    <input
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
+                <FormField label="Nama Badan Hukum (PT/CV)" error={errors.legal_entity_name}>
+                    <TextInput value={data.legal_entity_name} onChange={(e) => setData('legal_entity_name', e.target.value)} />
+                </FormField>
 
-                <Field label="Nama Badan Hukum (PT/CV)" error={errors.legal_entity_name}>
-                    <input
-                        value={data.legal_entity_name}
-                        onChange={(e) => setData('legal_entity_name', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                    />
-                </Field>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Kategori Tenant" error={errors.tenant_category_id}>
-                        <select
-                            value={data.tenant_category_id}
-                            onChange={(e) => setData('tenant_category_id', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Kategori Tenant" error={errors.tenant_category_id} required>
+                        <SelectInput value={data.tenant_category_id} onChange={(e) => setData('tenant_category_id', e.target.value)}>
                             <option value="">Pilih...</option>
-                            {tenantCategories.map((c) => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
-                    </Field>
+                            {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </SelectInput>
+                    </FormField>
 
-                    <Field label="Kategori Produk" error={errors.product_category_id}>
-                        <select
-                            value={data.product_category_id}
-                            onChange={(e) => setData('product_category_id', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+                    <FormField label="Kategori Produk" error={errors.product_category_id} required>
+                        <SelectInput value={data.product_category_id} onChange={(e) => setData('product_category_id', e.target.value)}>
                             <option value="">Pilih...</option>
-                            {productCategories.map((c) => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
-                    </Field>
+                            {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </SelectInput>
+                    </FormField>
                 </div>
 
                 {canPickBranch && (
-                    <Field label="Cabang" error={errors.branch_id}>
-                        <select
-                            value={data.branch_id}
-                            onChange={(e) => setData('branch_id', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        >
+                    <FormField label="Cabang" error={errors.branch_id} required>
+                        <SelectInput value={data.branch_id} onChange={(e) => setData('branch_id', e.target.value)}>
                             <option value="">Pilih...</option>
-                            {branches.map((b) => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
-                        </select>
-                    </Field>
+                            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </SelectInput>
+                    </FormField>
                 )}
 
-                <label className="flex items-center gap-2 mt-2">
-                    <input
-                        type="checkbox"
-                        checked={data.is_active}
-                        onChange={(e) => setData('is_active', e.target.checked)}
-                    />
-                    <span className="text-sm text-gray-600">Tenant aktif</span>
-                </label>
-            </div>
+                <Checkbox
+                    label="Tenant aktif"
+                    checked={data.is_active}
+                    onChange={(e) => setData('is_active', e.target.checked)}
+                    className="mt-2"
+                />
+            </FormSection>
 
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <h2 className="font-semibold text-gray-700 mb-4">Dokumen Legal</h2>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="NPWP" error={errors.npwp_number}>
-                        <input
-                            value={data.npwp_number}
-                            onChange={(e) => setData('npwp_number', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="SIUP / NIB" error={errors.siup_number}>
-                        <input
-                            value={data.siup_number}
-                            onChange={(e) => setData('siup_number', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
+            <FormSection title="Dokumen Legal">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="NPWP" error={errors.npwp_number}>
+                        <TextInput value={data.npwp_number} onChange={(e) => setData('npwp_number', e.target.value)} />
+                    </FormField>
+                    <FormField label="SIUP / NIB" error={errors.siup_number}>
+                        <TextInput value={data.siup_number} onChange={(e) => setData('siup_number', e.target.value)} />
+                    </FormField>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Telepon Perusahaan" error={errors.company_phone}>
-                        <input
-                            value={data.company_phone}
-                            onChange={(e) => setData('company_phone', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
-                    <Field label="Email Perusahaan" error={errors.company_email}>
-                        <input
-                            value={data.company_email}
-                            onChange={(e) => setData('company_email', e.target.value)}
-                            className="w-full border rounded px-3 py-2"
-                        />
-                    </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Telepon Perusahaan" error={errors.company_phone}>
+                        <TextInput value={data.company_phone} onChange={(e) => setData('company_phone', e.target.value)} />
+                    </FormField>
+                    <FormField label="Email Perusahaan" error={errors.company_email}>
+                        <TextInput value={data.company_email} onChange={(e) => setData('company_email', e.target.value)} />
+                    </FormField>
                 </div>
 
-                <Field label="Alamat Perusahaan" error={errors.company_address}>
-                    <textarea
-                        value={data.company_address}
-                        onChange={(e) => setData('company_address', e.target.value)}
-                        className="w-full border rounded px-3 py-2"
-                        rows={2}
-                    />
-                </Field>
-            </div>
+                <FormField label="Alamat Perusahaan" error={errors.company_address}>
+                    <Textarea value={data.company_address} onChange={(e) => setData('company_address', e.target.value)} rows={2} />
+                </FormField>
+            </FormSection>
 
-            <div className="bg-white rounded-lg shadow-sm p-5">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="font-semibold text-gray-700">PIC / Kontak</h2>
-                    <button type="button" onClick={addContact} className="text-sm text-blue-600">
-                        + Tambah PIC
-                    </button>
-                </div>
-
+            <FormSection title="PIC / Kontak">
                 {data.contacts.map((contact, idx) => (
-                    <div key={idx} className="border rounded p-3 mb-3">
-                        <div className="grid grid-cols-2 gap-3 mb-2">
-                            <input
-                                placeholder="Nama"
-                                value={contact.name}
-                                onChange={(e) => updateContact(idx, 'name', e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                            />
-                            <input
-                                placeholder="Jabatan"
-                                value={contact.position ?? ''}
-                                onChange={(e) => updateContact(idx, 'position', e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                            />
-                            <input
-                                placeholder="Telepon"
-                                value={contact.phone ?? ''}
-                                onChange={(e) => updateContact(idx, 'phone', e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                            />
-                            <input
-                                placeholder="Email"
-                                value={contact.email ?? ''}
-                                onChange={(e) => updateContact(idx, 'email', e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                            />
+                    <div key={idx} className="border border-gray-100 rounded-lg p-4 mb-3 bg-gray-50/50">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                            <TextInput placeholder="Nama" value={contact.name} onChange={(e) => updateContact(idx, 'name', e.target.value)} />
+                            <TextInput placeholder="Jabatan" value={contact.position ?? ''} onChange={(e) => updateContact(idx, 'position', e.target.value)} />
+                            <TextInput placeholder="Telepon" value={contact.phone ?? ''} onChange={(e) => updateContact(idx, 'phone', e.target.value)} />
+                            <TextInput placeholder="Email" value={contact.email ?? ''} onChange={(e) => updateContact(idx, 'email', e.target.value)} />
                         </div>
                         <div className="flex justify-between items-center">
-                            <select
+                            <SelectInput
                                 value={contact.type ?? ''}
                                 onChange={(e) => updateContact(idx, 'type', e.target.value)}
-                                className="border rounded px-2 py-1 text-xs"
+                                className="w-40 !py-1.5 text-xs"
                             >
                                 <option value="">Tipe kontak...</option>
                                 <option value="operasional">Operasional</option>
                                 <option value="legal">Legal</option>
                                 <option value="finance">Finance</option>
-                            </select>
+                            </SelectInput>
                             {data.contacts.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => removeContact(idx)}
-                                    className="text-xs text-red-500"
-                                >
-                                    Hapus
-                                </button>
+                                <button type="button" onClick={() => removeContact(idx)} className="text-xs text-red-500">Hapus</button>
                             )}
                         </div>
                     </div>
                 ))}
-            </div>
+                <Button type="button" variant="secondary" onClick={addContact} className="text-xs">
+                    + Tambah PIC
+                </Button>
+            </FormSection>
 
-            <button
-                type="submit"
-                disabled={processing}
-                className="bg-blue-600 text-white px-6 py-2 rounded font-medium"
-            >
+            <Button type="submit" disabled={processing}>
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Tenant'}
-            </button>
+            </Button>
         </form>
-    );
-}
-
-function Field({ label, error, children }) {
-    return (
-        <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-            {children}
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        </div>
     );
 }

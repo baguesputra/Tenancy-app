@@ -7,6 +7,7 @@ use App\Models\PermitRequest;
 use App\Models\Tenant;
 use App\Services\PermitRequestService;
 use Illuminate\Http\Request;
+use App\Http\Requests\StorePermitRequestRequest;
 use Inertia\Inertia;
 
 class PermitRequestController extends Controller
@@ -37,15 +38,11 @@ class PermitRequestController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StorePermitRequestRequest $request)
     {
-        $request->merge([
-            'tenant_id' => $request->tenant_id ?: null,
-        ]);
+        $request->merge(['tenant_id' => $request->tenant_id ?: null]);
 
-        $validated = $this->validatePermit($request);
-
-        $permit = $this->service->create($validated, $request->user());
+        $permit = $this->service->create($request->validated(), $request->user());
 
         return redirect()->route('permit-requests.show', $permit->id)
             ->with('success', 'Surat izin berhasil diajukan atas nama tenant.');
@@ -57,44 +54,11 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
 
         $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
+        $permitRequest->currentUserDepartmentId = $user->department_id;
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
-            'currentUserDepartmentId' => $request->user()->department_id,
         ]);
     }
 
-    private function validatePermit(Request $request): array
-    {
-        return $request->validate([
-            'tenant_id' => 'nullable|exists:tenants,id',
-            'store_name_snapshot' => 'nullable|required_without:tenant_id|string|max:255',
-            'floor_snapshot' => 'nullable|string|max:50',
-            'block_snapshot' => 'nullable|string|max:50',
-            'unit_number_snapshot' => 'nullable|string|max:50',
-            'permit_number' => 'required|string|max:100',
-            'activity_types' => 'required|array|min:1',
-            'request_date' => 'required|date',
-            'pic_name' => 'nullable|string|max:255',
-            'pic_phone' => 'nullable|string|max:30',
-            'is_external' => 'boolean',
-            'contractor_company' => 'nullable|string|max:255',
-            'contractor_pic' => 'nullable|string|max:255',
-            'contractor_address' => 'nullable|string',
-            'contractor_phone' => 'nullable|string|max:30',
-            'job_type' => 'nullable|string|max:255',
-            'work_start_date' => 'nullable|date',
-            'work_end_date' => 'nullable|date',
-            'work_start_time' => 'nullable',
-            'work_end_time' => 'nullable',
-            'access_route' => 'nullable|string',
-            'notes' => 'nullable|string',
-            'workers' => 'nullable|array',
-            'workers.*.name' => 'nullable|string|max:255',
-            'goods' => 'nullable|array',
-            'goods.*.description' => 'nullable|string|max:255',
-            'goods.*.quantity_note' => 'nullable|string|max:100',
-            'accompanying_department_ids' => 'nullable|array',
-        ]);
-    }
 }

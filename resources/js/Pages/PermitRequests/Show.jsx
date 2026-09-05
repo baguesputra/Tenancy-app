@@ -1,20 +1,19 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
+import FormSection from '@/Components/Form/FormSection';
+import Textarea from '@/Components/Form/Textarea';
+import FileInput from '@/Components/Form/FileInput';
+import Button from '@/Components/Form/Button';
+import Badge from '@/Components/Badge';
 
-const statusColors = {
-    pending: 'text-yellow-600',
-    approved: 'text-green-600',
-    rejected: 'text-red-600',
-};
+const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
 
-export default function Show({ permit, currentUserDepartmentId }) {
+export default function Show({ permit }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
 
-    const approve = (approvalId) => {
-        router.post(`/approvals/${approvalId}/approve`);
-    };
+    const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`);
 
     const reject = (approvalId) => {
         router.post(`/approvals/${approvalId}/reject`, { reason }, {
@@ -22,9 +21,7 @@ export default function Show({ permit, currentUserDepartmentId }) {
         });
     };
 
-    const toggleWorker = (workerId) => {
-        router.post(`/permit-workers/${workerId}/toggle`);
-    };
+    const toggleWorker = (workerId) => router.post(`/permit-workers/${workerId}/toggle`);
 
     const verifyGood = (goodId, file) => {
         const formData = new FormData();
@@ -32,100 +29,124 @@ export default function Show({ permit, currentUserDepartmentId }) {
         router.post(`/permit-goods/${goodId}/verify`, formData);
     };
 
+    const setGoodNote = (goodId, note) => {
+        router.post(`/permit-goods/${goodId}/verify`, { mismatch_note: note });
+    };
+
+    const completeSecurityCheck = () => {
+        router.post(`/permit-requests/${permit.id}/complete-security-check`);
+    };
+
+    const securityStep = permit.approvals.find((a) => a.step_key === 'security');
+    const canCompleteSecurityCheck = securityStep?.status === 'pending'
+        && securityStep?.department_id === permit.currentUserDepartmentId;
+
     return (
         <AppLayout>
             <div className="p-6 max-w-2xl">
-                <h1 className="text-2xl font-bold text-gray-800 mb-1">{permit.permit_number}</h1>
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">{permit.permit_number}</h1>
                 <p className="text-sm text-gray-500 mb-6">
                     {permit.store_name_snapshot} — {permit.job_type} — {permit.request_date}
                 </p>
 
-                <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-                    <h2 className="font-semibold text-gray-700 mb-3">Progress Approval</h2>
+                {permit.is_flagged && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-3.5 rounded-lg mb-4 flex items-center gap-2">
+                        <span>⚠</span> Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
+                    </div>
+                )}
+
+                <FormSection title="Progress Approval">
                     <ul className="space-y-3">
                         {permit.approvals.map((a) => (
-                            <li key={a.id} className="border-b pb-3 last:border-0">
+                            <li key={a.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium">{a.label}</span>
-                                    <span className={`text-xs ${statusColors[a.status]}`}>{a.status}</span>
+                                    <span className="text-sm font-medium text-gray-700">{a.label}</span>
+                                    <Badge color={approvalColor[a.status]}>{a.status}</Badge>
                                 </div>
 
-                                {/* Tahap Security: tidak ada tombol approve/reject di sini,
-                                    cukup instruksi arahkan ke checklist di bawah */}
-                                {a.step_key === 'security' && a.status === 'pending' && a.department_id === currentUserDepartmentId && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Centang semua pekerja & barang di bawah, lalu klik "Selesaikan Pengecekan".
+                                {a.step_key === 'security' && a.status === 'pending' && (
+                                    <p className="text-xs text-gray-400 mt-1.5">
+                                        Centang semua pekerja & barang di bawah, lalu selesaikan pemeriksaan.
                                     </p>
                                 )}
 
-                                {/* Tahap selain Security: approve/reject generik seperti biasa */}
-                                {a.step_key !== 'security' && a.status === 'pending' && a.department_id === currentUserDepartmentId && (
-                                    <div className="mt-2 flex gap-2">
-                                        <button onClick={() => approve(a.id)} className="text-xs bg-green-600 text-white px-3 py-1 rounded">
+                                {a.step_key !== 'security' && a.status === 'pending' && (
+                                    <div className="mt-2.5 flex gap-2">
+                                        <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                             Approve
-                                        </button>
-                                        <button onClick={() => setRejectingId(a.id)} className="text-xs bg-red-600 text-white px-3 py-1 rounded">
+                                        </Button>
+                                        <Button variant="danger" onClick={() => setRejectingId(a.id)} className="!px-3 !py-1.5 text-xs">
                                             Reject
-                                        </button>
+                                        </Button>
+                                    </div>
+                                )}
+
+                                {rejectingId === a.id && (
+                                    <div className="mt-2.5">
+                                        <Textarea
+                                            value={reason}
+                                            onChange={(e) => setReason(e.target.value)}
+                                            placeholder="Alasan penolakan..."
+                                            rows={2}
+                                            className="text-xs"
+                                        />
+                                        <Button variant="danger" onClick={() => reject(a.id)} className="!px-3 !py-1.5 text-xs mt-2">
+                                            Kirim Penolakan
+                                        </Button>
                                     </div>
                                 )}
                             </li>
                         ))}
                     </ul>
-                </div>
+                </FormSection>
 
-                <div className="bg-white rounded-lg shadow-sm p-5 mb-4">
-                    <h2 className="font-semibold text-gray-700 mb-3">Daftar Pekerja</h2>
-                    {permit.workers.map((w) => (
-                        <div key={w.id} className="flex justify-between items-center py-1">
-                            <span className="text-sm">{w.name}</span>
-                            <button
-                                onClick={() => toggleWorker(w.id)}
-                                className={`text-xs px-2 py-1 rounded ${w.is_present ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                            >
-                                {w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
-                            </button>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm p-5">
-                    <h2 className="font-semibold text-gray-700 mb-3">Daftar Barang</h2>
-                    {permit.goods.map((g) => (
-                        <div key={g.id} className="border-b pb-3 mb-3 last:border-0">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm">{g.description} ({g.quantity_note})</span>
-                                <span className={`text-xs px-2 py-1 rounded ${g.is_verified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                    {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
-                                </span>
+                <FormSection title="Daftar Pekerja">
+                    <div className="space-y-1">
+                        {permit.workers.map((w) => (
+                            <div key={w.id} className="flex justify-between items-center py-1.5">
+                                <span className="text-sm text-gray-700">{w.name}</span>
+                                <button
+                                    onClick={() => toggleWorker(w.id)}
+                                    className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors
+                                        ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    {w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
+                                </button>
                             </div>
-                            {!g.is_verified && (
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    onChange={(e) => verifyGood(g.id, e.target.files[0])}
-                                    className="text-xs"
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
-                {permit.is_flagged && (
-                        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-3 rounded mb-4">
-                            ⚠️ Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
-                        </div>
-                    )}
+                        ))}
+                    </div>
+                </FormSection>
 
-                    {permit.approvals.find(a => a.step_key === 'security')?.status === 'pending'
-                        && currentUserDepartmentId === permit.approvals.find(a => a.step_key === 'security')?.department_id && (
-                        <button
-                            onClick={() => router.post(`/permit-requests/${permit.id}/complete-security-check`)}
-                            className="w-full bg-blue-600 text-white rounded py-3 font-medium mt-4"
-                        >
-                            Selesaikan Pengecekan
-                        </button>
-                    )}
+                <FormSection title="Daftar Barang">
+                    <div className="space-y-4">
+                        {permit.goods.map((g) => (
+                            <div key={g.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-gray-700">{g.description} ({g.quantity_note})</span>
+                                    <Badge color={g.is_verified ? 'green' : 'gray'}>
+                                        {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
+                                    </Badge>
+                                </div>
+                                {!g.is_verified && (
+                                    <div className="space-y-2">
+                                        <FileInput accept="image/*" capture="environment" onChange={(e) => verifyGood(g.id, e.target.files[0])} />
+                                        <input
+                                            placeholder="Catatan ketidaksesuaian (opsional)"
+                                            onBlur={(e) => setGoodNote(g.id, e.target.value)}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-100"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </FormSection>
+
+                {canCompleteSecurityCheck && (
+                    <Button variant="primary" onClick={completeSecurityCheck} className="w-full !py-3">
+                        Selesaikan Pengecekan
+                    </Button>
+                )}
             </div>
         </AppLayout>
     );
