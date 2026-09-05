@@ -3,6 +3,8 @@ import { Link, router } from '@inertiajs/react';
 import SelectInput from '@/Components/Form/SelectInput';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import DataTable from '@/Components/DataTable';
+import Pagination from '@/Components/Pagination';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 
@@ -11,11 +13,22 @@ export default function Index({ permits, filters }) {
         router.get('/permit-requests', { status: value }, { preserveState: true });
     };
 
+    const columns = [
+        { key: 'number', label: 'Nomor Surat' },
+        { key: 'location', label: 'Lokasi / Tenant' },
+        { key: 'job', label: 'Jenis Pekerjaan' },
+        { key: 'date', label: 'Tanggal' },
+        { key: 'status', label: 'Status', className: 'text-right' },
+    ];
+
     return (
         <AppLayout>
-            <div className="p-6 max-w-4xl">
+            <div className="px-8 py-6 flex-1">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
-                    <h1 className="text-xl font-semibold text-gray-900">Surat Izin</h1>
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900">Surat Izin</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{permits.total} pengajuan</p>
+                    </div>
                     <Link href="/permit-requests/create">
                         <Button>+ Ajukan Atas Nama Tenant</Button>
                     </Link>
@@ -32,25 +45,33 @@ export default function Index({ permits, filters }) {
                     <option value="rejected">Rejected</option>
                 </SelectInput>
 
-                <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                <DataTable columns={columns}>
                     {permits.data.map((p) => (
-                        <Link
+                        <tr
                             key={p.id}
-                            href={`/permit-requests/${p.id}`}
-                            className="flex justify-between items-center p-4 hover:bg-gray-50 transition-colors"
+                            onClick={() => router.visit(`/permit-requests/${p.id}`)}
+                            className="cursor-pointer hover:bg-gray-50/80 transition-colors"
                         >
-                            <div>
-                                <p className="font-medium text-gray-900 text-sm">
-                                    {p.permit_number} — {p.store_name_snapshot}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-0.5">{p.job_type} — {p.request_date}</p>
-                            </div>
-                            <Badge color={statusColor[p.status]}>{p.status}</Badge>
-                        </Link>
+                            <td className="px-5 py-3.5 font-medium text-gray-900">{p.permit_number}</td>
+                            <td className="px-5 py-3.5 text-gray-500">{p.store_name_snapshot}</td>
+                            <td className="px-5 py-3.5 text-gray-500">{p.job_type ?? '—'}</td>
+                            <td className="px-5 py-3.5 text-gray-500">{p.request_date}</td>
+                            <td className="px-5 py-3.5 text-right">
+                                <Badge color={statusColor[p.status]}>{p.status}</Badge>
+                            </td>
+                        </tr>
                     ))}
                     {permits.data.length === 0 && (
-                        <p className="p-8 text-sm text-gray-400 text-center">Belum ada surat izin.</p>
+                        <tr>
+                            <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">
+                                Belum ada surat izin.
+                            </td>
+                        </tr>
                     )}
+                </DataTable>
+
+                <div className="bg-white rounded-b-xl border border-t-0 border-[#E2E5EA] -mt-px">
+                    <Pagination meta={permits} links={permits.links} />
                 </div>
             </div>
         </AppLayout>

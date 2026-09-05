@@ -1,50 +1,63 @@
-import { Link } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
+import { Link, router } from '@inertiajs/react';
+import Button from '@/Components/Form/Button';
+import Badge from '@/Components/Badge';
+import DataTable from '@/Components/DataTable';
+import Pagination from '@/Components/Pagination';
 
 export default function Index({ sessions }) {
+    const columns = [
+        { key: 'date', label: 'Tanggal' },
+        { key: 'branch', label: 'Cabang' },
+        { key: 'count', label: 'Jumlah Tenant' },
+        { key: 'status', label: 'Status', className: 'text-right' },
+    ];
+
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-3xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">Riwayat Sesi Sidak</h1>
-                    <Link
-                        href="/inspection-sessions/current"
-                        className="bg-blue-600 text-white px-4 py-2 rounded"
-                    >
-                        Mulai / Lanjut Sesi
+        <AppLayout>
+            <div className="px-8 py-6 flex-1">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900">Riwayat Sesi Sidak</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{sessions.total} sesi tercatat</p>
+                    </div>
+                    <Link href="/inspection-sessions/current">
+                        <Button>Mulai / Lanjut Sesi</Button>
                     </Link>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm divide-y">
+                <DataTable columns={columns}>
                     {sessions.data.map((session) => (
-                        <Link
+                        <tr
                             key={session.id}
-                            href={`/inspection-sessions/${session.id}`}
-                            className="flex justify-between items-center p-4 hover:bg-gray-50"
+                            onClick={() => router.visit(`/inspection-sessions/${session.id}`)}
+                            className="cursor-pointer hover:bg-gray-50/80 transition-colors"
                         >
-                            <div>
-                                <p className="font-medium">
-                                    {new Date(session.started_at).toLocaleDateString('id-ID')}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                    {session.branch.name} — {session.inspections.length} tenant
-                                </p>
-                            </div>
-                            <span
-                                className={`text-xs px-2 py-1 rounded ${
-                                    session.status === 'completed'
-                                        ? 'bg-gray-100 text-gray-600'
-                                        : 'bg-yellow-100 text-yellow-700'
-                                }`}
-                            >
-                                {session.status === 'completed' ? 'Selesai' : 'Berlangsung'}
-                            </span>
-                        </Link>
+                            <td className="px-5 py-3.5 font-medium text-gray-900">
+                                {new Date(session.started_at).toLocaleDateString('id-ID')}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-500">{session.branch.name}</td>
+                            <td className="px-5 py-3.5 text-gray-500">{session.inspections.length}</td>
+                            <td className="px-5 py-3.5 text-right">
+                                <Badge color={session.status === 'completed' ? 'gray' : 'yellow'}>
+                                    {session.status === 'completed' ? 'Selesai' : 'Berlangsung'}
+                                </Badge>
+                            </td>
+                        </tr>
                     ))}
                     {sessions.data.length === 0 && (
-                        <p className="p-4 text-sm text-gray-400">Belum ada riwayat sesi.</p>
+                        <tr>
+                            <td colSpan={4} className="px-5 py-12 text-center text-sm text-gray-400">
+                                Belum ada riwayat sesi.
+                            </td>
+                        </tr>
                     )}
+                </DataTable>
+
+                <div className="bg-white rounded-b-xl border border-t-0 border-[#E2E5EA] -mt-px">
+                    <Pagination meta={sessions} links={sessions.links} />
                 </div>
             </div>
-        </div>
+        </AppLayout>
     );
 }

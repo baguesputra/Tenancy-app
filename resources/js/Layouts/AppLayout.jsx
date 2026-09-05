@@ -19,9 +19,9 @@ export default function AppLayout({ children }) {
     const logout = () => router.post('/logout');
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            <aside className="w-64 bg-[#0F1E36] flex flex-col shrink-0">
-                <div className="px-5 py-5 border-b border-white/[0.08]">
+        <div className="min-h-screen bg-[#F7F8FA]">
+            <aside className="fixed inset-y-0 left-0 w-64 bg-[#0F1E36] flex flex-col z-20">
+                <div className="px-5 py-5 border-b border-white/[0.08] shrink-0">
                     <h1 className="font-semibold text-white text-[15px] tracking-tight">Tenant</h1>
                     <p className="text-white/40 text-xs mt-0.5">
                         {auth.user?.branch?.name ?? 'Semua Cabang'}
@@ -37,7 +37,7 @@ export default function AppLayout({ children }) {
                         <button
                             onClick={() => setMasterOpen(!masterOpen)}
                             className={`w-full flex justify-between items-center px-3 py-2 rounded-lg text-[13px] font-medium transition-colors
-                                ${isMasterActive ? 'text-white bg-white/[0.06]' : 'text-white/60 hover:text-white hover:bg-white/[0.06]'}`}
+                                ${isMasterActive ? 'text-white' : 'text-white/55 hover:text-white/90'}`}
                         >
                             <span>Master Data</span>
                             <svg
@@ -60,14 +60,14 @@ export default function AppLayout({ children }) {
                     </div>
                 </nav>
 
-                <div className="px-3 py-4 border-t border-white/[0.08]">
+                <div className="px-3 py-4 border-t border-white/[0.08] shrink-0">
                     <div className="px-3 py-2 mb-1">
                         <p className="text-white text-[13px] font-medium truncate">{auth.user?.name}</p>
                         <p className="text-white/40 text-xs mt-0.5">{auth.user?.employee_number}</p>
                     </div>
                     <button
                         onClick={logout}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] text-white/50 hover:text-white/80 transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -77,10 +77,10 @@ export default function AppLayout({ children }) {
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto">
+            <div className="ml-64 min-h-screen flex flex-col">
                 <FlashBanner />
                 {children}
-            </main>
+            </div>
         </div>
     );
 }
@@ -91,14 +91,17 @@ function NavLink({ href, currentUrl, children, small = false }) {
     return (
         <Link
             href={href}
-            className={`block px-3 py-2 rounded-lg transition-colors
+            className={`relative flex items-center px-3 py-2 rounded-lg transition-colors
                 ${small ? 'text-[13px]' : 'text-[13px] font-medium'}
                 ${isActive
-                    ? 'bg-[#1FA24C] text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                    ? 'text-white bg-white/[0.08]'
+                    : 'text-white/55 hover:text-white/90 hover:bg-white/[0.04]'
                 }`}
         >
-            {children}
+            {isActive && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[#2F6FED]" />
+            )}
+            <span className={isActive ? 'ml-1' : ''}>{children}</span>
         </Link>
     );
 }
@@ -108,7 +111,7 @@ function FlashBanner() {
     if (!flash?.success) return null;
 
     return (
-        <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-6 py-3 flex items-center gap-2">
+        <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-8 py-3 flex items-center gap-2 shrink-0">
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>

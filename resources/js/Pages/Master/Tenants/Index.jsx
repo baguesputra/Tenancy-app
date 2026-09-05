@@ -4,17 +4,29 @@ import TextInput from '@/Components/Form/TextInput';
 import SelectInput from '@/Components/Form/SelectInput';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import DataTable from '@/Components/DataTable';
+import Pagination from '@/Components/Pagination';
 
 export default function Index({ tenants, tenantCategories, productCategories, filters }) {
     const updateFilter = (key, value) => {
         router.get('/tenants', { ...filters, [key]: value }, { preserveState: true });
     };
 
+    const columns = [
+        { key: 'name', label: 'Nama Tenant' },
+        { key: 'category', label: 'Kategori' },
+        { key: 'branch', label: 'Cabang' },
+        { key: 'status', label: 'Status', className: 'text-right' },
+    ];
+
     return (
         <AppLayout>
-            <div className="p-6 max-w-4xl">
+            <div className="px-8 py-6 flex-1">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
-                    <h1 className="text-xl font-semibold text-gray-900">Master Tenant</h1>
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900">Master Tenant</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{tenants.total} tenant terdaftar</p>
+                    </div>
                     <Link href="/tenants/create">
                         <Button>+ Tambah Tenant</Button>
                     </Link>
@@ -25,7 +37,7 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
                         placeholder="Cari nama tenant..."
                         defaultValue={filters.search}
                         onChange={(e) => updateFilter('search', e.target.value)}
-                        className="flex-1"
+                        className="flex-1 max-w-sm"
                     />
                     <SelectInput
                         defaultValue={filters.tenant_category_id ?? ''}
@@ -45,27 +57,36 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
                     </SelectInput>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                <DataTable columns={columns}>
                     {tenants.data.map((tenant) => (
-                        <Link
+                        <tr
                             key={tenant.id}
-                            href={`/tenants/${tenant.id}/edit`}
-                            className="flex justify-between items-center p-4 hover:bg-gray-50 transition-colors"
+                            onClick={() => router.visit(`/tenants/${tenant.id}/edit`)}
+                            className="cursor-pointer hover:bg-gray-50/80 transition-colors"
                         >
-                            <div>
-                                <p className="font-medium text-gray-900 text-sm">{tenant.name}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {tenant.branch.name} — {tenant.tenant_category.name} / {tenant.product_category.name}
-                                </p>
-                            </div>
-                            <Badge color={tenant.is_active ? 'green' : 'gray'}>
-                                {tenant.is_active ? 'Aktif' : 'Nonaktif'}
-                            </Badge>
-                        </Link>
+                            <td className="px-5 py-3.5 font-medium text-gray-900">{tenant.name}</td>
+                            <td className="px-5 py-3.5 text-gray-500">
+                                {tenant.tenant_category.name} · {tenant.product_category.name}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-500">{tenant.branch.name}</td>
+                            <td className="px-5 py-3.5 text-right">
+                                <Badge color={tenant.is_active ? 'green' : 'gray'}>
+                                    {tenant.is_active ? 'Aktif' : 'Nonaktif'}
+                                </Badge>
+                            </td>
+                        </tr>
                     ))}
                     {tenants.data.length === 0 && (
-                        <p className="p-8 text-sm text-gray-400 text-center">Belum ada tenant.</p>
+                        <tr>
+                            <td colSpan={4} className="px-5 py-12 text-center text-sm text-gray-400">
+                                Belum ada tenant yang cocok dengan pencarian ini.
+                            </td>
+                        </tr>
                     )}
+                </DataTable>
+
+                <div className="bg-white rounded-b-xl border border-t-0 border-[#E2E5EA] -mt-px">
+                    <Pagination meta={tenants.meta ?? tenants} links={tenants.links} />
                 </div>
             </div>
         </AppLayout>
