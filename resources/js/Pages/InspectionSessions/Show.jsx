@@ -3,17 +3,20 @@ import { useState } from 'react';
 
 export default function Show({ session, availableTenants }) {
     const [search, setSearch] = useState('');
-    const { data, setData, post, processing } = useForm({ tenant_id: '' });
+    const [processing, setProcessing] = useState(false);
 
     const filteredTenants = availableTenants.filter((t) =>
         t.name.toLowerCase().includes(search.toLowerCase())
     );
 
     const submitAddTenant = (tenantId) => {
-        setData('tenant_id', tenantId);
-        post(`/inspection-sessions/${session.id}/tenants`, {
-            data: { tenant_id: tenantId },
-        });
+        setProcessing(true);
+        router.post(`/inspection-sessions/${session.id}/tenants`,
+            { tenant_id: tenantId },
+            {
+                onFinish: () => setProcessing(false),
+            }
+        );
     };
 
     const completeSession = () => {
@@ -48,7 +51,7 @@ export default function Show({ session, availableTenants }) {
                                     <div>
                                         <span className="font-medium">{inspection.tenant.name}</span>
                                         <span className="text-xs text-gray-400 ml-2">
-                                            ({inspection.tenant.business_type})
+                                            ({inspection.tenant.product_category?.name})
                                         </span>
                                     </div>
                                     <span
@@ -87,11 +90,11 @@ export default function Show({ session, availableTenants }) {
                                 >
                                     <span>
                                         {tenant.name}
-                                        {tenant.is_anchor && (
+                                        {tenant.tenant_category === 'Anchor' && (
                                             <span className="text-xs text-amber-600 ml-1">★ Anchor</span>
                                         )}
                                     </span>
-                                    <span className="text-xs text-gray-400">{tenant.unit_number}</span>
+                                    <span className="text-xs text-gray-400">{tenant.unit_code}</span>
                                 </button>
                             </li>
                         ))}

@@ -40,11 +40,19 @@ class InspectionSessionController extends Controller
 
         $addedTenantIds = $session->inspections->pluck('tenant_id');
 
-        $availableTenants = Tenant::where('branch_id', $session->branch_id)
+        $availableTenants = Tenant::with(['tenantCategory', 'productCategory', 'activeTenancy.unit'])
+            ->where('branch_id', $session->branch_id)
             ->where('is_active', true)
             ->whereNotIn('id', $addedTenantIds)
             ->orderBy('name')
-            ->get(['id', 'name', 'business_type', 'is_anchor', 'unit_number']);
+            ->get()
+            ->map(fn ($tenant) => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'tenant_category' => $tenant->tenantCategory?->name,
+                'product_category' => $tenant->productCategory?->name,
+                'unit_code' => $tenant->activeTenancy?->unit?->unit_code,
+            ]);
 
         return Inertia::render('InspectionSessions/Show', [
             'session' => $session,
