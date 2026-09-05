@@ -15,7 +15,7 @@ class PermitRequest extends Model
 
     protected $fillable = [
         'id', 'permit_number', 'activity_types', 'request_date',
-        'tenant_id', 'store_name_snapshot', 'floor_snapshot', 'block_snapshot', 'unit_number_snapshot',
+        'tenant_id', 'branch_id', 'store_name_snapshot', 'floor_snapshot', 'block_snapshot', 'unit_number_snapshot',
         'pic_name', 'pic_phone',
         'is_external', 'contractor_company', 'contractor_pic', 'contractor_address', 'contractor_phone',
         'job_type', 'work_start_date', 'work_end_date', 'work_start_time', 'work_end_time',
@@ -23,6 +23,7 @@ class PermitRequest extends Model
         'requested_by_type', 'requested_by_id',
         'status',
         'barcode_token',
+        'is_flagged',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class PermitRequest extends Model
             'activity_types' => 'array',
             'request_date' => 'date',
             'is_external' => 'boolean',
+            'is_flagged' => 'boolean',
             'work_start_date' => 'date',
             'work_end_date' => 'date',
             'work_start_time' => 'datetime:H:i',
@@ -85,5 +87,10 @@ class PermitRequest extends Model
     public function approvals()
     {
         return $this->morphMany(Approval::class, 'approvable')->orderBy('order');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

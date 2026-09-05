@@ -37,4 +37,9 @@ class TenantUser extends Authenticatable
 
         return $username;
     }
+
+    public function branch()
+    {
+        return $this->tenant->branch ?? null;
+    }
 }

@@ -19,11 +19,15 @@ class PermitRequestService
 
         $locationSnapshot = $this->resolveLocationSnapshot($tenant, $data);
 
+        $branchId = $tenant?->branch_id
+            ?? ($requestedBy instanceof User ? $requestedBy->branch_id : $requestedBy->tenant?->branch_id);
+
         $permit = PermitRequest::create([
             'permit_number' => $data['permit_number'],
             'activity_types' => $data['activity_types'],
             'request_date' => $data['request_date'],
             'tenant_id' => $tenant?->id,
+            'branch_id' => $branchId,
             ...$locationSnapshot,
             'pic_name' => $data['pic_name'] ?? null,
             'pic_phone' => $data['pic_phone'] ?? null,

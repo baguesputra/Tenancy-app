@@ -67,7 +67,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
     Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
     Route::post('/permit-workers/{worker}/toggle', [PermitCheckController::class, 'toggleWorker'])->name('permit-workers.toggle');
+    Route::post('/permit-workers/{worker}/note', [PermitCheckController::class, 'updateWorkerNote'])->name('permit-workers.note');
     Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
+    Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

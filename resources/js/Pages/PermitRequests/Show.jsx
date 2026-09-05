@@ -49,26 +49,23 @@ export default function Show({ permit, currentUserDepartmentId }) {
                                     <span className="text-sm font-medium">{a.label}</span>
                                     <span className={`text-xs ${statusColors[a.status]}`}>{a.status}</span>
                                 </div>
-                                {a.status === 'pending' && Number(a.department_id) === Number(currentUserDepartmentId) && (
+
+                                {/* Tahap Security: tidak ada tombol approve/reject di sini,
+                                    cukup instruksi arahkan ke checklist di bawah */}
+                                {a.step_key === 'security' && a.status === 'pending' && a.department_id === currentUserDepartmentId && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Centang semua pekerja & barang di bawah, lalu klik "Selesaikan Pengecekan".
+                                    </p>
+                                )}
+
+                                {/* Tahap selain Security: approve/reject generik seperti biasa */}
+                                {a.step_key !== 'security' && a.status === 'pending' && a.department_id === currentUserDepartmentId && (
                                     <div className="mt-2 flex gap-2">
                                         <button onClick={() => approve(a.id)} className="text-xs bg-green-600 text-white px-3 py-1 rounded">
                                             Approve
                                         </button>
                                         <button onClick={() => setRejectingId(a.id)} className="text-xs bg-red-600 text-white px-3 py-1 rounded">
                                             Reject
-                                        </button>
-                                    </div>
-                                )}
-                                {rejectingId === a.id && (
-                                    <div className="mt-2">
-                                        <textarea
-                                            value={reason}
-                                            onChange={(e) => setReason(e.target.value)}
-                                            placeholder="Alasan penolakan..."
-                                            className="w-full border rounded px-2 py-1 text-xs"
-                                        />
-                                        <button onClick={() => reject(a.id)} className="text-xs bg-red-600 text-white px-3 py-1 rounded mt-1">
-                                            Kirim Penolakan
                                         </button>
                                     </div>
                                 )}
@@ -114,6 +111,21 @@ export default function Show({ permit, currentUserDepartmentId }) {
                         </div>
                     ))}
                 </div>
+                {permit.is_flagged && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-3 rounded mb-4">
+                            ⚠️ Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
+                        </div>
+                    )}
+
+                    {permit.approvals.find(a => a.step_key === 'security')?.status === 'pending'
+                        && currentUserDepartmentId === permit.approvals.find(a => a.step_key === 'security')?.department_id && (
+                        <button
+                            onClick={() => router.post(`/permit-requests/${permit.id}/complete-security-check`)}
+                            className="w-full bg-blue-600 text-white rounded py-3 font-medium mt-4"
+                        >
+                            Selesaikan Pengecekan
+                        </button>
+                    )}
             </div>
         </AppLayout>
     );

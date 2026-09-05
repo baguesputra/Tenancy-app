@@ -84,6 +84,12 @@ class ApprovalService
             ]);
         }
 
+        if ($approval->approvable->status === 'rejected') {
+            throw ValidationException::withMessages([
+                'approval' => 'Permohonan ini sudah ditolak, tidak ada aksi lanjutan yang bisa dilakukan.',
+            ]);
+        }
+
         $hasPendingEarlierStep = Approval::where('approvable_type', $approval->approvable_type)
             ->where('approvable_id', $approval->approvable_id)
             ->where('order', '<', $approval->order)

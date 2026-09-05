@@ -13,14 +13,18 @@ class PermitRequestController extends Controller
 {
     public function __construct(private PermitRequestService $service) {}
 
-    public function index(Request $request)
+   public function index(Request $request)
     {
-        $permits = PermitRequest::with('tenant')
+        $query = PermitRequest::with('tenant')
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->latest()->paginate(15)->withQueryString();
+            ->latest();
+
+        if (! $request->user()->canViewAllBranches()) {
+            $query->where('branch_id', $request->user()->branch_id);
+        }
 
         return Inertia::render('PermitRequests/Index', [
-            'permits' => $permits,
+            'permits' => $query->paginate(15)->withQueryString(),
             'filters' => $request->only('status'),
         ]);
     }
@@ -49,6 +53,9 @@ class PermitRequestController extends Controller
 
     public function show(PermitRequest $permitRequest, Request $request)
     {
+        $user = $request->user();
+        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+
         $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
         return Inertia::render('PermitRequests/Show', [
