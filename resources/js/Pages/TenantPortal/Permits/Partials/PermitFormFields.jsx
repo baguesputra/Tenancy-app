@@ -101,51 +101,64 @@ export default function PermitFormFields({ data, setData, errors }) {
                 )}
             </FormSection>
 
-            <FormSection title="Daftar Pekerja">
-                {data.workers.map((worker, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                        <TextInput
-                            value={worker.name}
-                            onChange={(e) => updateWorker(idx, e.target.value)}
-                            placeholder={`Nama pekerja ${idx + 1}`}
-                        />
-                        {data.workers.length > 1 && (
-                            <button type="button" onClick={() => removeWorker(idx)} className="text-red-500 text-sm shrink-0 px-2">
-                                Hapus
-                            </button>
-                        )}
+            {/* Daftar Pekerja & Daftar Barang digabung — 2 kolom dalam 1 card, hemat ruang */}
+            <FormSection title="Pekerja & Barang">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                            Daftar Pekerja
+                        </h3>
+                        {data.workers.map((worker, idx) => (
+                            <div key={idx} className="flex gap-2 mb-2">
+                                <TextInput
+                                    value={worker.name}
+                                    onChange={(e) => updateWorker(idx, e.target.value)}
+                                    placeholder={`Nama pekerja ${idx + 1}`}
+                                />
+                                {data.workers.length > 1 && (
+                                    <button type="button" onClick={() => removeWorker(idx)} className="text-red-500 text-sm shrink-0 px-2">
+                                        Hapus
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <Button type="button" variant="secondary" onClick={addWorker} className="text-xs mt-1">
+                            + Tambah Pekerja
+                        </Button>
                     </div>
-                ))}
-                <Button type="button" variant="secondary" onClick={addWorker} className="text-xs mt-1">
-                    + Tambah Pekerja
-                </Button>
-            </FormSection>
 
-            <FormSection title="Daftar Barang / Peralatan">
-                {data.goods.map((good, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row gap-2 mb-2">
-                        <TextInput
-                            value={good.description}
-                            onChange={(e) => updateGood(idx, 'description', e.target.value)}
-                            placeholder="Nama barang"
-                            className="flex-1"
-                        />
-                        <TextInput
-                            value={good.quantity_note}
-                            onChange={(e) => updateGood(idx, 'quantity_note', e.target.value)}
-                            placeholder="Jumlah (misal: 8 koli)"
-                            className="sm:w-40"
-                        />
-                        {data.goods.length > 1 && (
-                            <button type="button" onClick={() => removeGood(idx)} className="text-red-500 text-sm shrink-0">
-                                Hapus
-                            </button>
-                        )}
+                    <div>
+                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                            Daftar Barang / Peralatan
+                        </h3>
+                        {data.goods.map((good, idx) => (
+                            <div key={idx} className="flex flex-col gap-2 mb-2">
+                                <div className="flex gap-2">
+                                    <TextInput
+                                        value={good.description}
+                                        onChange={(e) => updateGood(idx, 'description', e.target.value)}
+                                        placeholder="Nama barang"
+                                        className="flex-[3]"
+                                    />
+                                    <TextInput
+                                        value={good.quantity_note}
+                                        onChange={(e) => updateGood(idx, 'quantity_note', e.target.value)}
+                                        placeholder="Jumlah"
+                                        className="flex-1"
+                                    />
+                                    {data.goods.length > 1 && (
+                                        <button type="button" onClick={() => removeGood(idx)} className="text-red-500 text-sm shrink-0">
+                                            Hapus
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        <Button type="button" variant="secondary" onClick={addGood} className="text-xs mt-1">
+                            + Tambah Barang
+                        </Button>
                     </div>
-                ))}
-                <Button type="button" variant="secondary" onClick={addGood} className="text-xs mt-1">
-                    + Tambah Barang
-                </Button>
+                </div>
             </FormSection>
 
             <FormSection title="Detail Pekerjaan">
