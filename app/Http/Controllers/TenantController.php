@@ -31,6 +31,8 @@ class TenantController extends Controller
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
             'filters' => $request->only(['search', 'tenant_category_id', 'product_category_id']),
+            'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
+            'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);
     }
 
@@ -66,50 +68,36 @@ class TenantController extends Controller
         );
     }
 
-    public function edit(Tenant $tenant, Request $request)
+    public function update($id, Request $request)
     {
-        $this->authorizeAccess($tenant, $request);
-
-        $tenant->load('contacts');
-
-        return Inertia::render('Master/Tenants/Edit', [
-            ...$this->formProps($request),
-            'tenant' => $tenant,
-        ]);
-    }
-
-    public function update(Tenant $tenant, Request $request)
-    {
+        $tenant = Tenant::findOrFail($id);
         $this->authorizeAccess($tenant, $request);
 
         $validated = $this->validateTenant($request);
 
         $tenant->update([
             ...$validated,
-            'branch_id' => $request->user()->canViewAllBranches()
-                ? $validated['branch_id']
-                : $tenant->branch_id,
+            'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $tenant->branch_id,
         ]);
 
         $this->syncContacts($tenant, $request->input('contacts', []));
 
-        return redirect()->route('tenants.index')->with('success', 'Data tenant berhasil diperbarui.');
+        return back()->with('success', 'Data tenant berhasil diperbarui.');
     }
 
-    public function destroy(Tenant $tenant, Request $request)
+    public function destroy($id, Request $request)
     {
+        $tenant = Tenant::findOrFail($id);
         $this->authorizeAccess($tenant, $request);
 
         if ($tenant->tenancies()->exists() || $tenant->inspections()->exists()) {
-            return back()->withErrors([
-                'tenant' => 'Tenant tidak bisa dihapus karena masih punya riwayat kontrak/sidak. Nonaktifkan saja tenant ini.',
-            ]);
+            return back()->withErrors(['tenant' => 'Tenant tidak bisa dihapus karena masih punya riwayat kontrak/sidak. Nonaktifkan saja tenant ini.']);
         }
 
         $tenant->contacts()->delete();
         $tenant->delete();
 
-        return redirect()->route('tenants.index')->with('success', 'Tenant berhasil dihapus.');
+        return back()->with('success', 'Tenant berhasil dihapus.');
     }
 
     private function validateTenant(Request $request): array

@@ -14,16 +14,24 @@ class TenancyController extends Controller
     {
         $query = Tenancy::with(['unit.branch', 'tenant'])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->search, fn ($q) => $q->whereHas('tenant', fn ($qq) =>
-                $qq->where('name', 'like', "%{$request->search}%")
-            ))
+            ->when($request->search, fn ($q) => $q->whereHas('tenant', fn ($qq) => $qq->where('name', 'like', "%{$request->search}%")))
             ->latest('start_date');
 
         $this->applyBranchScope($query, $request->user());
 
+        $unitQuery = Unit::query()->where('is_active', true);
+        $this->applyBranchScopeToUnits($unitQuery, $request->user());
+
+        $tenantQuery = Tenant::query()->where('is_active', true);
+        if (! $request->user()->canViewAllBranches()) {
+            $tenantQuery->where('branch_id', $request->user()->branch_id);
+        }
+
         return Inertia::render('Master/Tenancies/Index', [
             'tenancies' => $query->paginate(15)->withQueryString(),
             'filters' => $request->only(['search', 'status']),
+            'units' => $unitQuery->orderBy('unit_code')->get(['id', 'unit_code', 'branch_id']),
+            'tenants' => $tenantQuery->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -52,18 +60,9 @@ class TenancyController extends Controller
         return redirect()->route('tenancies.index')->with('success', 'Tenancy berhasil ditambahkan.');
     }
 
-    public function edit(Tenancy $tenancy, Request $request)
+    public function update($id, Request $request)
     {
-        $this->authorizeUnitAccess($tenancy->unit, $request);
-
-        return Inertia::render('Master/Tenancies/Edit', [
-            ...$this->formProps($request),
-            'tenancy' => $tenancy,
-        ]);
-    }
-
-    public function update(Tenancy $tenancy, Request $request)
-    {
+        $tenancy = Tenancy::findOrFail($id);
         $this->authorizeUnitAccess($tenancy->unit, $request);
 
         $validated = $this->validateTenancy($request);
@@ -72,8 +71,7 @@ class TenancyController extends Controller
             if ($tenancy->contract_document_path) {
                 \Storage::disk('public')->delete($tenancy->contract_document_path);
             }
-            $validated['contract_document_path'] = $request->file('contract_document')
-                ->store('tenancy-contracts', 'public');
+            $validated['contract_document_path'] = $request->file('contract_document')->store('tenancy-contracts', 'public');
         } else {
             unset($validated['contract_document_path']);
         }
@@ -84,22 +82,21 @@ class TenancyController extends Controller
             $this->endOtherActiveTenancies($tenancy->unit_id, $tenancy->id);
         }
 
-        return redirect()->route('tenancies.index')->with('success', 'Data tenancy berhasil diperbarui.');
+        return back()->with('success', 'Data tenancy berhasil diperbarui.');
     }
 
-    public function destroy(Tenancy $tenancy, Request $request)
+    public function destroy($id, Request $request)
     {
+        $tenancy = Tenancy::findOrFail($id);
         $this->authorizeUnitAccess($tenancy->unit, $request);
 
         if ($tenancy->status !== 'draft') {
-            return back()->withErrors([
-                'tenancy' => 'Tenancy yang sudah aktif/berakhir tidak bisa dihapus, hanya boleh diubah statusnya jadi "terminated" untuk menjaga riwayat.',
-            ]);
+            return back()->withErrors(['tenancy' => 'Tenancy yang sudah aktif/berakhir tidak bisa dihapus, hanya boleh diubah statusnya jadi "terminated".']);
         }
 
         $tenancy->delete();
 
-        return redirect()->route('tenancies.index')->with('success', 'Tenancy berhasil dihapus.');
+        return back()->with('success', 'Tenancy berhasil dihapus.');
     }
 
     /**

@@ -57,11 +57,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
     Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
 
-    Route::resource('tenants', TenantController::class)->except(['show']);
-    Route::resource('units', UnitController::class)->except(['show']);
-    Route::resource('tenant-categories', TenantCategoryController::class)->except(['show']);
-    Route::resource('product-categories', ProductCategoryController::class)->except(['show']);
-    Route::resource('tenancies', TenancyController::class)->except(['show']);
+    Route::resource('tenants', TenantController::class)->except(['create', 'edit', 'show']);
+    Route::resource('units', UnitController::class)->except(['create', 'edit', 'show']);
+    Route::resource('tenant-categories', TenantCategoryController::class)->except(['create', 'edit', 'show']);
+    Route::resource('product-categories', ProductCategoryController::class)->except(['create', 'edit', 'show']);
+    Route::resource('tenancies', TenancyController::class)->except(['create', 'edit', 'show']);
 
     Route::resource('permit-requests', PermitRequestController::class)->except(['edit', 'update', 'destroy']);
     Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');

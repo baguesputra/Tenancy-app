@@ -28,7 +28,8 @@ const masterMenuItems = [
     { label: 'Tenant', href: '/tenants' },
     { label: 'Unit', href: '/units' },
     { label: 'Kontrak / Tenancy', href: '/tenancies' },
-    { label: 'Kategori', href: '/tenant-categories' },
+    { label: 'Kategori Tenant', href: '/tenant-categories' },
+    { label: 'Kategori Product', href: '/product-categories' },
 ];
 
 export default function AppLayout({ children }) {

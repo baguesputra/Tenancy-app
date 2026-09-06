@@ -26,8 +26,6 @@ class UnitController extends Controller
         $this->branchScope->apply($query, $request->user());
 
         $units = $query->paginate(15)->withQueryString();
-
-        // Tambahkan status occupied/vacant terhitung otomatis
         $units->getCollection()->transform(function (Unit $unit) {
             $unit->is_occupied = $unit->activeTenancy !== null;
             return $unit;
@@ -36,6 +34,8 @@ class UnitController extends Controller
         return Inertia::render('Master/Units/Index', [
             'units' => $units,
             'filters' => $request->only(['search']),
+            'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
+            'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);
     }
 
@@ -50,53 +50,39 @@ class UnitController extends Controller
 
         Unit::create([
             ...$validated,
-            'branch_id' => $request->user()->canViewAllBranches()
-                ? $validated['branch_id']
-                : $request->user()->branch_id,
+            'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $request->user()->branch_id,
         ]);
 
-        return redirect()->route('units.index')->with('success', 'Unit berhasil ditambahkan.');
+        return back()->with('success', 'Unit berhasil ditambahkan.');
     }
 
-    public function edit(Unit $unit, Request $request)
+    public function update($id, Request $request)
     {
-        $this->authorizeAccess($unit, $request);
-
-        return Inertia::render('Master/Units/Edit', [
-            ...$this->formProps($request),
-            'unit' => $unit,
-        ]);
-    }
-
-    public function update(Unit $unit, Request $request)
-    {
+        $unit = Unit::findOrFail($id);
         $this->authorizeAccess($unit, $request);
 
         $validated = $this->validateUnit($request, $unit->id);
 
         $unit->update([
             ...$validated,
-            'branch_id' => $request->user()->canViewAllBranches()
-                ? $validated['branch_id']
-                : $unit->branch_id,
+            'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $unit->branch_id,
         ]);
 
-        return redirect()->route('units.index')->with('success', 'Data unit berhasil diperbarui.');
+        return back()->with('success', 'Data unit berhasil diperbarui.');
     }
 
-    public function destroy(Unit $unit, Request $request)
+    public function destroy($id, Request $request)
     {
+        $unit = Unit::findOrFail($id);
         $this->authorizeAccess($unit, $request);
 
         if ($unit->tenancies()->exists()) {
-            return back()->withErrors([
-                'unit' => 'Unit tidak bisa dihapus karena masih punya riwayat tenancy. Nonaktifkan saja unit ini.',
-            ]);
+            return back()->withErrors(['unit' => 'Unit tidak bisa dihapus karena masih punya riwayat tenancy.']);
         }
 
         $unit->delete();
 
-        return redirect()->route('units.index')->with('success', 'Unit berhasil dihapus.');
+        return back()->with('success', 'Unit berhasil dihapus.');
     }
 
     private function validateUnit(Request $request, ?int $ignoreId = null): array
