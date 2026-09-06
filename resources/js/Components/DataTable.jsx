@@ -1,4 +1,4 @@
-export default function DataTable({ columns, children }) {
+export default function DataTable({ columns, footer, children }) {
     return (
         <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
             <div className="overflow-x-auto">
@@ -20,6 +20,12 @@ export default function DataTable({ columns, children }) {
                     </tbody>
                 </table>
             </div>
+
+            {footer && (
+                <div className="border-t border-[#E2E5EA]">
+                    {footer}
+                </div>
+            )}
         </div>
     );
 }

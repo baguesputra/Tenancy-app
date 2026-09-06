@@ -11,6 +11,7 @@ import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
+import Pagination from '@/Components/Pagination';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
 const emptyContact = { name: '', position: '', phone: '', email: '', type: '' };
@@ -121,7 +122,7 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
                     </SelectInput>
                 </div>
 
-                <DataTable columns={columns}>
+                <DataTable columns={columns} footer={<Pagination meta={tenants} links={tenants.links} />}>
                     {tenants.data.map((tenant) => (
                         <tr key={tenant.id} onClick={() => openEdit(tenant)} className="group cursor-pointer hover:bg-gray-50/80 transition-colors">
                             <td className="px-5 py-3.5 font-medium text-gray-900">{tenant.name}</td>
