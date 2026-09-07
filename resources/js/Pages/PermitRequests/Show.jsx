@@ -1,6 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
+import { ACTIVITY_TYPES } from '@/Constants/permitActivityTypes';
 import FormSection from '@/Components/Form/FormSection';
 import Textarea from '@/Components/Form/Textarea';
 import FileInput from '@/Components/Form/FileInput';
@@ -41,6 +42,12 @@ export default function Show({ permit }) {
     const canCompleteSecurityCheck = securityStep?.status === 'pending'
         && securityStep?.department_id === permit.currentUserDepartmentId;
 
+    const activityLabels = permit.activity_types
+        .map((val) => ACTIVITY_TYPES.find((t) => t.value === val)?.label ?? val);
+
+    const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
+        .filter(Boolean).join(' / ') || '—';
+
     return (
         <AppLayout>
             <div className="px-6 sm:px-8 py-6 flex-1">
@@ -56,8 +63,58 @@ export default function Show({ permit }) {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-                    {/* Kolom kiri — pemeriksaan fisik, gabungan pekerja+barang 2 kolom */}
+                    {/* Kolom kiri */}
                     <div>
+                        {/* Detail Permohonan — info lengkap untuk bahan approval */}
+                        <FormSection title="Detail Permohonan">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
+                                <InfoItem label="Lokasi" value={`${permit.store_name_snapshot} — ${location}`} />
+                                <InfoItem label="Penanggung Jawab" value={`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`} />
+                                <InfoItem
+                                    label="Jenis Kegiatan"
+                                    value={
+                                        <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                            {activityLabels.map((label) => (
+                                                <Badge key={label} color="blue">{label}</Badge>
+                                            ))}
+                                        </div>
+                                    }
+                                />
+                                <InfoItem label="Tanggal Pelaksanaan" value={`${permit.work_start_date} s/d ${permit.work_end_date}`} />
+                                <InfoItem label="Jam Pelaksanaan" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
+                                <InfoItem label="Akses Masuk/Keluar" value={permit.access_route || '—'} className="sm:col-span-2" />
+                                {permit.notes && (
+                                    <InfoItem label="Keterangan" value={permit.notes} className="sm:col-span-2" />
+                                )}
+                            </div>
+
+                            {permit.is_external && (
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                                        Kontraktor Eksternal
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                                        <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
+                                        <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
+                                        <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
+                                        <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
+                                    </div>
+                                    {permit.accompanying_departments?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {permit.accompanying_departments.map((d) => (
+                                                    <Badge key={d.id} color="gray">{d.name}</Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </FormSection>
+
+                        {/* Pemeriksaan Fisik — pekerja & barang, 2 kolom */}
                         <FormSection title="Pemeriksaan Fisik">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
@@ -111,7 +168,7 @@ export default function Show({ permit }) {
                         </FormSection>
                     </div>
 
-                    {/* Kolom kanan — sticky, tepat di bawah topbar */}
+                    {/* Kolom kanan — sticky */}
                     <div className="lg:sticky lg:top-[72px] space-y-4">
                         <FormSection title="Progress Approval">
                             <ul className="space-y-3">
@@ -167,5 +224,14 @@ export default function Show({ permit }) {
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+function InfoItem({ label, value, className = '' }) {
+    return (
+        <div className={className}>
+            <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+            <div className="text-sm text-gray-800">{value}</div>
+        </div>
     );
 }

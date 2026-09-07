@@ -56,6 +56,11 @@ class PermitRequestController extends Controller
         $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
 
+        $requestedBy = $permitRequest->requestedBy;
+        $permitRequest->requested_by_label = $requestedBy instanceof \App\Models\User
+            ? $requestedBy->name
+            : ($permitRequest->tenant->name ?? $requestedBy?->username ?? '—');
+
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
         ]);
