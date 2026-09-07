@@ -50,3 +50,5 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 
 # Develop Checklist - Tenancy App
 **Tanggal:** Selasa 8 September 2026
+- Perbaikan pengambilan data ke database
+- 

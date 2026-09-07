@@ -1,6 +1,7 @@
 import PortalLayout from '@/Layouts/PortalLayout';
 import PermitFormFields from './Partials/PermitFormFields';
 import { useForm } from '@inertiajs/react';
+import Button from '@/Components/Form/Button';
 
 export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
@@ -32,13 +33,15 @@ export default function Create() {
 
     return (
         <PortalLayout>
-            <div className="p-6 max-w-2xl">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Ajukan Surat Izin</h1>
+            <div className="px-6 sm:px-8 py-6 flex-1 max-w-3xl">
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">Ajukan Surat Izin</h1>
+                <p className="text-sm text-gray-500 mb-6">Isi form di bawah untuk mengajukan izin baru</p>
+
                 <form onSubmit={submit}>
                     <PermitFormFields data={data} setData={setData} errors={errors} />
-                    <button type="submit" disabled={processing} className="bg-blue-600 text-white px-6 py-2 rounded font-medium">
-                        Ajukan
-                    </button>
+                    <Button type="submit" disabled={processing}>
+                        {processing ? 'Mengirim...' : 'Ajukan'}
+                    </Button>
                 </form>
             </div>
         </PortalLayout>

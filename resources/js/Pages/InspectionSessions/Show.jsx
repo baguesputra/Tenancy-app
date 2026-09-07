@@ -1,21 +1,25 @@
-import { useForm, Link, router } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
+import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import FormSection from '@/Components/Form/FormSection';
+import TextInput from '@/Components/Form/TextInput';
+import Button from '@/Components/Form/Button';
+import Badge from '@/Components/Badge';
 
 export default function Show({ session, availableTenants }) {
     const [search, setSearch] = useState('');
-    const [processing, setProcessing] = useState(false);
+    const [adding, setAdding] = useState(false);
 
     const filteredTenants = availableTenants.filter((t) =>
         t.name.toLowerCase().includes(search.toLowerCase())
     );
 
     const submitAddTenant = (tenantId) => {
-        setProcessing(true);
-        router.post(`/inspection-sessions/${session.id}/tenants`,
+        setAdding(true);
+        router.post(
+            `/inspection-sessions/${session.id}/tenants`,
             { tenant_id: tenantId },
-            {
-                onFinish: () => setProcessing(false),
-            }
+            { onFinish: () => setAdding(false) }
         );
     };
 
@@ -26,91 +30,76 @@ export default function Show({ session, availableTenants }) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-2xl mx-auto">
-                <h1 className="text-2xl font-bold text-gray-800 mb-1">Sesi Sidak</h1>
+        <AppLayout>
+            <div className="px-6 sm:px-8 py-6 flex-1 max-w-4xl">
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">Sesi Sidak</h1>
                 <p className="text-sm text-gray-500 mb-6">
                     Dimulai: {new Date(session.started_at).toLocaleString('id-ID')}
                 </p>
 
-                {/* Tenant yang sudah ditambahkan */}
-                <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                    <h2 className="font-semibold text-gray-700 mb-3">
-                        Tenant dalam sesi ini ({session.inspections.length})
-                    </h2>
-                    {session.inspections.length === 0 && (
-                        <p className="text-sm text-gray-400">Belum ada tenant ditambahkan.</p>
-                    )}
-                    <ul className="space-y-2">
-                        {session.inspections.map((inspection) => (
-                            <li key={inspection.id}>
+                <FormSection title={`Tenant dalam Sesi Ini (${session.inspections.length})`}>
+                    {session.inspections.length === 0 ? (
+                        <p className="text-sm text-gray-400 py-4 text-center">Belum ada tenant ditambahkan.</p>
+                    ) : (
+                        <div className="divide-y divide-gray-100 -mx-5">
+                            {session.inspections.map((inspection) => (
                                 <Link
+                                    key={inspection.id}
                                     href={`/inspections/${inspection.id}`}
-                                    className="flex justify-between items-center p-3 border rounded hover:bg-gray-50"
+                                    className="flex justify-between items-center px-5 py-3 hover:bg-gray-50/80 transition-colors"
                                 >
                                     <div>
-                                        <span className="font-medium">{inspection.tenant.name}</span>
+                                        <span className="text-sm font-medium text-gray-900">{inspection.tenant.name}</span>
                                         <span className="text-xs text-gray-400 ml-2">
-                                            ({inspection.tenant.product_category?.name})
+                                            {inspection.tenant.product_category?.name}
                                         </span>
                                     </div>
-                                    <span
-                                        className={`text-xs px-2 py-1 rounded ${
-                                            inspection.status === 'completed'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                        }`}
-                                    >
-                                        {inspection.status === 'completed' ? 'Selesai' : 'Draft'}
-                                        {inspection.is_flagged && ' ⚠️'}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {inspection.is_flagged && <span title="Ada catatan">⚠️</span>}
+                                        <Badge color={inspection.status === 'completed' ? 'green' : 'yellow'}>
+                                            {inspection.status === 'completed' ? 'Selesai' : 'Draft'}
+                                        </Badge>
+                                    </div>
                                 </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                            ))}
+                        </div>
+                    )}
+                </FormSection>
 
-                {/* Tambah tenant baru */}
-                <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                    <h2 className="font-semibold text-gray-700 mb-3">Tambah Tenant</h2>
-                    <input
-                        type="text"
+                <FormSection title="Tambah Tenant">
+                    <TextInput
                         placeholder="Cari nama tenant..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full border rounded px-3 py-2 mb-3"
+                        className="mb-3"
                     />
-                    <ul className="space-y-1 max-h-64 overflow-y-auto">
+                    <div className="max-h-72 overflow-y-auto -mx-5 divide-y divide-gray-100">
                         {filteredTenants.map((tenant) => (
-                            <li key={tenant.id}>
-                                <button
-                                    disabled={processing}
-                                    onClick={() => submitAddTenant(tenant.id)}
-                                    className="w-full text-left p-2 rounded hover:bg-blue-50 flex justify-between"
-                                >
-                                    <span>
-                                        {tenant.name}
-                                        {tenant.tenant_category === 'Anchor' && (
-                                            <span className="text-xs text-amber-600 ml-1">★ Anchor</span>
-                                        )}
-                                    </span>
-                                    <span className="text-xs text-gray-400">{tenant.unit_code}</span>
-                                </button>
-                            </li>
+                            <button
+                                key={tenant.id}
+                                disabled={adding}
+                                onClick={() => submitAddTenant(tenant.id)}
+                                className="w-full text-left px-5 py-2.5 hover:bg-blue-50/60 transition-colors flex justify-between items-center disabled:opacity-50"
+                            >
+                                <span className="text-sm text-gray-800">
+                                    {tenant.name}
+                                    {tenant.tenant_category === 'Anchor' && (
+                                        <span className="text-xs text-amber-600 ml-1.5">★ Anchor</span>
+                                    )}
+                                </span>
+                                <span className="text-xs text-gray-400">{tenant.unit_code}</span>
+                            </button>
                         ))}
                         {filteredTenants.length === 0 && (
-                            <p className="text-sm text-gray-400">Tidak ada tenant ditemukan.</p>
+                            <p className="px-5 py-6 text-sm text-gray-400 text-center">Tidak ada tenant ditemukan.</p>
                         )}
-                    </ul>
-                </div>
+                    </div>
+                </FormSection>
 
-                <button
-                    onClick={completeSession}
-                    className="w-full bg-green-600 text-white rounded py-3 font-medium"
-                >
+                <Button variant="success" onClick={completeSession} className="w-full justify-center !py-3">
                     Selesaikan Sesi
-                </button>
+                </Button>
             </div>
-        </div>
+        </AppLayout>
     );
 }

@@ -1,5 +1,9 @@
-import { router, usePage } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
+import { router } from '@inertiajs/react';
 import { useState } from 'react';
+import FormSection from '@/Components/Form/FormSection';
+import Button from '@/Components/Form/Button';
+import Badge from '@/Components/Badge';
 
 export default function Show({ inspection, checklistSnapshot }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
@@ -19,7 +23,6 @@ export default function Show({ inspection, checklistSnapshot }) {
 
     const saveAnswer = (sectionIdx, itemIdx, item, { value, note, photo }) => {
         setSavingItemId(item.id);
-
         const formData = new FormData();
         formData.append('checklist_item_id', item.id);
         if (value !== undefined) formData.append('value', value);
@@ -60,39 +63,33 @@ export default function Show({ inspection, checklistSnapshot }) {
     };
 
     const needsPhotoButMissing = (item) => {
-        return (
-            item.type === 'binary_choice' &&
-            item.photo_required_on_negative &&
-            item.answer?.value === item.option_negative &&
-            (!item.answer?.photos || item.answer.photos.length === 0)
-        );
+        return item.type === 'binary_choice'
+            && item.photo_required_on_negative
+            && item.answer?.value === item.option_negative
+            && (!item.answer?.photos || item.answer.photos.length === 0);
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-2xl mx-auto pb-24">
-                <h1 className="text-2xl font-bold text-gray-800">{inspection.tenant.name}</h1>
+        <AppLayout>
+            <div className="px-6 sm:px-8 py-6 flex-1 max-w-3xl pb-28">
+                <h1 className="text-xl font-semibold text-gray-900">{inspection.tenant.name}</h1>
                 <p className="text-sm text-gray-500 mb-6">
-                    {inspection.tenant.business_type} — {snapshot.template_name}
+                    {inspection.tenant.business_type ?? inspection.tenant.product_category?.name} — {snapshot.template_name}
                 </p>
 
                 {isLocked && (
-                    <div className="bg-gray-200 text-gray-700 text-sm p-3 rounded mb-4">
+                    <div className="bg-gray-100 text-gray-600 text-sm p-3.5 rounded-lg mb-4">
                         Sesi ini sudah selesai, checklist tidak bisa diubah lagi.
                     </div>
                 )}
 
                 {snapshot.sections.map((section, sectionIdx) => (
-                    <div key={section.id} className="bg-white rounded-lg shadow-sm p-4 mb-4">
-                        <h2 className="font-semibold text-gray-700 mb-3">{section.name}</h2>
-
-                        <div className="space-y-4">
+                    <FormSection key={section.id} title={section.name}>
+                        <div className="space-y-5">
                             {section.items.map((item, itemIdx) => (
-                                <div key={item.id} className="border-b pb-3 last:border-0">
+                                <div key={item.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm font-medium text-gray-700">
-                                            {item.label}
-                                        </span>
+                                        <span className="text-sm font-medium text-gray-700">{item.label}</span>
                                         {savingItemId === item.id && (
                                             <span className="text-xs text-gray-400">Menyimpan...</span>
                                         )}
@@ -103,10 +100,10 @@ export default function Show({ inspection, checklistSnapshot }) {
                                             <button
                                                 disabled={isLocked}
                                                 onClick={() => handleChoice(sectionIdx, itemIdx, item, item.option_positive)}
-                                                className={`flex-1 py-2 rounded text-sm font-medium ${
+                                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                                                     item.answer?.value === item.option_positive
-                                                        ? 'bg-green-600 text-white'
-                                                        : 'bg-gray-100 text-gray-600'
+                                                        ? 'bg-[#1FA24C] text-white'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                             >
                                                 {item.option_positive}
@@ -114,10 +111,10 @@ export default function Show({ inspection, checklistSnapshot }) {
                                             <button
                                                 disabled={isLocked}
                                                 onClick={() => handleChoice(sectionIdx, itemIdx, item, item.option_negative)}
-                                                className={`flex-1 py-2 rounded text-sm font-medium ${
+                                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                                                     item.answer?.value === item.option_negative
                                                         ? 'bg-red-600 text-white'
-                                                        : 'bg-gray-100 text-gray-600'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                             >
                                                 {item.option_negative}
@@ -127,45 +124,32 @@ export default function Show({ inspection, checklistSnapshot }) {
                                         <textarea
                                             disabled={isLocked}
                                             defaultValue={item.answer?.value ?? ''}
-                                            onBlur={(e) =>
-                                                saveAnswer(sectionIdx, itemIdx, item, { value: e.target.value })
-                                            }
-                                            className="w-full border rounded px-3 py-2 text-sm mb-2"
+                                            onBlur={(e) => saveAnswer(sectionIdx, itemIdx, item, { value: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-gray-100"
                                             placeholder="Catatan bebas..."
                                             rows={2}
                                         />
                                     )}
 
                                     {needsPhotoButMissing(item) && (
-                                        <p className="text-xs text-red-600 mb-2">
-                                            ⚠️ Foto wajib dilampirkan untuk jawaban ini
-                                        </p>
+                                        <p className="text-xs text-red-600 mb-2">⚠ Foto wajib dilampirkan untuk jawaban ini</p>
                                     )}
 
                                     {item.type === 'binary_choice' && (
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <input
-                                                disabled={isLocked}
-                                                type="file"
-                                                accept="image/*"
-                                                capture="environment"
-                                                onChange={(e) =>
-                                                    e.target.files[0] &&
-                                                    handlePhotoUpload(sectionIdx, itemIdx, item, e.target.files[0])
-                                                }
-                                                className="text-xs"
-                                            />
-                                        </div>
+                                        <input
+                                            disabled={isLocked}
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={(e) => e.target.files[0] && handlePhotoUpload(sectionIdx, itemIdx, item, e.target.files[0])}
+                                            className="text-xs mb-2"
+                                        />
                                     )}
 
                                     {item.answer?.photos?.length > 0 && (
-                                        <div className="flex gap-2 flex-wrap">
+                                        <div className="flex gap-2 flex-wrap mb-2">
                                             {item.answer.photos.map((photo) => (
-                                                <img
-                                                    key={photo.id}
-                                                    src={photo.url}
-                                                    className="w-16 h-16 object-cover rounded border"
-                                                />
+                                                <img key={photo.id} src={photo.url} className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
                                             ))}
                                         </div>
                                     )}
@@ -173,28 +157,25 @@ export default function Show({ inspection, checklistSnapshot }) {
                                     <textarea
                                         disabled={isLocked}
                                         defaultValue={item.answer?.note ?? ''}
-                                        onBlur={(e) =>
-                                            handleNoteBlur(sectionIdx, itemIdx, item, e.target.value)
-                                        }
-                                        className="w-full border rounded px-3 py-1 text-xs mt-2 text-gray-500"
+                                        onBlur={(e) => handleNoteBlur(sectionIdx, itemIdx, item, e.target.value)}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-100"
                                         placeholder="Keterangan tambahan (opsional)..."
                                         rows={1}
                                     />
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </FormSection>
                 ))}
 
                 {!isLocked && (
-                    <button
-                        onClick={completeInspection}
-                        className="fixed bottom-4 left-4 right-4 max-w-2xl mx-auto bg-blue-600 text-white rounded py-3 font-medium shadow-lg"
-                    >
-                        Selesai — Simpan Checklist Ini
-                    </button>
+                    <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white border-t border-[#E2E5EA] p-4 z-10">
+                        <Button variant="primary" onClick={completeInspection} className="w-full max-w-3xl mx-auto justify-center block !py-3">
+                            Selesai — Simpan Checklist Ini
+                        </Button>
+                    </div>
                 )}
             </div>
-        </div>
+        </AppLayout>
     );
 }

@@ -112,7 +112,9 @@ class TenantController extends Controller
             'company_address' => 'nullable|string',
             'tenant_category_id' => 'required|exists:tenant_categories,id',
             'product_category_id' => 'required|exists:product_categories,id',
-            'branch_id' => 'required_if:canPickBranch,true|exists:branches,id',
+            'branch_id' => $request->user()->canViewAllBranches()
+                ? 'required|exists:branches,id'
+                : 'nullable',
             'is_active' => 'boolean',
         ]);
     }
