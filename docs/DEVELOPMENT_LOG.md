@@ -40,7 +40,13 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 
 # Develop Checklist - Tenancy App
 **Tanggal:** Senin 7 September 2026
-- Melakukan overhaul UI/UX dengan penerapan komponen form reusable dan standardisasi tampilan halaman aplikasi.
+- Melakukan overhaul UI/UX dengan penerapan komponen form reusable dan standardisasi tampilan halaman aplikasi tenant.
 - Migrasi form dan halaman index/show ke komponen UI baru serta implementasi Dashboard.
 - Optimasi validasi form dengan penggunaan StorePermitRequestRequest sebagai shared request validation.
-- testing fitur form surat ijin hingga approve security
+- testing fitur form surat ijin hingga checklist security
+- Pembuatan barcode bukti pinjaman pdf dan verifikasi valid pinjaman pada aplikasi koperasi
+- Pendataan Spek Laptop dan Komputer BM
+- Meeting IT pembahasan HRIS
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Selasa 8 September 2026
