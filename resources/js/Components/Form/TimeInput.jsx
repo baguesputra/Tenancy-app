@@ -1,6 +1,6 @@
-// DateInput.jsx
+// TimeInput.jsx
 import TextInput from './TextInput';
 
-export default function DateInput(props) {
-    return <TextInput type="date" {...props} />;
+export default function TimeInput(props) {
+    return <TextInput type="time" {...props} />;
 }
