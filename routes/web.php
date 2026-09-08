@@ -17,6 +17,8 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\PermitCheckController;
 use App\Http\Controllers\PermitRequestController;
 use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
+use App\Http\Controllers\DashboardController;
+
 
 Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('guest:tenant')->group(function () {
@@ -42,6 +44,8 @@ Route::get('/auth/sso/redirect', [SsoController::class, 'redirect'])->name('sso.
 Route::get('/auth/sso/callback', [SsoController::class, 'callback']);
 
 Route::middleware('auth')->group(function () {
+    
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [LocalLoginController::class, 'destroy'])->name('logout');
 
     Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
@@ -71,9 +75,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
     Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
 });
 
 
