@@ -16,6 +16,7 @@ class PermitCheckController extends Controller
     public function __construct(
         private ApprovalService $approvalService,
         private PermitRequestService $permitService,
+        private NotificationService $notificationService,
     ) {}
 
     public function toggleWorker(PermitWorker $worker, Request $request)
@@ -94,6 +95,36 @@ class PermitCheckController extends Controller
         }
 
         $this->permitService->syncStatus($permitRequest);
+
+        $requester = $permitRequest->requestedBy;
+        if ($requester) {
+            $url = $requester instanceof \App\Models\TenantUser
+                ? "/portal/permits/{$permitRequest->id}"
+                : "/permit-requests/{$permitRequest->id}";
+
+            $this->notificationService->notify(
+                $requester,
+                'Surat Izin Selesai',
+                "{$permitRequest->permit_number} — {$permitRequest->store_name_snapshot} telah selesai diproses.",
+                $url,
+                'check'
+            );
+        }
+
+        $tenancyDept = \App\Models\Department::where('name', 'Tenancy')->first();
+        $bsDept = \App\Models\Department::where('name', 'Building Service')->first();
+
+        foreach ([$tenancyDept, $bsDept] as $dept) {
+            if ($dept) {
+                $this->notificationService->notifyDepartment(
+                    $dept->id,
+                    'Surat Izin Selesai',
+                    "{$permitRequest->permit_number} telah selesai diproses Security.",
+                    "/permit-requests/{$permitRequest->id}",
+                    'check'
+                );
+            }
+        }
 
         return redirect()->route('permit-requests.show', $permitRequest->id)
             ->with('success', 'Pemeriksaan fisik selesai.' . ($hasMismatch ? ' Ada catatan ketidaksesuaian yang ditandai.' : ''));

@@ -19,6 +19,15 @@ use App\Http\Controllers\PermitRequestController;
 use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
 use App\Http\Controllers\DashboardController;
 
+Route::middleware('auth')->post('/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
+    $request->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
+    return back();
+})->name('notifications.read');
+
+Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
+    $request->user('tenant')->notifications()->where('id', $id)->update(['read_at' => now()]);
+    return back();
+})->name('tenant-portal.notifications.read');
 
 Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('guest:tenant')->group(function () {

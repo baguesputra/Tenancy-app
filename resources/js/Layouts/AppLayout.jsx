@@ -152,6 +152,11 @@ function Topbar({ user, onMenuClick, onLogout }) {
     const [notifOpen, setNotifOpen] = useState(false);
     const profileRef = useRef(null);
     const notifRef = useRef(null);
+    const { notifications, unreadNotificationsCount } = usePage().props;
+
+    const markAsRead = (id, url) => {
+        router.post(`/notifications/${id}/read`, {}, { onFinish: () => router.visit(url) });
+    };
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -174,15 +179,38 @@ function Topbar({ user, onMenuClick, onLogout }) {
 
             <div className="flex items-center gap-1.5 sm:gap-3">
                 <div className="relative" ref={notifRef}>
-                    <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors" aria-label="Notifikasi">
+                    <button
+                        onClick={() => setNotifOpen(!notifOpen)}
+                        className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"
+                        aria-label="Notifikasi"
+                    >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
+                        {unreadNotificationsCount > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                            </span>
+                        )}
                     </button>
                     {notifOpen && (
-                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-[#E2E5EA] shadow-lg py-2 z-30">
+                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-[#E2E5EA] shadow-lg py-2 z-30 max-h-96 overflow-y-auto">
                             <p className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide">Notifikasi</p>
-                            <p className="px-4 py-6 text-sm text-gray-400 text-center">Belum ada notifikasi.</p>
+                            {notifications.length === 0 ? (
+                                <p className="px-4 py-6 text-sm text-gray-400 text-center">Belum ada notifikasi.</p>
+                            ) : (
+                                notifications.map((n) => (
+                                    <button
+                                        key={n.id}
+                                        onClick={() => markAsRead(n.id, n.url)}
+                                        className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                                    >
+                                        <p className="text-sm font-medium text-gray-800">{n.title}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                                        <p className="text-xs text-gray-400 mt-1">{n.created_at}</p>
+                                    </button>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>

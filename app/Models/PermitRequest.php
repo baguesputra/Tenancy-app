@@ -4,11 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Notifications\Notifiable;
 
 class PermitRequest extends Model
 {
-    use HasUuids, Notifiable;
+    use HasUuids;
 
     public $incrementing = false;
     protected $keyType = 'string';

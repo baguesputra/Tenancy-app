@@ -11,7 +11,10 @@ use Illuminate\Support\Str;
 
 class PermitRequestService
 {
-    public function __construct(private ApprovalService $approvalService) {}
+    public function __construct(
+        private ApprovalService $approvalService,
+        private NotificationService $notificationService,
+    ) {}
 
     public function create(array $data, User|TenantUser $requestedBy): PermitRequest
     {
@@ -67,6 +70,17 @@ class PermitRequestService
         }
 
         $this->setupApprovalSteps($permit);
+
+        $firstStep = $permit->approvals()->orderBy('order')->first();
+        if ($firstStep && $firstStep->department_id) {
+            $this->notificationService->notifyDepartment(
+                $firstStep->department_id,
+                'Surat Izin Menunggu Persetujuan',
+                "{$permit->permit_number} — {$permit->store_name_snapshot} menunggu: {$firstStep->label}",
+                "/permit-requests/{$permit->id}",
+                'document'
+            );
+        }
 
         return $permit;
     }
