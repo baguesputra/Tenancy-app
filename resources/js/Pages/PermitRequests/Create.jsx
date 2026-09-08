@@ -82,22 +82,8 @@ export default function Create({ tenants, departments }) {
                                 )}
                             </FormSection>
 
-                            <PermitFormFields data={data} setData={setData} errors={errors} />
+                            <PermitFormFields data={data} setData={setData} errors={errors} departments={departments} />
 
-                            {data.is_external && (
-                                <FormSection title="Departemen Pendampingan">
-                                    <div className="flex flex-wrap gap-3">
-                                        {departments.map((d) => (
-                                            <Checkbox
-                                                key={d.id}
-                                                label={d.name}
-                                                checked={data.accompanying_department_ids.includes(d.id)}
-                                                onChange={() => toggleDept(d.id)}
-                                            />
-                                        ))}
-                                    </div>
-                                </FormSection>
-                            )}
                         </div>
 
                         {/* Kolom kanan — sticky, tepat di bawah topbar (72px = 56px topbar + 16px jarak) */}

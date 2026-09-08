@@ -24,6 +24,7 @@ export default function Create() {
         notes: '',
         workers: [{ name: '' }],
         goods: [{ description: '', quantity_note: '' }],
+        accompanying_department_ids: [],
     });
 
     const submit = (e) => {
@@ -38,7 +39,7 @@ export default function Create() {
                 <p className="text-sm text-gray-500 mb-6">Isi form di bawah untuk mengajukan izin baru</p>
 
                 <form onSubmit={submit}>
-                    <PermitFormFields data={data} setData={setData} errors={errors} />
+                    <PermitFormFields data={data} setData={setData} errors={errors} departments={departments} />
                     <Button type="submit" disabled={processing}>
                         {processing ? 'Mengirim...' : 'Ajukan'}
                     </Button>

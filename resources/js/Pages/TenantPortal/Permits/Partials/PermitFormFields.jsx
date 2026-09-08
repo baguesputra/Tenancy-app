@@ -8,7 +8,7 @@ import TimeInput from '@/Components/Form/TimeInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 
-export default function PermitFormFields({ data, setData, errors }) {
+export default function PermitFormFields({ data, setData, errors, departments = [] }) {
     const toggleActivityType = (value) => {
         const current = data.activity_types || [];
         setData('activity_types', current.includes(value)
@@ -31,6 +31,13 @@ export default function PermitFormFields({ data, setData, errors }) {
     };
     const addGood = () => setData('goods', [...data.goods, { description: '', quantity_note: '' }]);
     const removeGood = (idx) => setData('goods', data.goods.filter((_, i) => i !== idx));
+
+    const toggleDept = (id) => {
+        const current = data.accompanying_department_ids || [];
+        setData('accompanying_department_ids', current.includes(id)
+            ? current.filter((d) => d !== id)
+            : [...current, id]);
+    };
 
     return (
         <>
@@ -100,6 +107,21 @@ export default function PermitFormFields({ data, setData, errors }) {
                     </>
                 )}
             </FormSection>
+
+              {departments.length > 0 && (
+                <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
+                    <div className="flex flex-wrap gap-3">
+                        {departments.map((d) => (
+                            <Checkbox
+                                key={d.id}
+                                label={d.name}
+                                checked={(data.accompanying_department_ids || []).includes(d.id)}
+                                onChange={() => toggleDept(d.id)}
+                            />
+                        ))}
+                    </div>
+                </FormSection>
+            )}
 
             {/* Daftar Pekerja & Daftar Barang digabung — 2 kolom dalam 1 card, hemat ruang */}
             <FormSection title="Pekerja & Barang">
