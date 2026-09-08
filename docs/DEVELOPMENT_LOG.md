@@ -53,3 +53,9 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 - Testing CRUD Master Data hingga simulasi proses Surat Izin secara penuh sampai tahap approval.
 - Pengujian autentikasi, role, dan permission pengguna Tenant dan Staff Mall pada proses approval.
 - pembuatan noitifkasi in-system
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Rabu 9 September 2026
+- Pembuatan RBAC untuk tenant
+- testing akses menu dan juga approval
+- 
