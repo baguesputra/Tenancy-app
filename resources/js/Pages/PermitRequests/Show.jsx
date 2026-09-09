@@ -185,7 +185,7 @@ export default function Show({ permit }) {
                                             </p>
                                         )}
 
-                                        {a.step_key !== 'security' && a.status === 'pending' && (
+                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (
                                             <div className="mt-2.5 flex gap-2">
                                                 <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                                     Approve

@@ -42,7 +42,7 @@ class User extends Authenticatable
 
     public function canViewAllBranches(): bool
     {
-        return $this->hasAnyRole(['manager', 'admin_pusat']);
+        return $this->hasAnyRole(['manager', 'admin', 'super_admin']);
     }
 
     public function inspectionSessions()

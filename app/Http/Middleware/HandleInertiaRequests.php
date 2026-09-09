@@ -23,7 +23,12 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $webUser?->load('branch'),
+                'user' => $webUser ? [
+                    ...$webUser->toArray(),
+                    'branch' => $webUser->branch,
+                    'permissions' => $webUser->getAllPermissions()->pluck('name'),
+                    'roles' => $webUser->getRoleNames(),
+                ] : null,
                 'tenantUser' => $tenantUser?->load('tenant'),
             ],
             'notifications' => $notifiable

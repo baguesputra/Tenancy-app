@@ -1,6 +1,7 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 
+
 const menuIcons = {
     dashboard: (
         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -26,18 +27,24 @@ const menuIcons = {
 };
 
 const masterMenuItems = [
-    { label: 'Tenant', href: '/tenants' },
-    { label: 'Unit', href: '/units' },
-    { label: 'Kontrak / Tenancy', href: '/tenancies' },
-    { label: 'Kategori Tenant', href: '/tenant-categories' },
-    { label: 'Kategori Product', href: '/product-categories' },
+    { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
+    { label: 'Unit', href: '/units', permission: 'units.view' },
+    { label: 'Kontrak / Tenancy', href: '/tenancies', permission: 'tenancies.view' },
+    { label: 'Kategori Tenant', href: '/tenant-categories', permission: 'categories.view' },
+    { label: 'Kategori Product', href: '/product-categories', permission: 'categories.view' },
 ];
 
 export default function AppLayout({ children }) {
     const { auth } = usePage().props;
     const currentUrl = usePage().url;
 
-    const isMasterActive = masterMenuItems.some((item) => currentUrl.startsWith(item.href));
+    const isSuperAdmin = auth.user?.roles?.includes('super_admin');
+    const permissions = auth.user?.permissions ?? [];
+    const can = (perm) => isSuperAdmin || permissions.includes(perm);
+    
+     // Filter menu Master Data sesuai permission user
+    const visibleMasterMenuItems = masterMenuItems.filter((item) => can(item.permission));
+    const isMasterActive = visibleMasterMenuItems.some((item) => currentUrl.startsWith(item.href));
     const [masterOpen, setMasterOpen] = useState(isMasterActive);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
@@ -88,41 +95,54 @@ export default function AppLayout({ children }) {
                     <NavLink href="/dashboard" currentUrl={currentUrl} icon={menuIcons.dashboard} collapsed={collapsed}>
                         Dashboard
                     </NavLink>
-                     <div className="pt-1">
-                        <button
-                            onClick={() => collapsed ? null : setMasterOpen(!masterOpen)}
-                            title="Master Data"
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors
-                                ${collapsed ? 'justify-center' : 'justify-between'}
-                                ${isMasterActive ? 'text-white' : 'text-white/55 hover:text-white/90'}`}
-                        >
-                            <span className="flex items-center gap-3">
-                                <span className="shrink-0">{menuIcons.master}</span>
-                                {!collapsed && <span>Master Data</span>}
-                            </span>
-                            {!collapsed && (
-                                <svg className={`w-3.5 h-3.5 transition-transform shrink-0 ${masterOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
-                            )}
-                        </button>
+                     {visibleMasterMenuItems.length > 0 && (
+                        <div className="pt-1">
+                            <button
+                                onClick={() => collapsed ? null : setMasterOpen(!masterOpen)}
+                                title="Master Data"
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors
+                                    ${collapsed ? 'justify-center' : 'justify-between'}
+                                    ${isMasterActive ? 'text-white' : 'text-white/55 hover:text-white/90'}`}
+                            >
+                                <span className="flex items-center gap-3">
+                                    <span className="shrink-0">{menuIcons.master}</span>
+                                    {!collapsed && <span>Master Data</span>}
+                                </span>
+                                {!collapsed && (
+                                    <svg className={`w-3.5 h-3.5 transition-transform shrink-0 ${masterOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                )}
+                            </button>
 
-                        {masterOpen && !collapsed && (
-                            <div className="mt-0.5 ml-3 pl-3 border-l border-white/[0.08] space-y-0.5">
-                                {masterMenuItems.map((item) => (
-                                    <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
-                                        {item.label}
-                                    </NavLink>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <NavLink href="/inspection-sessions" currentUrl={currentUrl} icon={menuIcons.sidak} collapsed={collapsed}>
-                        Sesi Sidak
-                    </NavLink>
-                    <NavLink href="/permit-requests" currentUrl={currentUrl} icon={menuIcons.permit} collapsed={collapsed}>
-                        Surat Izin
-                    </NavLink>
+                            {masterOpen && !collapsed && (
+                                <div className="mt-0.5 ml-3 pl-3 border-l border-white/[0.08] space-y-0.5">
+                                    {visibleMasterMenuItems.map((item) => (
+                                        <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
+                                            {item.label}
+                                        </NavLink>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                   {can('sidak.view') && (
+                        <NavLink href="/inspection-sessions" currentUrl={currentUrl} icon={menuIcons.sidak}>
+                            Sesi Sidak
+                        </NavLink>
+                    )}
+                    {can('permits.view') && (
+                        <NavLink href="/permit-requests" currentUrl={currentUrl} icon={menuIcons.permit}>
+                            Surat Izin
+                        </NavLink>
+                    )}
+                    {auth.user?.roles?.includes('super_admin') && (
+                        <div className="pt-1">
+                            <p className="px-3 pt-2 pb-1 text-xs text-white/30 uppercase tracking-wide">Pengaturan</p>
+                            <NavLink href="/settings/users" currentUrl={currentUrl}>Manajemen User</NavLink>
+                            <NavLink href="/settings/access-control" currentUrl={currentUrl}>Hak Akses</NavLink>
+                        </div>
+                    )}
                 </nav>
 
                 <div className="hidden lg:flex justify-end p-3 border-t border-white/[0.08] shrink-0">

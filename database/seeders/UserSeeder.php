@@ -22,30 +22,36 @@ class UserSeeder extends Seeder
             ['employee_number' => 'TOP-000001'],
             ['name' => 'Test Staff', 'branch_id' => $branchA->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $staff->assignRole('staff');
+        $staff->syncRoles(['staff']);
 
         $manager = User::firstOrCreate(
             ['employee_number' => 'TOP-000002'],
             ['name' => 'Test Manager', 'branch_id' => $branchB->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $manager->assignRole('manager');
+        $manager->syncRoles(['manager']);
 
         $tenancyStaff = User::firstOrCreate(
             ['employee_number' => 'TOP-000003'],
             ['name' => 'Staff Tenancy', 'branch_id' => $branchA->id, 'department_id' => $tenancyDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $tenancyStaff->assignRole('staff');
+        $tenancyStaff->syncRoles(['tenancy_staff']);
 
         $bsStaff = User::firstOrCreate(
             ['employee_number' => 'TOP-000004'],
             ['name' => 'Staff BS', 'branch_id' => $branchA->id, 'department_id' => $bsDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $bsStaff->assignRole('staff');
+        $bsStaff->syncRoles(['bs_staff']);
 
         $securityStaff = User::firstOrCreate(
             ['employee_number' => 'TOP-000005'],
             ['name' => 'Staff Security', 'branch_id' => $branchA->id, 'department_id' => $securityDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $securityStaff->assignRole('staff');
+        $securityStaff->syncRoles(['security_staff']);
+
+        $superAdmin = User::firstOrCreate(
+            ['employee_number' => 'TOP-000000'],
+            ['name' => 'Super Admin IT', 'branch_id' => $branchA->id, 'password' => bcrypt('password'), 'must_change_password' => false]
+        );
+        $superAdmin->syncRoles(['super_admin']);
     }
 }
