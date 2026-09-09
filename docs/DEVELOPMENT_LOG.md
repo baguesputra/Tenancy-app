@@ -57,5 +57,5 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 # Develop Checklist - Tenancy App
 **Tanggal:** Rabu 9 September 2026
 - Pembuatan RBAC untuk tenant
+- Pembuatan pengaturan untuk hak akses dan manajemen user
 - testing akses menu dan juga approval
-- 

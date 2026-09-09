@@ -74,7 +74,7 @@ export default function Show({ inspection, checklistSnapshot }) {
             <div className="px-6 sm:px-8 py-6 flex-1 max-w-3xl pb-28">
                 <h1 className="text-xl font-semibold text-gray-900">{inspection.tenant.name}</h1>
                 <p className="text-sm text-gray-500 mb-6">
-                    {inspection.tenant.business_type ?? inspection.tenant.product_category?.name} — {snapshot.template_name}
+                    {inspection.tenant.product_category?.name} — {snapshot.template_name}
                 </p>
 
                 {isLocked && (
