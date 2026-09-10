@@ -8,7 +8,7 @@ import TimeInput from '@/Components/Form/TimeInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 
-export default function PermitFormFields({ data, setData, errors, departments = [] }) {
+export default function PermitFormFields({ data, setData, errors, departments = [], hideVendorSection = false }) {
     const toggleActivityType = (value) => {
         const current = data.activity_types || [];
         setData('activity_types', current.includes(value)
@@ -80,6 +80,7 @@ export default function PermitFormFields({ data, setData, errors, departments = 
                 </div>
             </FormSection>
 
+            {!hideVendorSection && (
             <FormSection title="Vendor / Kontraktor Eksternal">
                 <Checkbox
                     label="Melibatkan vendor/kontraktor eksternal"
@@ -107,6 +108,7 @@ export default function PermitFormFields({ data, setData, errors, departments = 
                     </>
                 )}
             </FormSection>
+            )}
 
               {departments.length > 0 && (
                 <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">

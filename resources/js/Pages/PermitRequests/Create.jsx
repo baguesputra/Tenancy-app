@@ -7,8 +7,11 @@ import TextInput from '@/Components/Form/TextInput';
 import SelectInput from '@/Components/Form/SelectInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
+import Textarea from '@/Components/Form/Textarea';
+import { useState } from 'react';
 
 export default function Create({ tenants, departments }) {
+    const [locationType, setLocationType] = useState('area');
     const { data, setData, post, processing, errors } = useForm({
         tenant_id: '',
         store_name_snapshot: '',
@@ -37,6 +40,17 @@ export default function Create({ tenants, departments }) {
         accompanying_department_ids: [],
     });
 
+    const selectLocationType = (type) => {
+        setLocationType(type);
+        if (type === 'vendor') {
+            setData((prev) => ({ ...prev, tenant_id: '', is_external: true }));
+        } else if (type === 'area') {
+            setData((prev) => ({ ...prev, tenant_id: '', is_external: false }));
+        } else {
+            setData((prev) => ({ ...prev, is_external: false }));
+        }
+    };
+
     const submit = (e) => {
         e.preventDefault();
         post('/permit-requests');
@@ -50,79 +64,136 @@ export default function Create({ tenants, departments }) {
     };
 
     return (
-        <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1">
-                <h1 className="text-xl font-semibold text-gray-900 mb-1">Ajukan Surat Izin</h1>
-                <p className="text-sm text-gray-500 mb-6">Atas nama tenant tertentu, atau untuk area umum mall</p>
+    <AppLayout>
+        <div className="px-6 sm:px-8 py-6 flex-1">
+            <h1 className="text-xl font-semibold text-gray-900 mb-1">Ajukan Surat Izin</h1>
+            <p className="text-sm text-gray-500 mb-6">Pilih kategori permohonan di bawah</p>
 
-                <form onSubmit={submit}>
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-                        {/* Kolom kiri — konten form utama */}
-                        <div>
-                            <FormSection title="Lokasi">
-                                <FormField label="Tenant" error={errors.tenant_id}>
+            <form onSubmit={submit}>
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+                    {/* Kolom kiri — konten form utama */}
+                    <div>
+                        <FormSection title="Kategori Permohonan">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                                {[
+                                    { value: 'area', label: 'Area Duta Mall' },
+                                    { value: 'tenant', label: 'Tenant' },
+                                    { value: 'vendor', label: 'Vendor' },
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => selectLocationType(opt.value)}
+                                        className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
+                                            locationType === opt.value
+                                                ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36]'
+                                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {locationType === 'tenant' && (
+                                <FormField label="Pilih Tenant" error={errors.tenant_id} required>
                                     <SelectInput value={data.tenant_id} onChange={(e) => setData('tenant_id', e.target.value)}>
-                                        <option value="">-- Area Umum Mall (bukan tenant spesifik) --</option>
+                                        <option value="">Pilih tenant...</option>
                                         {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </SelectInput>
                                 </FormField>
+                            )}
 
-                                {!data.tenant_id && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                                        <FormField label="Nama Lokasi/Area" error={errors.store_name_snapshot} className="sm:col-span-3">
-                                            <TextInput value={data.store_name_snapshot} onChange={(e) => setData('store_name_snapshot', e.target.value)} />
-                                        </FormField>
-                                        <FormField label="Lantai" error={errors.floor_snapshot}>
-                                            <TextInput value={data.floor_snapshot} onChange={(e) => setData('floor_snapshot', e.target.value)} />
-                                        </FormField>
-                                        <FormField label="Blok" error={errors.block_snapshot}>
-                                            <TextInput value={data.block_snapshot} onChange={(e) => setData('block_snapshot', e.target.value)} />
-                                        </FormField>
-                                    </div>
-                                )}
-                            </FormSection>
+                            {locationType === 'area' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <FormField label="Nama Lokasi/Area" error={errors.store_name_snapshot} className="sm:col-span-3" required>
+                                        <TextInput value={data.store_name_snapshot} onChange={(e) => setData('store_name_snapshot', e.target.value)} />
+                                    </FormField>
+                                    <FormField label="Lantai" error={errors.floor_snapshot}>
+                                        <TextInput value={data.floor_snapshot} onChange={(e) => setData('floor_snapshot', e.target.value)} />
+                                    </FormField>
+                                    <FormField label="Blok" error={errors.block_snapshot}>
+                                        <TextInput value={data.block_snapshot} onChange={(e) => setData('block_snapshot', e.target.value)} />
+                                    </FormField>
+                                </div>
+                            )}
 
-                            <PermitFormFields data={data} setData={setData} errors={errors} departments={departments} />
+                            {locationType === 'vendor' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField label="Nama Perusahaan" error={errors.contractor_company} required>
+                                        <TextInput value={data.contractor_company} onChange={(e) => setData('contractor_company', e.target.value)} />
+                                    </FormField>
+                                    <FormField label="Penanggung Jawab" error={errors.contractor_pic} required>
+                                        <TextInput value={data.contractor_pic} onChange={(e) => setData('contractor_pic', e.target.value)} />
+                                    </FormField>
+                                    <FormField label="Alamat" error={errors.contractor_address} className="sm:col-span-2">
+                                        <Textarea value={data.contractor_address} onChange={(e) => setData('contractor_address', e.target.value)} rows={2} />
+                                    </FormField>
+                                    <FormField label="Telp/HP/Fax" error={errors.contractor_phone} required>
+                                        <TextInput value={data.contractor_phone} onChange={(e) => setData('contractor_phone', e.target.value)} />
+                                    </FormField>
+                                </div>
+                            )}
+                        </FormSection>
 
-                        </div>
+                        <PermitFormFields
+                            data={data}
+                            setData={setData}
+                            errors={errors}
+                            hideVendorSection={locationType === 'vendor'}
+                        />
 
-                        {/* Kolom kanan — sticky, tepat di bawah topbar (72px = 56px topbar + 16px jarak) */}
-                        <div className="lg:sticky lg:top-[72px] space-y-4">
-                            <FormSection title="Ringkasan">
-                                <dl className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-500">Jenis Kegiatan</dt>
-                                        <dd className="text-gray-800 font-medium">
-                                            {data.activity_types.length || '—'} dipilih
-                                        </dd>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-500">Pekerja</dt>
-                                        <dd className="text-gray-800 font-medium">
-                                            {data.workers.filter(w => w.name).length} orang
-                                        </dd>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-500">Barang</dt>
-                                        <dd className="text-gray-800 font-medium">
-                                            {data.goods.filter(g => g.description).length} item
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </FormSection>
-
-                            <div className="bg-white rounded-xl border border-[#E2E5EA] p-5">
-                                <Button type="submit" disabled={processing} className="w-full justify-center">
-                                    {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
-                                </Button>
-                                <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-                                    Surat izin akan diproses melalui persetujuan Tenancy, Building Service, dan pengecekan fisik Security sebelum selesai.
-                                </p>
+                        <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
+                            <div className="flex flex-wrap gap-3">
+                                {departments.map((d) => (
+                                    <Checkbox
+                                        key={d.id}
+                                        label={d.name}
+                                        checked={data.accompanying_department_ids.includes(d.id)}
+                                        onChange={() => toggleDept(d.id)}
+                                    />
+                                ))}
                             </div>
+                        </FormSection>
+                    </div>
+
+                    {/* Kolom kanan — sticky, tepat di bawah topbar */}
+                    <div className="lg:sticky lg:top-[72px] space-y-4">
+                        <FormSection title="Ringkasan">
+                            <dl className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Jenis Kegiatan</dt>
+                                    <dd className="text-gray-800 font-medium">
+                                        {data.activity_types.length || '—'} dipilih
+                                    </dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Pekerja</dt>
+                                    <dd className="text-gray-800 font-medium">
+                                        {data.workers.filter(w => w.name).length} orang
+                                    </dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Barang</dt>
+                                    <dd className="text-gray-800 font-medium">
+                                        {data.goods.filter(g => g.description).length} item
+                                    </dd>
+                                </div>
+                            </dl>
+                        </FormSection>
+
+                        <div className="bg-white rounded-xl border border-[#E2E5EA] p-5">
+                            <Button type="submit" disabled={processing} className="w-full justify-center">
+                                {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
+                            </Button>
+                            <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+                                Surat izin akan diproses melalui persetujuan Tenancy, Building Service, dan pengecekan fisik Security sebelum selesai.
+                            </p>
                         </div>
                     </div>
-                </form>
-            </div>
-        </AppLayout>
-    );
+                </div>
+            </form>
+        </div>
+    </AppLayout>
+);
 }
