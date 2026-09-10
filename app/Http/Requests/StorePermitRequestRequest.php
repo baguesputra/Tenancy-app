@@ -18,7 +18,7 @@ class StorePermitRequestRequest extends FormRequest
         return [
             // Portal (staff toko) tidak perlu isi tenant_id/lokasi — otomatis dari akun login
             'tenant_id' => $isPortal ? 'prohibited' : 'nullable|exists:tenants,id',
-            'store_name_snapshot' => $isPortal ? 'prohibited' : 'nullable|required_without:tenant_id|string|max:255',
+            'store_name_snapshot' => $isPortal ? 'prohibited' : 'nullable|required_without_all:tenant_id,contractor_company|string|max:255',
             'floor_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
             'block_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
             'unit_number_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',

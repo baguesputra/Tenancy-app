@@ -67,7 +67,17 @@ export default function Create({ tenants, departments }) {
     <AppLayout>
         <div className="px-6 sm:px-8 py-6 flex-1">
             <h1 className="text-xl font-semibold text-gray-900 mb-1">Ajukan Surat Izin</h1>
-            <p className="text-sm text-gray-500 mb-6">Pilih kategori permohonan di bawah</p>
+            {Object.keys(errors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3.5 rounded-lg mb-4">
+                    <p className="font-medium mb-1">Ada kesalahan input:</p>
+                    <ul className="list-disc list-inside">
+                        {Object.entries(errors).map(([key, message]) => (
+                            <li key={key}>{message}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+                        <p className="text-sm text-gray-500 mb-6">Pilih kategori permohonan di bawah</p>
 
             <form onSubmit={submit}>
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
