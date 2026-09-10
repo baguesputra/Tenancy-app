@@ -116,14 +116,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/inspection-sessions/{session}', [InspectionSessionController::class, 'show'])->name('sessions.show');
     });
 
-    Route::middleware('can:permits.view')->group(function () {
-        Route::get('/permit-requests', [PermitRequestController::class, 'index'])->name('permit-requests.index');
-        Route::get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
-    });
+    Route::middleware('can:permits.view')->get('/permit-requests', [PermitRequestController::class, 'index'])->name('permit-requests.index');
+
     Route::middleware('can:permits.create')->group(function () {
+        // PENTING: taruh SEBELUM route wildcard {permitRequest}
         Route::get('/permit-requests/create', [PermitRequestController::class, 'create'])->name('permit-requests.create');
         Route::post('/permit-requests', [PermitRequestController::class, 'store']);
     });
+
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
+
     Route::middleware('can:permits.approve')->group(function () {
         Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
         Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
