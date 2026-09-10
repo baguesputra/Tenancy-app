@@ -98,16 +98,22 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:sidak.view')->group(function () {
-        Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
-        Route::get('/inspection-sessions/{session}', [InspectionSessionController::class, 'show'])->name('sessions.show');
-        Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
+    Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
+    Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
     });
+
     Route::middleware('can:sidak.create')->group(function () {
+        // PENTING: route ini HARUS di atas '/inspection-sessions/{session}'
         Route::get('/inspection-sessions/current', [InspectionSessionController::class, 'current'])->name('sessions.current');
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
         Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
+    });
+
+    Route::middleware('can:sidak.view')->group(function () {
+        // Baru taruh route wildcard {session} di paling akhir, setelah 'current'
+        Route::get('/inspection-sessions/{session}', [InspectionSessionController::class, 'show'])->name('sessions.show');
     });
 
     Route::middleware('can:permits.view')->group(function () {

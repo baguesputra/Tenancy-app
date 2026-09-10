@@ -14,7 +14,7 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
-   public function share(Request $request): array
+    public function share(Request $request): array
     {
         $webUser = $request->user('web');
         $tenantUser = $request->user('tenant');
@@ -23,15 +23,15 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $webUser ? [
+                'user' => $webUser ? fn () => [
                     ...$webUser->toArray(),
                     'branch' => $webUser->branch,
                     'permissions' => $webUser->getAllPermissions()->pluck('name'),
                     'roles' => $webUser->getRoleNames(),
                 ] : null,
-                'tenantUser' => $tenantUser?->load('tenant'),
+                'tenantUser' => fn () => $tenantUser?->load('tenant'),
             ],
-            'notifications' => $notifiable
+            'notifications' => fn () => $notifiable
                 ? $notifiable->unreadNotifications()->latest()->take(10)->get()->map(fn ($n) => [
                     'id' => $n->id,
                     'title' => $n->data['title'],
@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
                     'created_at' => $n->created_at->diffForHumans(),
                 ])
                 : [],
-            'unreadNotificationsCount' => $notifiable?->unreadNotifications()->count() ?? 0,
+            'unreadNotificationsCount' => fn () => $notifiable?->unreadNotifications()->count() ?? 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'answer' => fn () => $request->session()->get('answer'),

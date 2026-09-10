@@ -40,33 +40,45 @@ class DashboardController extends Controller
         if ($branchScoped) $sessionQuery->where('branch_id', $user->branch_id);
         $activeSessions = $sessionQuery->count();
 
-        // Perlu Tindakan Anda — approval pending yang cocok department user
         $actionNeeded = collect();
         if ($user->department_id) {
-            $actionNeeded = Approval::where('department_id', $user->department_id)
+            $pendingApprovals = Approval::where('department_id', $user->department_id)
                 ->where('status', 'pending')
                 ->where('approvable_type', PermitRequest::class)
-                ->with('approvable')
-                ->whereHas('approvable', function ($q) use ($user, $branchScoped) {
-                    if ($branchScoped) $q->where('branch_id', $user->branch_id);
-                    // hanya tampilkan kalau step sebelumnya sudah selesai (urutan benar)
-                })
+                ->get();
+
+            $permitIds = $pendingApprovals->pluck('approvable_id');
+
+            $permitsQuery = PermitRequest::whereIn('id', $permitIds);
+            if ($branchScoped) {
+                $permitsQuery->where('branch_id', $user->branch_id);
+            }
+            $validPermits = $permitsQuery->get()->keyBy('id');
+
+            $candidateApprovals = $pendingApprovals->filter(
+                fn ($a) => $validPermits->has($a->approvable_id)
+            );
+
+            $allRelatedApprovals = Approval::whereIn('approvable_id', $permitIds)
+                ->where('approvable_type', PermitRequest::class)
                 ->get()
-                ->filter(function (Approval $approval) {
-                    $earlierPending = Approval::where('approvable_type', $approval->approvable_type)
-                        ->where('approvable_id', $approval->approvable_id)
-                        ->where('order', '<', $approval->order)
-                        ->where('status', '!=', 'approved')
-                        ->exists();
-                    return ! $earlierPending;
-                })
-                ->take(5)
-                ->map(fn (Approval $a) => [
-                    'id' => $a->approvable->id,
-                    'permit_number' => $a->approvable->permit_number,
-                    'store_name' => $a->approvable->store_name_snapshot,
+                ->groupBy('approvable_id');
+
+            $actionNeeded = $candidateApprovals->filter(function (Approval $approval) use ($allRelatedApprovals) {
+                $siblings = $allRelatedApprovals->get($approval->approvable_id, collect());
+                $hasPendingEarlier = $siblings->contains(fn ($s) =>
+                    $s->order < $approval->order && $s->status !== 'approved'
+                );
+                return ! $hasPendingEarlier;
+            })->take(5)->map(function (Approval $a) use ($validPermits) {
+                $permit = $validPermits->get($a->approvable_id);
+                return [
+                    'id' => $permit->id,
+                    'permit_number' => $permit->permit_number,
+                    'store_name' => $permit->store_name_snapshot,
                     'step_label' => $a->label,
-                ]);
+                ];
+            });
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
