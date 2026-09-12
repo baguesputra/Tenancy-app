@@ -125,13 +125,19 @@ export default function Show({ permit }) {
                                         {permit.workers.map((w) => (
                                             <div key={w.id} className="flex justify-between items-center py-1.5">
                                                 <span className="text-sm text-gray-700">{w.name}</span>
-                                                <button
-                                                    onClick={() => toggleWorker(w.id)}
-                                                    className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors
-                                                        ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                                >
-                                                    {w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
-                                                </button>
+                                                {canCompleteSecurityCheck ? (
+                                                    <button
+                                                        onClick={() => toggleWorker(w.id)}
+                                                        className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors
+                                                            ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                                    >
+                                                        {w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
+                                                    </button>
+                                                ) : (
+                                                    <Badge color={w.is_present ? 'green' : 'gray'}>
+                                                        {w.is_present ? '✓ Hadir' : 'Belum dicek'}
+                                                    </Badge>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -147,10 +153,10 @@ export default function Show({ permit }) {
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-sm text-gray-700">{g.description} ({g.quantity_note})</span>
                                                     <Badge color={g.is_verified ? 'green' : 'gray'}>
-                                                        {g.is_verified ? '✓' : 'Belum'}
+                                                        {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
                                                     </Badge>
                                                 </div>
-                                                {!g.is_verified && (
+                                                {!g.is_verified && canCompleteSecurityCheck && (
                                                     <div className="space-y-2">
                                                         <FileInput accept="image/*" capture="environment" onChange={(e) => verifyGood(g.id, e.target.files[0])} />
                                                         <input

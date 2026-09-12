@@ -59,3 +59,16 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 - Pembuatan RBAC untuk tenant
 - Pembuatan pengaturan untuk hak akses dan manajemen user
 - testing akses menu dan juga approval
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Kamis 10 September 2026
+- Perbaikan routing permitrequest.create dan sidak.creat
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Jumat 11 September 2026
+- Refactor form surat ijin untuk jadi 3 option
+- perbaikan ui/ux untuk form dan navigasi yang memudahkan
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Sabtu 12 September 2026
+- Perbaikan progress approval surat ijin tenant
