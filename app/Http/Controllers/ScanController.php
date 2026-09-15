@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PermitRequest;
 use App\Models\ScannableCode;
 use App\Models\Unit;
-use App\Models\PermitRequest;
-use App\Models\InspectionSession;
+use App\Services\InspectionService;
+use App\Services\InspectionSessionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
 
 class ScanController extends Controller
 {
-    public function __invoke(Request $request, string $token)
-    {
+    public function __invoke(
+        Request $request,
+        string $token,
+        InspectionSessionService $sessions,
+        InspectionService $inspections,
+    ) {
         $scannable = ScannableCode::with('scannable')
             ->where('token', $token)
             ->firstOrFail();
@@ -23,49 +27,65 @@ class ScanController extends Controller
             abort(404, 'Scannable target not found');
         }
 
-        // Guest → login with intended URL
-        if (! Auth::check()) {
-            $request->session()->put('url.intended', url()->current());
-            $request->session()->put('scan_token', $token);
-            return Redirect::guest('login');
+        $webUser = $request->user('web');
+        $tenantUser = $request->user('tenant');
+
+        if (! $webUser && ! $tenantUser) {
+            $request->session()->put('scan_redirect_token', $token);
+
+            return Inertia::render('Scan/ChooseLogin', ['token' => $token]);
         }
 
-        $user = Auth::user();
-
-        // Polymorphic dispatch
         return match (get_class($model)) {
-            Unit::class => $this->handleUnit($model, $user),
-            PermitRequest::class => $this->handlePermit($model, $user),
+            Unit::class => $this->handleUnit($model, $webUser, $tenantUser, $sessions, $inspections),
+            PermitRequest::class => $this->handlePermit($model, $webUser, $tenantUser),
             default => abort(400, 'Unsupported scannable type'),
         };
     }
 
-    protected function handleUnit(Unit $unit, \App\Models\User $user)
-    {
-        // 1️⃣ Tenant staff (has a Tenant linked to this unit via activeTenancy)
-        $activeTenancy = $unit->activeTenancy;
-        if ($activeTenancy && $activeTenancy->tenant_id && $user->tenant_id === $activeTenancy->tenant_id) {
-            // Redirect to portal permit creation (or list)
-            return redirect()->route('portal.permits.create');
+    private function handleUnit(
+        Unit $unit,
+        $webUser,
+        $tenantUser,
+        InspectionSessionService $sessions,
+        InspectionService $inspections,
+    ) {
+        $unit->loadMissing('activeTenancy.tenant');
+
+        if ($tenantUser) {
+            $tenancy = $unit->activeTenancy;
+            if ($tenancy && (string) $tenancy->tenant_id === (string) $tenantUser->tenant_id) {
+                return redirect()->route('tenant-portal.permits.create');
+            }
+
+            return redirect()->route('tenant-portal.permits.index');
         }
 
-        // 2️⃣ Mall staff with inspection permission
-        if ($user->can('inspect', $unit)) {
-            $session = InspectionSession::getOrCreateActiveSession($activeTenancy);
-            $inspection = $session->addInspection($activeTenancy->tenant);
-            return redirect()->route('inspections.show', $inspection);
+        if ($webUser->can('sidak.create')) {
+            $tenancy = $unit->activeTenancy;
+            abort_unless($tenancy && $tenancy->tenant, 404, 'Unit kosong, tidak ada tenant aktif.');
+
+            $session = $sessions->getOrCreateActiveSession($webUser);
+            $inspection = $inspections->addInspection($session, $tenancy->tenant);
+
+            return redirect()->route('inspections.show', $inspection->id);
         }
 
-        // 3️⃣ Fallback – read‑only unit/tenant detail
-        return redirect()->route('units.show', $unit);
+        return $webUser->can('units.view')
+            ? redirect()->route('units.index')
+            : redirect()->route('dashboard');
     }
 
-    protected function handlePermit(PermitRequest $permit, \App\Models\User $user)
+    private function handlePermit(PermitRequest $permit, $webUser, $tenantUser)
     {
-        // Permit visibility: requester, admin, or assigned approver
-        if ($user->can('view', $permit)) {
-            return redirect()->route('permit-requests.show', $permit);
+        if ($tenantUser) {
+            abort_unless((string) $permit->tenant_id === (string) $tenantUser->tenant_id, 403);
+
+            return redirect()->route('tenant-portal.permits.show', $permit->id);
         }
-        abort(403, 'Unauthorized to view this permit');
+
+        abort_unless($webUser->can('permits.view'), 403);
+
+        return redirect()->route('permit-requests.show', $permit->id);
     }
 }
