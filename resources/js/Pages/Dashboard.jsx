@@ -5,7 +5,7 @@ import Badge from '@/Components/Badge';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import {
     IconBuilding, IconGrid, IconDocument, IconClipboard,
-    IconContract, IconArrowRight, IconAlert,
+    IconContract, IconArrowRight, IconAlert, IconPlus,
     IconRefresh, IconTrendUp, IconTrendDown, IconChevronDown, IconExternalLink
 } from '@/Components/Icons';
 

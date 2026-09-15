@@ -78,7 +78,7 @@ class DashboardController extends Controller
                     'store_name' => $permit->store_name_snapshot,
                     'step_label' => $a->label,
                 ];
-            });
+            })->values();
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
