@@ -47,20 +47,28 @@ class PermitCheckController extends Controller
     {
         $this->authorizeSecurityAction($good->permitRequest, $request);
 
+        if ($good->is_verified) {
+            $request->validate(['mismatch_note' => 'nullable|string']);
+            $good->update(['mismatch_note' => $request->mismatch_note]);
+
+            if ($request->hasFile('photo')) {
+                throw ValidationException::withMessages([
+                    'photo' => 'Foto sudah terkunci dan tidak dapat diganti.',
+                ]);
+            }
+
+            return back();
+        }
+
         $request->validate([
-            'photo' => 'nullable|image|max:5120',
+            'photo' => 'required|image|max:5120',
             'mismatch_note' => 'nullable|string',
         ]);
-
-        $path = $good->photo_path;
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('permit-goods', 'public');
-        }
 
         $good->update([
             'is_verified' => true,
             'checked_at' => now(),
-            'photo_path' => $path,
+            'photo_path' => $request->file('photo')->store('permit-goods', 'public'),
             'mismatch_note' => $request->mismatch_note,
         ]);
 

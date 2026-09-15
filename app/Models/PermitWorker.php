@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PermitWorker extends Model
 {
-    protected $fillable = ['permit_request_id', 'name', 'order', 'is_present', 'checked_at'];
+    protected $fillable = ['permit_request_id', 'name', 'order', 'is_present', 'checked_at', 'mismatch_note'];
 
     protected function casts(): array
     {
