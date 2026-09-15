@@ -1,4 +1,5 @@
 import PortalLayout from '@/Layouts/PortalLayout';
+import { Link } from '@inertiajs/react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
 
@@ -10,47 +11,63 @@ export default function Show({ permit }) {
 
     return (
         <PortalLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1 max-w-2xl">
-                <div className="flex items-center justify-between mb-1">
-                    <h1 className="text-xl font-semibold text-gray-900">{permit.permit_number}</h1>
-                    <Badge color={statusColor[permit.status]}>{statusLabel[permit.status]}</Badge>
+            <Link
+                href="/portal/permits"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors w-fit rounded focus-visible:outline-2 focus-visible:outline-[#0F1E36] animate-stagger-in"
+            >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Kembali ke daftar
+            </Link>
+
+            <div className="mt-3 bg-white rounded-2xl border border-[#E2E5EA] p-5 sm:p-6 animate-stagger-in" style={{ animationDelay: '60ms' }}>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="font-mono text-lg sm:text-xl font-bold text-gray-900 truncate">{permit.permit_number}</h1>
+                        <p className="text-sm text-gray-500 mt-1">{permit.job_type || '—'} — {formatDate(permit.request_date)}</p>
+                    </div>
+                    <Badge color={statusColor[permit.status]} variant="soft" size="md">{statusLabel[permit.status]}</Badge>
                 </div>
-                <p className="text-sm text-gray-500 mb-6">{permit.job_type || '—'} — {permit.request_date}</p>
 
                 {permit.status === 'rejected' && rejectedStep && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-lg mb-4">
-                        <p className="font-medium mb-1">Permohonan Ditolak</p>
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-xl mt-4" role="alert">
+                        <p className="font-semibold mb-1">Permohonan ditolak</p>
                         <p>{rejectedStep.notes || 'Tidak ada alasan spesifik yang dicatat.'}</p>
                     </div>
                 )}
 
                 {permit.is_flagged && (
-                    <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-4 rounded-lg mb-4">
-                        <p className="font-medium mb-1">⚠ Ada Catatan Ketidaksesuaian</p>
-                        <p>Security menemukan ketidaksesuaian saat pemeriksaan fisik. Lihat detail di bagian bawah.</p>
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl mt-4" role="alert">
+                        <p className="font-semibold mb-1">Ada catatan ketidaksesuaian</p>
+                        <p>Security menemukan ketidaksesuaian saat pemeriksaan fisik. Lihat detail di bawah.</p>
                     </div>
                 )}
 
                 {permit.status === 'completed' && !permit.is_flagged && (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm p-4 rounded-lg mb-4">
-                        ✓ Permohonan sudah selesai diproses dan sesuai.
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm p-4 rounded-xl mt-4" role="status">
+                        Permohonan selesai dan sesuai.
                     </div>
                 )}
+            </div>
 
-                {/* Timeline Approval */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
                 <FormSection title="Progress Persetujuan">
-                    <div className="relative pl-6">
-                        <div className="absolute left-[9px] top-1 bottom-1 w-0.5 bg-gray-100" />
-                        {permit.approvals.map((a, idx) => (
-                            <div key={a.id} className="relative pb-6 last:pb-0">
-                                <div
+                    <ol className="relative pl-6">
+                        <span className="absolute left-[9px] top-1 bottom-1 w-0.5 bg-gray-100" aria-hidden="true" />
+                        {permit.approvals.map((a) => (
+                            <li key={a.id} className="relative pb-6 last:pb-0">
+                                <span
                                     className={`absolute -left-6 w-[18px] h-[18px] rounded-full flex items-center justify-center ${
                                         a.status === 'approved'
                                             ? 'bg-[#1FA24C]'
                                             : a.status === 'rejected'
                                             ? 'bg-red-500'
+                                            : a.status === 'pending' && isCurrent(a, permit.approvals)
+                                            ? 'bg-amber-400 animate-pulse'
                                             : 'bg-gray-200'
                                     }`}
+                                    aria-hidden="true"
                                 >
                                     {a.status === 'approved' && (
                                         <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -62,82 +79,100 @@ export default function Show({ permit }) {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     )}
-                                </div>
+                                </span>
                                 <p className="text-sm font-medium text-gray-800">{a.label}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {a.status === 'approved' && a.approved_at
-                                        ? `Disetujui — ${new Date(a.approved_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
-                                        : a.status === 'rejected'
-                                        ? 'Ditolak'
-                                        : 'Menunggu'}
-                                </p>
-                            </div>
+                                <p className="text-xs text-gray-400 mt-0.5">{stepTime(a)}</p>
+                                {a.notes && a.status === 'rejected' && (
+                                    <p className="text-xs text-red-600 mt-1">{a.notes}</p>
+                                )}
+                            </li>
                         ))}
-                    </div>
+                    </ol>
                 </FormSection>
 
-                {/* Recap pengajuan */}
-                <FormSection title="Detail Pengajuan Anda">
-                    <dl className="space-y-2.5 text-sm">
-                        <RecapRow label="Jadwal" value={`${permit.work_start_date} s/d ${permit.work_end_date}`} />
-                        <RecapRow label="Jam" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
-                        <RecapRow label="Jenis Pekerjaan" value={permit.job_type || '—'} />
-                        {permit.is_external && (
-                            <RecapRow label="Vendor" value={permit.contractor_company || '—'} />
-                        )}
-                    </dl>
-                </FormSection>
+                <div className="space-y-4 lg:sticky lg:top-24">
+                    <FormSection title="Detail Pengajuan">
+                        <dl className="space-y-2.5 text-sm">
+                            <RecapRow label="Jadwal" value={`${formatDate(permit.work_start_date)} s/d ${formatDate(permit.work_end_date)}`} />
+                            <RecapRow label="Jam" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
+                            <RecapRow label="Jenis Pekerjaan" value={permit.job_type || '—'} />
+                            {permit.is_external && (
+                                <RecapRow label="Vendor" value={permit.contractor_company || '—'} />
+                            )}
+                        </dl>
+                    </FormSection>
 
-                {/* Hasil pemeriksaan fisik */}
-                <FormSection title="Hasil Pemeriksaan Fisik">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Pekerja</h3>
-                            <div className="space-y-1.5">
-                                {permit.workers.map((w) => (
-                                    <p key={w.id} className="text-sm text-gray-700 flex justify-between">
-                                        <span>{w.name}</span>
-                                        <span className={w.is_present ? 'text-emerald-600' : 'text-gray-400'}>
-                                            {w.is_present ? '✓ Hadir' : 'Belum dicek'}
-                                        </span>
-                                    </p>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Barang</h3>
-                            <div className="space-y-3">
-                                {permit.goods.map((g) => (
-                                    <div key={g.id}>
-                                        <p className="text-sm text-gray-700 flex justify-between">
-                                            <span>{g.description} ({g.quantity_note})</span>
-                                            <span className={g.is_verified ? 'text-emerald-600' : 'text-gray-400'}>
-                                                {g.is_verified ? '✓' : 'Belum'}
+                    <FormSection title="Hasil Pemeriksaan Fisik">
+                        <div className="space-y-5">
+                            <div>
+                                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2.5">Pekerja</h3>
+                                <ul className="space-y-1.5">
+                                    {permit.workers.map((w) => (
+                                        <li key={w.id} className="text-sm text-gray-700 flex justify-between gap-3">
+                                            <span className="min-w-0 truncate">{w.name}</span>
+                                            <span className={w.is_present ? 'text-emerald-600 font-medium shrink-0' : 'text-gray-400 shrink-0'}>
+                                                {w.is_present ? 'Hadir' : 'Belum dicek'}
                                             </span>
-                                        </p>
-                                        {g.mismatch_note && (
-                                            <p className="text-xs text-amber-600 mt-1">⚠ {g.mismatch_note}</p>
-                                        )}
-                                        {g.photo_url && (
-                                            <img src={g.photo_url} className="w-16 h-16 object-cover rounded-lg border border-gray-200 mt-1.5" />
-                                        )}
-                                    </div>
-                                ))}
+                                        </li>
+                                    ))}
+                                    {permit.workers.length === 0 && <li className="text-xs text-gray-400">Tidak ada data pekerja.</li>}
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2.5">Barang</h3>
+                                <ul className="space-y-3">
+                                    {permit.goods.map((g) => (
+                                        <li key={g.id}>
+                                            <p className="text-sm text-gray-700 flex justify-between gap-3">
+                                                <span className="min-w-0">{g.description} <span className="text-gray-400">({g.quantity_note || '—'})</span></span>
+                                                <span className={g.is_verified ? 'text-emerald-600 font-medium shrink-0' : 'text-gray-400 shrink-0'}>
+                                                    {g.is_verified ? 'Terverifikasi' : 'Belum'}
+                                                </span>
+                                            </p>
+                                            {g.mismatch_note && (
+                                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 mt-1.5">{g.mismatch_note}</p>
+                                            )}
+                                            {g.photo_url && (
+                                                <img src={g.photo_url} alt={`Foto ${g.description}`} loading="lazy" className="w-16 h-16 object-cover rounded-lg border border-gray-200 mt-1.5" />
+                                            )}
+                                        </li>
+                                    ))}
+                                    {permit.goods.length === 0 && <li className="text-xs text-gray-400">Tidak ada data barang.</li>}
+                                </ul>
                             </div>
                         </div>
-                    </div>
-                </FormSection>
+                    </FormSection>
+                </div>
             </div>
         </PortalLayout>
     );
 }
 
+function isCurrent(step, all) {
+    return step.status === 'pending' && all.findIndex((s) => s.status === 'pending') === all.indexOf(step);
+}
+
+function stepTime(a) {
+    if (a.status === 'approved' && a.approved_at) {
+        return `Disetujui — ${new Date(a.approved_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+    }
+    if (a.status === 'rejected') return 'Ditolak';
+    return 'Menunggu';
+}
+
+function formatDate(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 function RecapRow({ label, value }) {
     return (
-        <div className="flex justify-between">
-            <dt className="text-gray-500">{label}</dt>
-            <dd className="text-gray-800 font-medium text-right max-w-[60%]">{value}</dd>
+        <div className="flex justify-between gap-3">
+            <dt className="text-gray-500 shrink-0">{label}</dt>
+            <dd className="text-gray-800 font-medium text-right min-w-0">{value}</dd>
         </div>
     );
 }

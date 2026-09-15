@@ -19,8 +19,13 @@ class PermitRequestController extends Controller
 
         $permits = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
             ->where('tenant_id', $tenantUser->tenant_id)
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->search, fn ($q) => $q->where(fn ($qq) => $qq
+                ->where('permit_number', 'like', "%{$request->search}%")
+                ->orWhere('job_type', 'like', "%{$request->search}%")))
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         $permits->getCollection()->transform(function (PermitRequest $permit) {
             $currentStep = $permit->approvals->firstWhere('status', 'pending');
@@ -32,7 +37,10 @@ class PermitRequestController extends Controller
             return $permit;
         });
 
-        return Inertia::render('TenantPortal/Permits/Index', ['permits' => $permits]);
+        return Inertia::render('TenantPortal/Permits/Index', [
+            'permits' => $permits,
+            'filters' => $request->only(['status', 'search']),
+        ]);
     }
 
     public function create()
