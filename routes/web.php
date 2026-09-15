@@ -53,8 +53,52 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('auth:tenant')->group(function () {
         Route::post('/logout', [TenantLoginController::class, 'destroy'])->name('logout');
 
-        Route::get('/dashboard', function () {
-            return Inertia::render('TenantPortal/Dashboard');
+        Route::get('/dashboard', function (Illuminate\Http\Request $request) {
+            $tenantUser = $request->user('tenant');
+            $tenant = \App\Models\Tenant::with(['activeTenancy.unit', 'branch'])->findOrFail($tenantUser->tenant_id);
+
+            $base = \App\Models\PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
+                ->where('tenant_id', $tenant->id);
+
+            $stats = [
+                'pending' => (clone $base)->where('status', 'pending')->count(),
+                'completed' => (clone $base)->where('status', 'completed')->count(),
+                'rejected' => (clone $base)->where('status', 'rejected')->count(),
+            ];
+            $stats['total'] = array_sum($stats);
+
+            $mapPermit = function ($permit) {
+                $current = $permit->approvals->firstWhere('status', 'pending');
+                return [
+                    'id' => $permit->id,
+                    'permit_number' => $permit->permit_number,
+                    'status' => $permit->status,
+                    'job_type' => $permit->job_type,
+                    'request_date' => $permit->request_date,
+                    'current_step_label' => $current?->label,
+                    'step_progress' => $permit->approvals->map(fn ($a) => [
+                        'status' => $a->status,
+                        'label' => $a->label,
+                    ])->values(),
+                ];
+            };
+
+            $activePermit = (clone $base)->where('status', 'pending')->latest()->first();
+            $recent = (clone $base)->latest()->take(5)->get()->map($mapPermit)->values();
+            $tenancy = $tenant->activeTenancy;
+
+            return Inertia::render('TenantPortal/Dashboard', [
+                'store' => [
+                    'name' => $tenant->name,
+                    'unit_code' => $tenancy?->unit?->unit_code,
+                    'branch' => $tenant->branch?->name,
+                    'tenancy_end' => $tenancy?->end_date?->toDateString(),
+                    'is_active' => (bool) $tenancy,
+                ],
+                'stats' => $stats,
+                'activePermit' => $activePermit ? $mapPermit($activePermit) : null,
+                'recent' => $recent,
+            ]);
         })->name('dashboard');
     });
 });
