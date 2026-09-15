@@ -2,87 +2,70 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PermitRequest;
 use App\Models\ScannableCode;
 use App\Models\Unit;
-use App\Services\InspectionService;
-use App\Services\InspectionSessionService;
+use App\Models\PermitRequest;
+use App\Models\InspectionSession;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
 
 class ScanController extends Controller
 {
-    public function resolve(string $token, Request $request)
+    public function __invoke(Request $request, string $token)
     {
-        $code = ScannableCode::where('token', $token)->first();
-        abort_unless($code, 404, 'QR code tidak dikenali.');
+        $scannable = ScannableCode::with('scannable')
+            ->where('token', $token)
+            ->firstOrFail();
 
-        $webUser = $request->user('web');
-        $tenantUser = $request->user('tenant');
-
-        if (! $webUser && ! $tenantUser) {
-            session(['scan_redirect_token' => $token]);
-            return redirect()->route('login')
-                ->with('info', 'Silakan login terlebih dahulu untuk melanjutkan.');
+        $model = $scannable->scannable;
+        if (! $model) {
+            abort(404, 'Scannable target not found');
         }
 
-        return match ($code->scannable_type) {
-            Unit::class => $this->resolveUnit($code, $webUser, $tenantUser),
-            PermitRequest::class => $this->resolvePermit($code, $webUser, $tenantUser),
-            default => abort(404),
+        // Guest → login with intended URL
+        if (! Auth::check()) {
+            $request->session()->put('url.intended', url()->current());
+            $request->session()->put('scan_token', $token);
+            return Redirect::guest('login');
+        }
+
+        $user = Auth::user();
+
+        // Polymorphic dispatch
+        return match (get_class($model)) {
+            Unit::class => $this->handleUnit($model, $user),
+            PermitRequest::class => $this->handlePermit($model, $user),
+            default => abort(400, 'Unsupported scannable type'),
         };
     }
 
-    private function resolveUnit(ScannableCode $code, $webUser, $tenantUser)
+    protected function handleUnit(Unit $unit, \App\Models\User $user)
     {
-        $unit = Unit::find($code->scannable_id);
-        abort_unless($unit, 404, 'Unit tidak ditemukan.');
-
-        // Staff toko scan QR unit → masuk ke Surat Izin mereka sendiri
-        if ($tenantUser) {
-            return redirect()->route('tenant-portal.permits.index');
+        // 1️⃣ Tenant staff (has a Tenant linked to this unit via activeTenancy)
+        $activeTenancy = $unit->activeTenancy;
+        if ($activeTenancy && $activeTenancy->tenant_id && $user->tenant_id === $activeTenancy->tenant_id) {
+            // Redirect to portal permit creation (or list)
+            return redirect()->route('portal.permits.create');
         }
 
-        // Staff mall dengan izin Sidak → langsung masuk alur checklist
-        if ($webUser->can('sidak.create')) {
-            $tenant = $unit->activeTenancy?->tenant;
-
-            if (! $tenant) {
-                return redirect()->route('units.index')
-                    ->with('success', "Unit {$unit->unit_code} belum memiliki tenant aktif.");
-            }
-
-            $sessionService = app(InspectionSessionService::class);
-            $inspectionService = app(InspectionService::class);
-
-            $session = $sessionService->getOrCreateActiveSession($webUser);
-            $inspection = $inspectionService->addInspection($session, $tenant);
-
-            return redirect()->route('inspections.show', $inspection->id);
+        // 2️⃣ Mall staff with inspection permission
+        if ($user->can('inspect', $unit)) {
+            $session = InspectionSession::getOrCreateActiveSession($activeTenancy);
+            $inspection = $session->addInspection($activeTenancy->tenant);
+            return redirect()->route('inspections.show', $inspection);
         }
 
-        // Staff mall tanpa izin Sidak → info unit read-only
-        if ($webUser->can('units.view')) {
-            return redirect()->route('units.index')
-                ->with('success', "Unit {$unit->unit_code} — Tenant: " . ($unit->activeTenancy?->tenant?->name ?? 'Kosong'));
-        }
-
-        return redirect()->route('dashboard');
+        // 3️⃣ Fallback – read‑only unit/tenant detail
+        return redirect()->route('units.show', $unit);
     }
 
-    private function resolvePermit(ScannableCode $code, $webUser, $tenantUser)
+    protected function handlePermit(PermitRequest $permit, \App\Models\User $user)
     {
-        $permit = PermitRequest::find($code->scannable_id);
-        abort_unless($permit, 404, 'Surat izin tidak ditemukan.');
-
-        if ($tenantUser) {
-            abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
-            return redirect()->route('tenant-portal.permits.show', $permit->id);
+        // Permit visibility: requester, admin, or assigned approver
+        if ($user->can('view', $permit)) {
+            return redirect()->route('permit-requests.show', $permit);
         }
-
-        if ($webUser) {
-            return redirect()->route('permit-requests.show', $permit->id);
-        }
-
-        abort(403);
+        abort(403, 'Unauthorized to view this permit');
     }
 }

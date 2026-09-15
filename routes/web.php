@@ -21,6 +21,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\TenantAccountController;
+use App\Http\Controllers\UnitQrController;
 
 Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
@@ -85,6 +86,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:units.create')->post('/units', [UnitController::class, 'store']);
     Route::middleware('can:units.edit')->put('/units/{id}', [UnitController::class, 'update']);
     Route::middleware('can:units.delete')->delete('/units/{id}', [UnitController::class, 'destroy']);
+    
+    Route::middleware(['auth', 'can:units.view'])->group(function () {
+        Route::get('/units/{id}/qr', [UnitQrController::class, 'single'])->name('units.qr');
+        Route::get('/units-qr/bulk', [UnitQrController::class, 'bulk'])->name('units.qr.bulk');
+    });
 
     Route::middleware('can:tenancies.view')->get('/tenancies', [TenancyController::class, 'index'])->name('tenancies.index');
     Route::middleware('can:tenancies.create')->post('/tenancies', [TenancyController::class, 'store']);
@@ -153,7 +159,7 @@ Route::middleware('auth')->group(function () {
     })->name('notifications.read');
 });
 
-Route::get('/scan/{token}', [ScanController::class, 'resolve'])->name('scan.resolve');
+Route::get('/scan/{token}', [ScanController::class])->name('scan.resolve');
 
 
 // Portal (staff toko)

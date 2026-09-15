@@ -15,7 +15,7 @@ class UnitController extends Controller
 
     public function index(Request $request)
     {
-        $query = Unit::with(['branch', 'activeTenancy.tenant'])
+        $query = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('unit_code', 'like', "%{$request->search}%")
                     ->orWhere('floor', 'like', "%{$request->search}%")

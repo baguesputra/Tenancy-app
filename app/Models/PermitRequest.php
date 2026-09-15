@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PermitRequest extends Model
 {
@@ -88,8 +89,28 @@ class PermitRequest extends Model
         return $this->morphMany(Approval::class, 'approvable')->orderBy('order');
     }
 
+    public function scannableCode()
+    {
+        return $this->morphOne(ScannableCode::class, 'scannable');
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (PermitRequest $permit) {
+            if (! $permit->scannableCode) {
+                ScannableCode::create([
+                    'token' => (string) Str::uuid(),
+                    'scannable_type' => static::class,
+                    'scannable_id' => $permit->id,
+                ]);
+                // Optionally sync barcode_token
+                // $permit->update(['barcode_token' => $permit->scannableCode->token]);
+            }
+        });
     }
 }

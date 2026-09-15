@@ -10,10 +10,11 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
-import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
+import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
 
 export default function Index({ units, filters, branches, canPickBranch }) {
     const [editingUnit, setEditingUnit] = useState(null);
+    const [exporting, setExporting] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         floor: '',
@@ -91,9 +92,22 @@ export default function Index({ units, filters, branches, canPickBranch }) {
     return (
         <AppLayout>
             <div className="px-6 sm:px-8 py-6 flex-1">
-                <div className="mb-6">
-                    <h1 className="text-xl font-semibold text-gray-900">Master Unit</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">{units.total} unit terdaftar</p>
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900">Master Unit</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{units.total} unit terdaftar</p>
+                    </div>
+                    <a
+                        href="/units-qr/bulk"
+                        target="_blank"
+                        onClick={() => {
+                            setExporting(true);
+                            setTimeout(() => setExporting(false), 10000);
+                        }}
+                        className={`shrink-0 inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${exporting ? 'text-gray-400 bg-gray-50 border-[#E2E5EA] pointer-events-none' : 'text-gray-700 bg-white border-[#E2E5EA] hover:bg-gray-50'}`}
+                    >
+                        {exporting ? 'Menyiapkan PDF…' : 'Export Semua QR (maks 50)'}
+                    </a>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
@@ -220,16 +234,27 @@ export default function Index({ units, filters, branches, canPickBranch }) {
                                         </Badge>
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(unit.id);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                                            aria-label="Hapus"
-                                        >
-                                            <IconTrash />
-                                        </button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            <a
+                                                href={`/units/${unit.id}/qr`}
+                                                target="_blank"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="p-1.5 rounded-lg text-gray-400 hover:text-[#0F1E36] hover:bg-gray-50"
+                                                title="Cetak QR"
+                                            >
+                                                <IconDocument className="w-4 h-4" />
+                                            </a>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(unit.id);
+                                                }}
+                                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                aria-label="Hapus"
+                                            >
+                                                <IconTrash />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

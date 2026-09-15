@@ -7,6 +7,7 @@ use App\Models\PermitGood;
 use App\Models\PermitRequest;
 use App\Models\PermitWorker;
 use App\Services\ApprovalService;
+use App\Services\NotificationService;
 use App\Services\PermitRequestService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
