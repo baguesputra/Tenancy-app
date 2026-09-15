@@ -9,10 +9,13 @@ import Badge from '@/Components/Badge';
 import GoodPhotoCapture from '@/Components/Security/GoodPhotoCapture';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
+const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red' };
+const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
 export default function Show({ permit }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
+    const [showContractor, setShowContractor] = useState(false);
 
     const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`, {}, { preserveScroll: true });
 
@@ -96,6 +99,13 @@ export default function Show({ permit }) {
     const canCompleteSecurityCheck = securityStep?.status === 'pending'
         && securityStep?.department_id === permit.currentUserDepartmentId;
 
+    const workersDone = workers.filter((w) => w.is_present).length;
+    const goodsDone = goods.filter((g) => g.is_verified).length;
+    const totalTasks = workers.length + goods.length;
+    const doneTasks = workersDone + goodsDone;
+    const allChecked = totalTasks > 0 && doneTasks === totalTasks;
+    const pct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
     const activityLabels = permit.activity_types
         .map((val) => ACTIVITY_TYPES.find((t) => t.value === val)?.label ?? val);
 
@@ -104,12 +114,45 @@ export default function Show({ permit }) {
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1">
-                <h1 className="text-xl font-semibold text-gray-900 mb-1">{permit.permit_number}</h1>
-                <p className="text-sm text-gray-500 mb-6">
-                    {permit.store_name_snapshot} — {permit.job_type} — {permit.request_date}
-                </p>
+            <div className="sticky top-14 z-10 bg-[#F7F8FA]/95 backdrop-blur border-b border-[#E2E5EA] px-6 sm:px-8 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h1 className="text-lg font-semibold text-gray-900 truncate">{permit.permit_number}</h1>
+                            <Badge color={statusColor[permit.status] ?? 'gray'}>{permit.status}</Badge>
+                            {permit.is_flagged && <Badge color="amber">⚠ flagged</Badge>}
+                            {canCompleteSecurityCheck && <Badge color="blue">{doneTasks}/{totalTasks} dicek</Badge>}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {permit.store_name_snapshot} — {permit.job_type} — {permit.request_date}
+                        </p>
+                    </div>
+                    {canCompleteSecurityCheck && (
+                        <div className="w-36 shrink-0">
+                            <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                                <span>Progress</span><span>{pct}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#0F1E36] transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto" aria-label="Lompat section">
+                    {[
+                        ['#detail', 'Detail'],
+                        ['#pekerja', `Pekerja ${workersDone}/${workers.length}`],
+                        ['#barang', `Barang ${goodsDone}/${goods.length}`],
+                        ['#approval', 'Approval'],
+                    ].map(([href, label]) => (
+                        <a key={href} href={href} className="px-3 py-1.5 rounded-full text-gray-600 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-200 whitespace-nowrap transition-colors">
+                            {label}
+                        </a>
+                    ))}
+                </nav>
+            </div>
 
+            <div className="px-6 sm:px-8 py-6 flex-1 pb-28 lg:pb-6">
                 {permit.is_flagged && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-3.5 rounded-lg mb-4 flex items-center gap-2">
                         <span>⚠</span> Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
@@ -117,73 +160,80 @@ export default function Show({ permit }) {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-                    {/* Kolom kiri */}
                     <div>
-                        {/* Detail Permohonan — info lengkap untuk bahan approval */}
-                        <FormSection title="Detail Permohonan">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
-                                <InfoItem label="Lokasi" value={`${permit.store_name_snapshot} — ${location}`} />
-                                <InfoItem label="Penanggung Jawab" value={`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`} />
-                                <InfoItem
-                                    label="Jenis Kegiatan"
-                                    value={
-                                        <div className="flex flex-wrap gap-1.5 mt-0.5">
-                                            {activityLabels.map((label) => (
-                                                <Badge key={label} color="blue">{label}</Badge>
-                                            ))}
-                                        </div>
-                                    }
-                                />
-                                <InfoItem label="Tanggal Pelaksanaan" value={`${permit.work_start_date} s/d ${permit.work_end_date}`} />
-                                <InfoItem label="Jam Pelaksanaan" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
-                                <InfoItem label="Akses Masuk/Keluar" value={permit.access_route || '—'} className="sm:col-span-2" />
-                                {permit.notes && (
-                                    <InfoItem label="Keterangan" value={permit.notes} className="sm:col-span-2" />
-                                )}
-                            </div>
-
-                            {permit.is_external && (
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                        Kontraktor Eksternal
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                                        <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
-                                        <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
-                                        <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
-                                        <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
-                                    </div>
-                                    {permit.accompanying_departments?.length > 0 && (
-                                        <div className="mt-3">
-                                            <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {permit.accompanying_departments.map((d) => (
-                                                    <Badge key={d.id} color="gray">{d.name}</Badge>
+                        <div id="detail" className="scroll-mt-40">
+                            <FormSection title="Detail Permohonan" description={`${permit.store_name_snapshot} — ${location}`}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                    <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
+                                    <InfoItem label="Lokasi" value={`${permit.store_name_snapshot} — ${location}`} />
+                                    <InfoItem label="Penanggung Jawab" value={`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`} />
+                                    <InfoItem
+                                        label="Jenis Kegiatan"
+                                        value={
+                                            <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                                {activityLabels.map((label) => (
+                                                    <Badge key={label} color="blue">{label}</Badge>
                                                 ))}
                                             </div>
-                                        </div>
+                                        }
+                                    />
+                                    <InfoItem label="Tanggal Pelaksanaan" value={`${permit.work_start_date} s/d ${permit.work_end_date}`} />
+                                    <InfoItem label="Jam Pelaksanaan" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
+                                    <InfoItem label="Akses Masuk/Keluar" value={permit.access_route || '—'} className="sm:col-span-2" />
+                                    {permit.notes && (
+                                        <InfoItem label="Keterangan" value={permit.notes} className="sm:col-span-2" />
                                     )}
                                 </div>
-                            )}
-                        </FormSection>
 
-                        {/* Pemeriksaan Fisik — pekerja & barang, 2 kolom */}
-                        <FormSection title="Pemeriksaan Fisik">
+                                {permit.is_external && (
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowContractor(!showContractor)}
+                                            aria-expanded={showContractor}
+                                            className="flex items-center justify-between w-full text-xs font-medium text-gray-500 uppercase tracking-wide"
+                                        >
+                                            <span>Kontraktor Eksternal</span>
+                                            <span className="text-gray-400">{showContractor ? '▾' : '▸'}</span>
+                                        </button>
+                                        {showContractor && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mt-3">
+                                                <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
+                                                <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
+                                                <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
+                                                <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
+                                            </div>
+                                        )}
+                                        {permit.accompanying_departments?.length > 0 && (
+                                            <div className="mt-3">
+                                                <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {permit.accompanying_departments.map((d) => (
+                                                        <Badge key={d.id} color="gray">{d.name}</Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </FormSection>
+                        </div>
+
+                        <FormSection title="Pemeriksaan Fisik" description={canCompleteSecurityCheck ? `${doneTasks}/${totalTasks} selesai — ketuk untuk cek` : 'Hasil cek fisik'}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div>
+                                <div id="pekerja" className="scroll-mt-40">
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                        Daftar Pekerja
+                                        Daftar Pekerja <span className="text-gray-400">({workersDone}/{workers.length})</span>
                                     </h3>
                                     <div className="space-y-1">
                                         {workers.map((w) => (
-                                            <div key={w.id} id={`worker-${w.id}`} className="flex justify-between items-center py-1.5 scroll-mt-20">
+                                            <div key={w.id} id={`worker-${w.id}`} className="flex justify-between items-center gap-2 py-2 scroll-mt-40 min-h-[44px]">
                                                 <span className="text-sm text-gray-700">{w.name}</span>
                                                 {canCompleteSecurityCheck ? (
                                                     <button
                                                         onClick={() => toggleWorker(w.id)}
                                                         disabled={pendingWorkers.includes(w.id)}
-                                                        className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-60
+                                                        className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors disabled:opacity-60 min-h-[32px]
                                                             ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                                                     >
                                                         {pendingWorkers.includes(w.id) ? '…' : w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
@@ -198,14 +248,14 @@ export default function Show({ permit }) {
                                     </div>
                                 </div>
 
-                                <div>
+                                <div id="barang" className="scroll-mt-40">
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                        Daftar Barang
+                                        Daftar Barang <span className="text-gray-400">({goodsDone}/{goods.length})</span>
                                     </h3>
                                     <div className="space-y-4">
                                         {goods.map((g) => (
-                                            <div key={g.id} id={`good-${g.id}`} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 scroll-mt-20 min-h-[120px]">
-                                                <div className="flex justify-between items-center mb-2">
+                                            <div key={g.id} id={`good-${g.id}`} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 scroll-mt-40 min-h-[120px]">
+                                                <div className="flex justify-between items-center gap-2 mb-2">
                                                     <span className="text-sm text-gray-700">{g.description} ({g.quantity_note})</span>
                                                     <Badge color={g.is_verified ? 'green' : 'gray'}>
                                                         {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
@@ -232,13 +282,13 @@ export default function Show({ permit }) {
                         </FormSection>
                     </div>
 
-                    {/* Kolom kanan — sticky */}
-                    <div className="lg:sticky lg:top-[72px] space-y-4">
+                    <div id="approval" className="lg:sticky lg:top-[168px] space-y-4 scroll-mt-40">
                         <FormSection title="Progress Approval">
-                            <ul className="space-y-3">
+                            <ol className="relative ml-1.5 border-l-2 border-gray-100 space-y-4">
                                 {permit.approvals.map((a) => (
-                                    <li key={a.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                                        <div className="flex justify-between items-center">
+                                    <li key={a.id} className="pl-4 relative">
+                                        <span className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full ${dotColor[a.status] ?? 'bg-gray-300'}`} aria-hidden="true" />
+                                        <div className="flex justify-between items-center gap-2">
                                             <span className="text-sm font-medium text-gray-700">{a.label}</span>
                                             <Badge color={approvalColor[a.status]}>{a.status}</Badge>
                                         </div>
@@ -276,17 +326,31 @@ export default function Show({ permit }) {
                                         )}
                                     </li>
                                 ))}
-                            </ul>
+                            </ol>
                         </FormSection>
 
                         {canCompleteSecurityCheck && (
-                            <Button variant="primary" onClick={completeSecurityCheck} className="w-full !py-3">
-                                Selesaikan Pengecekan
+                            <Button variant="primary" onClick={completeSecurityCheck} disabled={!allChecked} className="w-full !py-3 hidden lg:inline-flex">
+                                Selesaikan Pengecekan ({doneTasks}/{totalTasks})
                             </Button>
                         )}
                     </div>
                 </div>
             </div>
+
+            {canCompleteSecurityCheck && (
+                <div className="lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-700">{doneTasks}/{totalTasks} dicek</p>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1">
+                            <div className="h-full bg-[#0F1E36] transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                    </div>
+                    <Button variant="primary" onClick={completeSecurityCheck} disabled={!allChecked} className="!px-4 !py-2.5 text-sm shrink-0">
+                        Selesaikan
+                    </Button>
+                </div>
+            )}
         </AppLayout>
     );
 }

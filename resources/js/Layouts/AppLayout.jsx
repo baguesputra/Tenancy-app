@@ -1,5 +1,6 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Breadcrumbs from '@/Components/Breadcrumbs';
 
 const menuIcons = {
     dashboard: (
@@ -220,7 +221,7 @@ export default function AppLayout({ children }) {
             </aside>
 
             <div className={`min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[232px]'}`}>
-                <Topbar user={auth.user} onMenuClick={() => setMobileNavOpen(true)} onLogout={logout} breadcrumbs={getBreadcrumbs(currentUrl)} />
+                <Topbar user={auth.user} onMenuClick={() => setMobileNavOpen(true)} onLogout={logout} />
                 <FlashBanner />
                 <div className="flex-1 flex flex-col">{children}</div>
             </div>
@@ -228,35 +229,7 @@ export default function AppLayout({ children }) {
     );
 }
 
-function getBreadcrumbs(url) {
-    const segments = url.split('?')[0].split('/').filter(Boolean);
-    const crumbs = [{ label: 'Beranda', href: '/dashboard' }];
-
-    const labelMap = {
-        'tenants': 'Master Tenant',
-        'units': 'Master Unit',
-        'tenancies': 'Master Tenancy',
-        'tenant-categories': 'Kategori Tenant',
-        'product-categories': 'Kategori Produk',
-        'inspection-sessions': 'Sesi Sidak',
-        'permit-requests': 'Surat Izin',
-        'settings': 'Pengaturan',
-        'users': 'Manajemen User',
-        'access-control': 'Hak Akses',
-    };
-
-    let currentPath = '';
-    for (const segment of segments) {
-        currentPath += '/' + segment;
-        if (segment.match(/^[a-f0-9-]{36}$/) || segment.match(/^\d+$/)) continue;
-        if (labelMap[segment]) {
-            crumbs.push({ label: labelMap[segment], href: currentPath });
-        }
-    }
-    return crumbs.slice(-2);
-}
-
-function Topbar({ user, onMenuClick, onLogout, breadcrumbs }) {
+function Topbar({ user, onMenuClick, onLogout }) {
     const [profileOpen, setProfileOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const profileRef = useRef(null);
@@ -300,20 +273,7 @@ function Topbar({ user, onMenuClick, onLogout, breadcrumbs }) {
                         </svg>
                     </button>
 
-                    <nav className="flex items-center gap-1.5 text-sm min-w-0" aria-label="Breadcrumb">
-                        {breadcrumbs.map((crumb, idx) => (
-                            <Fragment key={crumb.href}>
-                                {idx > 0 && <span className="text-gray-300" aria-hidden="true">/</span>}
-                                {idx === breadcrumbs.length - 1 ? (
-                                    <span className="font-medium text-gray-900 truncate max-w-[180px]">{crumb.label}</span>
-                                ) : (
-                                    <Link href={crumb.href} className="text-gray-500 hover:text-gray-800 transition-colors rounded focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                                        {crumb.label}
-                                    </Link>
-                                )}
-                            </Fragment>
-                        ))}
-                    </nav>
+                    <Breadcrumbs />
                 </div>
 
                 <div className="flex items-center gap-1">
