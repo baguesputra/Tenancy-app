@@ -20,6 +20,7 @@ use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitReq
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\AccessControlController;
+use App\Http\Controllers\Settings\TenantAccountController;
 
 Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
@@ -29,6 +30,12 @@ Route::middleware('can:settings.access')->prefix('settings')->name('settings.')-
 
     Route::get('/access-control', [AccessControlController::class, 'index'])->name('access-control.index');
     Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
+
+    Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('tenant-accounts.index');
+    Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store']);
+    Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate']);
+    Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword']);
+    Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive']);
 });
 
 Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
@@ -145,6 +152,8 @@ Route::middleware('auth')->group(function () {
         return back();
     })->name('notifications.read');
 });
+
+Route::get('/scan/{token}', [ScanController::class, 'resolve'])->name('scan.resolve');
 
 
 // Portal (staff toko)

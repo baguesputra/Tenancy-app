@@ -189,6 +189,9 @@ export default function AppLayout({ children }) {
                                 <NavLink href="/settings/users" currentUrl={currentUrl} icon={menuIcons.users} collapsed={collapsed}>
                                     Manajemen User
                                 </NavLink>
+                                <NavLink href="/settings/tenant-accounts" currentUrl={currentUrl}>
+                                    Akun Portal Tenant
+                                </NavLink>
                                 <NavLink href="/settings/access-control" currentUrl={currentUrl} icon={menuIcons.access} collapsed={collapsed}>
                                     Hak Akses
                                 </NavLink>
@@ -492,7 +495,7 @@ function FlashBanner() {
     if (!flash?.success) return null;
 
     return (
-        <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-4 sm:px-8 py-3 flex items-center gap-2 shrink-0 animate-slideDown">
+        <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-4 sm:px-8 py-3 flex items-center gap-2 shrink-0 animate-slideDown whitespace-pre-line">
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>

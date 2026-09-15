@@ -17,8 +17,20 @@ class PermitRequestController extends Controller
     {
         $tenantUser = $request->user('tenant');
 
-        $permits = PermitRequest::where('tenant_id', $tenantUser->tenant_id)
-            ->latest()->paginate(15);
+        $permits = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
+            ->where('tenant_id', $tenantUser->tenant_id)
+            ->latest()
+            ->paginate(15);
+
+        $permits->getCollection()->transform(function (PermitRequest $permit) {
+            $currentStep = $permit->approvals->firstWhere('status', 'pending');
+            $permit->current_step_label = $currentStep?->label;
+            $permit->step_progress = $permit->approvals->map(fn ($a) => [
+                'status' => $a->status,
+                'label' => $a->label,
+            ]);
+            return $permit;
+        });
 
         return Inertia::render('TenantPortal/Permits/Index', ['permits' => $permits]);
     }
@@ -48,7 +60,7 @@ class PermitRequestController extends Controller
         $tenantUser = $request->user('tenant');
         abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
 
-        $permit->load(['workers', 'goods', 'approvals.department']);
+        $permit->load(['workers', 'goods', 'approvals' => fn ($q) => $q->orderBy('order')]);
 
         return Inertia::render('TenantPortal/Permits/Show', ['permit' => $permit]);
     }

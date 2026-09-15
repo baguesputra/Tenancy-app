@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ScannableCode;
+use Illuminate\Support\Str;
 
 class Unit extends Model
 {
@@ -45,9 +47,21 @@ class Unit extends Model
         static::creating(function (Unit $unit) {
             if (empty($unit->unit_code)) {
                 $unit->unit_code = collect([$unit->floor, $unit->block, $unit->unit_number])
-                    ->filter()
-                    ->implode('-');
+                    ->filter()->implode('-');
             }
         });
+
+        static::created(function (Unit $unit) {
+            ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => static::class,
+                'scannable_id' => $unit->id,
+            ]);
+        });
+    }
+
+    public function scannableCode()
+    {
+        return $this->morphOne(ScannableCode::class, 'scannable');
     }
 }

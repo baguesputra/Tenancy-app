@@ -45,6 +45,10 @@ class LocalLoginController extends Controller
         RateLimiter::clear($key);
         $request->session()->regenerate();
 
+        if ($token = session()->pull('scan_redirect_token')) {
+            return redirect()->route('scan.resolve', $token);
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 

@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Str;
+use App\Models\ScannableCode;
 
 class PermitRequestService
 {
@@ -81,6 +82,12 @@ class PermitRequestService
                 'document'
             );
         }
+
+        ScannableCode::create([
+            'token' => (string) Str::uuid(),
+            'scannable_type' => PermitRequest::class,
+            'scannable_id' => $permit->id,
+        ]);
 
         return $permit;
     }

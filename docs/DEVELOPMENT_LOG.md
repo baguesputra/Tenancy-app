@@ -72,3 +72,14 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 # Develop Checklist - Tenancy App
 **Tanggal:** Sabtu 12 September 2026
 - Perbaikan progress approval surat ijin tenant
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Senin 14 September 2026
+- Pembuatan login portal tenant
+- pembuatan manajemen user tenant
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Selasa 15 September 2026
+- pembuatan surat ijin untuk tenant
+- pembuatan 1 barcode untuk sidak dan surat ijin 
+- perancangan fitur kamera untuk scan barcode, sidak, checlist security surat ijin
