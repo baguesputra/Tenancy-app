@@ -70,15 +70,16 @@ class DashboardController extends Controller
                     $s->order < $approval->order && $s->status !== 'approved'
                 );
                 return ! $hasPendingEarlier;
-            })->take(5)->map(function (Approval $a) use ($validPermits) {
+            })->map(function (Approval $a) use ($validPermits) {
                 $permit = $validPermits->get($a->approvable_id);
                 return [
                     'id' => $permit->id,
                     'permit_number' => $permit->permit_number,
                     'store_name' => $permit->store_name_snapshot,
                     'step_label' => $a->label,
+                    'requested_at' => $permit->created_at,
                 ];
-            })->values();
+            })->sortBy('requested_at')->take(5)->values();
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
