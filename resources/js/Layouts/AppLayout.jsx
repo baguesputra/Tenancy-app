@@ -54,6 +54,8 @@ const masterMenuItems = [
     { label: 'Kategori Product', href: '/product-categories', permission: 'categories.view' },
 ];
 
+const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+
 export default function AppLayout({ children }) {
     const { auth } = usePage().props;
     const currentUrl = usePage().url;
@@ -83,6 +85,17 @@ export default function AppLayout({ children }) {
     }, [currentUrl]);
 
     useEffect(() => {
+        if (!mobileNavOpen) return;
+        const handleKey = (e) => e.key === 'Escape' && setMobileNavOpen(false);
+        document.addEventListener('keydown', handleKey);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+            document.body.style.overflow = '';
+        };
+    }, [mobileNavOpen]);
+
+    useEffect(() => {
         if (collapsed) {
             setMasterOpen(false);
             setSettingsOpen(false);
@@ -100,7 +113,7 @@ export default function AppLayout({ children }) {
     return (
         <div className="min-h-screen bg-[#F7F8FA]">
             {mobileNavOpen && (
-                <div onClick={() => setMobileNavOpen(false)} className="fixed inset-0 bg-black/30 z-30 lg:hidden" aria-hidden="true" />
+                <div onClick={() => setMobileNavOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-30 lg:hidden" aria-hidden="true" />
             )}
 
             <aside
@@ -109,35 +122,66 @@ export default function AppLayout({ children }) {
                     ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
                 aria-label="Navigasi utama"
             >
-                <div className={`flex items-center border-b border-white/10 shrink-0 h-14 px-4 ${collapsed ? 'justify-center' : ''}`}>
-                    {!collapsed ? (
-                        <Link href="/dashboard" className="flex items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-white">
-                            <img src="/images/logo.png" alt="Duta Mall" className="h-8 w-auto rounded-md bg-white p-0.5" />
-                            <span className="leading-tight">
-                                <span className="block text-sm font-semibold text-white">Tenant</span>
-                                <span className="block text-[11px] text-white/50 truncate max-w-[140px]">{auth.user?.branch?.name ?? 'Semua Cabang'}</span>
-                            </span>
+                <div className="shrink-0 border-b border-white/10">
+                    <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
+                        <Link
+                            href="/dashboard"
+                            aria-label="Dashboard"
+                            className={`flex items-center rounded-xl focus-visible:outline-2 focus-visible:outline-white min-h-[40px] ${collapsed ? 'justify-center' : 'gap-2.5 flex-1 min-w-0 px-1'}`}
+                        >
+                            <img src="/images/logo.png" alt="Duta Mall" className="h-8 w-8 object-contain rounded-lg bg-white p-0.5 shrink-0" />
+                            {!collapsed && (
+                                <span className="leading-tight min-w-0">
+                                    <span className="block text-sm font-semibold text-white truncate">Tenant</span>
+                                    <span className="block text-[11px] text-white/50 truncate">{auth.user?.branch?.name ?? 'Semua Cabang'}</span>
+                                </span>
+                            )}
                         </Link>
-                    ) : (
-                        <Link href="/dashboard" aria-label="Dashboard" className="rounded-lg focus-visible:outline-2 focus-visible:outline-white">
-                            <img src="/images/logo.png" alt="Duta Mall" className="h-8 w-8 object-contain rounded-md bg-white p-0.5" />
-                        </Link>
+                        {!collapsed && (
+                            <button
+                                onClick={toggleCollapsed}
+                                title="Ciutkan sidebar"
+                                aria-label="Ciutkan sidebar"
+                                className="hidden lg:flex h-10 w-10 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white shrink-0"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                    {collapsed && (
+                        <div className="flex justify-center pb-2">
+                            <button
+                                onClick={toggleCollapsed}
+                                title="Perluas sidebar"
+                                aria-label="Perluas sidebar"
+                                className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                            >
+                                <svg className="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        </div>
                     )}
                 </div>
 
-                <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto" role="navigation">
+                <nav className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto" role="navigation">
+                    {!collapsed && <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Menu</p>}
                     <NavLink href="/dashboard" currentUrl={currentUrl} icon={menuIcons.dashboard} collapsed={collapsed}>
                         Dashboard
                     </NavLink>
 
                     {visibleMasterMenuItems.length > 0 && (
                         <div className="pt-1">
+                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Master Data</p>}
                             <button
-                                onClick={() => collapsed ? null : setMasterOpen(!masterOpen)}
+                                onClick={() => collapsed ? setCollapsed(false) : setMasterOpen(!masterOpen)}
                                 title="Master Data"
+                                aria-label="Master Data"
                                 aria-expanded={masterOpen && !collapsed}
-                                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
-                                    ${collapsed ? 'justify-center' : 'justify-between'}
+                                className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
+                                    ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
                                     ${isMasterActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                             >
                                 <span className="flex items-center gap-3">
@@ -152,7 +196,7 @@ export default function AppLayout({ children }) {
                             </button>
 
                             {masterOpen && !collapsed && (
-                                <div className="mt-0.5 ml-3 pl-3 border-l border-white/10 space-y-0.5">
+                                <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
                                     {visibleMasterMenuItems.map((item) => (
                                         <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
                                             {item.label}
@@ -174,12 +218,14 @@ export default function AppLayout({ children }) {
                     )}
                     {isSuperAdmin && (
                         <div className="pt-1">
+                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Pengaturan</p>}
                             <button
-                                onClick={() => collapsed ? null : setSettingsOpen(!settingsOpen)}
+                                onClick={() => collapsed ? setCollapsed(false) : setSettingsOpen(!settingsOpen)}
                                 title="Pengaturan"
+                                aria-label="Pengaturan"
                                 aria-expanded={settingsOpen && !collapsed}
-                                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
-                                    ${collapsed ? 'justify-center' : 'justify-between'}
+                                className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
+                                    ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
                                     ${isSettingsActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                             >
                                 <span className="flex items-center gap-3">
@@ -194,7 +240,7 @@ export default function AppLayout({ children }) {
                             </button>
 
                             {settingsOpen && !collapsed && (
-                                <div className="mt-0.5 ml-3 pl-3 border-l border-white/10 space-y-0.5">
+                                <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
                                     {settingsMenuItems.map((item) => (
                                         <NavLink key={item.href} href={item.href} currentUrl={currentUrl} icon={item.icon} small collapsed={false}>
                                             {item.label}
@@ -205,19 +251,6 @@ export default function AppLayout({ children }) {
                         </div>
                     )}
                 </nav>
-
-                <div className="p-2.5 border-t border-white/10 shrink-0">
-                    <button
-                        onClick={toggleCollapsed}
-                        className={`hidden lg:flex w-full items-center px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-white ${collapsed ? 'justify-center' : 'justify-end'}`}
-                        title={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
-                        aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
-                    >
-                        <svg className={`w-5 h-5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                </div>
             </aside>
 
             <div className={`min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[232px]'}`}>
@@ -234,10 +267,13 @@ function Topbar({ user, onMenuClick, onLogout }) {
     const [notifOpen, setNotifOpen] = useState(false);
     const profileRef = useRef(null);
     const notifRef = useRef(null);
-    const { notifications, unreadNotificationsCount } = usePage().props;
+    const profileBtnRef = useRef(null);
+    const notifBtnRef = useRef(null);
+    const { notifications = [], unreadNotificationsCount = 0 } = usePage().props;
 
     const markAsRead = (id, url) => {
-        router.post(`/notifications/${id}/read`, {}, { onFinish: () => router.visit(url) });
+        setNotifOpen(false);
+        router.post(`/notifications/${id}/read`, {}, { onFinish: () => url ? router.visit(url) : router.reload() });
     };
 
     useEffect(() => {
@@ -247,8 +283,8 @@ function Topbar({ user, onMenuClick, onLogout }) {
         };
         const handleKey = (e) => {
             if (e.key === 'Escape') {
-                setProfileOpen(false);
-                setNotifOpen(false);
+                if (notifOpen) { setNotifOpen(false); notifBtnRef.current?.focus(); }
+                if (profileOpen) { setProfileOpen(false); profileBtnRef.current?.focus(); }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -257,15 +293,15 @@ function Topbar({ user, onMenuClick, onLogout }) {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleKey);
         };
-    }, []);
+    }, [notifOpen, profileOpen]);
 
     return (
-        <header className="sticky top-0 z-20 h-14 shrink-0 bg-white border-b border-[#E2E5EA]">
+        <header className="sticky top-0 z-20 h-16 shrink-0 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-[#E2E5EA]">
             <div className="flex items-center justify-between h-full px-4 sm:px-6 gap-3">
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     <button
                         onClick={onMenuClick}
-                        className="lg:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        className="lg:hidden h-10 w-10 flex items-center justify-center -ml-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0"
                         aria-label="Buka menu"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -273,14 +309,18 @@ function Topbar({ user, onMenuClick, onLogout }) {
                         </svg>
                     </button>
 
-                    <Breadcrumbs />
+                    <span className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" aria-hidden="true" />
+                    <div className="min-w-0">
+                        <Breadcrumbs />
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                     <div className="relative" ref={notifRef}>
                         <button
-                            onClick={() => setNotifOpen(!notifOpen)}
-                            className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            ref={notifBtnRef}
+                            onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
+                            className="relative h-10 w-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                             aria-label={`Notifikasi${unreadNotificationsCount > 0 ? `, ${unreadNotificationsCount} belum dibaca` : ''}`}
                             aria-expanded={notifOpen}
                         >
@@ -288,54 +328,99 @@ function Topbar({ user, onMenuClick, onLogout }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                             </svg>
                             {unreadNotificationsCount > 0 && (
-                                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 bg-[#FF6B6B] text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-[#FF6B6B] text-white text-[10px] font-semibold rounded-full flex items-center justify-center ring-2 ring-white">
                                     {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                                 </span>
                             )}
                         </button>
                         {notifOpen && (
-                            <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-[#E2E5EA] shadow-lg py-2 z-30 max-h-96 overflow-y-auto">
-                                <p className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100">Notifikasi</p>
-                                {notifications.length === 0 ? (
-                                    <p className="px-4 py-8 text-sm text-gray-400 text-center">Belum ada notifikasi.</p>
-                                ) : (
-                                    notifications.map((n) => (
-                                        <button
-                                            key={n.id}
-                                            onClick={() => markAsRead(n.id, n.url)}
-                                            className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
-                                        >
-                                            <p className="text-sm font-medium text-gray-800">{n.title}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                                            <p className="text-xs text-gray-400 mt-1">{n.created_at}</p>
-                                        </button>
-                                    ))
-                                )}
+                            <div className="absolute right-0 mt-2 w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl border border-[#E2E5EA] shadow-xl z-30 overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notifikasi</p>
+                                    {unreadNotificationsCount > 0 && (
+                                        <span className="text-[11px] font-medium text-[#0F1E36] bg-[#0F1E36]/5 rounded-full px-2 py-0.5">{unreadNotificationsCount} baru</span>
+                                    )}
+                                </div>
+                                <div className="max-h-80 overflow-y-auto py-1">
+                                    {notifications.length === 0 ? (
+                                        <div className="px-4 py-8 text-center">
+                                            <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400" aria-hidden="true">
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                                </svg>
+                                            </span>
+                                            <p className="text-sm font-medium text-gray-700">Belum ada notifikasi</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">Notifikasi baru akan muncul di sini.</p>
+                                        </div>
+                                    ) : (
+                                        notifications.map((n) => (
+                                            <button
+                                                key={n.id}
+                                                onClick={() => markAsRead(n.id, n.url)}
+                                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36] flex gap-2.5"
+                                            >
+                                                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#FF6B6B] shrink-0" aria-hidden="true" />
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm font-medium text-gray-800 truncate">{n.title}</span>
+                                                    <span className="block text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</span>
+                                                    <span className="block text-xs text-gray-400 mt-1">{n.created_at}</span>
+                                                </span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
 
                     <div className="relative" ref={profileRef}>
                         <button
-                            onClick={() => setProfileOpen(!profileOpen)}
-                            className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            ref={profileBtnRef}
+                            onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
+                            className="flex items-center gap-2 h-10 pl-1.5 pr-2 rounded-xl hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                             aria-expanded={profileOpen}
                             aria-label="Menu pengguna"
                         >
                             <span className="w-8 h-8 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                {user?.name?.charAt(0).toUpperCase()}
+                                {initials(user?.name ?? '?')}
                             </span>
                             <span className="hidden sm:block text-sm font-medium text-gray-700 truncate max-w-[140px]">{user?.name}</span>
+                            <svg className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
                         </button>
                         {profileOpen && (
-                            <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl border border-[#E2E5EA] shadow-lg py-1.5 z-30">
-                                <div className="px-4 py-3 border-b border-gray-100">
-                                    <p className="text-sm font-medium text-gray-800 truncate">{user?.name}</p>
-                                    <p className="text-xs text-gray-500 mt-0.5 font-mono">{user?.employee_number}</p>
+                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#E2E5EA] shadow-xl z-30 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(user?.name ?? '?')}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-medium text-gray-800 truncate">{user?.name}</span>
+                                        <span className="block text-xs text-gray-500 truncate">{user?.branch?.name ?? 'Semua Cabang'}</span>
+                                        <span className="block text-xs text-gray-400 mt-0.5 font-mono truncate">{user?.employee_number}</span>
+                                    </span>
                                 </div>
-                                <button onClick={onLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                    Keluar
-                                </button>
+                                <div className="py-1.5">
+                                    <Link
+                                        href="/password/change"
+                                        className="flex items-center gap-2.5 px-4 py-2.5 min-h-[40px] text-sm text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
+                                    >
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                        Ubah Kata Sandi
+                                    </Link>
+                                    <button
+                                        onClick={onLogout}
+                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 min-h-[40px] text-sm text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-500"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        Keluar
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -352,8 +437,10 @@ function NavLink({ href, currentUrl, children, icon, small = false, collapsed = 
         <Link
             href={href}
             title={collapsed && typeof children === 'string' ? children : undefined}
+            aria-label={collapsed && typeof children === 'string' ? children : undefined}
             aria-current={isActive ? 'page' : undefined}
-            className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-white
+            className={`relative flex items-center gap-3 px-3 rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-white min-h-[40px]
+                ${small ? 'py-2' : 'py-2.5'}
                 ${collapsed ? 'justify-center' : ''}
                 ${isActive ? 'text-white bg-white/10 font-medium' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
         >
