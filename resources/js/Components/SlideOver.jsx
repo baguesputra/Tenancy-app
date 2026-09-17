@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
 
-export default function SlideOver({ open, onClose, title, icon, children, maxWidth = 'max-w-xl' }) {
+export default function SlideOver({ open, onClose, title, subtitle, icon, children, footer, maxWidth = 'max-w-xl' }) {
     useEffect(() => {
         const handleEsc = (e) => e.key === 'Escape' && onClose();
-        if (open) document.addEventListener('keydown', handleEsc);
-        return () => document.removeEventListener('keydown', handleEsc);
+        if (open) {
+            document.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = '';
+        };
     }, [open, onClose]);
 
     return (
@@ -21,14 +27,17 @@ export default function SlideOver({ open, onClose, title, icon, children, maxWid
                     transition-transform duration-200 ease-out
                     ${open ? 'translate-x-0' : 'translate-x-full'}`}
             >
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E5EA] shrink-0">
-                    <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#E2E5EA] bg-white shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
                         {icon && (
-                            <div className="w-8 h-8 rounded-lg bg-[#0F1E36]/5 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-[#0F1E36] text-white flex items-center justify-center shrink-0 [&_svg]:w-4 [&_svg]:h-4" aria-hidden="true">
                                 {icon}
                             </div>
                         )}
-                        <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
+                        <div className="min-w-0">
+                            <h2 className="text-sm font-semibold text-gray-900 truncate">{title}</h2>
+                            {subtitle && <p className="text-xs text-gray-500 truncate mt-0.5">{subtitle}</p>}
+                        </div>
                     </div>
                     <button
                         onClick={onClose}
@@ -41,9 +50,15 @@ export default function SlideOver({ open, onClose, title, icon, children, maxWid
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5">
+                <div className="flex-1 overflow-y-auto p-5 bg-[#F7F8FA]">
                     {children}
                 </div>
+
+                {footer && (
+                    <div className="shrink-0 border-t border-[#E2E5EA] bg-white px-5 py-4">
+                        {footer}
+                    </div>
+                )}
             </div>
         </div>
     );

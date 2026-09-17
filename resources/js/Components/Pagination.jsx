@@ -4,7 +4,7 @@ export default function Pagination({ meta, links }) {
     if (!meta || meta.last_page <= 1) return null;
 
     return (
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[#E2E5EA]">
+        <div className="flex items-center justify-between px-5 py-3">
             <p className="text-xs text-gray-500">
                 Menampilkan {meta.from}–{meta.to} dari {meta.total}
             </p>

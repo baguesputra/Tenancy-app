@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { useForm, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SlideOver from '@/Components/SlideOver';
 import FormField from '@/Components/Form/FormField';
 import FormSection from '@/Components/Form/FormSection';
@@ -15,10 +15,12 @@ import Pagination from '@/Components/Pagination';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
 const emptyContact = { name: '', position: '', phone: '', email: '', type: '' };
+const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
-export default function Index({ tenants, tenantCategories, productCategories, filters, branches, canPickBranch }) {
+export default function Index({ tenants, summary = { total: 0, active: 0, inactive: 0 }, tenantCategories = [], productCategories = [], filters = {}, branches = [], canPickBranch }) {
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
+    const [searchText, setSearchText] = useState(filters.search ?? '');
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         name: '', legal_entity_name: '', npwp_number: '', siup_number: '',
@@ -75,78 +77,155 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
     const removeContact = (idx) => setData('contacts', data.contacts.filter((_, i) => i !== idx));
 
     const updateFilter = (key, value) => {
-        router.get('/tenants', { ...filters, [key]: value }, { preserveState: true });
+        router.get('/tenants', { ...filters, [key]: value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     };
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            if (searchText !== (filters.search ?? '')) updateFilter('search', searchText);
+        }, 400);
+        return () => clearTimeout(t);
+    }, [searchText]);
+
+    const hasFilter = filters.search || filters.tenant_category_id || filters.product_category_id || filters.status;
+    const resetFilters = () => {
+        setSearchText('');
+        router.get('/tenants', {}, { preserveScroll: true, replace: true });
+    };
+
+    const stats = [
+        { key: '', label: 'Total Tenant', value: summary.total, dot: 'bg-[#0F1E36]' },
+        { key: 'active', label: 'Aktif', value: summary.active, dot: 'bg-emerald-500' },
+        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, dot: 'bg-gray-400' },
+    ];
 
     const columns = [
         { key: 'name', label: 'Nama Tenant' },
         { key: 'category', label: 'Kategori' },
         { key: 'branch', label: 'Cabang' },
-        { key: 'status', label: 'Status', className: 'text-right' },
-        { key: 'actions', label: '', className: 'w-10' },
+        { key: 'status', label: 'Status' },
+        { key: 'actions', label: '', className: 'w-12' },
     ];
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
+            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900">Master Tenant</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{tenants.total} tenant terdaftar</p>
+                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Master Tenant</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{summary.total} tenant terdaftar · {summary.active} aktif</p>
                     </div>
-                    <Button onClick={openCreate}>+ Tambah Tenant</Button>
+                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>Tambah Tenant</Button>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                    <TextInput
-                        placeholder="Cari nama tenant..."
-                        defaultValue={filters.search}
-                        onChange={(e) => updateFilter('search', e.target.value)}
-                        className="flex-1 max-w-sm"
-                    />
-                    <SelectInput
-                        defaultValue={filters.tenant_category_id ?? ''}
-                        onChange={(e) => updateFilter('tenant_category_id', e.target.value)}
-                        className="sm:w-48"
-                    >
-                        <option value="">Semua Kategori Tenant</option>
-                        {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </SelectInput>
-                    <SelectInput
-                        defaultValue={filters.product_category_id ?? ''}
-                        onChange={(e) => updateFilter('product_category_id', e.target.value)}
-                        className="sm:w-48"
-                    >
-                        <option value="">Semua Kategori Produk</option>
-                        {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </SelectInput>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                    {stats.map((s) => {
+                        const active = (filters.status ?? '') === s.key;
+                        return (
+                            <button
+                                key={s.label}
+                                onClick={() => updateFilter('status', s.key)}
+                                aria-pressed={active}
+                                className={`text-left bg-white rounded-xl border px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
+                            >
+                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
+                                    {s.label}
+                                </span>
+                                <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
+                    <div className="flex flex-col lg:flex-row gap-2">
+                        <div className="relative flex-1">
+                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <TextInput
+                                placeholder="Cari nama tenant..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                className="!pl-9"
+                                aria-label="Cari nama tenant"
+                            />
+                        </div>
+                        <SelectInput
+                            value={filters.tenant_category_id ?? ''}
+                            onChange={(e) => updateFilter('tenant_category_id', e.target.value)}
+                            className="lg:w-52"
+                            aria-label="Filter kategori tenant"
+                        >
+                            <option value="">Semua Kategori Tenant</option>
+                            {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </SelectInput>
+                        <SelectInput
+                            value={filters.product_category_id ?? ''}
+                            onChange={(e) => updateFilter('product_category_id', e.target.value)}
+                            className="lg:w-52"
+                            aria-label="Filter kategori produk"
+                        >
+                            <option value="">Semua Kategori Produk</option>
+                            {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </SelectInput>
+                        {hasFilter && (
+                            <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
+                                Reset
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <DataTable columns={columns} footer={<Pagination meta={tenants} links={tenants.links} />}>
                     {tenants.data.map((tenant) => (
                         <tr key={tenant.id} onClick={() => openEdit(tenant)} className="group cursor-pointer hover:bg-gray-50/80 transition-colors">
-                            <td className="px-5 py-3.5 font-medium text-gray-900">{tenant.name}</td>
-                            <td className="px-5 py-3.5 text-gray-500">
-                                {tenant.tenant_category.name} · {tenant.product_category.name}
+                            <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(tenant.name)}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block font-medium text-gray-900 truncate">{tenant.name}</span>
+                                        <span className="block text-xs text-gray-400 truncate">{tenant.legal_entity_name || tenant.company_email || '—'}</span>
+                                    </span>
+                                </div>
                             </td>
-                            <td className="px-5 py-3.5 text-gray-500">{tenant.branch.name}</td>
-                            <td className="px-5 py-3.5 text-right">
+                            <td className="px-5 py-3.5">
+                                <span className="block text-sm text-gray-700">{tenant.tenant_category?.name ?? '—'}</span>
+                                <span className="block text-xs text-gray-400">{tenant.product_category?.name ?? '—'}</span>
+                            </td>
+                            <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">{tenant.branch?.name ?? '—'}</td>
+                            <td className="px-5 py-3.5">
                                 <Badge color={tenant.is_active ? 'green' : 'gray'}>
+                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${tenant.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} aria-hidden="true" />
                                     {tenant.is_active ? 'Aktif' : 'Nonaktif'}
                                 </Badge>
                             </td>
                             <td className="px-5 py-3.5">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleDelete(tenant.id); }}
-                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                    aria-label={`Hapus ${tenant.name}`}
+                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all focus-visible:outline-2 focus-visible:outline-red-500"
                                 >
-                                    <IconTrash />
+                                    <IconTrash className="w-4 h-4" />
                                 </button>
                             </td>
                         </tr>
                     ))}
                     {tenants.data.length === 0 && (
-                        <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">Belum ada tenant.</td></tr>
+                        <tr>
+                            <td colSpan={5} className="px-5 py-12 text-center">
+                                <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
+                                <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Tenant untuk data pertama.'}</p>
+                                {hasFilter && (
+                                    <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                        Reset filter
+                                    </button>
+                                )}
+                            </td>
+                        </tr>
                     )}
                 </DataTable>
             </div>
@@ -155,24 +234,33 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
                 open={panelOpen}
                 onClose={closePanel}
                 title={editingTenant ? 'Edit Tenant' : 'Tambah Tenant'}
-                icon={editingTenant ? <IconEdit /> : <IconPlus />}
+                subtitle={editingTenant ? editingTenant.name : 'Lengkapi identitas, legal, dan kontak PIC'}
+                icon={editingTenant ? <IconEdit className="w-4 h-4" /> : <IconPlus className="w-4 h-4" />}
+                footer={
+                    <div className="flex gap-2">
+                        <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>
+                        <Button type="submit" form="tenant-form" loading={processing} className="flex-1 justify-center">
+                            {editingTenant ? 'Simpan Perubahan' : 'Tambah Tenant'}
+                        </Button>
+                    </div>
+                }
             >
-                <form onSubmit={submit}>
-                    <FormSection title="Identitas Bisnis">
-                        <FormField label="Nama Toko/Brand" error={errors.name} required>
-                            <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                <form id="tenant-form" onSubmit={submit}>
+                    <FormSection variant="drawer" title="Identitas Bisnis" description="Nama tampil, kategori, dan cabang">
+                        <FormField compact label="Nama Toko/Brand" error={errors.name} required>
+                            <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="cth. Kopi Senja" />
                         </FormField>
-                        <FormField label="Nama Badan Hukum (PT/CV)" error={errors.legal_entity_name}>
-                            <TextInput value={data.legal_entity_name} onChange={(e) => setData('legal_entity_name', e.target.value)} />
+                        <FormField compact label="Nama Badan Hukum (PT/CV)" error={errors.legal_entity_name}>
+                            <TextInput value={data.legal_entity_name} onChange={(e) => setData('legal_entity_name', e.target.value)} placeholder="cth. PT Senja Abadi" />
                         </FormField>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Kategori Tenant" error={errors.tenant_category_id} required>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <FormField compact label="Kategori Tenant" error={errors.tenant_category_id} required>
                                 <SelectInput value={data.tenant_category_id} onChange={(e) => setData('tenant_category_id', e.target.value)}>
                                     <option value="">Pilih...</option>
                                     {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </SelectInput>
                             </FormField>
-                            <FormField label="Kategori Produk" error={errors.product_category_id} required>
+                            <FormField compact label="Kategori Produk" error={errors.product_category_id} required>
                                 <SelectInput value={data.product_category_id} onChange={(e) => setData('product_category_id', e.target.value)}>
                                     <option value="">Pilih...</option>
                                     {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -180,69 +268,66 @@ export default function Index({ tenants, tenantCategories, productCategories, fi
                             </FormField>
                         </div>
                         {canPickBranch && (
-                            <FormField label="Cabang" error={errors.branch_id} required>
+                            <FormField compact label="Cabang" error={errors.branch_id} required>
                                 <SelectInput value={data.branch_id} onChange={(e) => setData('branch_id', e.target.value)}>
                                     <option value="">Pilih...</option>
                                     {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                                 </SelectInput>
                             </FormField>
                         )}
-                        <Checkbox label="Tenant aktif" checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
+                        <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
+                            <span className="text-xs font-medium text-gray-700">Status tenant</span>
+                            <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
+                        </div>
                     </FormSection>
 
-                    <FormSection title="Dokumen Legal">
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="NPWP" error={errors.npwp_number}>
-                                <TextInput value={data.npwp_number} onChange={(e) => setData('npwp_number', e.target.value)} />
+                    <FormSection variant="drawer" title="Legal & Kontak Perusahaan" description="Dokumen dan kanal resmi tenant">
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <FormField compact label="NPWP" error={errors.npwp_number}>
+                                <TextInput value={data.npwp_number} onChange={(e) => setData('npwp_number', e.target.value)} placeholder="00.000.000.0-000.000" />
                             </FormField>
-                            <FormField label="SIUP / NIB" error={errors.siup_number}>
-                                <TextInput value={data.siup_number} onChange={(e) => setData('siup_number', e.target.value)} />
-                            </FormField>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Telepon" error={errors.company_phone}>
-                                <TextInput value={data.company_phone} onChange={(e) => setData('company_phone', e.target.value)} />
-                            </FormField>
-                            <FormField label="Email" error={errors.company_email}>
-                                <TextInput value={data.company_email} onChange={(e) => setData('company_email', e.target.value)} />
+                            <FormField compact label="SIUP / NIB" error={errors.siup_number}>
+                                <TextInput value={data.siup_number} onChange={(e) => setData('siup_number', e.target.value)} placeholder="No. izin usaha" />
                             </FormField>
                         </div>
-                        <FormField label="Alamat" error={errors.company_address}>
-                            <Textarea value={data.company_address} onChange={(e) => setData('company_address', e.target.value)} rows={2} />
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <FormField compact label="Telepon" error={errors.company_phone}>
+                                <TextInput value={data.company_phone} onChange={(e) => setData('company_phone', e.target.value)} placeholder="08xx-xxxx-xxxx" />
+                            </FormField>
+                            <FormField compact label="Email" error={errors.company_email}>
+                                <TextInput type="email" value={data.company_email} onChange={(e) => setData('company_email', e.target.value)} placeholder="toko@email.com" />
+                            </FormField>
+                        </div>
+                        <FormField compact label="Alamat" error={errors.company_address}>
+                            <Textarea value={data.company_address} onChange={(e) => setData('company_address', e.target.value)} rows={2} placeholder="Alamat lengkap toko/kantor" />
                         </FormField>
                     </FormSection>
 
-                    <FormSection title="PIC / Kontak">
+                    <FormSection variant="drawer" title={`PIC / Kontak (${data.contacts.length})`} description="Min. 1 penanggung jawab tenant">
                         {data.contacts.map((contact, idx) => (
-                            <div key={idx} className="border border-gray-100 rounded-lg p-3 mb-3 bg-gray-50/50">
-                                <div className="grid grid-cols-2 gap-2 mb-2">
-                                    <TextInput placeholder="Nama" value={contact.name} onChange={(e) => updateContact(idx, 'name', e.target.value)} />
-                                    <TextInput placeholder="Jabatan" value={contact.position ?? ''} onChange={(e) => updateContact(idx, 'position', e.target.value)} />
-                                    <TextInput placeholder="Telepon" value={contact.phone ?? ''} onChange={(e) => updateContact(idx, 'phone', e.target.value)} />
-                                    <TextInput placeholder="Email" value={contact.email ?? ''} onChange={(e) => updateContact(idx, 'email', e.target.value)} />
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <SelectInput value={contact.type ?? ''} onChange={(e) => updateContact(idx, 'type', e.target.value)} className="w-36 !py-1.5 text-xs">
-                                        <option value="">Tipe...</option>
-                                        <option value="operasional">Operasional</option>
-                                        <option value="legal">Legal</option>
-                                        <option value="finance">Finance</option>
-                                    </SelectInput>
+                            <div key={idx} className="rounded-xl border border-[#E2E5EA] bg-white p-3 mb-2.5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-semibold text-gray-700">PIC {idx + 1}</span>
                                     {data.contacts.length > 1 && (
-                                        <button type="button" onClick={() => removeContact(idx)} className="text-xs text-red-500">Hapus</button>
+                                        <button type="button" onClick={() => removeContact(idx)} className="text-xs text-red-500 hover:text-red-700 rounded focus-visible:outline-2 focus-visible:outline-red-500">Hapus</button>
                                     )}
                                 </div>
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <TextInput placeholder="Nama *" value={contact.name} onChange={(e) => updateContact(idx, 'name', e.target.value)} aria-label={`Nama PIC ${idx + 1}`} />
+                                    <TextInput placeholder="Jabatan" value={contact.position ?? ''} onChange={(e) => updateContact(idx, 'position', e.target.value)} aria-label={`Jabatan PIC ${idx + 1}`} />
+                                    <TextInput placeholder="Telepon" value={contact.phone ?? ''} onChange={(e) => updateContact(idx, 'phone', e.target.value)} aria-label={`Telepon PIC ${idx + 1}`} />
+                                    <TextInput placeholder="Email" value={contact.email ?? ''} onChange={(e) => updateContact(idx, 'email', e.target.value)} aria-label={`Email PIC ${idx + 1}`} />
+                                </div>
+                                <SelectInput value={contact.type ?? ''} onChange={(e) => updateContact(idx, 'type', e.target.value)} className="!py-2 text-xs" aria-label={`Tipe PIC ${idx + 1}`}>
+                                    <option value="">Tipe kontak...</option>
+                                    <option value="operasional">Operasional</option>
+                                    <option value="legal">Legal</option>
+                                    <option value="finance">Finance</option>
+                                </SelectInput>
                             </div>
                         ))}
-                        <Button type="button" variant="secondary" onClick={addContact} className="text-xs">+ Tambah PIC</Button>
+                        <Button type="button" variant="secondary" onClick={addContact} className="text-xs w-full justify-center border-dashed">+ Tambah PIC</Button>
                     </FormSection>
-
-                    <div className="flex gap-2 sticky bottom-0 bg-white pt-3 -mx-5 px-5 -mb-5 pb-5 border-t border-[#E2E5EA] mt-5">
-                        <Button type="submit" disabled={processing} className="flex-1 justify-center">
-                            {editingTenant ? 'Simpan Perubahan' : 'Tambah Tenant'}
-                        </Button>
-                        <Button type="button" variant="secondary" onClick={closePanel}>Batal</Button>
-                    </div>
                 </form>
             </SlideOver>
         </AppLayout>

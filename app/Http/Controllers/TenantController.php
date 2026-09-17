@@ -22,15 +22,22 @@ class TenantController extends Controller
             ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"))
             ->when($request->tenant_category_id, fn ($q) => $q->where('tenant_category_id', $request->tenant_category_id))
             ->when($request->product_category_id, fn ($q) => $q->where('product_category_id', $request->product_category_id))
+            ->when($request->status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
             ->latest();
 
         $this->branchScope->apply($query, $request->user());
 
+        $summaryBase = clone $query;
+        $total = (clone $summaryBase)->count();
+        $active = (clone $summaryBase)->where('is_active', true)->count();
+
         return Inertia::render('Master/Tenants/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
+            'summary' => ['total' => $total, 'active' => $active, 'inactive' => $total - $active],
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
-            'filters' => $request->only(['search', 'tenant_category_id', 'product_category_id']),
+            'filters' => $request->only(['search', 'tenant_category_id', 'product_category_id', 'status']),
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);

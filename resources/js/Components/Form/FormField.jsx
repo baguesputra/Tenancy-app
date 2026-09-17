@@ -1,8 +1,8 @@
-export default function FormField({ label, error, hint, required, className = '', children }) {
+export default function FormField({ label, error, hint, required, className = '', children, compact = false }) {
     return (
-        <div className={`mb-5 ${className}`}>
+        <div className={`${compact ? 'mb-3' : 'mb-5'} ${className}`}>
             {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className={`block font-medium text-gray-700 ${compact ? 'text-xs mb-1' : 'text-sm mb-1.5'}`}>
                     {label}
                     {required && <span className="text-red-500 ml-0.5" aria-hidden="true">*</span>}
                 </label>

@@ -1,15 +1,16 @@
-export default function FormSection({ title, description, children, collapsible = false, expanded = true, onToggle }) {
+export default function FormSection({ title, description, children, collapsible = false, expanded = true, onToggle, variant }) {
+    const drawer = variant === 'drawer';
     return (
-        <div className="bg-white rounded-2xl border border-[#E2E5EA] p-6 sm:p-8 mb-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className={drawer ? 'bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm' : 'bg-white rounded-2xl border border-[#E2E5EA] p-6 sm:p-8 mb-6 shadow-sm hover:shadow-md transition-shadow duration-200'}>
             {title || description || collapsible ? (
-                <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#E2E5EA]">
-                    <div>
+                <div className={drawer ? 'flex items-center justify-between gap-2 mb-3' : 'flex items-center justify-between mb-5 pb-3 border-b border-[#E2E5EA]'}>
+                    <div className="min-w-0">
                         {title && (
-                            <h2 className="text-lg font-semibold text-[#0F1E36] flex items-center gap-2">
+                            <h2 className={drawer ? 'text-sm font-semibold text-gray-900' : 'text-lg font-semibold text-[#0F1E36] flex items-center gap-2'}>
                                 {title}
                             </h2>
                         )}
-                        {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+                        {description && <p className={drawer ? 'text-xs text-gray-500 mt-0.5' : 'text-sm text-gray-500 mt-0.5'}>{description}</p>}
                     </div>
                     {collapsible && (
                         <button

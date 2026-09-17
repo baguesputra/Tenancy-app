@@ -15,7 +15,7 @@ const sizeMap = {
 };
 
 export default function Badge({ color = 'gray', variant = 'solid', size = 'md', children, className = '' }) {
-    const baseStyles = 'inline-flex items-center font-medium rounded-full whitespace-nowrap';
+    const baseStyles = 'inline-flex items-center font-medium rounded-full whitespace-nowrap ring-1 ring-inset ring-black/5';
     const colorStyles = colorMap[color]?.[variant] || colorMap.gray[variant];
     const sizeStyles = sizeMap[size];
 
