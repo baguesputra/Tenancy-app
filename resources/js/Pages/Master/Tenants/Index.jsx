@@ -265,6 +265,46 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                 }
             >
                 <form id="tenant-form" onSubmit={submit}>
+                    {(() => {
+                        const displayName = (data.name || '').trim() || editingTenant?.name || 'Tenant baru';
+                        const tenantCatName = tenantCategories.find((c) => String(c.id) === String(data.tenant_category_id))?.name ?? editingTenant?.tenant_category?.name;
+                        const productCatName = productCategories.find((c) => String(c.id) === String(data.product_category_id))?.name ?? editingTenant?.product_category?.name;
+                        const branchName = branches.find((b) => String(b.id) === String(data.branch_id))?.name ?? editingTenant?.branch?.name;
+                        const meta = [tenantCatName, productCatName, branchName].filter(Boolean).join(' · ');
+                        return (
+                            <div className="bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm">
+                                <div className="flex items-center gap-4">
+                                    {logoPreview ? (
+                                        <img src={logoPreview} alt={`Logo ${displayName}`} className="w-20 h-20 rounded-2xl object-contain bg-gray-50 border border-[#E2E5EA] p-1.5 shrink-0" />
+                                    ) : (
+                                        <span className="w-20 h-20 rounded-2xl bg-[#0F1E36] text-white text-xl font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(displayName)}
+                                        </span>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-base font-semibold text-gray-900 truncate">{displayName}</p>
+                                        {meta ? (
+                                            <p className="text-xs text-gray-500 mt-0.5 truncate">{meta}</p>
+                                        ) : (
+                                            <p className="text-xs text-gray-400 mt-0.5">Lengkapi identitas di bawah</p>
+                                        )}
+                                        <div className="mt-1.5">
+                                            <Badge color={data.is_active ? 'green' : 'gray'}>
+                                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${data.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} aria-hidden="true" />
+                                                {data.is_active ? 'Aktif' : 'Nonaktif'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                                <FormField compact label="Logo Tenant" error={errors.logo}>
+                                    <FileInput accept=".jpg,.jpeg,.png,.webp" onChange={onLogoChange} />
+                                    {editingTenant?.logo_url && !data.logo && (
+                                        <p className="text-xs text-gray-400 mt-1.5">Logo tersimpan. Pilih file baru untuk mengganti.</p>
+                                    )}
+                                </FormField>
+                            </div>
+                        );
+                    })()}
                     <FormSection variant="drawer" title="Identitas Bisnis" description="Nama tampil, kategori, dan cabang">
                         <FormField compact label="Nama Toko/Brand" error={errors.name} required>
                             <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="cth. Kopi Senja" />
@@ -298,23 +338,6 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <span className="text-xs font-medium text-gray-700">Status tenant</span>
                             <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
                         </div>
-                        <FormField compact label="Logo Tenant" error={errors.logo}>
-                            <div className="flex items-start gap-3">
-                                {logoPreview ? (
-                                    <img src={logoPreview} alt="Logo tenant" className="w-16 h-16 rounded-xl object-contain bg-gray-50 border border-[#E2E5EA] p-1 shrink-0" />
-                                ) : (
-                                    <span className="w-16 h-16 rounded-xl bg-gray-50 border border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xs shrink-0" aria-hidden="true">
-                                        Logo
-                                    </span>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <FileInput accept=".jpg,.jpeg,.png,.webp" onChange={onLogoChange} />
-                                    {editingTenant?.logo_url && !data.logo && (
-                                        <p className="text-xs text-gray-400 mt-1.5">Logo tersimpan. Pilih file baru untuk mengganti.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </FormField>
                     </FormSection>
 
                     <FormSection variant="drawer" title="Legal & Kontak Perusahaan" description="Dokumen dan kanal resmi tenant">

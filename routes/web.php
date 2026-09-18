@@ -125,7 +125,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:tenants.view')->get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
     Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store']);
-    Route::middleware('can:tenants.edit')->put('/tenants/{id}', [TenantController::class, 'update']); // update file via POST + _method=put (multipart tidak bisa PUT langsung)
+    Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update']); // POST didukung karena upload logo via multipart + _method=put
     Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy']);
 
     Route::middleware('can:units.view')->get('/units', [UnitController::class, 'index'])->name('units.index');
