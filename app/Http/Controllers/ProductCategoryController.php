@@ -25,4 +25,9 @@ class ProductCategoryController extends BaseCategoryController
     {
         return 'Kategori Produk';
     }
+
+    protected function beforeDelete($category): void
+    {
+        $category->checklistTemplates()->detach();
+    }
 }

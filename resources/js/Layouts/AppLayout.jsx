@@ -50,8 +50,7 @@ const masterMenuItems = [
     { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
     { label: 'Unit', href: '/units', permission: 'units.view' },
     { label: 'Kontrak / Tenancy', href: '/tenancies', permission: 'tenancies.view' },
-    { label: 'Kategori Tenant', href: '/tenant-categories', permission: 'categories.view' },
-    { label: 'Kategori Product', href: '/product-categories', permission: 'categories.view' },
+    { label: 'Kategori', href: '/categories', permission: 'categories.view' },
 ];
 
 const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';

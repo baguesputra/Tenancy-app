@@ -49,10 +49,13 @@ abstract class BaseCategoryController extends Controller
             return back()->withErrors(['category' => 'Kategori ini masih dipakai oleh tenant, tidak bisa dihapus.']);
         }
 
+        $this->beforeDelete($category);
         $category->delete();
 
         return back()->with('success', $this->pageTitle() . ' berhasil dihapus.');
     }
+
+    protected function beforeDelete($category): void {}
 
     protected function validateCategory(Request $request): array
     {

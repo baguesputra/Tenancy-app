@@ -9,6 +9,7 @@ use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\TenancyController;
@@ -143,8 +144,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy']);
 
     Route::middleware('can:categories.view')->group(function () {
-        Route::get('/tenant-categories', [TenantCategoryController::class, 'index'])->name('tenant-categories.index');
-        Route::get('/product-categories', [ProductCategoryController::class, 'index'])->name('product-categories.index');
+        Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::redirect('/tenant-categories', '/categories?tab=tenant', 301);
+        Route::redirect('/product-categories', '/categories?tab=product', 301);
     });
     Route::middleware('can:categories.manage')->group(function () {
         Route::post('/tenant-categories', [TenantCategoryController::class, 'store']);
