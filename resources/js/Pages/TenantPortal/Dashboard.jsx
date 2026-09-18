@@ -15,8 +15,15 @@ export default function Dashboard({ store, stats, activePermit, recent }) {
                 <div className="absolute -right-10 -top-14 w-48 h-48 rounded-full bg-white/[0.06]" aria-hidden="true" />
                 <div className="absolute right-16 -bottom-20 w-56 h-56 rounded-full bg-white/[0.04]" aria-hidden="true" />
                 <div className="relative">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Toko Saya</p>
-                    <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{store?.name}</h1>
+                    <div className="flex items-center gap-3.5">
+                        {store?.logo_url && (
+                            <img src={store.logo_url} alt={`Logo ${store?.name}`} className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white object-contain p-1 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Toko Saya</p>
+                            <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight truncate">{store?.name}</h1>
+                        </div>
+                    </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 font-mono text-[13px]">
                             {store?.unit_code ?? 'Unit belum dipetakan'}

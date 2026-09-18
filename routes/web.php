@@ -92,6 +92,7 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
             return Inertia::render('TenantPortal/Dashboard', [
                 'store' => [
                     'name' => $tenant->name,
+                    'logo_url' => $tenant->logo_url,
                     'unit_code' => $tenancy?->unit?->unit_code,
                     'branch' => $tenant->branch?->name,
                     'tenancy_end' => $tenancy?->end_date?->toDateString(),
