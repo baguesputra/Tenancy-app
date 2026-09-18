@@ -25,7 +25,7 @@ class BreadcrumbService
             'sessions.index' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions')],
             'sessions.current' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item('Sesi Berjalan')],
             'sessions.show' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item(self::sessionLabel($request))],
-            'inspections.show' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item(self::inspectionLabel($request))],
+            'inspections.show' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), ...self::inspectionParents($request), self::item(self::inspectionLabel($request))],
             'permit-requests.index' => [$webHome, self::item('Surat Izin', '/permit-requests')],
             'permit-requests.create' => [$webHome, self::item('Surat Izin', '/permit-requests'), self::item('Tambah')],
             'permit-requests.show' => [$webHome, self::item('Surat Izin', '/permit-requests'), self::item(self::permitLabel($request, 'permitRequest'))],
@@ -79,6 +79,25 @@ class BreadcrumbService
         }
 
         return 'Detail Inspeksi';
+    }
+
+    private static function inspectionParents(Request $request): array
+    {
+        $inspection = $request->route()?->parameter('inspection');
+
+        if (! is_object($inspection)) {
+            return [];
+        }
+
+        try {
+            $sessionId = $inspection->inspection_session_id;
+            $startedAt = $inspection->session?->started_at;
+            $label = $startedAt ? 'Sesi '.$startedAt->format('d M Y') : 'Sesi Berjalan';
+
+            return $sessionId ? [self::item($label, '/inspection-sessions/'.$sessionId)] : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private static function fallback(Request $request): array

@@ -74,12 +74,18 @@ class InspectionController extends Controller
 
         $answer->load('photos');
 
-        return back()->with('answer', [
+        $payload = [
             'checklist_item_id' => $item->id,
             'value' => $answer->value,
             'note' => $answer->note,
             'photos' => $answer->photos->map(fn ($p) => ['id' => $p->id, 'url' => $p->url()]),
-        ]);
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json(['answer' => $payload]);
+        }
+
+        return back()->with('answer', $payload);
     }
 
     public function complete(Inspection $inspection, Request $request)

@@ -22,6 +22,7 @@ use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\TenantAccountController;
 use App\Http\Controllers\UnitQrController;
+use App\Http\Controllers\ScanController;
 
 Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
@@ -163,6 +164,7 @@ Route::middleware('auth')->group(function () {
         // PENTING: route ini HARUS di atas '/inspection-sessions/{session}'
         Route::get('/inspection-sessions/current', [InspectionSessionController::class, 'current'])->name('sessions.current');
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
+        Route::post('/inspection-sessions/{session}/scan', [InspectionSessionController::class, 'scan'])->name('sessions.scan');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
         Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
@@ -203,7 +205,7 @@ Route::middleware('auth')->group(function () {
     })->name('notifications.read');
 });
 
-Route::get('/scan/{token}', [ScanController::class])->name('scan.resolve');
+Route::get('/scan/{token}', ScanController::class)->name('scan.resolve');
 
 
 // Portal (staff toko)

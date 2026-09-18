@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\InspectionSession;
+use App\Models\ScannableCode;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class InspectionSessionController extends Controller
@@ -36,7 +39,7 @@ class InspectionSessionController extends Controller
     {
         $this->authorizeAccess($session, $request);
 
-        $session->load(['inspections.tenant']);
+        $session->load(['inspections.tenant.productCategory', 'inspections.tenant.activeTenancy.unit']);
 
         $addedTenantIds = $session->inspections->pluck('tenant_id');
 
@@ -70,6 +73,39 @@ class InspectionSessionController extends Controller
 
         $tenant = Tenant::findOrFail($request->tenant_id);
         $inspection = $this->inspectionService->addInspection($session, $tenant);
+
+        return redirect()->route('inspections.show', $inspection->id);
+    }
+
+    public function scan(InspectionSession $session, Request $request)
+    {
+        $this->authorizeAccess($session, $request);
+
+        $validated = $request->validate([
+            'token' => 'required|string|max:100',
+        ]);
+
+        $scannable = ScannableCode::with('scannable')
+            ->where('token', trim($validated['token']))
+            ->first();
+
+        if (! $scannable || ! $scannable->scannable instanceof Unit) {
+            return back()->withErrors(['token' => 'QR tidak dikenal. Pastikan QR unit yang dipindai.']);
+        }
+
+        /** @var Unit $unit */
+        $unit = $scannable->scannable;
+        $unit->loadMissing('activeTenancy.tenant');
+
+        if (! $unit->activeTenancy || ! $unit->activeTenancy->tenant) {
+            return back()->withErrors(['token' => "Unit {$unit->unit_code} kosong, tidak ada tenant aktif."]);
+        }
+
+        try {
+            $inspection = $this->inspectionService->addInspection($session, $unit->activeTenancy->tenant);
+        } catch (ValidationException $e) {
+            return back()->withErrors(['token' => $e->errors()['tenant_id'][0] ?? 'Tenant tidak bisa ditambahkan ke sesi ini.']);
+        }
 
         return redirect()->route('inspections.show', $inspection->id);
     }

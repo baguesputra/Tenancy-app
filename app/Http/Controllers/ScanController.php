@@ -8,6 +8,7 @@ use App\Models\Unit;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ScanController extends Controller
