@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import SlideOver from '@/Components/SlideOver';
 import FormField from '@/Components/Form/FormField';
 import FormSection from '@/Components/Form/FormSection';
+import FileInput from '@/Components/Form/FileInput';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
 import SelectInput from '@/Components/Form/SelectInput';
@@ -22,17 +23,20 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     const [editingTenant, setEditingTenant] = useState(null);
     const [searchText, setSearchText] = useState(filters.search ?? '');
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '', legal_entity_name: '', npwp_number: '', siup_number: '',
         company_phone: '', company_email: '', company_address: '',
         tenant_category_id: '', product_category_id: '', branch_id: '', is_active: true,
+        logo: null,
         contacts: [emptyContact],
     });
+    const [logoPreview, setLogoPreview] = useState(null);
 
     const openCreate = () => {
         setEditingTenant(null);
         reset();
         clearErrors();
+        setLogoPreview(null);
         setPanelOpen(true);
     };
 
@@ -50,18 +54,29 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
             product_category_id: tenant.product_category_id,
             branch_id: tenant.branch_id,
             is_active: tenant.is_active,
+            logo: null,
             contacts: tenant.contacts?.length ? tenant.contacts : [emptyContact],
         });
+        setLogoPreview(tenant.logo_url ?? null);
         clearErrors();
         setPanelOpen(true);
     };
 
-    const closePanel = () => { setPanelOpen(false); reset(); };
+    const closePanel = () => { setPanelOpen(false); setLogoPreview(null); reset(); };
+
+    const onLogoChange = (e) => {
+        const file = e.target.files?.[0] ?? null;
+        setData('logo', file);
+        if (logoPreview && logoPreview.startsWith('blob:')) URL.revokeObjectURL(logoPreview);
+        setLogoPreview(file ? URL.createObjectURL(file) : (editingTenant?.logo_url ?? null));
+    };
 
     const submit = (e) => {
         e.preventDefault();
-        const options = { onSuccess: closePanel };
-        editingTenant ? put(`/tenants/${editingTenant.id}`, options) : post('/tenants', options);
+        const options = { forceFormData: true, onSuccess: closePanel };
+        editingTenant
+            ? post(`/tenants/${editingTenant.id}`, { ...options, data: { ...data, _method: 'put' } })
+            : post('/tenants', options);
     };
 
     const handleDelete = (id) => {
@@ -183,9 +198,13 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                         <tr key={tenant.id} onClick={() => openEdit(tenant)} className="group cursor-pointer hover:bg-gray-50/80 transition-colors">
                             <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                        {initials(tenant.name)}
-                                    </span>
+                                    {tenant.logo_url ? (
+                                        <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-9 h-9 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
+                                    ) : (
+                                        <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(tenant.name)}
+                                        </span>
+                                    )}
                                     <span className="min-w-0">
                                         <span className="block font-medium text-gray-900 truncate">{tenant.name}</span>
                                         <span className="block text-xs text-gray-400 truncate">{tenant.legal_entity_name || tenant.company_email || '—'}</span>
@@ -279,6 +298,23 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <span className="text-xs font-medium text-gray-700">Status tenant</span>
                             <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
                         </div>
+                        <FormField compact label="Logo Tenant" error={errors.logo}>
+                            <div className="flex items-start gap-3">
+                                {logoPreview ? (
+                                    <img src={logoPreview} alt="Logo tenant" className="w-16 h-16 rounded-xl object-contain bg-gray-50 border border-[#E2E5EA] p-1 shrink-0" />
+                                ) : (
+                                    <span className="w-16 h-16 rounded-xl bg-gray-50 border border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xs shrink-0" aria-hidden="true">
+                                        Logo
+                                    </span>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <FileInput accept=".jpg,.jpeg,.png,.webp" onChange={onLogoChange} />
+                                    {editingTenant?.logo_url && !data.logo && (
+                                        <p className="text-xs text-gray-400 mt-1.5">Logo tersimpan. Pilih file baru untuk mengganti.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </FormField>
                     </FormSection>
 
                     <FormSection variant="drawer" title="Legal & Kontak Perusahaan" description="Dokumen dan kanal resmi tenant">

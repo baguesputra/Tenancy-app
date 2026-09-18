@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Tenant extends Model
 {
@@ -15,10 +16,13 @@ class Tenant extends Model
         'company_phone',
         'company_email',
         'company_address',
+        'logo_path',
         'tenant_category_id',
         'product_category_id',
         'is_active',
     ];
+
+    protected $appends = ['logo_url'];
 
     protected function casts(): array
     {
@@ -28,6 +32,11 @@ class Tenant extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo_path ? Storage::url($this->logo_path) : null;
     }
 
     public function tenantCategory()

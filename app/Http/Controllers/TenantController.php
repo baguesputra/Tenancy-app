@@ -51,6 +51,11 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateTenant($request);
+        unset($validated['logo']);
+
+        if ($request->hasFile('logo')) {
+            $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
+        }
 
         $tenant = Tenant::create([
             ...$validated,
@@ -81,6 +86,14 @@ class TenantController extends Controller
         $this->authorizeAccess($tenant, $request);
 
         $validated = $this->validateTenant($request);
+        unset($validated['logo']);
+
+        if ($request->hasFile('logo')) {
+            if ($tenant->logo_path) {
+                \Storage::disk('public')->delete($tenant->logo_path);
+            }
+            $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
+        }
 
         $tenant->update([
             ...$validated,
@@ -102,6 +115,9 @@ class TenantController extends Controller
         }
 
         $tenant->contacts()->delete();
+        if ($tenant->logo_path) {
+            \Storage::disk('public')->delete($tenant->logo_path);
+        }
         $tenant->delete();
 
         return back()->with('success', 'Tenant berhasil dihapus.');
@@ -117,6 +133,7 @@ class TenantController extends Controller
             'company_phone' => 'nullable|string|max:30',
             'company_email' => 'nullable|email|max:255',
             'company_address' => 'nullable|string',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'tenant_category_id' => 'required|exists:tenant_categories,id',
             'product_category_id' => 'required|exists:product_categories,id',
             'branch_id' => $request->user()->canViewAllBranches()
