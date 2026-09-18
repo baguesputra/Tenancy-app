@@ -23,7 +23,16 @@ class UnitQrController extends Controller
 
     public function bulk(Request $request)
     {
-        $query = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])->where('is_active', true);
+        $query = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])
+            ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
+                $qq->where('unit_code', 'like', "%{$request->search}%")
+                    ->orWhere('floor', 'like', "%{$request->search}%")
+                    ->orWhere('block', 'like', "%{$request->search}%");
+            }))
+            ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
+            ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
+            ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when(! $request->status, fn ($q) => $q->where('is_active', true));
 
         if (! $request->user()->canViewAllBranches()) {
             $query->where('branch_id', $request->user()->branch_id);

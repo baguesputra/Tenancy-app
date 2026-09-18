@@ -309,7 +309,6 @@ function Topbar({ user, onMenuClick, onLogout }) {
                         </svg>
                     </button>
 
-                    <span className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
                         <Breadcrumbs />
                     </div>

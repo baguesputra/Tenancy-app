@@ -15,15 +15,26 @@ class UnitController extends Controller
 
     public function index(Request $request)
     {
-        $query = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])
+        $base = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('unit_code', 'like', "%{$request->search}%")
                     ->orWhere('floor', 'like', "%{$request->search}%")
                     ->orWhere('block', 'like', "%{$request->search}%");
-            }))
-            ->latest();
+            }));
 
-        $this->branchScope->apply($query, $request->user());
+        $this->branchScope->apply($base, $request->user());
+
+        $summaryBase = clone $base;
+        $total = (clone $summaryBase)->count();
+        $occupied = (clone $summaryBase)->whereHas('activeTenancy')->count();
+        $inactive = (clone $summaryBase)->where('is_active', false)->count();
+        $vacant = (clone $summaryBase)->where('is_active', true)->whereDoesntHave('activeTenancy')->count();
+
+        $query = (clone $base)
+            ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
+            ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
+            ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->latest();
 
         $units = $query->paginate(15)->withQueryString();
         $units->getCollection()->transform(function (Unit $unit) {
@@ -33,7 +44,13 @@ class UnitController extends Controller
 
         return Inertia::render('Master/Units/Index', [
             'units' => $units,
-            'filters' => $request->only(['search']),
+            'summary' => [
+                'total' => $total,
+                'occupied' => $occupied,
+                'vacant' => $vacant,
+                'inactive' => $inactive,
+            ],
+            'filters' => $request->only(['search', 'status']),
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);
