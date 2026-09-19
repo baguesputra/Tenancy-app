@@ -4,6 +4,7 @@ import FormSection from '@/Components/Form/FormSection';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
 import SelectInput from '@/Components/Form/SelectInput';
+import SearchableSelect from '@/Components/Form/SearchableSelect';
 import DateInput from '@/Components/Form/DateInput';
 import NumberInput from '@/Components/Form/NumberInput';
 import FileInput from '@/Components/Form/FileInput';
@@ -46,17 +47,23 @@ export default function TenancyForm({ tenancy, units, tenants }) {
             <FormSection title="Unit & Tenant">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField label="Unit" error={errors.unit_id} required>
-                        <SelectInput value={data.unit_id} onChange={(e) => setData('unit_id', e.target.value)}>
-                            <option value="">Pilih unit...</option>
-                            {units.map((u) => <option key={u.id} value={u.id}>{u.unit_code}</option>)}
-                        </SelectInput>
+                        <SearchableSelect
+                            value={data.unit_id}
+                            onChange={(e) => setData('unit_id', e.target.value)}
+                            options={units.map((u) => ({ value: u.id, label: u.unit_code }))}
+                            placeholder="Ketik untuk cari unit..."
+                            error={errors.unit_id}
+                        />
                     </FormField>
 
                     <FormField label="Tenant" error={errors.tenant_id} required>
-                        <SelectInput value={data.tenant_id} onChange={(e) => setData('tenant_id', e.target.value)}>
-                            <option value="">Pilih tenant...</option>
-                            {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </SelectInput>
+                        <SearchableSelect
+                            value={data.tenant_id}
+                            onChange={(e) => setData('tenant_id', e.target.value)}
+                            options={tenants.map((t) => ({ value: t.id, label: t.name }))}
+                            placeholder="Ketik untuk cari tenant..."
+                            error={errors.tenant_id}
+                        />
                     </FormField>
                 </div>
 

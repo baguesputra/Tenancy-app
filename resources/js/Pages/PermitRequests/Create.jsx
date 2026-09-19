@@ -6,7 +6,7 @@ import FormSection from '@/Components/Form/FormSection';
 import FormField from '@/Components/Form/FormField';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
-import SelectInput from '@/Components/Form/SelectInput';
+import SearchableSelect from '@/Components/Form/SearchableSelect';
 import DateInput from '@/Components/Form/DateInput';
 import TimeInput from '@/Components/Form/TimeInput';
 import Checkbox from '@/Components/Form/Checkbox';
@@ -172,10 +172,13 @@ export default function Create({ tenants, departments }) {
 
                                         {locationType === 'tenant' && (
                                             <FormField label="Pilih Tenant" error={clientErrors.tenant_id} required>
-                                                <SelectInput value={data.tenant_id} onChange={(e) => setData('tenant_id', e.target.value)}>
-                                                    <option value="">Pilih tenant...</option>
-                                                    {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                                </SelectInput>
+                                                <SearchableSelect
+                                                    value={data.tenant_id}
+                                                    onChange={(e) => setData('tenant_id', e.target.value)}
+                                                    options={tenants.map((t) => ({ value: t.id, label: t.name }))}
+                                                    placeholder="Ketik untuk cari tenant..."
+                                                    error={clientErrors.tenant_id}
+                                                />
                                             </FormField>
                                         )}
 
