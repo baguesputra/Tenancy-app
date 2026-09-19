@@ -7,15 +7,17 @@ import Textarea from '@/Components/Form/Textarea';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import GoodPhotoCapture from '@/Components/Security/GoodPhotoCapture';
+import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from '@/utils/format';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
 const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red' };
+const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', approved: 'Disetujui', rejected: 'Ditolak' };
+const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
 export default function Show({ permit }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
-    const [showContractor, setShowContractor] = useState(false);
 
     const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`, {}, { preserveScroll: true });
 
@@ -111,6 +113,16 @@ export default function Show({ permit }) {
 
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
+    const category = permit.tenant_id
+        ? 'Tenant'
+        : (permit.is_external || (!permit.store_name_snapshot || permit.store_name_snapshot === 'Area Umum Mall') && permit.contractor_company)
+        ? 'Vendor'
+        : 'Area Duta Mall';
+    const locationTitle = permit.tenant?.name
+        ?? permit.contractor_company
+        ?? permit.store_name_snapshot
+        ?? '—';
+    const currentStep = permit.approvals.find((a) => a.status === 'pending');
 
     return (
         <AppLayout>
@@ -119,12 +131,13 @@ export default function Show({ permit }) {
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                             <h1 className="text-lg font-semibold text-gray-900 truncate">{permit.permit_number}</h1>
-                            <Badge color={statusColor[permit.status] ?? 'gray'}>{permit.status}</Badge>
+                            <Badge color="blue">{category}</Badge>
+                            <Badge color={statusColor[permit.status] ?? 'gray'}>{statusLabel[permit.status] ?? permit.status}</Badge>
                             {permit.is_flagged && <Badge color="amber">⚠ flagged</Badge>}
                             {canCompleteSecurityCheck && <Badge color="blue">{doneTasks}/{totalTasks} dicek</Badge>}
                         </div>
                         <p className="text-xs text-gray-500 truncate mt-0.5">
-                            {permit.store_name_snapshot} — {permit.job_type} — {permit.request_date}
+                            {locationTitle} — {permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
                         </p>
                     </div>
                     {canCompleteSecurityCheck && (
@@ -162,9 +175,12 @@ export default function Show({ permit }) {
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
                     <div>
                         <div id="detail" className="scroll-mt-40">
-                            <FormSection title="Detail Permohonan" description={`${permit.store_name_snapshot} — ${location}`}>
+                            <FormSection title="Detail Permohonan" description={`${category} — ${locationTitle}`}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                    <InfoItem label="Kategori" value={<Badge color="blue">{category}</Badge>} />
+                                    <InfoItem label="Nomor Surat" value={permit.permit_number} />
                                     <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
+                                    <InfoItem label="Tanggal Pengajuan" value={formatDateID(permit.request_date)} />
                                     <InfoItem label="Lokasi" value={`${permit.store_name_snapshot} — ${location}`} />
                                     <InfoItem label="Penanggung Jawab" value={`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`} />
                                     <InfoItem
@@ -176,44 +192,39 @@ export default function Show({ permit }) {
                                                 ))}
                                             </div>
                                         }
+                                        className="sm:col-span-2"
                                     />
-                                    <InfoItem label="Tanggal Pelaksanaan" value={`${permit.work_start_date} s/d ${permit.work_end_date}`} />
-                                    <InfoItem label="Jam Pelaksanaan" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
+                                    <InfoItem label="Jenis Pekerjaan" value={permit.job_type || '—'} className="sm:col-span-2" />
+                                    <InfoItem label="Tanggal Pelaksanaan" value={formatDateRange(permit.work_start_date, permit.work_end_date)} />
+                                    <InfoItem label="Jam Pelaksanaan" value={formatTimeRange(permit.work_start_time, permit.work_end_time)} />
                                     <InfoItem label="Akses Masuk/Keluar" value={permit.access_route || '—'} className="sm:col-span-2" />
                                     {permit.notes && (
                                         <InfoItem label="Keterangan" value={permit.notes} className="sm:col-span-2" />
                                     )}
                                 </div>
 
-                                {permit.is_external && (
+                                {(permit.is_external || permit.contractor_company) && (
                                     <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowContractor(!showContractor)}
-                                            aria-expanded={showContractor}
-                                            className="flex items-center justify-between w-full text-xs font-medium text-gray-500 uppercase tracking-wide"
-                                        >
-                                            <span>Kontraktor Eksternal</span>
-                                            <span className="text-gray-400">{showContractor ? '▾' : '▸'}</span>
-                                        </button>
-                                        {showContractor && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mt-3">
-                                                <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
-                                                <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
-                                                <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
-                                                <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
-                                            </div>
-                                        )}
-                                        {permit.accompanying_departments?.length > 0 && (
-                                            <div className="mt-3">
-                                                <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {permit.accompanying_departments.map((d) => (
-                                                        <Badge key={d.id} color="gray">{d.name}</Badge>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                                            {category === 'Vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                                            <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
+                                            <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
+                                            <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
+                                            <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {permit.accompanying_departments?.length > 0 && (
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {permit.accompanying_departments.map((d) => (
+                                                <Badge key={d.id} color="gray">{d.name}</Badge>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </FormSection>
@@ -283,15 +294,29 @@ export default function Show({ permit }) {
                     </div>
 
                     <div id="approval" className="lg:sticky lg:top-[168px] space-y-4 scroll-mt-40">
-                        <FormSection title="Progress Approval">
+                        <FormSection title="Progress Approval" description={currentStep ? `Menunggu: ${currentStep.label}` : 'Semua tahap selesai'}>
                             <ol className="relative ml-1.5 border-l-2 border-gray-100 space-y-4">
                                 {permit.approvals.map((a) => (
                                     <li key={a.id} className="pl-4 relative">
                                         <span className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full ${dotColor[a.status] ?? 'bg-gray-300'}`} aria-hidden="true" />
                                         <div className="flex justify-between items-center gap-2">
                                             <span className="text-sm font-medium text-gray-700">{a.label}</span>
-                                            <Badge color={approvalColor[a.status]}>{a.status}</Badge>
+                                            <Badge color={approvalColor[a.status]}>{approvalLabel[a.status] ?? a.status}</Badge>
                                         </div>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            {a.status === 'approved'
+                                                ? `Oleh ${a.approved_by?.name ?? '—'} — ${formatDateTimeID(a.approved_at)}`
+                                                : a.status === 'rejected'
+                                                ? `Oleh ${a.approved_by?.name ?? '—'} — ${formatDateTimeID(a.approved_at)}`
+                                                : a.department?.name
+                                                ? `Departemen ${a.department.name} — menunggu`
+                                                : 'Menunggu'}
+                                        </p>
+                                        {a.notes && (
+                                            <p className={`text-xs mt-1.5 rounded-lg px-2.5 py-1.5 border ${a.status === 'rejected' ? 'text-red-700 bg-red-50 border-red-100' : 'text-gray-600 bg-gray-50 border-gray-100'}`}>
+                                                {a.notes}
+                                            </p>
+                                        )}
 
                                         {a.step_key === 'security' && a.status === 'pending' && (
                                             <p className="text-xs text-gray-400 mt-1.5">

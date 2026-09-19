@@ -24,7 +24,7 @@ export default function Button({
                 disabled:cursor-not-allowed
                 ${variants[variant]} ${className}`}
             {...props}
-            disabled={loading}
+            disabled={loading || props.disabled}
         >
             {iconLeft && (
                 <span className="h-4 w-4">{iconLeft}</span>

@@ -5,6 +5,7 @@ import Badge from '@/Components/Badge';
 import StepProgressMini from '@/Components/StepProgressMini';
 import Pagination from '@/Components/Pagination';
 import TextInput from '@/Components/Form/TextInput';
+import { formatDateID } from '@/utils/format';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak' };
@@ -82,7 +83,7 @@ export default function Index({ permits, filters }) {
                         >
                             <div className="flex-1 min-w-0">
                                 <p className="font-mono font-semibold text-gray-900 text-sm truncate">{p.permit_number}</p>
-                                <p className="text-xs text-gray-400 mt-0.5 truncate">{p.job_type || '—'} — {formatDate(p.request_date)}</p>
+                                <p className="text-xs text-gray-400 mt-0.5 truncate">{p.job_type || '—'} — {formatDateID(p.request_date)}</p>
                                 {p.step_progress?.length > 0 && p.status === 'pending' && (
                                     <div className="mt-2.5 max-w-[220px]">
                                         <StepProgressMini steps={p.step_progress} />
@@ -115,13 +116,6 @@ export default function Index({ permits, filters }) {
 
 function shortStep(label) {
     return (label ?? '').replace('Approval ', '').replace('Cek Fisik ', '');
-}
-
-function formatDate(value) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function emptyTitle(filters) {

@@ -2,6 +2,7 @@ import PortalLayout from '@/Layouts/PortalLayout';
 import { Link } from '@inertiajs/react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
+import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak' };
@@ -25,7 +26,7 @@ export default function Show({ permit }) {
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <h1 className="font-mono text-lg sm:text-xl font-bold text-gray-900 truncate">{permit.permit_number}</h1>
-                        <p className="text-sm text-gray-500 mt-1">{permit.job_type || '—'} — {formatDate(permit.request_date)}</p>
+                        <p className="text-sm text-gray-500 mt-1">{permit.job_type || '—'} — {formatDateID(permit.request_date)}</p>
                     </div>
                     <Badge color={statusColor[permit.status]} variant="soft" size="md">{statusLabel[permit.status]}</Badge>
                 </div>
@@ -93,8 +94,8 @@ export default function Show({ permit }) {
                 <div className="space-y-4 lg:sticky lg:top-24">
                     <FormSection title="Detail Pengajuan">
                         <dl className="space-y-2.5 text-sm">
-                            <RecapRow label="Jadwal" value={`${formatDate(permit.work_start_date)} s/d ${formatDate(permit.work_end_date)}`} />
-                            <RecapRow label="Jam" value={`${permit.work_start_time ?? '—'} s/d ${permit.work_end_time ?? '—'}`} />
+                            <RecapRow label="Jadwal" value={formatDateRange(permit.work_start_date, permit.work_end_date)} />
+                            <RecapRow label="Jam" value={formatTimeRange(permit.work_start_time, permit.work_end_time)} />
                             <RecapRow label="Jenis Pekerjaan" value={permit.job_type || '—'} />
                             {permit.is_external && (
                                 <RecapRow label="Vendor" value={permit.contractor_company || '—'} />
@@ -159,13 +160,6 @@ function stepTime(a) {
     }
     if (a.status === 'rejected') return 'Ditolak';
     return 'Menunggu';
-}
-
-function formatDate(value) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function RecapRow({ label, value }) {

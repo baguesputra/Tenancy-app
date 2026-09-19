@@ -2,6 +2,7 @@ import PortalLayout from '@/Layouts/PortalLayout';
 import { Link } from '@inertiajs/react';
 import Badge from '@/Components/Badge';
 import StepProgressMini from '@/Components/StepProgressMini';
+import { formatDateID } from '@/utils/format';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak' };
@@ -110,7 +111,7 @@ export default function Dashboard({ store, stats, activePermit, recent }) {
                         >
                             <span className="min-w-0">
                                 <span className="block font-mono text-sm font-medium text-gray-900 truncate">{p.permit_number}</span>
-                                <span className="block text-xs text-gray-400 mt-0.5 truncate">{p.job_type || '—'} — {p.request_date}</span>
+                                <span className="block text-xs text-gray-400 mt-0.5 truncate">{p.job_type || '—'} — {formatDateID(p.request_date)}</span>
                             </span>
                             <Badge color={statusColor[p.status]} variant="soft" size="sm">
                                 {statusLabel[p.status]}

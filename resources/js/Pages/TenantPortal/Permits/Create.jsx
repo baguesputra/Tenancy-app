@@ -10,14 +10,18 @@ import DateInput from '@/Components/Form/DateInput';
 import TimeInput from '@/Components/Form/TimeInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
+import Badge from '@/Components/Badge';
 import StepIndicator from '@/Components/StepIndicator';
 import StepPanel from '@/Components/StepPanel';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import { formatDateRange, formatTimeRange } from '@/utils/format';
 
 const STEPS = ['Jadwal', 'Pekerja & Barang', 'Detail', 'Review'];
 
 export default function Create({ departments }) {
     const [step, setStep] = useState(1);
     const [clientErrors, setClientErrors] = useState({});
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         permit_number: '',
@@ -68,7 +72,7 @@ export default function Create({ departments }) {
     const addGood = () => setData('goods', [...data.goods, { description: '', quantity_note: '' }]);
     const removeGood = (idx) => setData('goods', data.goods.filter((_, i) => i !== idx));
 
-    const validateStep = (s) => {
+    const getStepErrors = (s) => {
         const errs = {};
         if (s === 1) {
             if (data.activity_types.length === 0) errs.activity_types = 'Pilih minimal 1 jenis kegiatan.';
@@ -81,8 +85,24 @@ export default function Create({ departments }) {
         if (s === 3) {
             if (!data.permit_number) errs.permit_number = 'Nomor surat wajib diisi.';
         }
+        return errs;
+    };
+
+    const validateStep = (s) => {
+        const errs = getStepErrors(s);
         setClientErrors(errs);
         return Object.keys(errs).length === 0;
+    };
+
+    const validateAll = () => {
+        const all = {};
+        for (let s = 1; s < STEPS.length; s++) Object.assign(all, getStepErrors(s));
+        setClientErrors(all);
+        if (Object.keys(all).length === 0) return true;
+        for (let s = 1; s < STEPS.length; s++) {
+            if (Object.keys(getStepErrors(s)).length > 0) { setStep(s); break; }
+        }
+        return false;
     };
 
     const goNext = () => {
@@ -95,11 +115,23 @@ export default function Create({ departments }) {
 
     const submit = (e) => {
         e.preventDefault();
-        if (!validateStep(3)) { setStep(3); return; }
+        goNext();
+    };
+
+    const handleAjukan = () => {
+        if (!validateAll()) return;
+        setConfirmOpen(true);
+    };
+
+    const confirmAjukan = () => {
+        setConfirmOpen(false);
         post('/portal/permits');
     };
 
     const activityLabels = data.activity_types.map((v) => ACTIVITY_TYPES.find((t) => t.value === v)?.label ?? v);
+    const workerNames = data.workers.map((w) => w.name.trim()).filter(Boolean);
+    const goodNames = data.goods.map((g) => [g.description.trim(), g.quantity_note.trim()].filter(Boolean).join(' — ')).filter(Boolean);
+    const deptNames = departments.filter((d) => data.accompanying_department_ids.includes(d.id)).map((d) => d.name);
 
     return (
         <PortalLayout>
@@ -287,29 +319,69 @@ export default function Create({ departments }) {
 
                                 {/* STEP 4 — Review */}
                                 {step === 4 && (
-                                    <FormSection title="Review & Kirim">
-                                        <div className="space-y-4 text-sm">
-                                            <ReviewRow label="Nomor Surat" value={data.permit_number} />
-                                            <ReviewRow label="Jenis Kegiatan" value={activityLabels.join(', ') || '—'} />
-                                            <ReviewRow label="Tanggal Pelaksanaan" value={`${data.work_start_date} s/d ${data.work_end_date}`} />
-                                            <ReviewRow label="Jam" value={`${data.work_start_time || '—'} s/d ${data.work_end_time || '—'}`} />
-                                            <ReviewRow label="Pekerja" value={`${data.workers.filter((w) => w.name).length} orang`} />
-                                            <ReviewRow label="Barang" value={`${data.goods.filter((g) => g.description).length} item`} />
-                                            <ReviewRow label="Vendor Eksternal" value={data.is_external ? data.contractor_company || 'Ya' : 'Tidak'} />
-                                            <ReviewRow
-                                                label="Pendampingan"
-                                                value={
-                                                    departments
-                                                        .filter((d) => data.accompanying_department_ids.includes(d.id))
-                                                        .map((d) => d.name)
-                                                        .join(', ') || 'Tidak ada'
-                                                }
-                                            />
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-5 pt-4 border-t border-gray-100 leading-relaxed">
-                                            Periksa kembali data di atas. Setelah diajukan, surat izin akan diproses melalui persetujuan Tenancy, Building Service, dan pengecekan fisik Security.
-                                        </p>
-                                    </FormSection>
+                                    <>
+                                        <FormSection title="Jadwal & Kegiatan">
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                                <ReviewRow
+                                                    label="Jenis Kegiatan"
+                                                    value={activityLabels.length > 0
+                                                        ? <span className="flex flex-wrap gap-1.5">{activityLabels.map((l) => <Badge key={l} color="blue">{l}</Badge>)}</span>
+                                                        : '—'}
+                                                    className="sm:col-span-2"
+                                                />
+                                                <ReviewRow label="Jenis Pekerjaan" value={data.job_type || '—'} className="sm:col-span-2" />
+                                                <ReviewRow label="Tanggal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
+                                                <ReviewRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
+                                                <ReviewRow label="Akses Masuk/Keluar" value={data.access_route || '—'} className="sm:col-span-2" />
+                                            </dl>
+                                        </FormSection>
+
+                                        <FormSection title={`Pekerja (${workerNames.length}) & Barang (${goodNames.length})`}>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                                                <div>
+                                                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Pekerja</h3>
+                                                    {workerNames.length > 0 ? (
+                                                        <ol className="list-decimal list-inside space-y-1 text-gray-900 font-medium">
+                                                            {workerNames.map((n, i) => <li key={`${n}-${i}`} className="truncate">{n}</li>)}
+                                                        </ol>
+                                                    ) : <p className="text-gray-400">Belum ada pekerja.</p>}
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Barang</h3>
+                                                    {goodNames.length > 0 ? (
+                                                        <ul className="list-disc list-inside space-y-1 text-gray-900 font-medium">
+                                                            {goodNames.map((n, i) => <li key={`${n}-${i}`} className="truncate">{n}</li>)}
+                                                        </ul>
+                                                    ) : <p className="text-gray-400">Tidak ada barang.</p>}
+                                                </div>
+                                            </div>
+                                        </FormSection>
+
+                                        <FormSection title="Detail Pengajuan">
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                                <ReviewRow label="Nomor Surat" value={data.permit_number || '—'} />
+                                                <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
+                                                <ReviewRow label="Vendor Eksternal" value={data.is_external ? (data.contractor_company || 'Ya') : 'Tidak'} />
+                                                {data.is_external && (
+                                                    <>
+                                                        <ReviewRow label="PIC Vendor" value={[data.contractor_pic, data.contractor_phone].filter(Boolean).join(' — ') || '—'} />
+                                                        <ReviewRow label="Alamat Vendor" value={data.contractor_address || '—'} className="sm:col-span-2" />
+                                                    </>
+                                                )}
+                                                <ReviewRow
+                                                    label="Pendampingan"
+                                                    value={deptNames.length > 0
+                                                        ? <span className="flex flex-wrap gap-1.5">{deptNames.map((n) => <Badge key={n} color="gray">{n}</Badge>)}</span>
+                                                        : 'Tidak ada'}
+                                                    className="sm:col-span-2"
+                                                />
+                                                <ReviewRow label="Catatan" value={data.notes || '—'} className="sm:col-span-2" />
+                                            </dl>
+                                            <p className="text-xs text-gray-400 mt-5 pt-4 border-t border-gray-100 leading-relaxed">
+                                                Periksa kembali data di atas. Setelah diajukan, surat izin akan diproses melalui persetujuan Tenancy, Building Service, dan pengecekan fisik Security.
+                                            </p>
+                                        </FormSection>
+                                    </>
                                 )}
                             </StepPanel>
 
@@ -325,7 +397,7 @@ export default function Create({ departments }) {
                                         Lanjut
                                     </Button>
                                 ) : (
-                                    <Button type="submit" disabled={processing} variant="success">
+                                    <Button type="button" disabled={processing} variant="success" onClick={handleAjukan}>
                                         {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
                                     </Button>
                                 )}
@@ -338,6 +410,20 @@ export default function Create({ departments }) {
                         </div>
                     </div>
                 </form>
+
+                <ConfirmModal
+                    open={confirmOpen}
+                    onClose={() => setConfirmOpen(false)}
+                    onConfirm={confirmAjukan}
+                    loading={processing}
+                >
+                    <ConfirmRow label="Nomor" value={data.permit_number} />
+                    <ConfirmRow label="Jadwal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
+                    <ConfirmRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
+                    <ConfirmRow label="Pekerja" value={workerNames.length > 0 ? `${workerNames.length} orang` : null} />
+                    <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />
+                    <ConfirmRow label="Vendor" value={data.is_external ? (data.contractor_company || 'Ya') : 'Tidak'} />
+                </ConfirmModal>
             </div>
         </PortalLayout>
     );
@@ -364,7 +450,7 @@ function LiveSummary({ data, currentStep }) {
                 />
                 <SummaryItem
                     label="Jadwal"
-                    value={data.work_start_date ? `${data.work_start_date} s/d ${data.work_end_date || '...'}` : null}
+                    value={data.work_start_date ? formatDateRange(data.work_start_date, data.work_end_date || '') : null}
                     filled={!!data.work_start_date}
                 />
                 <SummaryItem
@@ -419,11 +505,11 @@ function SummaryItem({ label, value, filled, dim = false }) {
     );
 }
 
-function ReviewRow({ label, value }) {
+function ReviewRow({ label, value, className = '' }) {
     return (
-        <div className="flex justify-between items-start border-b border-gray-50 pb-3 last:border-0">
-            <dt className="text-gray-500">{label}</dt>
-            <dd className="text-gray-900 font-medium text-right max-w-[60%]">{value || '—'}</dd>
+        <div className={`flex flex-col gap-1 border-b border-gray-50 pb-3 ${className}`}>
+            <dt className="text-xs text-gray-500">{label}</dt>
+            <dd className="text-gray-900 font-medium break-words">{value || '—'}</dd>
         </div>
     );
 }

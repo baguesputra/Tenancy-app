@@ -104,6 +104,16 @@ class PermitRequestService
             ];
         }
 
+        // Vendor murni (tanpa tenant & tanpa nama area) — jangan fallback Area Umum Mall
+        if (! $tenant && empty($data['store_name_snapshot'])) {
+            return [
+                'store_name_snapshot' => $data['contractor_company'] ?? 'Vendor',
+                'floor_snapshot' => null,
+                'block_snapshot' => null,
+                'unit_number_snapshot' => null,
+            ];
+        }
+
         // Area umum mall — manual
         return [
             'store_name_snapshot' => $data['store_name_snapshot'] ?? 'Area Umum Mall',
