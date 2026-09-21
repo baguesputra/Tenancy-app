@@ -7,7 +7,7 @@ import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak' };
 
-export default function Show({ permit }) {
+export default function Show({ permit, scan_url, qr_image, show_qr }) {
     const rejectedStep = permit.approvals.find((a) => a.status === 'rejected');
 
     return (
@@ -102,6 +102,33 @@ export default function Show({ permit }) {
                             )}
                         </dl>
                     </FormSection>
+
+                    {show_qr && (
+                        <FormSection title="QR Check Security">
+                            <div className="text-center">
+                                {qr_image && (
+                                    <img src={qr_image} alt={`QR ${permit.permit_number}`} className="w-44 h-44 mx-auto border border-gray-200 rounded-xl" />
+                                )}
+                                <p className="text-xs text-gray-500 mt-3">Tunjukkan ke Security untuk scan saat cek fisik</p>
+                                <div className="mt-3 flex gap-2 justify-center">
+                                    <a
+                                        href={`/portal/permits/${permit.id}/qr.pdf`}
+                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                    >
+                                        Download PDF
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => window.print()}
+                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                    >
+                                        Print
+                                    </button>
+                                </div>
+                                {scan_url && <p className="mt-2 font-mono text-[10px] text-gray-400 break-all">{scan_url}</p>}
+                            </div>
+                        </FormSection>
+                    )}
 
                     <FormSection title="Hasil Pemeriksaan Fisik">
                         <div className="space-y-5">

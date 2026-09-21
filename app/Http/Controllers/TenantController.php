@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Services\BranchScopeService;
 use App\Models\TenantUser;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -71,7 +72,7 @@ class TenantController extends Controller
         $tenantUser = TenantUser::create([
             'tenant_id' => $tenant->id,
             'username' => TenantUser::generateUsernameFrom($tenant->name),
-            'password' => bcrypt($generatedPassword),
+            'password' => Hash::make($generatedPassword),
             'is_active' => true,
         ]);
 

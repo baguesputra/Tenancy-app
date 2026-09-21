@@ -48,9 +48,8 @@ class SsoController extends Controller
         Auth::login($user);
         request()->session()->regenerate();
 
-        if (! $user->branch_id) {
-            // User baru dari SSO belum di-assign cabang — perlu halaman khusus
-            // atau notifikasi ke admin. Untuk sekarang redirect ke dashboard saja.
+        if ($token = session()->pull('scan_redirect_token')) {
+            return redirect()->route('scan.resolve', $token);
         }
 
         return redirect()->route('dashboard');

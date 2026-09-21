@@ -83,3 +83,13 @@ segala form akan digitalisasikan, tahapan awal pembuatan master data dulu sebelu
 - pembuatan surat ijin untuk tenant
 - pembuatan 1 barcode untuk sidak dan surat ijin 
 - perancangan fitur kamera untuk scan barcode, sidak, checlist security surat ijin
+
+# Develop Checklist - Tenancy App
+**Tanggal:** Senin 21 September 2026
+- list open counter tenant dimasuk kan
+- penambahan role untuk marketing
+- ada sidak untuk opencounter atau event
+- penmabahan form surat ijin marketing untuk event atau opencounter
+- penambahan expired untuk surat ijin
+- penambahan laoding dock untuk security pengecekan
+- penambahan qrcode untuk hasil approve ijin untuk tenant

@@ -8,6 +8,7 @@ export default function ConfirmModal({
     title = 'Ajukan Surat Izin?',
     loading = false,
     confirmLabel = 'Ya, Ajukan',
+    confirmVariant = 'success',
     children,
     note = 'Pastikan data di review sudah benar. Setelah diajukan, surat izin masuk tahap persetujuan dan tidak bisa diubah.',
 }) {
@@ -33,7 +34,7 @@ export default function ConfirmModal({
                 <Button type="button" variant="secondary" onClick={onClose} disabled={loading} className="flex-1 justify-center">
                     Kembali Cek
                 </Button>
-                <Button type="button" variant="success" onClick={onConfirm} disabled={loading} className="flex-1 justify-center">
+                <Button type="button" variant={confirmVariant} onClick={onConfirm} disabled={loading} className="flex-1 justify-center">
                     {loading ? 'Mengirim...' : confirmLabel}
                 </Button>
             </div>

@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'answer' => fn () => $request->session()->get('answer'),
+                'credential' => fn () => $request->session()->get('credential'),
             ],
             'breadcrumbs' => fn () => BreadcrumbService::forRequest($request),
         ];

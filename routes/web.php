@@ -35,8 +35,8 @@ Route::middleware('can:settings.access')->prefix('settings')->name('settings.')-
     Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
 
     Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('tenant-accounts.index');
-    Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store']);
     Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate']);
+    Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store']);
     Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword']);
     Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive']);
 });
@@ -213,6 +213,7 @@ Route::get('/scan/{token}', ScanController::class)->name('scan.resolve');
 
 // Portal (staff toko)
 Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
+    Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });
 

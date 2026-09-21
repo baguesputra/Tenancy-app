@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\PermitRequest;
 use App\Services\PermitRequestService;
 use App\Http\Requests\StorePermitRequestRequest;
+use App\Models\ScannableCode;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class PermitRequestController extends Controller
 {
@@ -68,9 +72,51 @@ class PermitRequestController extends Controller
         $tenantUser = $request->user('tenant');
         abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
 
-        $permit->load(['workers', 'goods', 'approvals' => fn ($q) => $q->orderBy('order')]);
+        $permit->load(['workers', 'goods', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
 
-        return Inertia::render('TenantPortal/Permits/Show', ['permit' => $permit]);
+        $bsStep = $permit->approvals->firstWhere('step_key', 'bs');
+        $showQr = $permit->status === 'completed'
+            || ($bsStep && $bsStep->status === 'approved' && $permit->status !== 'rejected');
+
+        $scanUrl = $showQr ? $permit->scan_url : '';
+        $qrImage = $scanUrl
+            ? 'data:image/svg+xml;base64,' . base64_encode((string) QrCode::size(220)->generate($scanUrl))
+            : null;
+
+        return Inertia::render('TenantPortal/Permits/Show', [
+            'permit' => $permit,
+            'scan_url' => $scanUrl,
+            'qr_image' => $qrImage,
+            'show_qr' => $showQr,
+        ]);
+    }
+
+    public function qrPdf(PermitRequest $permit, Request $request)
+    {
+        $tenantUser = $request->user('tenant');
+        abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
+
+        $permit->load(['scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
+
+        $bsStep = $permit->approvals->firstWhere('step_key', 'bs');
+        $showQr = $permit->status === 'completed'
+            || ($bsStep && $bsStep->status === 'approved' && $permit->status !== 'rejected');
+        abort_unless($showQr, 403, 'QR belum tersedia — tunggu approval Building Service.');
+
+        if (! $permit->scannableCode) {
+            $permit->setRelation('scannableCode', ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => PermitRequest::class,
+                'scannable_id' => $permit->id,
+            ]));
+        }
+
+        $pdf = Pdf::loadView('pdf.permit-qr-label', ['permit' => $permit])
+            ->setPaper([0, 0, 320, 480]);
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permit->permit_number);
+
+        return $pdf->download("QR-{$safeNumber}.pdf");
     }
 
 }

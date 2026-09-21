@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TenantAccountController extends Controller
@@ -21,14 +23,17 @@ class TenantAccountController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $withoutAccountCount = Tenant::whereDoesntHave('tenantUser')->count();
+
         return Inertia::render('Settings/TenantAccounts/Index', [
             'tenants' => $tenants,
             'filters' => $request->only(['search', 'status']),
-            'withoutAccountCount' => Tenant::whereDoesntHave('tenantUser')->count(),
+            'withoutAccountCount' => $withoutAccountCount,
+            'withAccountCount' => Tenant::whereHas('tenantUser')->count(),
         ]);
     }
 
-    public function store($tenantId)
+    public function store(Request $request, $tenantId)
     {
         $tenant = Tenant::findOrFail($tenantId);
 
@@ -36,17 +41,29 @@ class TenantAccountController extends Controller
             return back()->withErrors(['tenant' => 'Tenant ini sudah punya akun.']);
         }
 
-        $password = Str::random(10);
+        $validated = $request->validate([
+            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', Rule::unique('tenant_users', 'username')],
+            'password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ]);
+
+        $username = $validated['username'] ?: TenantUser::generateUsernameFrom($tenant->name);
+        $password = $validated['password'] ?: Str::random(10);
+
         $tenantUser = TenantUser::create([
             'tenant_id' => $tenant->id,
-            'username' => TenantUser::generateUsernameFrom($tenant->name),
-            'password' => bcrypt($password),
+            'username' => $username,
+            'password' => Hash::make($password),
             'is_active' => true,
         ]);
 
-        return back()->with('success',
-            "Akun berhasil dibuat untuk \"{$tenant->name}\". Username: \"{$tenantUser->username}\", Password: \"{$password}\" — catat sekarang, tidak akan ditampilkan lagi."
-        );
+        return back()
+            ->with('success', "Akun portal untuk \"{$tenant->name}\" berhasil dibuat.")
+            ->with('credential', [
+                'mode' => 'created',
+                'tenant_name' => $tenant->name,
+                'username' => $tenantUser->username,
+                'password' => $password,
+            ]);
     }
 
     public function bulkCreate()
@@ -59,22 +76,22 @@ class TenantAccountController extends Controller
             $tenantUser = TenantUser::create([
                 'tenant_id' => $tenant->id,
                 'username' => TenantUser::generateUsernameFrom($tenant->name),
-                'password' => bcrypt($password),
+                'password' => Hash::make($password),
                 'is_active' => true,
             ]);
-            $created[] = "{$tenant->name}: {$tenantUser->username} / {$password}";
+            $created[] = ['tenant_name' => $tenant->name, 'username' => $tenantUser->username, 'password' => $password];
         }
 
         if (empty($created)) {
             return back()->with('success', 'Semua tenant sudah punya akun.');
         }
 
-        return back()->with('success',
-            count($created) . " akun berhasil dibuat. Detail:\n" . implode("\n", $created)
-        );
+        return back()
+            ->with('success', count($created) . ' akun portal berhasil dibuat. Salin kredensial di bawah sebelum menutup halaman.')
+            ->with('credential', ['mode' => 'bulk', 'accounts' => $created]);
     }
 
-    public function resetPassword($tenantId)
+    public function resetPassword(Request $request, $tenantId)
     {
         $tenant = Tenant::with('tenantUser')->findOrFail($tenantId);
 
@@ -82,12 +99,32 @@ class TenantAccountController extends Controller
             return back()->withErrors(['tenant' => 'Tenant ini belum punya akun.']);
         }
 
-        $password = Str::random(10);
-        $tenant->tenantUser->update(['password' => bcrypt($password)]);
+        $validated = $request->validate([
+            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', Rule::unique('tenant_users', 'username')->ignore($tenant->tenantUser->id)],
+            'password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ]);
 
-        return back()->with('success',
-            "Password untuk \"{$tenant->name}\" (username: {$tenant->tenantUser->username}) berhasil direset menjadi: \"{$password}\" — catat sekarang, tidak akan ditampilkan lagi."
-        );
+        $username = $validated['username'] ?: $tenant->tenantUser->username;
+        $passwordChanged = ! empty($validated['password']);
+        $password = $validated['password'] ?: null;
+
+        $tenant->tenantUser->update(array_filter([
+            'username' => $username,
+            'password' => $passwordChanged ? Hash::make($password) : null,
+        ]));
+
+        if (! $passwordChanged) {
+            return back()->with('success', "Username akun \"{$tenant->name}\" diperbarui menjadi \"{$username}\". Password tidak berubah.");
+        }
+
+        return back()
+            ->with('success', "Akun portal \"{$tenant->name}\" berhasil diperbarui.")
+            ->with('credential', [
+                'mode' => 'updated',
+                'tenant_name' => $tenant->name,
+                'username' => $username,
+                'password' => $password,
+            ]);
     }
 
     public function toggleActive($tenantId)

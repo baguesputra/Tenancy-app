@@ -94,6 +94,13 @@ class PermitRequest extends Model
         return $this->morphOne(ScannableCode::class, 'scannable');
     }
 
+    public function getScanUrlAttribute(): string
+    {
+        $token = $this->scannableCode?->token;
+
+        return $token ? route('scan.resolve', $token) : '';
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
