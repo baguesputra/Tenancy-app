@@ -1,6 +1,7 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
+import QrScanModal from '@/Components/Scan/QrScanModal';
 
 const menuIcons = {
     dashboard: (
@@ -264,6 +265,9 @@ export default function AppLayout({ children }) {
 function Topbar({ user, onMenuClick, onLogout }) {
     const [profileOpen, setProfileOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
+    const [scanOpen, setScanOpen] = useState(false);
+    const isSuperAdmin = user?.roles?.includes('super_admin');
+    const canScan = isSuperAdmin || user?.permissions?.includes('sidak.view') || user?.permissions?.includes('permits.view');
     const profileRef = useRef(null);
     const notifRef = useRef(null);
     const profileBtnRef = useRef(null);
@@ -314,6 +318,18 @@ function Topbar({ user, onMenuClick, onLogout }) {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                    {canScan && (
+                        <button
+                            type="button"
+                            onClick={() => setScanOpen(true)}
+                            className="h-10 w-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            aria-label="Scan QR"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M3 12h18" />
+                            </svg>
+                        </button>
+                    )}
                     <div className="relative" ref={notifRef}>
                         <button
                             ref={notifBtnRef}
@@ -424,6 +440,7 @@ function Topbar({ user, onMenuClick, onLogout }) {
                     </div>
                 </div>
             </div>
+            <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
         </header>
     );
 }

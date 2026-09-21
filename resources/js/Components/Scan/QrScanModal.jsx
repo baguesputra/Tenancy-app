@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { router, usePage } from '@inertiajs/react';
 import Button from '@/Components/Form/Button';
 import TextInput from '@/Components/Form/TextInput';
@@ -19,7 +20,7 @@ function extractToken(raw) {
     return text;
 }
 
-export default function QrScanModal({ open, onClose, sessionId = null }) {
+export default function QrScanModal({ open, onClose, sessionId = null, title = 'Scan QR', description = 'Arahkan kamera ke QR — otomatis buka halaman terkait', submitLabel = 'Buka dari Token' }) {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const timerRef = useRef(null);
@@ -131,14 +132,14 @@ export default function QrScanModal({ open, onClose, sessionId = null }) {
 
     if (!open) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Scan QR tenant">
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Scan QR tenant">
             <div className="absolute inset-0 bg-black/60" onClick={() => { stopAll(); onClose?.(); }} aria-hidden="true" />
-            <div className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl">
+            <div className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl overflow-hidden shadow-xl">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div>
-                        <h2 className="text-base font-semibold text-gray-900">Scan QR Tenant</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Arahkan kamera ke QR unit — otomatis lompat ke sidak</p>
+                        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
                     </div>
                     <button
                         type="button"
@@ -188,11 +189,12 @@ export default function QrScanModal({ open, onClose, sessionId = null }) {
                             disabled={!manualToken.trim()}
                             onClick={() => goToToken(manualToken)}
                         >
-                            Buka Sidak dari Token
+                            {submitLabel}
                         </Button>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

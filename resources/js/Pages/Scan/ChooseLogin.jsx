@@ -21,7 +21,7 @@ export default function ChooseLogin({ token }) {
                         Masuk sebagai Staff Mall
                     </Link>
                 </div>
-                <p className="mt-4 font-mono text-[11px] text-gray-400 break-all">Token: {token}</p>
+                <p className="mt-4 text-[11px] text-gray-400">Login untuk melanjutkan ke hasil scan.</p>
             </div>
         </div>
     );

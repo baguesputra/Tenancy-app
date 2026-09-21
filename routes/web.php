@@ -208,7 +208,7 @@ Route::middleware('auth')->group(function () {
     })->name('notifications.read');
 });
 
-Route::get('/scan/{token}', ScanController::class)->name('scan.resolve');
+Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)->name('scan.resolve');
 
 
 // Portal (staff toko)
