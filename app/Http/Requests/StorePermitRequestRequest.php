@@ -21,7 +21,7 @@ class StorePermitRequestRequest extends FormRequest
             // Marketing terkunci: field non-pameran di-exclude (diabaikan), bukan ditolak,
             // karena form selalu kirim string kosong untuk field tak terpakai.
             'tenant_id' => $isPortal ? 'prohibited' : ($isMarketing ? 'required|exists:tenants,id' : 'nullable|exists:tenants,id'),
-            'store_name_snapshot' => $isPortal || $isMarketing ? 'exclude' : 'nullable|required_without_all:tenant_id,contractor_company|string|max:255',
+            'store_name_snapshot' => $isPortal || $isMarketing ? 'exclude' : 'nullable|required_without_all:tenant_id,contractor_company|string|min:3|max:255',
             'floor_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
             'block_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
             'unit_number_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
@@ -32,7 +32,7 @@ class StorePermitRequestRequest extends FormRequest
             'pic_name' => $isMarketing ? 'required|string|max:255' : 'nullable|string|max:255',
             'pic_phone' => $isMarketing ? 'required|string|max:30' : 'nullable|string|max:30',
             'is_external' => 'boolean',
-            'contractor_company' => $isMarketing ? 'exclude' : 'nullable|string|max:255',
+            'contractor_company' => $isMarketing ? 'exclude' : 'nullable|string|min:3|max:255',
             'contractor_pic' => $isMarketing ? 'exclude' : 'nullable|string|max:255',
             'contractor_address' => $isMarketing ? 'exclude' : 'nullable|string',
             'contractor_phone' => $isMarketing ? 'exclude' : 'nullable|string|max:30',

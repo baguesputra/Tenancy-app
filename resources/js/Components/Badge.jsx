@@ -1,11 +1,11 @@
 const colorMap = {
-    gray: { solid: 'bg-gray-100 text-gray-700', outline: 'border-gray-300 text-gray-700', soft: 'bg-gray-50 text-gray-700' },
-    green: { solid: 'bg-emerald-100 text-emerald-700', outline: 'border-emerald-300 text-emerald-700', soft: 'bg-emerald-50 text-emerald-700' },
-    yellow: { solid: 'bg-amber-100 text-amber-700', outline: 'border-amber-300 text-amber-700', soft: 'bg-amber-50 text-amber-700' },
-    red: { solid: 'bg-red-100 text-red-700', outline: 'border-red-300 text-red-700', soft: 'bg-red-50 text-red-700' },
-    blue: { solid: 'bg-blue-100 text-blue-700', outline: 'border-blue-300 text-blue-700', soft: 'bg-blue-50 text-blue-700' },
-    amber: { solid: 'bg-amber-100 text-amber-700', outline: 'border-amber-300 text-amber-700', soft: 'bg-amber-50 text-amber-700' },
-    coral: { solid: 'bg-[#FF6B6B]/10 text-[#FF6B6B]', outline: 'border-[#FF6B6B] text-[#FF6B6B]', soft: 'bg-[#FF6B6B]/10 text-[#FF6B6B]' },
+    gray: { solid: 'bg-gray-100 text-gray-800', outline: 'border-gray-300 text-gray-800', soft: 'bg-gray-50 text-gray-800' },
+    green: { solid: 'bg-emerald-100 text-emerald-800', outline: 'border-emerald-400 text-emerald-800', soft: 'bg-emerald-50 text-emerald-800' },
+    yellow: { solid: 'bg-amber-100 text-amber-900', outline: 'border-amber-400 text-amber-900', soft: 'bg-amber-50 text-amber-900' },
+    red: { solid: 'bg-red-100 text-red-800', outline: 'border-red-400 text-red-800', soft: 'bg-red-50 text-red-800' },
+    blue: { solid: 'bg-blue-100 text-blue-800', outline: 'border-blue-400 text-blue-800', soft: 'bg-blue-50 text-blue-800' },
+    amber: { solid: 'bg-amber-100 text-amber-900', outline: 'border-amber-400 text-amber-900', soft: 'bg-amber-50 text-amber-900' },
+    coral: { solid: 'bg-[#FF6B6B]/15 text-[#D64545]', outline: 'border-[#FF6B6B] text-[#D64545]', soft: 'bg-[#FF6B6B]/10 text-[#D64545]' },
 };
 
 const sizeMap = {

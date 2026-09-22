@@ -25,18 +25,9 @@ const sourceMeta = {
     staff: { label: 'Staff', color: 'blue' },
 };
 
-const categoryTabs = [
-    { key: '', label: 'Semua' },
-    { key: 'pameran', label: 'Pameran' },
-    { key: 'tenant', label: 'Tenant' },
-    { key: 'vendor', label: 'Vendor' },
-    { key: 'area', label: 'Area' },
-];
-
 export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const locked = !!categoryLocked;
-    const visibleTabs = categoryTabs.filter((t) => !hiddenCategories.includes(t.key));
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -71,6 +62,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
         { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
+        { key: 'area', label: 'Area', value: counts.area ?? 0, dot: 'bg-gray-400' },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
     const columns = locked ? [
@@ -117,7 +109,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
                     </div>
                 ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                     {stats.map((s) => {
                         const active = (filters.category ?? '') === s.key;
                         return (
@@ -139,27 +131,6 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 )}
 
                 <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    {!locked && (
-                    <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2" role="tablist" aria-label="Filter jenis pengajuan">
-                        {visibleTabs.map((tab) => {
-                            const active = (filters.category ?? '') === tab.key;
-                            return (
-                                <button
-                                    key={tab.key}
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => updateFilter('category', tab.key)}
-                                    className={`shrink-0 text-xs font-medium rounded-full px-3.5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    {tab.label}
-                                    {tab.key !== '' && counts[tab.key] > 0 && (
-                                        <span className={`ml-1.5 tabular-nums ${active ? 'text-white/70' : 'text-gray-400'}`}>{counts[tab.key]}</span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    )}
                     <div className="flex flex-col lg:flex-row gap-2">
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -169,7 +140,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 placeholder="Cari nomor / toko..."
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
-                                className="!pl-9"
+                                className="!pl-10 !rounded-xl !leading-5"
                                 aria-label="Cari nomor atau toko"
                             />
                         </div>
@@ -177,7 +148,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <SelectInput
                             value={filters.activity_type ?? ''}
                             onChange={(e) => updateFilter('activity_type', e.target.value)}
-                            className="lg:w-56"
+                            className="lg:w-56 !rounded-xl"
                             aria-label="Filter tipe aktivitas"
                         >
                             <option value="">Semua Aktivitas</option>
@@ -187,7 +158,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <SelectInput
                             value={filters.status ?? ''}
                             onChange={(e) => updateFilter('status', e.target.value)}
-                            className="lg:w-44"
+                            className="lg:w-44 !rounded-xl"
                             aria-label="Filter status"
                         >
                             <option value="">Semua Status</option>
@@ -211,8 +182,8 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                             <tr
                                 key={p.id}
                                 onClick={() => router.visit(`/permit-requests/${p.id}`)}
-                                className={`cursor-pointer transition-colors ${
-                                    p.is_my_turn ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50/80'
+                                className={`group cursor-pointer transition-all ${
+                                    p.is_my_turn ? 'bg-amber-50/40 hover:bg-amber-50/70 hover:shadow-sm' : 'hover:bg-gray-50/80 hover:shadow-sm'
                                 }`}
                             >
                                 <td className="px-5 py-3.5">
@@ -242,8 +213,8 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     <Badge color={src.color} size="sm">{src.label}</Badge>
                                 </td>
                                 <td className="px-5 py-3.5">
-                                    <span className="block text-sm text-gray-900 truncate max-w-52">{p.store_name_snapshot}</span>
-                                    <span className="block text-xs text-gray-400 truncate max-w-52">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
+                                    <span className="block text-sm text-gray-900 truncate max-w-52" title={p.store_name_snapshot}>{p.store_name_snapshot}</span>
+                                    <span className="block text-xs text-gray-400 truncate max-w-52" title={(p.activity_labels ?? []).join(' · ') || '—'}>{(p.activity_labels ?? []).join(' · ') || '—'}</span>
                                 </td>
                                 <td className="px-5 py-3.5">
                                     {p.step_progress?.length > 0 ? (
@@ -253,11 +224,16 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     )}
                                 </td>
                                 <td className="px-5 py-3.5 text-right">
-                                    {p.status === 'pending' && p.current_step_label ? (
-                                        <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
-                                    ) : (
-                                        <Badge color={statusColor[p.status]}>{statusLabel[p.status] ?? p.status}</Badge>
-                                    )}
+                                    <span className="inline-flex items-center gap-1.5">
+                                        {p.status === 'pending' && p.current_step_label ? (
+                                            <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
+                                        ) : (
+                                            <Badge color={statusColor[p.status]}>{statusLabel[p.status] ?? p.status}</Badge>
+                                        )}
+                                        <svg className="w-4 h-4 text-gray-300 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
                                 </td>
                             </tr>
                         );
