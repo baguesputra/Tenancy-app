@@ -90,6 +90,7 @@ class AccessControlController extends Controller
         $validated = $request->validate([
             'scopes' => 'array',
             'scopes.*.tenant_category_id' => 'nullable|exists:tenant_categories,id',
+            'scopes.*.mode' => 'nullable|in:include,exclude',
             'scopes.*.can_view' => 'boolean',
             'scopes.*.view_own_only' => 'boolean',
             'scopes.*.can_create' => 'boolean',
@@ -98,17 +99,24 @@ class AccessControlController extends Controller
         ]);
 
         MasterScope::where('role_id', $role->id)->delete();
-        $byCategory = [];
+        $seen = [];
         foreach ($validated['scopes'] ?? [] as $row) {
             if (! $row['can_view'] && ! $row['can_create'] && ! $row['can_edit']) {
                 continue;
             }
-            $byCategory[$row['tenant_category_id'] ?? 'all'] = $row;
-        }
-        foreach ($byCategory as $row) {
+            $mode = $row['mode'] ?? 'include';
+            if ($mode === 'exclude' && empty($row['tenant_category_id'])) {
+                continue;
+            }
+            $key = $mode.'|'.($row['tenant_category_id'] ?? 'all');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
             MasterScope::create([
                 'role_id' => $role->id,
                 'tenant_category_id' => $row['tenant_category_id'] ?? null,
+                'mode' => $mode,
                 'can_view' => (bool) ($row['can_view'] ?? false),
                 'view_own_only' => (bool) ($row['view_own_only'] ?? false),
                 'can_create' => (bool) ($row['can_create'] ?? false),

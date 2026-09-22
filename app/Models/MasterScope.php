@@ -10,6 +10,7 @@ class MasterScope extends Model
     protected $fillable = [
         'role_id',
         'tenant_category_id',
+        'mode',
         'can_view',
         'view_own_only',
         'can_create',

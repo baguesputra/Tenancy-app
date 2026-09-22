@@ -33,6 +33,39 @@ class TenantScopeService
         return $this->scopesFor($user)->isNotEmpty();
     }
 
+    private function allIds(): Collection
+    {
+        // ponytail: pluck tiap panggil, cache DB jika kategori ratusan
+        return TenantCategory::pluck('id');
+    }
+
+    private function allowedIds(Collection $scopes, string $flag, string $ownFlag): array
+    {
+        $rows = $scopes->where($flag, true);
+        $ownRows = $rows->where($ownFlag, true);
+        $allRows = $rows->where($ownFlag, false);
+
+        $includeOwn = $ownRows->where('mode', '!=', 'exclude');
+        $includeAll = $allRows->where('mode', '!=', 'exclude');
+        $excludeOwn = $ownRows->where('mode', 'exclude');
+        $excludeAll = $allRows->where('mode', 'exclude');
+
+        $expand = function (Collection $set) {
+            if ($set->contains(fn ($s) => ! $s->tenant_category_id)) {
+                return $this->allIds();
+            }
+
+            return $set->pluck('tenant_category_id')->filter()->unique()->values();
+        };
+
+        $baseOwn = $includeOwn->isEmpty() ? collect() : $expand($includeOwn)->diff($expand($excludeOwn));
+        $baseAll = $includeAll->isNotEmpty() || $excludeAll->isNotEmpty()
+            ? ($includeAll->isEmpty() ? $this->allIds() : $expand($includeAll))->diff($expand($excludeAll))
+            : collect();
+
+        return [$baseAll, $baseOwn];
+    }
+
     public function applyView(Builder $query, User $user): Builder
     {
         if ($user->hasRole('super_admin')) {
@@ -44,9 +77,7 @@ class TenantScopeService
             return $query;
         }
 
-        $view = $scopes->where('can_view', true);
-        $all = $this->expand($view->where('view_own_only', false));
-        $own = $this->expand($view->where('view_own_only', true));
+        [$all, $own] = $this->allowedIds($scopes, 'can_view', 'view_own_only');
 
         if ($all->isEmpty() && $own->isEmpty()) {
             return $query->whereRaw('0 = 1');
@@ -70,8 +101,9 @@ class TenantScopeService
             return true;
         }
 
-        return $scopes->where('can_create', true)
-            ->contains(fn ($s) => ! $s->tenant_category_id || (int) $s->tenant_category_id === $categoryId);
+        [$all] = $this->allowedIds($scopes, 'can_create', 'view_own_only');
+
+        return $all->contains($categoryId);
     }
 
     public function canEdit(User $user, Tenant $tenant): bool
@@ -85,10 +117,14 @@ class TenantScopeService
             return true;
         }
 
-        return $scopes->where('can_edit', true)->contains(
-            fn ($s) => (! $s->tenant_category_id || (int) $s->tenant_category_id === (int) $tenant->tenant_category_id)
-                && (! $s->edit_own_only || (int) $tenant->created_by === (int) $user->id)
-        );
+        [$all, $own] = $this->allowedIds($scopes, 'can_edit', 'edit_own_only');
+        $catId = (int) $tenant->tenant_category_id;
+
+        if ($all->contains($catId)) {
+            return true;
+        }
+
+        return $own->contains($catId) && (int) $tenant->created_by === (int) $user->id;
     }
 
     public function creatableCategoryIds(User $user): ?Collection
@@ -102,7 +138,7 @@ class TenantScopeService
             return null;
         }
 
-        return $this->expand($scopes->where('can_create', true));
+        return $this->allowedIds($scopes, 'can_create', 'view_own_only')[0];
     }
 
     public function editOwnOnlyCategoryIds(User $user): ?Collection
@@ -116,15 +152,6 @@ class TenantScopeService
             return null;
         }
 
-        return $this->expand($scopes->where('can_edit', true)->where('edit_own_only', true));
-    }
-
-    private function expand(Collection $rows): Collection
-    {
-        if ($rows->contains(fn ($s) => ! $s->tenant_category_id)) {
-            return TenantCategory::pluck('id');
-        }
-
-        return $rows->pluck('tenant_category_id')->filter()->unique()->values();
+        return $this->allowedIds($scopes, 'can_edit', 'edit_own_only')[1];
     }
 }

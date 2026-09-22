@@ -85,4 +85,51 @@ class TenantScopeTest extends TestCase
         $this->assertTrue($svc->canEdit($mkt, $own));
         $this->assertFalse($svc->canEdit($mkt, $other));
     }
+
+    private function tenancy(): User
+    {
+        foreach (['tenants.view', 'tenants.create', 'tenants.edit'] as $p) {
+            Permission::firstOrCreate(['name' => $p]);
+        }
+        $role = Role::firstOrCreate(['name' => 'tenancy_staff']);
+        $role->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $staff = User::create([
+            'name' => 'Tnc', 'employee_number' => 'TNC-1',
+            'branch_id' => $branch->id, 'password' => bcrypt('x'),
+        ]);
+        $staff->assignRole('tenancy_staff');
+
+        $oc = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
+        MasterScope::create([
+            'role_id' => $role->id, 'tenant_category_id' => $oc->id, 'mode' => 'exclude',
+            'can_view' => true, 'view_own_only' => false,
+            'can_create' => true, 'can_edit' => true, 'edit_own_only' => false,
+        ]);
+
+        return $staff;
+    }
+
+    public function test_tenancy_excludes_open_counter_with_one_row(): void
+    {
+        $tnc = $this->tenancy();
+        $this->tenant('Open Counter');
+        $this->tenant('Tenant');
+
+        $res = $this->actingAs($tnc)->get('/tenants')->assertOk();
+        $names = collect($res->viewData('page')['props']['tenants']['data'])->pluck('name')->all();
+        $this->assertContains('Tenant Test', $names);
+        $this->assertNotContains('Open Counter Test', $names);
+
+        $oc = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
+        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
+        $this->actingAs($tnc)->post('/tenants', [
+            'name' => 'X', 'tenant_category_id' => $oc->id, 'product_category_id' => $pc->id,
+        ])->assertForbidden();
+
+        $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
+        $this->actingAs($tnc)->post('/tenants', [
+            'name' => 'OK', 'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
+        ])->assertRedirect();
+    }
 }

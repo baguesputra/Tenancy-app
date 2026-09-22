@@ -12,6 +12,7 @@ class MasterScopeSeeder extends Seeder
     public function run(): void
     {
         $marketing = Role::firstOrCreate(['name' => 'marketing_staff']);
+        $tenancy = Role::firstOrCreate(['name' => 'tenancy_staff']);
         $oc = TenantCategory::where('name', 'Open Counter')->first();
         if (! $oc) {
             return;
@@ -19,7 +20,12 @@ class MasterScopeSeeder extends Seeder
 
         MasterScope::updateOrCreate(
             ['role_id' => $marketing->id, 'tenant_category_id' => $oc->id],
-            ['can_view' => true, 'view_own_only' => false, 'can_create' => true, 'can_edit' => true, 'edit_own_only' => true]
+            ['mode' => 'include', 'can_view' => true, 'view_own_only' => false, 'can_create' => true, 'can_edit' => true, 'edit_own_only' => true]
+        );
+
+        MasterScope::updateOrCreate(
+            ['role_id' => $tenancy->id, 'tenant_category_id' => $oc->id],
+            ['mode' => 'exclude', 'can_view' => true, 'view_own_only' => false, 'can_create' => true, 'can_edit' => true, 'edit_own_only' => false]
         );
     }
 }
