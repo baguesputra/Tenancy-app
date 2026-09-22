@@ -13,6 +13,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
 const emptyContact = { name: '', position: '', phone: '', email: '', type: '' };
@@ -22,6 +23,8 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
     const [searchText, setSearchText] = useState(filters.search ?? '');
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '', legal_entity_name: '', npwp_number: '', siup_number: '',
@@ -79,8 +82,18 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
             : post('/tenants', options);
     };
 
-    const handleDelete = (id) => {
-        if (confirm('Hapus tenant ini?')) router.delete(`/tenants/${id}`, { preserveScroll: true });
+    const askDelete = (tenant) => setConfirmDelete(tenant);
+
+    const confirmDeleteTenant = () => {
+        if (!confirmDelete) return;
+        setDeleting(true);
+        router.delete(`/tenants/${confirmDelete.id}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setDeleting(false);
+                setConfirmDelete(null);
+            },
+        });
     };
 
     const updateContact = (idx, field, value) => {
@@ -224,7 +237,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             </td>
                             <td className="px-5 py-3.5">
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(tenant.id); }}
+                                    onClick={(e) => { e.stopPropagation(); askDelete(tenant); }}
                                     aria-label={`Hapus ${tenant.name}`}
                                     className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all focus-visible:outline-2 focus-visible:outline-red-500"
                                 >
@@ -389,6 +402,21 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     </FormSection>
                 </form>
             </SlideOver>
+
+            <ConfirmModal
+                open={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={confirmDeleteTenant}
+                loading={deleting}
+                title="Hapus Tenant?"
+                confirmLabel="Ya, Hapus"
+                confirmVariant="danger"
+                note="Tenant terhapus permanen dan tidak bisa dibatalkan. Tenant dengan riwayat kontrak/sidak akan ditolak server — nonaktifkan saja."
+            >
+                <ConfirmRow label="Nama" value={confirmDelete?.name} />
+                <ConfirmRow label="Kategori" value={confirmDelete?.tenant_category?.name} />
+                <ConfirmRow label="Cabang" value={confirmDelete?.branch?.name} />
+            </ConfirmModal>
         </AppLayout>
     );
 }

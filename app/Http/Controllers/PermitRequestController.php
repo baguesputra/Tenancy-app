@@ -20,6 +20,10 @@ class PermitRequestController extends Controller
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->latest();
 
+        if ($request->user()->hasRole('marketing_staff')) {
+            $query->where('activity_types', 'like', '%pameran%');
+        }
+
         if (! $request->user()->canViewAllBranches()) {
             $query->where('branch_id', $request->user()->branch_id);
         }
@@ -47,19 +51,39 @@ class PermitRequestController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $isMarketing = $request->user()->hasRole('marketing_staff');
+
+        $tenants = Tenant::where('is_active', true)
+            ->when($isMarketing, fn ($q) => $q->whereHas('tenantCategory', fn ($c) => $c->where('name', 'Open Counter')))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('PermitRequests/Create', [
-            'tenants' => Tenant::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'tenants' => $tenants,
             'departments' => Department::orderBy('name')->get(['id', 'name']),
+            'isMarketingLocked' => $isMarketing,
         ]);
     }
 
     public function store(StorePermitRequestRequest $request)
     {
-        $request->merge(['tenant_id' => $request->tenant_id ?: null]);
+        $isMarketing = $request->user()->hasRole('marketing_staff');
 
-        $permit = $this->service->create($request->validated(), $request->user());
+        if ($isMarketing) {
+            $tenant = Tenant::with('tenantCategory')->find($request->tenant_id);
+            abort_unless($tenant && $tenant->tenantCategory?->name === 'Open Counter', 403, 'Marketing hanya bisa mengajukan untuk tenant Open Counter.');
+        } else {
+            $request->merge(['tenant_id' => $request->tenant_id ?: null]);
+        }
+
+        $validated = $request->validated();
+        if ($isMarketing) {
+            $validated['activity_types'] = ['pameran'];
+        }
+
+        $permit = $this->service->create($validated, $request->user());
 
         return redirect()->route('permit-requests.show', $permit->id)
             ->with('success', 'Surat izin berhasil diajukan atas nama tenant.');
@@ -69,6 +93,7 @@ class PermitRequestController extends Controller
     {
         $user = $request->user();
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
         $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
         $permitRequest->currentUserDepartmentId = $user->department_id;

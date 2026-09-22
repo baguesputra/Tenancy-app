@@ -15,6 +15,8 @@ class DepartmentSeeder extends Seeder
             ['name' => 'Security', 'description' => 'Divisi keamanan, termasuk pengecekan fisik keluar-masuk barang.'],
             ['name' => 'Engineering', 'description' => 'Divisi teknik, menangani listrik, AC, dan sarana bangunan.'],
             ['name' => 'IT', 'description' => 'Divisi teknologi informasi.'],
+            ['name' => 'Marketing', 'description' => 'Divisi pemasaran, menangani event, pameran, dan open counter.'],
+            ['name' => 'Keuangan', 'description' => 'Divisi keuangan, verifikasi pembayaran sewa event/pameran.'],
         ];
 
         foreach ($departments as $dept) {

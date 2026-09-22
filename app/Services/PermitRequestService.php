@@ -15,9 +15,17 @@ class PermitRequestService
     public function __construct(
         private ApprovalService $approvalService,
         private NotificationService $notificationService,
+        private PermitNumberService $numberService,
     ) {}
 
     public function create(array $data, User|TenantUser $requestedBy): PermitRequest
+    {
+        return \DB::transaction(function () use ($data, $requestedBy) {
+            return $this->createOnce($data, $requestedBy);
+        }, 3);
+    }
+
+    private function createOnce(array $data, User|TenantUser $requestedBy): PermitRequest
     {
         $tenant = isset($data['tenant_id']) ? Tenant::with('activeTenancy.unit')->find($data['tenant_id']) : null;
 
@@ -27,7 +35,7 @@ class PermitRequestService
             ?? ($requestedBy instanceof User ? $requestedBy->branch_id : $requestedBy->tenant?->branch_id);
 
         $permit = PermitRequest::create([
-            'permit_number' => $data['permit_number'],
+            'permit_number' => $this->numberService->next($data['activity_types'] ?? []),
             'activity_types' => $data['activity_types'],
             'request_date' => $data['request_date'],
             'tenant_id' => $tenant?->id,
@@ -66,6 +74,24 @@ class PermitRequestService
             ]);
         }
 
+        foreach ($data['goods_light'] ?? [] as $good) {
+            if (empty($good['description'])) continue;
+            $permit->goods()->create([
+                'description' => $good['description'],
+                'quantity_note' => $good['quantity_note'] ?? null,
+                'weight_class' => 'light',
+            ]);
+        }
+
+        foreach ($data['goods_heavy'] ?? [] as $good) {
+            if (empty($good['description'])) continue;
+            $permit->goods()->create([
+                'description' => $good['description'],
+                'quantity_note' => $good['quantity_note'] ?? null,
+                'weight_class' => 'heavy',
+            ]);
+        }
+
         if (! empty($data['accompanying_department_ids'])) {
             $permit->accompanyingDepartments()->sync($data['accompanying_department_ids']);
         }
@@ -96,11 +122,16 @@ class PermitRequestService
     {
         if ($tenant) {
             $unit = $tenant->activeTenancy?->unit;
+            $standName = trim($data['stand_name'] ?? '');
+            $floor = trim($data['floor_snapshot'] ?? '');
+            $block = trim($data['block_snapshot'] ?? '');
+            $unitNo = trim($data['unit_number_snapshot'] ?? '');
+
             return [
-                'store_name_snapshot' => $tenant->name,
-                'floor_snapshot' => $unit?->floor,
-                'block_snapshot' => $unit?->block,
-                'unit_number_snapshot' => $unit?->unit_number,
+                'store_name_snapshot' => $standName !== '' ? "{$tenant->name} — {$standName}" : $tenant->name,
+                'floor_snapshot' => $floor !== '' ? $floor : $unit?->floor,
+                'block_snapshot' => $block !== '' ? $block : $unit?->block,
+                'unit_number_snapshot' => $unitNo !== '' ? $unitNo : $unit?->unit_number,
             ];
         }
 
@@ -125,9 +156,24 @@ class PermitRequestService
 
     private function setupApprovalSteps(PermitRequest $permit): void
     {
-        $tenancyDept = Department::where('name', 'Tenancy')->first();
         $bsDept = Department::where('name', 'Building Service')->first();
         $securityDept = Department::where('name', 'Security')->first();
+
+        if (in_array('pameran', $permit->activity_types ?? [])) {
+            $marketingDept = Department::where('name', 'Marketing')->first();
+            $financeDept = Department::where('name', 'Keuangan')->first();
+
+            $this->approvalService->setupSteps($permit, [
+                ['step_key' => 'marketing', 'label' => 'Approval Marketing', 'department_id' => $marketingDept?->id],
+                ['step_key' => 'finance', 'label' => 'Approval Keuangan', 'department_id' => $financeDept?->id],
+                ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDept?->id],
+                ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDept?->id],
+            ]);
+
+            return;
+        }
+
+        $tenancyDept = Department::where('name', 'Tenancy')->first();
 
         $this->approvalService->setupSteps($permit, [
             ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDept?->id],

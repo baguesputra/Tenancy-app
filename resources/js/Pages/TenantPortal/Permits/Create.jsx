@@ -24,7 +24,6 @@ export default function Create({ departments }) {
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
-        permit_number: '',
         activity_types: [],
         request_date: new Date().toISOString().split('T')[0],
         pic_name: '',
@@ -81,9 +80,6 @@ export default function Create({ departments }) {
         }
         if (s === 2) {
             if (!data.workers.some((w) => w.name.trim())) errs.workers = 'Minimal 1 nama pekerja wajib diisi.';
-        }
-        if (s === 3) {
-            if (!data.permit_number) errs.permit_number = 'Nomor surat wajib diisi.';
         }
         return errs;
     };
@@ -254,13 +250,9 @@ export default function Create({ departments }) {
                                 {step === 3 && (
                                     <>
                                         <FormSection title="Detail Permohonan">
-                                            <FormField label="Nomor Surat" error={clientErrors.permit_number} required>
-                                                <TextInput
-                                                    value={data.permit_number}
-                                                    onChange={(e) => setData('permit_number', e.target.value)}
-                                                    placeholder="307/TC/VIII/26"
-                                                />
-                                            </FormField>
+                                            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-4">
+                                                Nomor surat dibuat otomatis saat diajukan (kode TC).
+                                            </p>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <FormField label="Nama Penanggung Jawab" error={errors.pic_name}>
                                                     <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} />
@@ -359,7 +351,7 @@ export default function Create({ departments }) {
 
                                         <FormSection title="Detail Pengajuan">
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Nomor Surat" value={data.permit_number || '—'} />
+                                                <ReviewRow label="Nomor Surat" value="Otomatis saat diajukan" />
                                                 <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
                                                 <ReviewRow label="Vendor Eksternal" value={data.is_external ? (data.contractor_company || 'Ya') : 'Tidak'} />
                                                 {data.is_external && (
@@ -417,7 +409,7 @@ export default function Create({ departments }) {
                     onConfirm={confirmAjukan}
                     loading={processing}
                 >
-                    <ConfirmRow label="Nomor" value={data.permit_number} />
+                    <ConfirmRow label="Nomor" value="Otomatis saat diajukan" />
                     <ConfirmRow label="Jadwal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
                     <ConfirmRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
                     <ConfirmRow label="Pekerja" value={workerNames.length > 0 ? `${workerNames.length} orang` : null} />
@@ -467,8 +459,8 @@ function LiveSummary({ data, currentStep }) {
                 />
                 <SummaryItem
                     label="Nomor Surat"
-                    value={data.permit_number}
-                    filled={!!data.permit_number}
+                    value="Otomatis"
+                    filled
                     dim={currentStep < 3}
                 />
                 <SummaryItem

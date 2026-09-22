@@ -334,6 +334,9 @@ class TenantSeeder extends Seeder
             ["name" => "Hi Sushi", "product_category" => "F&B", "tenant_category" => "Tenant"],
             ["name" => "Sancha", "product_category" => "F&B", "tenant_category" => "Tenant"],
             ["name" => "Matahari", "product_category" => "Retail", "tenant_category" => "Anchor"],
+            ["name" => "Bazar UMKM Merdeka", "product_category" => "Retail", "tenant_category" => "Open Counter"],
+            ["name" => "Pameran Otomotif Expo", "product_category" => "Lifestyle", "tenant_category" => "Open Counter"],
+            ["name" => "Festival Kuliner Nusantara", "product_category" => "F&B", "tenant_category" => "Open Counter"],
         ];
 
         foreach ($tenants as $tenantData) {

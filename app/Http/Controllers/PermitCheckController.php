@@ -120,10 +120,12 @@ class PermitCheckController extends Controller
             );
         }
 
-        $tenancyDept = \App\Models\Department::where('name', 'Tenancy')->first();
+        $isExhibition = in_array('pameran', $permitRequest->activity_types ?? []);
+        $firstDeptName = $isExhibition ? 'Marketing' : 'Tenancy';
+        $firstDept = \App\Models\Department::where('name', $firstDeptName)->first();
         $bsDept = \App\Models\Department::where('name', 'Building Service')->first();
 
-        foreach ([$tenancyDept, $bsDept] as $dept) {
+        foreach ([$firstDept, $bsDept] as $dept) {
             if ($dept) {
                 $this->notificationService->notifyDepartment(
                     $dept->id,

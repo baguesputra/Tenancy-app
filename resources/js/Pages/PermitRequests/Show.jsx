@@ -113,7 +113,9 @@ export default function Show({ permit }) {
 
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
-    const category = permit.tenant_id
+    const category = (permit.activity_types ?? []).includes('pameran')
+        ? 'Pameran / Open Counter'
+        : permit.tenant_id
         ? 'Tenant'
         : (permit.is_external || (!permit.store_name_snapshot || permit.store_name_snapshot === 'Area Umum Mall') && permit.contractor_company)
         ? 'Vendor'

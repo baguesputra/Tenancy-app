@@ -12,6 +12,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
 
 const statusOptions = [
@@ -26,6 +27,8 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
     const [editingUnit, setEditingUnit] = useState(null);
     const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState(filters.search ?? '');
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         floor: '',
@@ -77,11 +80,18 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
         editingUnit ? put(`/units/${editingUnit.id}`, options) : post('/units', options);
     };
 
-    const handleDelete = (unit) => {
-        const tenant = unit.active_tenancy?.tenant?.name;
-        if (!confirm(`Hapus unit ${unit.unit_code}?\n\nTindakan ini tidak bisa dibatalkan.`)) return;
-        if (tenant && !confirm(`Unit ${unit.unit_code} masih ditempati "${tenant}".\nUnit dengan riwayat tenancy akan ditolak server.\n\nTetap lanjut hapus?`)) return;
-        router.delete(`/units/${unit.id}`, { preserveScroll: true });
+    const askDelete = (unit) => setConfirmDelete(unit);
+
+    const confirmDeleteUnit = () => {
+        if (!confirmDelete) return;
+        setDeleting(true);
+        router.delete(`/units/${confirmDelete.id}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setDeleting(false);
+                setConfirmDelete(null);
+            },
+        });
     };
 
     const updateFilter = (key, value) => {
@@ -136,7 +146,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                 <IconDocument className="w-4 h-4" />
             </a>
             <button
-                onClick={(e) => { e.stopPropagation(); handleDelete(unit); }}
+                onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                 aria-label={`Hapus ${unit.unit_code}`}
                 title="Hapus"
                 className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
@@ -306,7 +316,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                     Cetak QR
                                 </a>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(unit); }}
+                                    onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                                     className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-red-50 active:bg-red-100 transition-colors"
                                 >
                                     Hapus
@@ -381,6 +391,22 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                     </FormSection>
                 </form>
             </SlideOver>
+
+            <ConfirmModal
+                open={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={confirmDeleteUnit}
+                loading={deleting}
+                title="Hapus Unit?"
+                confirmLabel="Ya, Hapus"
+                confirmVariant="danger"
+                note={confirmDelete?.active_tenancy?.tenant?.name
+                    ? `Unit masih ditempati "${confirmDelete.active_tenancy.tenant.name}". Unit dengan riwayat tenancy akan ditolak server.`
+                    : 'Unit terhapus permanen dan tidak bisa dibatalkan.'}
+            >
+                <ConfirmRow label="Kode" value={confirmDelete?.unit_code} />
+                <ConfirmRow label="Tenant" value={confirmDelete?.active_tenancy?.tenant?.name} />
+            </ConfirmModal>
         </AppLayout>
     );
 }

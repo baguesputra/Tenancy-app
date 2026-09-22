@@ -66,6 +66,14 @@ class PermissionSeeder extends Seeder
             'permits.view',
         ]);
 
+        $this->assignRolePermissions('marketing_staff', [
+            'permits.view', 'permits.create', 'permits.approve',
+        ]);
+
+        $this->assignRolePermissions('finance_staff', [
+            'permits.view', 'permits.approve',
+        ]);
+
         $this->assignRolePermissions('staff', []);
 
         // super_admin tidak perlu permission satu-satu — bypass total via Gate::before

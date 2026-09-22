@@ -9,6 +9,7 @@ import Textarea from '@/Components/Form/Textarea';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
 const tabs = [
@@ -23,6 +24,8 @@ export default function Index({ tenantCategories = [], productCategories = [] })
     const [quickName, setQuickName] = useState('');
     const [panelOpen, setPanelOpen] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const active = tabs.find((t) => t.key === tab);
     const lists = { tenant: tenantCategories, product: productCategories };
@@ -74,9 +77,18 @@ export default function Index({ tenantCategories = [], productCategories = [] })
         router.post(`/${active.prefix}`, { name }, { preserveScroll: true, onSuccess: () => setQuickName('') });
     };
 
-    const handleDelete = (cat) => {
-        if (!confirm(`Hapus kategori "${cat.name}"?\n\nTindakan ini tidak bisa dibatalkan.`)) return;
-        router.delete(`/${active.prefix}/${cat.id}`, { preserveScroll: true });
+    const askDelete = (cat) => setConfirmDelete(cat);
+
+    const confirmDeleteCategory = () => {
+        if (!confirmDelete) return;
+        setDeleting(true);
+        router.delete(`/${active.prefix}/${confirmDelete.id}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setDeleting(false);
+                setConfirmDelete(null);
+            },
+        });
     };
 
     const switchTab = (key) => {
@@ -216,7 +228,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                             <IconEdit className="w-4 h-4" />
                                         </span>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(cat); }}
+                                            onClick={(e) => { e.stopPropagation(); askDelete(cat); }}
                                             aria-label={locked ? `${cat.name} dipakai ${used} tenant, tidak bisa dihapus` : `Hapus ${cat.name}`}
                                             title={locked ? `Dipakai ${used} tenant — hapus diblokir server` : 'Hapus'}
                                             disabled={locked}
@@ -289,6 +301,20 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                     </FormSection>
                 </form>
             </SlideOver>
+
+            <ConfirmModal
+                open={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={confirmDeleteCategory}
+                loading={deleting}
+                title="Hapus Kategori?"
+                confirmLabel="Ya, Hapus"
+                confirmVariant="danger"
+                note="Kategori terhapus permanen dan tidak bisa dibatalkan. Kategori yang masih dipakai akan ditolak server."
+            >
+                <ConfirmRow label="Nama" value={confirmDelete?.name} />
+                <ConfirmRow label="Dipakai" value={confirmDelete ? `${confirmDelete.tenants_count ?? 0} tenant` : ''} />
+            </ConfirmModal>
         </AppLayout>
     );
 }

@@ -17,6 +17,8 @@ class UserSeeder extends Seeder
         $tenancyDept = Department::where('name', 'Tenancy')->first();
         $bsDept = Department::where('name', 'Building Service')->first();
         $securityDept = Department::where('name', 'Security')->first();
+        $marketingDept = Department::where('name', 'Marketing')->first();
+        $financeDept = Department::where('name', 'Keuangan')->first();
 
         $staff = User::firstOrCreate(
             ['employee_number' => 'TOP-000001'],
@@ -47,6 +49,18 @@ class UserSeeder extends Seeder
             ['name' => 'Staff Security', 'branch_id' => $branchA->id, 'department_id' => $securityDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
         $securityStaff->syncRoles(['security_staff']);
+
+        $marketingStaff = User::firstOrCreate(
+            ['employee_number' => 'TOP-000006'],
+            ['name' => 'Staff Marketing', 'branch_id' => $branchA->id, 'department_id' => $marketingDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
+        );
+        $marketingStaff->syncRoles(['marketing_staff']);
+
+        $financeStaff = User::firstOrCreate(
+            ['employee_number' => 'TOP-000007'],
+            ['name' => 'Staff Keuangan', 'branch_id' => $branchA->id, 'department_id' => $financeDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
+        );
+        $financeStaff->syncRoles(['finance_staff']);
 
         $superAdmin = User::firstOrCreate(
             ['employee_number' => 'TOP-000000'],
