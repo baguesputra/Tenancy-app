@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Approval;
 use App\Models\Inspection;
+use App\Models\InspectionSession;
 use App\Models\PermitRequest;
 use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Services\BranchScopeService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -24,20 +25,28 @@ class DashboardController extends Controller
 
         // Stats
         $tenantQuery = Tenant::where('is_active', true);
-        if ($branchScoped) $tenantQuery->where('branch_id', $user->branch_id);
+        if ($branchScoped) {
+            $tenantQuery->where('branch_id', $user->branch_id);
+        }
         $totalTenants = $tenantQuery->count();
 
         $unitQuery = Unit::where('is_active', true);
-        if ($branchScoped) $unitQuery->where('branch_id', $user->branch_id);
+        if ($branchScoped) {
+            $unitQuery->where('branch_id', $user->branch_id);
+        }
         $totalUnits = (clone $unitQuery)->count();
         $occupiedUnits = (clone $unitQuery)->whereHas('activeTenancy')->count();
 
         $permitQuery = PermitRequest::where('status', 'pending');
-        if ($branchScoped) $permitQuery->where('branch_id', $user->branch_id);
+        if ($branchScoped) {
+            $permitQuery->where('branch_id', $user->branch_id);
+        }
         $pendingPermits = (clone $permitQuery)->count();
 
-        $sessionQuery = \App\Models\InspectionSession::where('status', 'in_progress');
-        if ($branchScoped) $sessionQuery->where('branch_id', $user->branch_id);
+        $sessionQuery = InspectionSession::where('status', 'in_progress');
+        if ($branchScoped) {
+            $sessionQuery->where('branch_id', $user->branch_id);
+        }
         $activeSessions = $sessionQuery->count();
 
         $actionNeeded = collect();
@@ -66,12 +75,13 @@ class DashboardController extends Controller
 
             $actionNeeded = $candidateApprovals->filter(function (Approval $approval) use ($allRelatedApprovals) {
                 $siblings = $allRelatedApprovals->get($approval->approvable_id, collect());
-                $hasPendingEarlier = $siblings->contains(fn ($s) =>
-                    $s->order < $approval->order && $s->status !== 'approved'
+                $hasPendingEarlier = $siblings->contains(fn ($s) => $s->order < $approval->order && $s->status !== 'approved'
                 );
+
                 return ! $hasPendingEarlier;
             })->map(function (Approval $a) use ($validPermits) {
                 $permit = $validPermits->get($a->approvable_id);
+
                 return [
                     'id' => $permit->id,
                     'permit_number' => $permit->permit_number,
@@ -112,7 +122,7 @@ class DashboardController extends Controller
                 'title' => "Kontrak {$t->tenant->name}",
                 'status' => $t->status,
                 'time' => $t->created_at,
-                'url' => "/tenancies",
+                'url' => '/tenancies',
             ]);
 
         $recentActivity = $recentPermits
@@ -132,6 +142,105 @@ class DashboardController extends Controller
             ],
             'actionNeeded' => $actionNeeded,
             'recentActivity' => $recentActivity,
+            'calendar' => $this->calendarEvents($request),
         ]);
+    }
+
+    private function calendarEvents(Request $request): array
+    {
+        $user = $request->user();
+        $branchScoped = ! $user->canViewAllBranches();
+        $isMarketing = $user->hasRole('marketing_staff');
+
+        try {
+            $month = Carbon::createFromFormat('Y-m', (string) $request->input('cal_month', now()->format('Y-m')))->startOfMonth();
+        } catch (\Throwable $e) {
+            $month = now()->startOfMonth();
+        }
+        $start = $month->copy()->startOfMonth();
+        $end = $month->copy()->endOfMonth();
+        $warnFrom = now()->toDateString();
+        $warnTo = now()->addDays(30)->toDateString();
+
+        $permitQuery = PermitRequest::with('tenant')
+            ->where(fn ($q) => $q
+                ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
+                ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
+                ->orWhere(fn ($w) => $w->where('work_start_date', '<=', $start->toDateString())->where(fn ($x) => $x->whereNull('work_end_date')->orWhere('work_end_date', '>=', $end->toDateString()))))
+            ->when($isMarketing, fn ($q) => $q->where('activity_types', 'like', '%pameran%'))
+            ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+            ->latest('work_start_date')
+            ->limit(200);
+
+        $events = $permitQuery->get()->map(fn ($p) => [
+            'id' => "permit-{$p->id}",
+            'type' => in_array('pameran', $p->activity_types ?? []) ? 'pameran' : 'permit',
+            'title' => "{$p->permit_number} — {$p->store_name_snapshot}",
+            'start' => ($p->work_start_date ?? $p->request_date)?->toDateString(),
+            'end' => ($p->work_end_date ?? $p->work_start_date ?? $p->request_date)?->toDateString(),
+            'status' => $p->status,
+            'url' => "/permit-requests/{$p->id}",
+        ]);
+
+        if (! $isMarketing) {
+            $tenancies = Tenancy::with(['tenant', 'unit'])
+                ->where(fn ($q) => $q
+                    ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhereBetween('end_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhere(fn ($w) => $w->whereBetween('end_date', [$warnFrom, $warnTo])))
+                ->when($branchScoped, fn ($q) => $q->whereHas('unit', fn ($u) => $u->where('branch_id', $user->branch_id)))
+                ->latest('end_date')
+                ->limit(100)
+                ->get();
+
+            foreach ($tenancies as $t) {
+                $events->push([
+                    'id' => "tenancy-start-{$t->id}",
+                    'type' => 'contract_start',
+                    'title' => "Mulai: {$t->tenant?->name}",
+                    'start' => $t->start_date?->toDateString(),
+                    'end' => $t->start_date?->toDateString(),
+                    'status' => $t->status,
+                    'url' => '/tenancies',
+                ]);
+                $events->push([
+                    'id' => "tenancy-end-{$t->id}",
+                    'type' => 'contract_end',
+                    'title' => "Berakhir: {$t->tenant?->name}",
+                    'start' => $t->end_date?->toDateString(),
+                    'end' => $t->end_date?->toDateString(),
+                    'status' => $t->status,
+                    'urgent' => $t->end_date && $t->end_date->toDateString() >= $warnFrom && $t->end_date->toDateString() <= $warnTo,
+                    'url' => '/tenancies',
+                ]);
+            }
+
+            if ($user->can('sidak.view')) {
+                $sessions = InspectionSession::with('user')
+                    ->whereDate('started_at', '>=', $start->toDateString())
+                    ->whereDate('started_at', '<=', $end->toDateString())
+                    ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+                    ->latest('started_at')
+                    ->limit(50)
+                    ->get();
+
+                foreach ($sessions as $s) {
+                    $events->push([
+                        'id' => "sidak-{$s->id}",
+                        'type' => 'sidak',
+                        'title' => 'Sidak '.($s->user?->name ? "— {$s->user->name}" : ''),
+                        'start' => $s->started_at?->toDateString(),
+                        'end' => $s->started_at?->toDateString(),
+                        'status' => $s->status,
+                        'url' => "/inspection-sessions/{$s->id}",
+                    ]);
+                }
+            }
+        }
+
+        return [
+            'month' => $month->format('Y-m'),
+            'events' => $events->filter(fn ($e) => $e['start'])->sortBy('start')->values()->all(),
+        ];
     }
 }

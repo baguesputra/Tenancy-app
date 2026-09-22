@@ -134,7 +134,7 @@ class TenantScopeTest extends TestCase
         ])->assertRedirect();
     }
 
-    public function test_tenancy_cannot_see_pameran_permits(): void
+    public function test_tenancy_can_see_pameran_permits_but_tenant_dropdown_scoped(): void
     {
         $tnc = $this->tenancy();
         foreach (['permits.view', 'permits.create'] as $p) {
@@ -159,12 +159,21 @@ class TenantScopeTest extends TestCase
         $res = $this->actingAs($tnc)->get('/permit-requests')->assertOk();
         $numbers = collect($res->viewData('page')['props']['permits']['data'])->pluck('permit_number')->all();
         $this->assertContains($biasa->permit_number, $numbers);
-        $this->assertNotContains($pameran->permit_number, $numbers);
+        $this->assertContains($pameran->permit_number, $numbers);
 
-        $this->actingAs($tnc)->get("/permit-requests/{$pameran->id}")->assertForbidden();
-        $this->actingAs($tnc)->post("/permit-requests/{$pameran->id}/revise", [
-            'work_start_date' => '2026-09-23', 'work_end_date' => '2026-09-30',
-            'reason' => 'Revisi jadwal pameran mundur.',
+        $this->actingAs($tnc)->get("/permit-requests/{$pameran->id}")->assertOk();
+
+        $res = $this->actingAs($tnc)->get('/permit-requests/create')->assertOk();
+        $names = collect($res->viewData('page')['props']['tenants'])->pluck('name')->all();
+        $this->assertContains('Tenant Test', $names);
+        $this->assertNotContains('Open Counter Test', $names);
+
+        $this->actingAs($tnc)->post('/permit-requests', [
+            'activity_types' => ['pameran'],
+            'request_date' => '2026-09-22',
+            'tenant_id' => $oc->id,
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-24',
         ])->assertForbidden();
     }
 }

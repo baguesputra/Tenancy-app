@@ -17,6 +17,7 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
+import { formatDateID } from '@/utils/format';
 
 const statusColor = { draft: 'gray', active: 'green', ended: 'yellow', terminated: 'red' };
 const statusLabel = { draft: 'Draft', active: 'Aktif', ended: 'Berakhir', terminated: 'Diakhiri' };
@@ -131,7 +132,7 @@ export default function Index({ tenancies, filters, units, tenants }) {
                         <tr key={t.id} onClick={() => openEdit(t)} className="group cursor-pointer hover:bg-gray-50/80 transition-colors">
                             <td className="px-5 py-3.5 font-medium text-gray-900">{t.tenant.name}</td>
                             <td className="px-5 py-3.5 text-gray-500">{t.unit.unit_code}</td>
-                            <td className="px-5 py-3.5 text-gray-500">{t.start_date} s/d {t.end_date ?? 'sekarang'}</td>
+                            <td className="px-5 py-3.5 text-gray-500">{formatDateID(t.start_date)} s/d {t.end_date ? formatDateID(t.end_date) : 'sekarang'}</td>
                             <td className="px-5 py-3.5 text-right">
                                 <Badge color={statusColor[t.status]}>{statusLabel[t.status]}</Badge>
                             </td>
@@ -282,7 +283,7 @@ export default function Index({ tenancies, filters, units, tenants }) {
             >
                 <ConfirmRow label="Tenant" value={confirmDelete?.tenant?.name} />
                 <ConfirmRow label="Unit" value={confirmDelete?.unit?.unit_code} />
-                <ConfirmRow label="Periode" value={confirmDelete ? `${confirmDelete.start_date} s/d ${confirmDelete.end_date ?? 'sekarang'}` : ''} />
+                <ConfirmRow label="Periode" value={confirmDelete ? `${formatDateID(confirmDelete.start_date)} s/d ${confirmDelete.end_date ? formatDateID(confirmDelete.end_date) : 'sekarang'}` : ''} />
             </ConfirmModal>
         </AppLayout>
     );

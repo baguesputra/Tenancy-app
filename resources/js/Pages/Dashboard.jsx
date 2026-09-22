@@ -6,6 +6,7 @@ import {
     IconBuilding, IconGrid, IconDocument, IconClipboard,
     IconArrowRight, IconRefresh,
 } from '@/Components/Icons';
+import EventCalendar from '@/Components/Dashboard/EventCalendar';
 
 const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak' };
 
@@ -31,12 +32,12 @@ function formatRelativeTime(dateStr) {
     return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
-export default function Dashboard({ stats, actionNeeded, recentActivity }) {
+export default function Dashboard({ stats, actionNeeded, recentActivity, calendar }) {
     const { auth } = usePage().props;
     const { refresh, isRefreshing, formattedLastUpdated, setRefreshCallback } = useAutoRefresh(true, 30000);
 
     useEffect(() => {
-        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity'] }));
+        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity', 'calendar'] }));
     }, [setRefreshCallback]);
 
     const byOldest = (a, b) => new Date(a.requested_at ?? a.time ?? 0) - new Date(b.requested_at ?? b.time ?? 0);
@@ -143,6 +144,8 @@ export default function Dashboard({ stats, actionNeeded, recentActivity }) {
                         </div>
                     </div>
                 </section>
+
+                <EventCalendar calendar={calendar} />
 
                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <section aria-label="Antrian persetujuan" className="bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden">
