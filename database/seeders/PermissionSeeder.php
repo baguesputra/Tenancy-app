@@ -67,6 +67,7 @@ class PermissionSeeder extends Seeder
         ]);
 
         $this->assignRolePermissions('marketing_staff', [
+            'tenants.view', 'tenants.create', 'tenants.edit',
             'permits.view', 'permits.create', 'permits.approve',
         ]);
 

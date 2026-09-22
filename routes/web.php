@@ -33,6 +33,7 @@ Route::middleware('can:settings.access')->prefix('settings')->name('settings.')-
 
     Route::get('/access-control', [AccessControlController::class, 'index'])->name('access-control.index');
     Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
+    Route::put('/access-control/{role}/scopes', [AccessControlController::class, 'updateScopes'])->name('access-control.scopes');
 
     Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('tenant-accounts.index');
     Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate']);

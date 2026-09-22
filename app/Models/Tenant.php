@@ -20,6 +20,7 @@ class Tenant extends Model
         'tenant_category_id',
         'product_category_id',
         'is_active',
+        'created_by',
     ];
 
     protected $appends = ['logo_url'];

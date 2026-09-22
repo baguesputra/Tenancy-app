@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Tenant;
 use App\Models\Tenancy;
+use App\Models\Tenant;
 use App\Models\Unit;
 use Illuminate\Database\Seeder;
 
@@ -25,10 +25,11 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             TenantCategorySeeder::class,
             ProductCategorySeeder::class,
+            MasterScopeSeeder::class,
             TenantSeeder::class,
             UnitTenantSeeder::class,
             ChecklistSeeder::class,
-        
+
         ]);
     }
 }

@@ -18,12 +18,15 @@ const roleColor = (role) => {
     return 'gray';
 };
 
-export default function Index({ roles = [], permissions = [], groups = [], authRoles = [], protectedPermissions = [] }) {
+export default function Index({ roles = [], permissions = [], groups = [], authRoles = [], protectedPermissions = [], tenantCategories = [], masterScopes = {} }) {
     const { errors } = usePage().props;
     const [searchText, setSearchText] = useState('');
     const [panelRoleId, setPanelRoleId] = useState(null);
+    const [panelTab, setPanelTab] = useState('permissions');
     const [selected, setSelected] = useState([]);
     const [initial, setInitial] = useState([]);
+    const [scopeRows, setScopeRows] = useState([]);
+    const [scopeInitial, setScopeInitial] = useState([]);
     const [panelSearch, setPanelSearch] = useState('');
     const [collapsed, setCollapsed] = useState({});
     const [saving, setSaving] = useState(false);
@@ -40,9 +43,32 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
         return labels;
     };
 
+    const scopeSummary = (role) => {
+        const rows = masterScopes[role.id] ?? [];
+        const view = rows.filter((r) => r.can_view).length;
+        const create = rows.filter((r) => r.can_create).length;
+        const edit = rows.filter((r) => r.can_edit).length;
+        if (view + create + edit === 0) return null;
+        const catName = (id) => id ? (tenantCategories.find((c) => String(c.id) === String(id))?.name ?? `#${id}`) : 'Semua';
+        const detail = rows.filter((r) => r.can_view || r.can_create || r.can_edit).map((r) => catName(r.tenant_category_id)).join(', ');
+        return { view, create, edit, detail };
+    };
+
     const openPanel = (role) => {
         setSelected([...role.permissions]);
         setInitial([...role.permissions]);
+        const rows = (masterScopes[role.id] ?? []).map((s) => ({
+            tenant_category_id: s.tenant_category_id ?? '',
+            can_view: !!s.can_view,
+            view_own_only: !!s.view_own_only,
+            can_create: !!s.can_create,
+            can_edit: !!s.can_edit,
+            edit_own_only: !!s.edit_own_only,
+        }));
+        if (rows.length === 0) rows.push({ tenant_category_id: '', can_view: false, view_own_only: false, can_create: false, can_edit: false, edit_own_only: false });
+        setScopeRows(rows);
+        setScopeInitial(JSON.parse(JSON.stringify(rows)));
+        setPanelTab('permissions');
         setPanelSearch('');
         setCollapsed({});
         setPanelRoleId(role.id);
@@ -68,6 +94,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
     };
 
     const dirty = [...selected].sort().join('|') !== [...initial].sort().join('|');
+    const scopeDirty = JSON.stringify(scopeRows) !== JSON.stringify(scopeInitial);
 
     const save = () => {
         if (!panelRole || !dirty) return;
@@ -78,6 +105,31 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
             onSuccess: closePanel,
         });
     };
+
+    const saveScopes = () => {
+        if (!panelRole || !scopeDirty) return;
+        setSaving(true);
+        router.put(`/settings/access-control/${panelRole.id}/scopes`, {
+            scopes: scopeRows.map((r) => ({ ...r, tenant_category_id: r.tenant_category_id || null })),
+        }, {
+            preserveScroll: true,
+            onFinish: () => setSaving(false),
+            onSuccess: closePanel,
+        });
+    };
+
+    const updateScopeRow = (idx, field, value) => {
+        setScopeRows((prev) => {
+            const next = prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r));
+            if (field === 'tenant_category_id' && value !== '') {
+                const dup = next.findIndex((r, i) => i !== idx && String(r.tenant_category_id) === String(value));
+                if (dup !== -1) next.splice(dup, 1);
+            }
+            return next;
+        });
+    };
+    const addScopeRow = () => setScopeRows((prev) => [...prev, { tenant_category_id: '', can_view: false, view_own_only: false, can_create: false, can_edit: false, edit_own_only: false }]);
+    const removeScopeRow = (idx) => setScopeRows((prev) => prev.filter((_, i) => i !== idx));
 
     const q = panelSearch.trim().toLowerCase();
     const visibleGroups = groups
@@ -136,6 +188,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                 <DataTable columns={columns}>
                     {filteredRoles.map((role) => {
                         const modules = roleModules(role);
+                        const scope = scopeSummary(role);
                         return (
                             <tr
                                 key={role.id}
@@ -167,6 +220,11 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                     ) : (
                                         <span className="text-sm text-gray-300 italic">Tanpa akses</span>
                                     )}
+                                    {scope && (
+                                        <span className="block text-xs text-gray-400 mt-1.5">
+                                            Batasan: {scope.detail} · L{scope.view}/T{scope.create}/U{scope.edit}
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-5 py-3.5 text-right whitespace-nowrap">
                                     <Badge color={role.permissions.length > 0 ? 'blue' : 'gray'}>{role.permissions.length} akses</Badge>
@@ -192,9 +250,15 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                     footer={
                         <div className="flex gap-2">
                             <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>
-                            <Button type="button" onClick={save} disabled={!dirty} loading={saving} className="flex-1 justify-center">
-                                Simpan Perubahan{dirty ? ` (${Math.abs(selectedCount - initial.length)} berubah)` : ''}
-                            </Button>
+                            {panelTab === 'permissions' ? (
+                                <Button type="button" onClick={save} disabled={!dirty} loading={saving} className="flex-1 justify-center">
+                                    Simpan Perubahan{dirty ? ` (${Math.abs(selectedCount - initial.length)} berubah)` : ''}
+                                </Button>
+                            ) : (
+                                <Button type="button" onClick={saveScopes} disabled={!scopeDirty} loading={saving} className="flex-1 justify-center">
+                                    Simpan Batasan{scopeDirty ? ' (berubah)' : ''}
+                                </Button>
+                            )}
                         </div>
                     }
                 >
@@ -227,6 +291,72 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                 </p>
                             )}
 
+                            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-3">
+                                {[['permissions', 'Permission'], ['scopes', 'Batasan Master']].map(([key, label]) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setPanelTab(key)}
+                                        className={`flex-1 text-xs font-medium rounded-lg px-3 py-2 transition-colors ${panelTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {panelTab === 'scopes' ? (
+                                <>
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Kosong = tanpa batas (lihat semua). Isi 1 baris per kategori. Tanpa baris Lihat = data disembunyikan walau permission ada.
+                                    </p>
+                                    {scopeRows.map((row, idx) => (
+                                        <div key={idx} className="rounded-xl border border-[#E2E5EA] bg-white p-3 mb-2.5">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-semibold text-gray-700">Kategori {idx + 1}</span>
+                                                {scopeRows.length > 1 && (
+                                                    <button type="button" onClick={() => removeScopeRow(idx)} className="text-xs text-red-500 hover:text-red-700 rounded">Hapus</button>
+                                                )}
+                                            </div>
+                                            <select
+                                                value={row.tenant_category_id}
+                                                onChange={(e) => updateScopeRow(idx, 'tenant_category_id', e.target.value ? Number(e.target.value) : '')}
+                                                className="w-full text-sm border border-[#E2E5EA] rounded-lg px-2.5 py-2 mb-2"
+                                            >
+                                                <option value="">Semua Kategori</option>
+                                                {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                                    <span className="text-xs font-medium text-gray-700">Lihat</span>
+                                                    <Checkbox label="" checked={row.can_view} onChange={() => updateScopeRow(idx, 'can_view', !row.can_view)} aria-label="Boleh lihat" />
+                                                </div>
+                                                {row.can_view && (
+                                                    <div className="flex items-center justify-between rounded-lg px-3 py-2 pl-6">
+                                                        <span className="text-xs text-gray-500">Hanya buatan sendiri</span>
+                                                        <Checkbox label="" checked={row.view_own_only} onChange={() => updateScopeRow(idx, 'view_own_only', !row.view_own_only)} aria-label="Lihat hanya buatan sendiri" />
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                                    <span className="text-xs font-medium text-gray-700">Tambah</span>
+                                                    <Checkbox label="" checked={row.can_create} onChange={() => updateScopeRow(idx, 'can_create', !row.can_create)} aria-label="Boleh tambah" />
+                                                </div>
+                                                <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                                    <span className="text-xs font-medium text-gray-700">Ubah</span>
+                                                    <Checkbox label="" checked={row.can_edit} onChange={() => updateScopeRow(idx, 'can_edit', !row.can_edit)} aria-label="Boleh ubah" />
+                                                </div>
+                                                {row.can_edit && (
+                                                    <div className="flex items-center justify-between rounded-lg px-3 py-2 pl-6">
+                                                        <span className="text-xs text-gray-500">Hanya buatan sendiri</span>
+                                                        <Checkbox label="" checked={row.edit_own_only} onChange={() => updateScopeRow(idx, 'edit_own_only', !row.edit_own_only)} aria-label="Ubah hanya buatan sendiri" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="secondary" onClick={addScopeRow} className="text-xs w-full justify-center border-dashed">+ Tambah Kategori</Button>
+                                </>
+                            ) : (
+                            <>
                             <div className="relative mb-3">
                                 <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -285,6 +415,8 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                             })}
                             {visibleGroups.length === 0 && (
                                 <p className="text-sm text-gray-400 text-center py-8">Tidak ada permission yang cocok.</p>
+                            )}
+                            </>
                             )}
                         </>
                     )}

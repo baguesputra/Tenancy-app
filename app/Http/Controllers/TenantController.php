@@ -6,16 +6,17 @@ use App\Models\Branch;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
-use App\Services\BranchScopeService;
 use App\Models\TenantUser;
+use App\Services\BranchScopeService;
+use App\Services\TenantScopeService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TenantController extends Controller
 {
-    public function __construct(private BranchScopeService $branchScope) {}
+    public function __construct(private BranchScopeService $branchScope, private TenantScopeService $tenantScope) {}
 
     public function index(Request $request)
     {
@@ -28,10 +29,13 @@ class TenantController extends Controller
             ->latest();
 
         $this->branchScope->apply($query, $request->user());
+        $this->tenantScope->applyView($query, $request->user());
 
         $summaryBase = clone $query;
         $total = (clone $summaryBase)->count();
         $active = (clone $summaryBase)->where('is_active', true)->count();
+
+        $creatable = $this->tenantScope->creatableCategoryIds($request->user());
 
         return Inertia::render('Master/Tenants/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
@@ -41,6 +45,10 @@ class TenantController extends Controller
             'filters' => $request->only(['search', 'tenant_category_id', 'product_category_id', 'status']),
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
+            'tenantScope' => [
+                'creatableCategoryIds' => $creatable,
+                'editOwnOnlyCategoryIds' => $this->tenantScope->editOwnOnlyCategoryIds($request->user()),
+            ],
         ]);
     }
 
@@ -52,6 +60,7 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateTenant($request);
+        abort_unless($this->tenantScope->canCreate($request->user(), (int) $validated['tenant_category_id']), 403, 'Tidak boleh membuat tenant kategori ini.');
         unset($validated['logo']);
 
         if ($request->hasFile('logo')) {
@@ -63,6 +72,7 @@ class TenantController extends Controller
             'branch_id' => $request->user()->canViewAllBranches()
                 ? $validated['branch_id']
                 : $request->user()->branch_id,
+            'created_by' => $request->user()->id,
         ]);
 
         $this->syncContacts($tenant, $request->input('contacts', []));
@@ -85,8 +95,10 @@ class TenantController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
         $this->authorizeAccess($tenant, $request);
+        abort_unless($this->tenantScope->canEdit($request->user(), $tenant), 403, 'Tidak boleh mengubah tenant ini.');
 
         $validated = $this->validateTenant($request);
+        abort_unless($this->tenantScope->canCreate($request->user(), (int) $validated['tenant_category_id']), 403, 'Tidak boleh memindah tenant ke kategori ini.');
         unset($validated['logo']);
 
         if ($request->hasFile('logo')) {
