@@ -8,7 +8,6 @@ use App\Models\Unit;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ScanController extends Controller
@@ -79,6 +78,16 @@ class ScanController extends Controller
 
     private function handlePermit(PermitRequest $permit, $webUser, $tenantUser)
     {
+        if ($permit->is_expired) {
+            $label = $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA';
+
+            return Inertia::render('Scan/Expired', [
+                'permit_number' => $permit->permit_number,
+                'store_name' => $permit->store_name_snapshot,
+                'expires_label' => $label,
+            ])->toResponse(request())->setStatusCode(410);
+        }
+
         if ($tenantUser) {
             abort_unless((string) $permit->tenant_id === (string) $tenantUser->tenant_id, 403);
 

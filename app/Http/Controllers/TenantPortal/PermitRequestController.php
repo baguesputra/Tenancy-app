@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\TenantPortal;
 
 use App\Http\Controllers\Controller;
-use App\Models\PermitRequest;
-use App\Services\PermitRequestService;
 use App\Http\Requests\StorePermitRequestRequest;
+use App\Models\Department;
+use App\Models\PermitRequest;
 use App\Models\ScannableCode;
+use App\Services\PermitRequestService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -38,6 +39,7 @@ class PermitRequestController extends Controller
                 'status' => $a->status,
                 'label' => $a->label,
             ]);
+
             return $permit;
         });
 
@@ -50,7 +52,7 @@ class PermitRequestController extends Controller
     public function create()
     {
         return Inertia::render('TenantPortal/Permits/Create', [
-            'departments' => \App\Models\Department::orderBy('name')->get(['id', 'name']),
+            'departments' => Department::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -72,7 +74,7 @@ class PermitRequestController extends Controller
         $tenantUser = $request->user('tenant');
         abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
 
-        $permit->load(['workers', 'goods', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
+        $permit->load(['tenant', 'workers', 'goods', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
 
         $bsStep = $permit->approvals->firstWhere('step_key', 'bs');
         $showQr = $permit->status === 'completed'
@@ -80,14 +82,17 @@ class PermitRequestController extends Controller
 
         $scanUrl = $showQr ? $permit->scan_url : '';
         $qrImage = $scanUrl
-            ? 'data:image/svg+xml;base64,' . base64_encode((string) QrCode::size(220)->generate($scanUrl))
+            ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($scanUrl))
             : null;
 
         return Inertia::render('TenantPortal/Permits/Show', [
             'permit' => $permit,
-            'scan_url' => $scanUrl,
             'qr_image' => $qrImage,
             'show_qr' => $showQr,
+            'expires_at' => $permit->expires_at?->toDateTimeString(),
+            'expires_label' => $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA',
+            'is_expired' => $permit->is_expired,
+            'is_goods_permit' => $permit->is_goods_permit,
         ]);
     }
 
@@ -96,7 +101,7 @@ class PermitRequestController extends Controller
         $tenantUser = $request->user('tenant');
         abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
 
-        $permit->load(['scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
+        $permit->load(['tenant', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
 
         $bsStep = $permit->approvals->firstWhere('step_key', 'bs');
         $showQr = $permit->status === 'completed'
@@ -111,12 +116,28 @@ class PermitRequestController extends Controller
             ]));
         }
 
-        $pdf = Pdf::loadView('pdf.permit-qr-label', ['permit' => $permit])
-            ->setPaper([0, 0, 320, 480]);
+        $time = ($permit->work_start_time?->format('H:i') ?? '').($permit->work_end_time ? '–'.$permit->work_end_time->format('H:i') : '');
+        $logoData = null;
+        if ($permit->tenant?->logo_path && \Storage::disk('public')->exists($permit->tenant->logo_path)) {
+            $mime = match (strtolower(pathinfo($permit->tenant->logo_path, PATHINFO_EXTENSION))) {
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                default => 'image/jpeg',
+            };
+            $logoData = 'data:'.$mime.';base64,'.base64_encode(\Storage::disk('public')->get($permit->tenant->logo_path));
+        }
+
+        $pdf = Pdf::loadView('pdf.permit-qr-label', [
+            'permit' => $permit,
+            'schedule' => ($permit->work_start_date?->translatedFormat('d M Y') ?? '—').($permit->work_end_date && $permit->work_end_date->ne($permit->work_start_date) ? ' s/d '.$permit->work_end_date->translatedFormat('d M Y') : ''),
+            'time' => $time !== '' ? str_replace(':', '.', $time).' WITA' : '—',
+            'expiresLabel' => $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA',
+            'isGoods' => $permit->is_goods_permit,
+            'logoData' => $logoData,
+        ])->setPaper('a6');
 
         $safeNumber = str_replace(['/', '\\'], '-', $permit->permit_number);
 
         return $pdf->download("QR-{$safeNumber}.pdf");
     }
-
 }

@@ -45,7 +45,20 @@ class PermitNumberTest extends TestCase
             'store_name_snapshot' => 'Area X',
             'work_start_date' => '2026-09-23',
             'work_end_date' => '2026-09-24',
+            'work_end_time' => '17:00',
         ];
+    }
+
+    public function test_scan_expired_permit_returns_gone(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $staff = $this->staff();
+        $permit = app(PermitRequestService::class)->create($this->payload(['kerja']), $staff);
+
+        Carbon::setTestNow('2026-09-25 10:00');
+        $this->assertTrue($permit->fresh()->is_expired);
+        $this->actingAs($staff)->get('/scan/'.$permit->fresh()->scannableCode->token)->assertStatus(410);
+        Carbon::setTestNow();
     }
 
     private function marketingStaff(): User

@@ -1,14 +1,17 @@
 import PortalLayout from '@/Layouts/PortalLayout';
 import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
+import LoadingCardModal from '@/Components/Portal/LoadingCardModal';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
 const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak' };
 
-export default function Show({ permit, scan_url, qr_image, show_qr }) {
+export default function Show({ permit, qr_image, show_qr, expires_label, is_expired, is_goods_permit }) {
     const rejectedStep = permit.approvals.find((a) => a.status === 'rejected');
+    const [cardOpen, setCardOpen] = useState(false);
 
     return (
         <PortalLayout>
@@ -104,31 +107,41 @@ export default function Show({ permit, scan_url, qr_image, show_qr }) {
                     </FormSection>
 
                     {show_qr && (
-                        <FormSection title="QR Check Security">
+                        <FormSection title={is_goods_permit ? 'Kartu Loading' : 'QR Check Security'}>
                             <div className="text-center">
                                 {qr_image && (
                                     <img src={qr_image} alt={`QR ${permit.permit_number}`} className="w-44 h-44 mx-auto border border-gray-200 rounded-xl" />
                                 )}
-                                <p className="text-xs text-gray-500 mt-3">Tunjukkan ke Security untuk scan saat cek fisik</p>
-                                <div className="mt-3 flex gap-2 justify-center">
-                                    <a
-                                        href={`/portal/permits/${permit.id}/qr.pdf`}
-                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-                                    >
-                                        Download PDF
-                                    </a>
+                                {is_expired ? (
+                                    <p className="mt-2.5 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+                                        Kedaluwarsa {expires_label ?? ''}
+                                    </p>
+                                ) : (
+                                    <p className="mt-2.5 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
+                                        Berlaku s/d {expires_label ?? '—'}
+                                    </p>
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">Tunjukkan ke Security untuk scan saat cek fisik</p>
+                                {!is_expired && (
                                     <button
                                         type="button"
-                                        onClick={() => window.print()}
-                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                        onClick={() => setCardOpen(true)}
+                                        className="mt-3 inline-flex items-center justify-center w-full px-4 py-3 min-h-[48px] text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                                     >
-                                        Print
+                                        Lihat Kartu
                                     </button>
-                                </div>
-                                {scan_url && <p className="mt-2 font-mono text-[10px] text-gray-400 break-all">{scan_url}</p>}
+                                )}
                             </div>
                         </FormSection>
                     )}
+                    <LoadingCardModal
+                        open={cardOpen}
+                        onClose={() => setCardOpen(false)}
+                        permit={permit}
+                        qrImage={qr_image}
+                        expiresLabel={expires_label}
+                        isGoods={is_goods_permit}
+                    />
 
                     <FormSection title="Hasil Pemeriksaan Fisik">
                         <div className="space-y-5">

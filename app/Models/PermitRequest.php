@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -11,6 +12,7 @@ class PermitRequest extends Model
     use HasUuids;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -99,6 +101,26 @@ class PermitRequest extends Model
         $token = $this->scannableCode?->token;
 
         return $token ? route('scan.resolve', $token) : '';
+    }
+
+    public function getExpiresAtAttribute(): ?Carbon
+    {
+        if (! $this->work_end_date) {
+            return null;
+        }
+        $time = $this->work_end_time?->format('H:i') ?? '23:59';
+
+        return Carbon::parse($this->work_end_date->format('Y-m-d').' '.$time);
+    }
+
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->expires_at ? now()->greaterThan($this->expires_at) : false;
+    }
+
+    public function getIsGoodsPermitAttribute(): bool
+    {
+        return in_array('masuk_keluar_barang', $this->activity_types ?? []);
     }
 
     public function branch()
