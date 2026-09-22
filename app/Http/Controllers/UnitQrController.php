@@ -15,8 +15,8 @@ class UnitQrController extends Controller
         $unit = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])->findOrFail($id);
         $this->ensureCodes(collect([$unit]));
 
-        $pdf = Pdf::loadView('pdf.unit-qr-label', ['units' => collect([$unit])])
-            ->setPaper([0, 0, 320, 480]); // ukuran custom, bisa disesuaikan (dalam points)
+        $pdf = Pdf::loadView('pdf.unit-qr-label', ['units' => collect([$unit]), 'logos' => $this->logos(collect([$unit]))])
+            ->setPaper('a4');
 
         return $pdf->download("QR-Unit-{$unit->unit_code}.pdf");
     }
@@ -42,16 +42,36 @@ class UnitQrController extends Controller
         $units = $query->orderBy('unit_code')->limit(50)->get();
         $this->ensureCodes($units);
 
-        $pdf = Pdf::loadView('pdf.unit-qr-label', ['units' => $units])
-            ->setPaper([0, 0, 320, 480]);
+        $pdf = Pdf::loadView('pdf.unit-qr-label', ['units' => $units, 'logos' => $this->logos($units)])
+            ->setPaper('a4');
 
         return $pdf->download('QR-Semua-Unit.pdf');
+    }
+
+    private function logos($units): array
+    {
+        $out = [];
+        foreach ($units as $unit) {
+            $path = $unit->activeTenancy?->tenant?->logo_path;
+            if ($path && \Storage::disk('public')->exists($path)) {
+                $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                    default => 'image/jpeg',
+                };
+                $out[$unit->id] = 'data:'.$mime.';base64,'.base64_encode(\Storage::disk('public')->get($path));
+            }
+        }
+
+        return $out;
     }
 
     private function ensureCodes($units): void
     {
         foreach ($units as $unit) {
-            if ($unit->scannableCode) continue;
+            if ($unit->scannableCode) {
+                continue;
+            }
 
             $unit->setRelation('scannableCode', ScannableCode::create([
                 'token' => (string) Str::uuid(),

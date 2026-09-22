@@ -13,6 +13,7 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import UnitQrModal from '@/Components/Master/UnitQrModal';
 import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
 
 const statusOptions = [
@@ -29,6 +30,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [qrUnit, setQrUnit] = useState(null);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         floor: '',
@@ -134,17 +136,15 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
 
     const renderActions = (unit) => (
         <div className="flex gap-1 justify-end">
-            <a
-                href={`/units/${unit.id}/qr`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                aria-label={`Cetak QR ${unit.unit_code}`}
-                title="Cetak QR"
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
+                aria-label={`Pratinjau QR ${unit.unit_code}`}
+                title="Pratinjau QR"
                 className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-gray-400 hover:text-[#0F1E36] hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
             >
                 <IconDocument className="w-4 h-4" />
-            </a>
+            </button>
             <button
                 onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                 aria-label={`Hapus ${unit.unit_code}`}
@@ -306,15 +306,13 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 {unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}
                             </p>
                             <div className="grid grid-cols-2 gap-2 mt-3">
-                                <a
-                                    href={`/units/${unit.id}/qr`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
                                     className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-gray-700 bg-gray-100 active:bg-gray-200 transition-colors flex items-center justify-center"
                                 >
                                     Cetak QR
-                                </a>
+                                </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                                     className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-red-50 active:bg-red-100 transition-colors"
@@ -391,6 +389,8 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                     </FormSection>
                 </form>
             </SlideOver>
+
+            <UnitQrModal open={!!qrUnit} onClose={() => setQrUnit(null)} unit={qrUnit} />
 
             <ConfirmModal
                 open={!!confirmDelete}

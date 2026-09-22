@@ -8,6 +8,7 @@ use App\Services\BranchScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class UnitController extends Controller
 {
@@ -39,6 +40,11 @@ class UnitController extends Controller
         $units = $query->paginate(15)->withQueryString();
         $units->getCollection()->transform(function (Unit $unit) {
             $unit->is_occupied = $unit->activeTenancy !== null;
+            $unit->scan_url = $unit->scanUrl;
+            $unit->qr_image = $unit->scanUrl
+                ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($unit->scanUrl))
+                : null;
+
             return $unit;
         });
 
