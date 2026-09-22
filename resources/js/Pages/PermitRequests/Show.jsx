@@ -7,6 +7,7 @@ import Textarea from '@/Components/Form/Textarea';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import GoodPhotoCapture from '@/Components/Security/GoodPhotoCapture';
+import ReviseModal, { RevisionTimeline } from '@/Components/Permits/ReviseModal';
 import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from '@/utils/format';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
@@ -15,9 +16,10 @@ const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', app
 const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
-export default function Show({ permit }) {
+export default function Show({ permit, can_revise }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
+    const [reviseOpen, setReviseOpen] = useState(false);
 
     const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`, {}, { preserveScroll: true });
 
@@ -177,9 +179,9 @@ export default function Show({ permit }) {
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
                     <div>
                         <div id="detail" className="scroll-mt-40">
-                            <FormSection title="Detail Permohonan" description={`${category} — ${locationTitle}`}>
+                            <FormSection title="Detail Permohonan" description={`${category.label} — ${locationTitle}`}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                    <InfoItem label="Kategori" value={<Badge color="blue">{category}</Badge>} />
+                                    <InfoItem label="Kategori" value={<Badge color={category.color}>{category.label}</Badge>} />
                                     <InfoItem label="Nomor Surat" value={permit.permit_number} />
                                     <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
                                     <InfoItem label="Tanggal Pengajuan" value={formatDateID(permit.request_date)} />
@@ -208,7 +210,7 @@ export default function Show({ permit }) {
                                 {(permit.is_external || permit.contractor_company) && (
                                     <div className="mt-4 pt-4 border-t border-gray-100">
                                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                            {category === 'Vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}
+                                            {category.key === 'vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                                             <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
@@ -296,6 +298,16 @@ export default function Show({ permit }) {
                     </div>
 
                     <div id="approval" className="lg:sticky lg:top-[168px] space-y-4 scroll-mt-40">
+                        {can_revise && (
+                            <Button variant="secondary" onClick={() => setReviseOpen(true)} className="w-full justify-center">
+                                Ajukan Revisi
+                            </Button>
+                        )}
+                        {(permit.revisions ?? []).length > 0 && (
+                            <FormSection title={`Riwayat Revisi (${permit.revisions.length})`}>
+                                <RevisionTimeline revisions={permit.revisions} />
+                            </FormSection>
+                        )}
                         <FormSection title="Progress Approval" description={currentStep ? `Menunggu: ${currentStep.label}` : 'Semua tahap selesai'}>
                             <ol className="relative ml-1.5 border-l-2 border-gray-100 space-y-4">
                                 {permit.approvals.map((a) => (
@@ -378,6 +390,12 @@ export default function Show({ permit }) {
                     </Button>
                 </div>
             )}
+            <ReviseModal
+                open={reviseOpen}
+                onClose={() => setReviseOpen(false)}
+                permit={permit}
+                postUrl={`/permit-requests/${permit.id}/revise`}
+            />
         </AppLayout>
     );
 }

@@ -33,9 +33,10 @@ const categoryTabs = [
     { key: 'area', label: 'Area' },
 ];
 
-export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null }) {
+export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const locked = !!categoryLocked;
+    const visibleTabs = categoryTabs.filter((t) => !hiddenCategories.includes(t.key));
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -70,7 +71,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
         { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
-    ];
+    ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
     const columns = locked ? [
         { key: 'number', label: 'Nomor Surat' },
@@ -140,7 +141,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
                     {!locked && (
                     <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2" role="tablist" aria-label="Filter jenis pengajuan">
-                        {categoryTabs.map((tab) => {
+                        {visibleTabs.map((tab) => {
                             const active = (filters.category ?? '') === tab.key;
                             return (
                                 <button

@@ -91,6 +91,11 @@ class PermitRequest extends Model
         return $this->morphMany(Approval::class, 'approvable')->orderBy('order');
     }
 
+    public function revisions()
+    {
+        return $this->hasMany(PermitRevision::class)->orderByDesc('revision_no');
+    }
+
     public function scannableCode()
     {
         return $this->morphOne(ScannableCode::class, 'scannable');

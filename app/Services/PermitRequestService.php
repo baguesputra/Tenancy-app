@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Department;
 use App\Models\PermitRequest;
+use App\Models\PermitRevision;
+use App\Models\ScannableCode;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Str;
-use App\Models\ScannableCode;
 
 class PermitRequestService
 {
@@ -62,12 +63,16 @@ class PermitRequestService
         ]);
 
         foreach ($data['workers'] ?? [] as $index => $worker) {
-            if (empty($worker['name'])) continue;
+            if (empty($worker['name'])) {
+                continue;
+            }
             $permit->workers()->create(['name' => $worker['name'], 'order' => $index + 1]);
         }
 
         foreach ($data['goods'] ?? [] as $good) {
-            if (empty($good['description'])) continue;
+            if (empty($good['description'])) {
+                continue;
+            }
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
@@ -75,7 +80,9 @@ class PermitRequestService
         }
 
         foreach ($data['goods_light'] ?? [] as $good) {
-            if (empty($good['description'])) continue;
+            if (empty($good['description'])) {
+                continue;
+            }
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
@@ -84,7 +91,9 @@ class PermitRequestService
         }
 
         foreach ($data['goods_heavy'] ?? [] as $good) {
-            if (empty($good['description'])) continue;
+            if (empty($good['description'])) {
+                continue;
+            }
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
@@ -191,5 +200,72 @@ class PermitRequestService
         } else {
             $permit->update(['status' => 'pending']);
         }
+    }
+
+    public const REVISABLE = ['work_start_date', 'work_end_date', 'work_end_time', 'access_route'];
+
+    private const RESET_ON_REVISE = ['marketing', 'finance', 'bs', 'security'];
+
+    public function revise(PermitRequest $permit, array $data, User|TenantUser $revisedBy): PermitRevision
+    {
+        return \DB::transaction(function () use ($permit, $data, $revisedBy) {
+            $changes = [];
+            foreach (self::REVISABLE as $field) {
+                if (! array_key_exists($field, $data)) {
+                    continue;
+                }
+                $old = $permit->getAttribute($field);
+                $oldStr = $old instanceof \DateTimeInterface ? $old->format(in_array($field, ['work_start_date', 'work_end_date'], true) ? 'Y-m-d' : 'H:i') : (string) ($old ?? '');
+                $newStr = (string) ($data[$field] ?? '');
+                if ($oldStr !== $newStr) {
+                    $changes[$field] = ['old' => $oldStr !== '' ? $oldStr : null, 'new' => $newStr !== '' ? $newStr : null];
+                }
+            }
+
+            $permit->update([
+                'work_start_date' => $data['work_start_date'] ?? $permit->work_start_date,
+                'work_end_date' => $data['work_end_date'] ?? $permit->work_end_date,
+                'work_end_time' => array_key_exists('work_end_time', $data) ? ($data['work_end_time'] ?: null) : $permit->work_end_time,
+                'access_route' => array_key_exists('access_route', $data) ? ($data['access_route'] ?: null) : $permit->access_route,
+            ]);
+
+            $revision = $permit->revisions()->create([
+                'revised_by_type' => get_class($revisedBy),
+                'revised_by_id' => $revisedBy->id,
+                'changes' => $changes,
+                'reason' => $data['reason'],
+                'revision_no' => ($permit->revisions()->max('revision_no') ?? 0) + 1,
+            ]);
+
+            $permit->approvals()->whereIn('step_key', self::RESET_ON_REVISE)->update([
+                'status' => 'pending', 'approved_by' => null, 'approved_at' => null, 'notes' => null,
+            ]);
+            $this->syncStatus($permit->fresh());
+
+            $summary = collect($changes)->map(fn ($c, $f) => $this->revisionLabel($f).': '.($c['old'] ?? '—').' → '.($c['new'] ?? '—'))->values()->join('; ');
+            $bsDept = Department::where('name', 'Building Service')->first();
+            if ($bsDept) {
+                $this->notificationService->notifyDepartment(
+                    $bsDept->id,
+                    'Revisi Surat Izin',
+                    "{$permit->permit_number} direvisi: {$summary}. Alasan: {$data['reason']}",
+                    "/permit-requests/{$permit->id}",
+                    'document'
+                );
+            }
+
+            return $revision;
+        }, 3);
+    }
+
+    private function revisionLabel(string $field): string
+    {
+        return match ($field) {
+            'work_start_date' => 'Tgl mulai',
+            'work_end_date' => 'Tgl selesai',
+            'work_end_time' => 'Jam selesai',
+            'access_route' => 'Akses',
+            default => $field,
+        };
     }
 }

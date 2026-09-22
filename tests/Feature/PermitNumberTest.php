@@ -253,4 +253,60 @@ class PermitNumberTest extends TestCase
         $this->assertNotContains($pameran->permit_number, $numbers($res));
         Carbon::setTestNow();
     }
+
+    public function test_revise_resets_bs_and_logs_changes(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $staff = $this->staff();
+        $service = app(PermitRequestService::class);
+        $permit = $service->create($this->payload(['kerja']), $staff);
+
+        $permit->approvals()->where('step_key', 'tenancy')->update(['status' => 'approved']);
+        $permit->approvals()->where('step_key', 'bs')->update(['status' => 'approved']);
+
+        $res = $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-30',
+            'work_end_time' => '18:00',
+            'access_route' => 'Pintu timur',
+            'reason' => 'Pekerjaan mundur seminggu karena material telat.',
+        ]);
+        $res->assertRedirect();
+
+        $permit->refresh();
+        $this->assertSame('2026-09-30', $permit->work_end_date->format('Y-m-d'));
+        $this->assertSame('pending', $permit->approvals()->where('step_key', 'bs')->first()->status);
+        $this->assertSame('pending', $permit->approvals()->where('step_key', 'security')->first()->status);
+        $this->assertSame('approved', $permit->approvals()->where('step_key', 'tenancy')->first()->status);
+        $this->assertSame('pending', $permit->status);
+
+        $rev = $permit->revisions()->firstOrFail();
+        $this->assertSame(1, $rev->revision_no);
+        $this->assertArrayHasKey('work_end_date', $rev->changes);
+        $this->assertSame('Pekerjaan mundur seminggu karena material telat.', $rev->reason);
+        $this->assertTrue($permit->fresh()->expires_at->format('Y-m-d') === '2026-09-30');
+        Carbon::setTestNow();
+    }
+
+    public function test_revise_rejected_when_completed_or_reason_short(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $staff = $this->staff();
+        $permit = app(PermitRequestService::class)->create($this->payload(['kerja']), $staff);
+        $permit->update(['status' => 'completed']);
+
+        $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-30',
+            'reason' => 'Pekerjaan mundur seminggu.',
+        ])->assertStatus(422);
+
+        $permit->update(['status' => 'pending']);
+        $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-30',
+            'reason' => 'Pendek.',
+        ])->assertSessionHasErrors('reason');
+        Carbon::setTestNow();
+    }
 }

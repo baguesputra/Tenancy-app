@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RevisePermitRequestRequest;
 use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
 use App\Models\PermitRequest;
 use App\Models\Tenant;
+use App\Models\TenantCategory;
 use App\Models\User;
 use App\Services\PermitRequestService;
+use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
 class PermitRequestController extends Controller
 {
-    public function __construct(private PermitRequestService $service) {}
+    public function __construct(private PermitRequestService $service, private TenantScopeService $tenantScope) {}
 
     private const ACTIVITY_TYPES = [
         ['value' => 'kerja', 'label' => 'Kerja'],
@@ -40,6 +43,8 @@ class PermitRequestController extends Controller
         if ($isMarketing) {
             $base->where('activity_types', 'like', '%pameran%');
             $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
+        } else {
+            $this->hideForbiddenTenantPermits($base, $request->user());
         }
 
         if (! $request->user()->canViewAllBranches()) {
@@ -91,6 +96,7 @@ class PermitRequestController extends Controller
             'activityTypes' => self::ACTIVITY_TYPES,
             'summary' => $summary,
             'categoryLocked' => $isMarketing ? 'pameran' : null,
+            'hiddenCategories' => $isMarketing ? [] : $this->hiddenCategories($request->user()),
         ]);
     }
 
@@ -106,6 +112,67 @@ class PermitRequestController extends Controller
                 ->whereNull('contractor_company'),
             default => $query,
         };
+    }
+
+    private function hiddenCategories(User $user): array
+    {
+        if ($user->hasRole('super_admin')) {
+            return [];
+        }
+
+        $viewable = $this->tenantScope->viewableCategoryIds($user);
+        if ($viewable === null) {
+            return [];
+        }
+
+        $ocId = TenantCategory::where('name', 'Open Counter')->first()?->id;
+        if ($ocId && ! $viewable->contains($ocId)) {
+            return ['pameran'];
+        }
+
+        return [];
+    }
+
+    private function authorizeTenantPermit(PermitRequest $permit, User $user): void
+    {
+        if ($user->hasRole(['super_admin', 'marketing_staff'])) {
+            return;
+        }
+
+        $viewable = $this->tenantScope->viewableCategoryIds($user);
+        if ($viewable === null) {
+            return;
+        }
+
+        if ($permit->tenant_id && ! $viewable->contains((int) $permit->loadMissing('tenant')->tenant->tenant_category_id)) {
+            abort(403, 'Tidak berhak mengakses izin tenant kategori ini.');
+        }
+
+        $ocId = TenantCategory::where('name', 'Open Counter')->first()?->id;
+        if ($ocId && ! $viewable->contains($ocId) && in_array('pameran', $permit->activity_types ?? [])) {
+            abort(403, 'Tidak berhak mengakses izin pameran.');
+        }
+    }
+
+    private function hideForbiddenTenantPermits($query, User $user): void
+    {
+        if ($user->hasRole('super_admin')) {
+            return;
+        }
+
+        $viewable = $this->tenantScope->viewableCategoryIds($user);
+        if ($viewable === null) {
+            return;
+        }
+
+        $ocId = TenantCategory::where('name', 'Open Counter')->first()?->id;
+        $query->where(function ($q) use ($viewable, $ocId) {
+            $q->whereNull('tenant_id')
+                ->orWhereHas('tenant', fn ($t) => $t->whereIn('tenant_category_id', $viewable));
+            if ($ocId && ! $viewable->contains($ocId)) {
+                $q->where('activity_types', 'not like', '%pameran%');
+            }
+        });
     }
 
     private function categoryOf(PermitRequest $permit): string
@@ -166,8 +233,9 @@ class PermitRequestController extends Controller
         $user = $request->user();
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
         abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        $this->authorizeTenantPermit($permitRequest, $user);
 
-        $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
+        $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
 
         $requestedBy = $permitRequest->requestedBy;
@@ -177,6 +245,21 @@ class PermitRequestController extends Controller
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
+            'can_revise' => $permitRequest->status === 'pending',
         ]);
+    }
+
+    public function revise(PermitRequest $permitRequest, RevisePermitRequestRequest $request)
+    {
+        abort_unless($permitRequest->status === 'pending', 422, 'Hanya izin pending yang bisa direvisi.');
+        abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
+        abort_if($request->user()->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        $this->authorizeTenantPermit($permitRequest, $request->user());
+
+        $validated = $request->validated();
+
+        $this->service->revise($permitRequest, $validated, $request->user());
+
+        return back()->with('success', 'Revisi diajukan. Approval BS, Finance/Marketing, dan Security diulang.');
     }
 }

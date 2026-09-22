@@ -141,6 +141,22 @@ class TenantScopeService
         return $this->allowedIds($scopes, 'can_create', 'view_own_only')[0];
     }
 
+    public function viewableCategoryIds(User $user): ?Collection
+    {
+        if ($user->hasRole('super_admin')) {
+            return null;
+        }
+
+        $scopes = $this->scopesFor($user);
+        if ($scopes->isEmpty()) {
+            return null;
+        }
+
+        [$all] = $this->allowedIds($scopes, 'can_view', 'view_own_only');
+
+        return $all;
+    }
+
     public function editOwnOnlyCategoryIds(User $user): ?Collection
     {
         if ($user->hasRole('super_admin')) {

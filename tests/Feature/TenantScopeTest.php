@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\User;
+use App\Services\PermitRequestService;
 use App\Services\TenantScopeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -131,5 +132,39 @@ class TenantScopeTest extends TestCase
         $this->actingAs($tnc)->post('/tenants', [
             'name' => 'OK', 'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
         ])->assertRedirect();
+    }
+
+    public function test_tenancy_cannot_see_pameran_permits(): void
+    {
+        $tnc = $this->tenancy();
+        foreach (['permits.view', 'permits.create'] as $p) {
+            Permission::firstOrCreate(['name' => $p]);
+        }
+        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit', 'permits.view', 'permits.create']);
+
+        $service = app(PermitRequestService::class);
+        $oc = $this->tenant('Open Counter');
+        $reg = $this->tenant('Tenant');
+
+        $pameran = $service->create([
+            'activity_types' => ['pameran'], 'request_date' => '2026-09-22',
+            'tenant_id' => $oc->id, 'work_start_date' => '2026-09-23', 'work_end_date' => '2026-09-24',
+        ], $tnc);
+        $biasa = $service->create([
+            'activity_types' => ['kerja'], 'request_date' => '2026-09-22',
+            'tenant_id' => $reg->id, 'store_name_snapshot' => 'Area X',
+            'work_start_date' => '2026-09-23', 'work_end_date' => '2026-09-24',
+        ], $tnc);
+
+        $res = $this->actingAs($tnc)->get('/permit-requests')->assertOk();
+        $numbers = collect($res->viewData('page')['props']['permits']['data'])->pluck('permit_number')->all();
+        $this->assertContains($biasa->permit_number, $numbers);
+        $this->assertNotContains($pameran->permit_number, $numbers);
+
+        $this->actingAs($tnc)->get("/permit-requests/{$pameran->id}")->assertForbidden();
+        $this->actingAs($tnc)->post("/permit-requests/{$pameran->id}/revise", [
+            'work_start_date' => '2026-09-23', 'work_end_date' => '2026-09-30',
+            'reason' => 'Revisi jadwal pameran mundur.',
+        ])->assertForbidden();
     }
 }

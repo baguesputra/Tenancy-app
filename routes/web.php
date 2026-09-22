@@ -188,6 +188,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
+    Route::middleware('can:permits.view')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
 
     Route::middleware('can:permits.approve')->group(function () {
         Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
@@ -215,6 +216,7 @@ Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)-
 // Portal (staff toko)
 Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
     Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
+    Route::post('permits/{permit}/revise', [PortalPermitRequestController::class, 'revise'])->name('permits.revise');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });
 
