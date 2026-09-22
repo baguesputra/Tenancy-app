@@ -2,6 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Branch;
+use App\Models\PermitRequest;
+use App\Models\ProductCategory;
+use App\Models\Tenant;
+use App\Models\TenantCategory;
 use App\Models\User;
 use App\Services\PermitNumberService;
 use App\Services\PermitRequestService;
@@ -60,26 +65,26 @@ class PermitNumberTest extends TestCase
         return $staff;
     }
 
-    private function openCounterTenant(): \App\Models\Tenant
+    private function openCounterTenant(): Tenant
     {
-        $cat = \App\Models\TenantCategory::firstOrCreate(['name' => 'Open Counter']);
-        $pc = \App\Models\ProductCategory::firstOrCreate(['name' => 'Retail']);
-        $branch = \App\Models\Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $cat = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
+        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
 
-        return \App\Models\Tenant::create([
+        return Tenant::create([
             'name' => 'Bazar Test', 'branch_id' => $branch->id,
             'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
             'is_active' => true,
         ]);
     }
 
-    private function regularTenant(): \App\Models\Tenant
+    private function regularTenant(): Tenant
     {
-        $cat = \App\Models\TenantCategory::firstOrCreate(['name' => 'Tenant']);
-        $pc = \App\Models\ProductCategory::firstOrCreate(['name' => 'Retail']);
-        $branch = \App\Models\Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
+        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
 
-        return \App\Models\Tenant::create([
+        return Tenant::create([
             'name' => 'Toko Biasa', 'branch_id' => $branch->id,
             'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
             'is_active' => true,
@@ -179,7 +184,7 @@ class PermitNumberTest extends TestCase
         ]);
         $res->assertRedirect();
 
-        $permit = \App\Models\PermitRequest::where('permit_number', '001/E&P/IX/26')->firstOrFail();
+        $permit = PermitRequest::where('permit_number', '001/E&P/IX/26')->firstOrFail();
         $this->assertSame('Bazar Test — Stand Kopi', $permit->store_name_snapshot);
         $this->assertSame(['light', 'heavy'], $permit->goods()->orderBy('id')->pluck('weight_class')->all());
         $this->assertSame(
@@ -196,11 +201,43 @@ class PermitNumberTest extends TestCase
         $service = app(PermitRequestService::class);
         $umum = $service->create($this->payload(['kerja']), $this->staff());
 
-        $this->actingAs($mkt)->get('/permit-requests')
-            ->assertOk()
-            ->assertDontSee($umum->permit_number);
+        $res = $this->actingAs($mkt)->get('/permit-requests')->assertOk();
+        $props = $res->viewData('page')['props'];
+        $this->assertSame('pameran', $props['categoryLocked']);
+        $this->assertSame('pameran', $props['filters']['category']);
+        $numbers = collect($props['permits']['data'])->pluck('permit_number')->all();
+        $this->assertNotContains($umum->permit_number, $numbers);
         $this->actingAs($mkt)->get("/permit-requests/{$umum->id}")
             ->assertForbidden();
+        $res = $this->actingAs($mkt)->get('/permit-requests?category=tenant')->assertOk();
+        $numbers = collect($res->viewData('page')['props']['permits']['data'])->pluck('permit_number')->all();
+        $this->assertNotContains($umum->permit_number, $numbers);
+        Carbon::setTestNow();
+    }
+
+    public function test_index_filters_by_category_search_and_activity(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $staff = $this->staff();
+        $service = app(PermitRequestService::class);
+        $pameran = $service->create($this->payload(['pameran']), $staff);
+        $kerja = $service->create($this->payload(['kerja']), $staff);
+
+        $numbers = function ($res) {
+            return collect($res->viewData('page')['props']['permits']['data'])->pluck('permit_number')->all();
+        };
+
+        $res = $this->actingAs($staff)->get('/permit-requests?category=pameran')->assertOk();
+        $this->assertContains($pameran->permit_number, $numbers($res));
+        $this->assertNotContains($kerja->permit_number, $numbers($res));
+
+        $res = $this->actingAs($staff)->get('/permit-requests?search='.urlencode($kerja->permit_number))->assertOk();
+        $this->assertContains($kerja->permit_number, $numbers($res));
+        $this->assertNotContains($pameran->permit_number, $numbers($res));
+
+        $res = $this->actingAs($staff)->get('/permit-requests?activity_type=kerja')->assertOk();
+        $this->assertContains($kerja->permit_number, $numbers($res));
+        $this->assertNotContains($pameran->permit_number, $numbers($res));
         Carbon::setTestNow();
     }
 }

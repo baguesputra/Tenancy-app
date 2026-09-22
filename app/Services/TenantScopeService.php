@@ -8,13 +8,23 @@ use App\Models\TenantCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class TenantScopeService
 {
     private array $memo = [];
 
+    public function ready(): bool
+    {
+        return Schema::hasTable('master_scopes');
+    }
+
     public function scopesFor(User $user): Collection
     {
+        if (! $this->ready()) {
+            return collect();
+        }
+
         return $this->memo[$user->id] ??= MasterScope::whereIn('role_id', $user->roles()->pluck('roles.id'))->get();
     }
 

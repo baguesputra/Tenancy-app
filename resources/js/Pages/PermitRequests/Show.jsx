@@ -114,12 +114,12 @@ export default function Show({ permit }) {
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
     const category = (permit.activity_types ?? []).includes('pameran')
-        ? 'Pameran / Open Counter'
+        ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
         : permit.tenant_id
-        ? 'Tenant'
+        ? { key: 'tenant', label: 'Tenant', color: 'blue' }
         : (permit.is_external || (!permit.store_name_snapshot || permit.store_name_snapshot === 'Area Umum Mall') && permit.contractor_company)
-        ? 'Vendor'
-        : 'Area Duta Mall';
+        ? { key: 'vendor', label: 'Vendor', color: 'amber' }
+        : { key: 'area', label: 'Area Duta Mall', color: 'gray' };
     const locationTitle = permit.tenant?.name
         ?? permit.contractor_company
         ?? permit.store_name_snapshot
@@ -133,7 +133,7 @@ export default function Show({ permit }) {
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                             <h1 className="text-lg font-semibold text-gray-900 truncate">{permit.permit_number}</h1>
-                            <Badge color="blue">{category}</Badge>
+                            <Badge color={category.color}>{category.label}</Badge>
                             <Badge color={statusColor[permit.status] ?? 'gray'}>{statusLabel[permit.status] ?? permit.status}</Badge>
                             {permit.is_flagged && <Badge color="amber">⚠ flagged</Badge>}
                             {canCompleteSecurityCheck && <Badge color="blue">{doneTasks}/{totalTasks} dicek</Badge>}

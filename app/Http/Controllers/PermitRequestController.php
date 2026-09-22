@@ -2,37 +2,67 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
 use App\Models\PermitRequest;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\PermitRequestService;
 use Illuminate\Http\Request;
-use App\Http\Requests\StorePermitRequestRequest;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 class PermitRequestController extends Controller
 {
     public function __construct(private PermitRequestService $service) {}
 
+    private const ACTIVITY_TYPES = [
+        ['value' => 'kerja', 'label' => 'Kerja'],
+        ['value' => 'lembur', 'label' => 'Lembur'],
+        ['value' => 'masuk_keluar_barang', 'label' => 'Masuk/Keluar Barang'],
+        ['value' => 'masuk_keluar_alat', 'label' => 'Masuk/Keluar Alat Kerja/Properti'],
+        ['value' => 'fit_out_pull_out_renovasi', 'label' => 'Fit Out/Pull Out/Renovasi'],
+        ['value' => 'pameran', 'label' => 'Pameran / Open Counter', 'code' => 'E&P'],
+    ];
+
     public function index(Request $request)
     {
-        $query = PermitRequest::with(['tenant', 'approvals' => fn ($q) => $q->orderBy('order')])
+        $isMarketing = $request->user()->hasRole('marketing_staff');
+
+        $base = PermitRequest::with(['tenant', 'requestedBy', 'approvals' => fn ($q) => $q->orderBy('order')])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->activity_type, fn ($q) => $q->where('activity_types', 'like', "%{$request->activity_type}%"))
+            ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
+                ->where('permit_number', 'like', "%{$request->search}%")
+                ->orWhere('store_name_snapshot', 'like', "%{$request->search}%")))
             ->latest();
 
-        if ($request->user()->hasRole('marketing_staff')) {
-            $query->where('activity_types', 'like', '%pameran%');
+        if ($isMarketing) {
+            $base->where('activity_types', 'like', '%pameran%');
+            $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
         }
 
         if (! $request->user()->canViewAllBranches()) {
-            $query->where('branch_id', $request->user()->branch_id);
+            $base->where('branch_id', $request->user()->branch_id);
         }
 
-        $permits = $query->paginate(15)->withQueryString();
+        $summary = [
+            'total' => (clone $base)->count(),
+            'counts' => $isMarketing ? ['pameran' => (clone $base)->count()]
+                : [
+                    'pameran' => (clone $base)->where('activity_types', 'like', '%pameran%')->count(),
+                    'tenant' => $this->applyCategory(clone $base, 'tenant')->count(),
+                    'vendor' => $this->applyCategory(clone $base, 'vendor')->count(),
+                    'area' => $this->applyCategory(clone $base, 'area')->count(),
+                ],
+        ];
+
+        $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 
         $userDepartmentId = $request->user()->department_id;
+        $marketingIds = Role::where('name', 'marketing_staff')->first()?->users()->pluck('users.id')->all() ?? [];
 
-        $permits->getCollection()->transform(function (PermitRequest $permit) use ($userDepartmentId) {
+        $permits->getCollection()->transform(function (PermitRequest $permit) use ($userDepartmentId, $marketingIds) {
             $currentStep = $permit->approvals->firstWhere('status', 'pending');
 
             $permit->current_step_label = $currentStep?->label;
@@ -41,14 +71,56 @@ class PermitRequestController extends Controller
                 'status' => $a->status,
                 'label' => $a->label,
             ]);
+            $permit->category = $this->categoryOf($permit);
+            $permit->activity_labels = collect($permit->activity_types ?? [])
+                ->map(fn ($v) => collect(self::ACTIVITY_TYPES)->firstWhere('value', $v)['label'] ?? $v)
+                ->values();
+            $permit->source = str_contains($permit->requested_by_type ?? '', 'TenantUser')
+                ? 'portal'
+                : (in_array($permit->requested_by_id, $marketingIds) ? 'marketing' : 'staff');
 
             return $permit;
         });
 
         return Inertia::render('PermitRequests/Index', [
             'permits' => $permits,
-            'filters' => $request->only('status'),
+            'filters' => array_merge(
+                $request->only(['status', 'category', 'activity_type', 'search']),
+                $isMarketing ? ['category' => 'pameran'] : []
+            ),
+            'activityTypes' => self::ACTIVITY_TYPES,
+            'summary' => $summary,
+            'categoryLocked' => $isMarketing ? 'pameran' : null,
         ]);
+    }
+
+    private function applyCategory($query, ?string $category)
+    {
+        return match ($category) {
+            'pameran' => $query->where('activity_types', 'like', '%pameran%'),
+            'tenant' => $query->whereNotNull('tenant_id')->where('activity_types', 'not like', '%pameran%'),
+            'vendor' => $query->where('activity_types', 'not like', '%pameran%')
+                ->where(fn ($w) => $w->where('is_external', true)->orWhereNotNull('contractor_company')),
+            'area' => $query->whereNull('tenant_id')->where('activity_types', 'not like', '%pameran%')
+                ->where(fn ($w) => $w->where('is_external', false)->orWhereNull('is_external'))
+                ->whereNull('contractor_company'),
+            default => $query,
+        };
+    }
+
+    private function categoryOf(PermitRequest $permit): string
+    {
+        if (in_array('pameran', $permit->activity_types ?? [])) {
+            return 'pameran';
+        }
+        if ($permit->tenant_id) {
+            return 'tenant';
+        }
+        if ($permit->is_external || $permit->contractor_company) {
+            return 'vendor';
+        }
+
+        return 'area';
     }
 
     public function create(Request $request)
@@ -99,7 +171,7 @@ class PermitRequestController extends Controller
         $permitRequest->currentUserDepartmentId = $user->department_id;
 
         $requestedBy = $permitRequest->requestedBy;
-        $permitRequest->requested_by_label = $requestedBy instanceof \App\Models\User
+        $permitRequest->requested_by_label = $requestedBy instanceof User
             ? $requestedBy->name
             : ($permitRequest->tenant->name ?? $requestedBy?->username ?? '—');
 
@@ -107,5 +179,4 @@ class PermitRequestController extends Controller
             'permit' => $permitRequest,
         ]);
     }
-
 }

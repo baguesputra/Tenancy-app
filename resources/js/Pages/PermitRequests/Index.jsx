@@ -1,5 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
+import TextInput from '@/Components/Form/TextInput';
 import SelectInput from '@/Components/Form/SelectInput';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
@@ -8,16 +10,78 @@ import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
+const statusLabel = { pending: 'Menunggu', completed: 'Selesai', rejected: 'Ditolak' };
 
-export default function Index({ permits, filters }) {
-    const updateFilter = (value) => {
-        router.get('/permit-requests', { status: value }, { preserveState: true });
+const categoryMeta = {
+    pameran: { label: 'Pameran / Open Counter', color: 'coral', code: 'E&P' },
+    tenant: { label: 'Tenant', color: 'blue', code: 'TC' },
+    vendor: { label: 'Vendor', color: 'amber', code: 'TC' },
+    area: { label: 'Area Mall', color: 'gray', code: 'TC' },
+};
+
+const sourceMeta = {
+    marketing: { label: 'Marketing', color: 'coral' },
+    portal: { label: 'Portal', color: 'green' },
+    staff: { label: 'Staff', color: 'blue' },
+};
+
+const categoryTabs = [
+    { key: '', label: 'Semua' },
+    { key: 'pameran', label: 'Pameran' },
+    { key: 'tenant', label: 'Tenant' },
+    { key: 'vendor', label: 'Vendor' },
+    { key: 'area', label: 'Area' },
+];
+
+export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null }) {
+    const [searchText, setSearchText] = useState(filters.search ?? '');
+    const locked = !!categoryLocked;
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            if (searchText !== (filters.search ?? '')) updateFilter('search', searchText);
+        }, 400);
+        return () => clearTimeout(t);
+    }, [searchText]);
+
+    const updateFilter = (key, value) => {
+        if (locked && (key === 'category' || key === 'activity_type')) return;
+        const next = { ...filters, [key]: value || undefined };
+        if (locked) {
+            delete next.category;
+            delete next.activity_type;
+        }
+        router.get('/permit-requests', next, { preserveState: true, preserveScroll: true, replace: true });
+    };
+
+    const resetFilters = () => {
+        setSearchText('');
+        router.get('/permit-requests', {}, { preserveScroll: true, replace: true });
     };
 
     const myTurnCount = permits.data.filter((p) => p.is_my_turn).length;
+    const hasFilter = locked ? (filters.search || filters.status) : (filters.search || filters.category || filters.activity_type || filters.status);
+    const counts = summary.counts ?? {};
 
-    const columns = [
+    const stats = locked ? [
+        { key: 'pameran', label: 'Pengajuan Pameran', value: summary.total, dot: 'bg-[#FF6B6B]' },
+    ] : [
+        { key: '', label: 'Total Pengajuan', value: summary.total, dot: 'bg-[#0F1E36]' },
+        { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
+        { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
+        { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
+    ];
+
+    const columns = locked ? [
         { key: 'number', label: 'Nomor Surat' },
+        { key: 'source', label: 'Sumber' },
+        { key: 'location', label: 'Lokasi / Tenant' },
+        { key: 'progress', label: 'Progress' },
+        { key: 'status', label: 'Status', className: 'text-right' },
+    ] : [
+        { key: 'number', label: 'Nomor Surat' },
+        { key: 'category', label: 'Jenis' },
+        { key: 'source', label: 'Sumber' },
         { key: 'location', label: 'Lokasi / Tenant' },
         { key: 'progress', label: 'Progress' },
         { key: 'status', label: 'Status', className: 'text-right' },
@@ -25,14 +89,14 @@ export default function Index({ permits, filters }) {
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
+            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900">Surat Izin</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{permits.total} pengajuan</p>
+                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">{locked ? 'Pengajuan Pameran' : 'Surat Izin'}</h1>
+                        <p className="text-sm text-gray-500 mt-0.5">{summary.total} pengajuan{locked ? ' pameran' : ' terdaftar'}</p>
                     </div>
                     <Link href="/permit-requests/create">
-                        <Button>+ Ajukan Atas Nama Tenant</Button>
+                        <Button>{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
                     </Link>
                 </div>
 
@@ -45,63 +109,172 @@ export default function Index({ permits, filters }) {
                     </div>
                 )}
 
-                <SelectInput
-                    defaultValue={filters.status ?? ''}
-                    onChange={(e) => updateFilter(e.target.value)}
-                    className="sm:w-48 mb-4"
-                >
-                    <option value="">Semua Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="rejected">Rejected</option>
-                </SelectInput>
+                {locked ? (
+                    <div className="bg-white rounded-xl border border-[#E2E5EA] px-4 py-3 mb-4 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-hidden="true" />
+                        <span className="text-xs text-gray-500">Pengajuan Pameran</span>
+                        <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
+                    </div>
+                ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {stats.map((s) => {
+                        const active = (filters.category ?? '') === s.key;
+                        return (
+                            <button
+                                key={s.label}
+                                onClick={() => updateFilter('category', s.key)}
+                                aria-pressed={active}
+                                className={`text-left bg-white rounded-xl border px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
+                            >
+                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
+                                    {s.label}
+                                </span>
+                                <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+                )}
 
-                <DataTable columns={columns}>
-                    {permits.data.map((p) => (
-                        <tr
-                            key={p.id}
-                            onClick={() => router.visit(`/permit-requests/${p.id}`)}
-                            className={`cursor-pointer transition-colors ${
-                                p.is_my_turn ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50/80'
-                            }`}
+                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
+                    {!locked && (
+                    <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2" role="tablist" aria-label="Filter jenis pengajuan">
+                        {categoryTabs.map((tab) => {
+                            const active = (filters.category ?? '') === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    role="tab"
+                                    aria-selected={active}
+                                    onClick={() => updateFilter('category', tab.key)}
+                                    className={`shrink-0 text-xs font-medium rounded-full px-3.5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    {tab.label}
+                                    {tab.key !== '' && counts[tab.key] > 0 && (
+                                        <span className={`ml-1.5 tabular-nums ${active ? 'text-white/70' : 'text-gray-400'}`}>{counts[tab.key]}</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    )}
+                    <div className="flex flex-col lg:flex-row gap-2">
+                        <div className="relative flex-1">
+                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <TextInput
+                                placeholder="Cari nomor / toko..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                className="!pl-9"
+                                aria-label="Cari nomor atau toko"
+                            />
+                        </div>
+                        {!locked && (
+                        <SelectInput
+                            value={filters.activity_type ?? ''}
+                            onChange={(e) => updateFilter('activity_type', e.target.value)}
+                            className="lg:w-56"
+                            aria-label="Filter tipe aktivitas"
                         >
-                            <td className="px-5 py-3.5">
-                                <p className="font-medium text-gray-900">{p.permit_number}</p>
-                                {p.is_my_turn && (
-                                    <span className="text-[10px] font-medium text-amber-600 uppercase tracking-wide">
-                                        Menunggu Anda
+                            <option value="">Semua Aktivitas</option>
+                            {activityTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </SelectInput>
+                        )}
+                        <SelectInput
+                            value={filters.status ?? ''}
+                            onChange={(e) => updateFilter('status', e.target.value)}
+                            className="lg:w-44"
+                            aria-label="Filter status"
+                        >
+                            <option value="">Semua Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                        </SelectInput>
+                        {hasFilter && (
+                            <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
+                                Reset
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
+                    {permits.data.map((p) => {
+                        const cat = categoryMeta[p.category] ?? categoryMeta.area;
+                        const src = sourceMeta[p.source] ?? sourceMeta.staff;
+                        return (
+                            <tr
+                                key={p.id}
+                                onClick={() => router.visit(`/permit-requests/${p.id}`)}
+                                className={`cursor-pointer transition-colors ${
+                                    p.is_my_turn ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-gray-50/80'
+                                }`}
+                            >
+                                <td className="px-5 py-3.5">
+                                    <span className="flex items-center gap-2 min-w-0">
+                                        <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
+                                            {cat.code}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block font-medium text-gray-900 truncate">{p.permit_number}</span>
+                                            {p.is_my_turn && (
+                                                <span className="block text-[10px] font-medium text-amber-600 uppercase tracking-wide">
+                                                    Menunggu Anda
+                                                </span>
+                                            )}
+                                        </span>
                                     </span>
+                                </td>
+                                {!locked && (
+                                <td className="px-5 py-3.5">
+                                    <Badge color={cat.color}>{cat.label}</Badge>
+                                    {(p.activity_labels ?? []).length > 1 && (
+                                        <span className="block text-[11px] text-gray-400 mt-1">+{(p.activity_labels ?? []).length - 1} aktivitas</span>
+                                    )}
+                                </td>
                                 )}
-                            </td>
-                            <td className="px-5 py-3.5 text-gray-500">{p.store_name_snapshot}</td>
-                            <td className="px-5 py-3.5">
-                                {p.step_progress?.length > 0 ? (
-                                    <StepProgressMini steps={p.step_progress} />
-                                ) : (
-                                    <span className="text-xs text-gray-300">—</span>
-                                )}
-                            </td>
-                            <td className="px-5 py-3.5 text-right">
-                                {p.status === 'pending' && p.current_step_label ? (
-                                    <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
-                                ) : (
-                                    <Badge color={statusColor[p.status]}>{p.status === 'completed' ? 'Selesai' : p.status === 'rejected' ? 'Ditolak' : p.status}</Badge>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
+                                <td className="px-5 py-3.5">
+                                    <Badge color={src.color} size="sm">{src.label}</Badge>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                    <span className="block text-sm text-gray-900 truncate max-w-52">{p.store_name_snapshot}</span>
+                                    <span className="block text-xs text-gray-400 truncate max-w-52">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                    {p.step_progress?.length > 0 ? (
+                                        <StepProgressMini steps={p.step_progress} />
+                                    ) : (
+                                        <span className="text-xs text-gray-300">—</span>
+                                    )}
+                                </td>
+                                <td className="px-5 py-3.5 text-right">
+                                    {p.status === 'pending' && p.current_step_label ? (
+                                        <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
+                                    ) : (
+                                        <Badge color={statusColor[p.status]}>{statusLabel[p.status] ?? p.status}</Badge>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    })}
                     {permits.data.length === 0 && (
                         <tr>
-                            <td colSpan={4} className="px-5 py-12 text-center text-sm text-gray-400">
-                                Belum ada surat izin.
+                            <td colSpan={locked ? 5 : 6} className="px-5 py-12 text-center">
+                                <p className="text-sm font-medium text-gray-700">{locked ? 'Belum ada pengajuan pameran.' : 'Belum ada surat izin ditemukan.'}</p>
+                                <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.'}</p>
+                                {hasFilter && (
+                                    <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                        Reset filter
+                                    </button>
+                                )}
                             </td>
                         </tr>
                     )}
                 </DataTable>
-
-                <div className="bg-white rounded-b-xl border border-t-0 border-[#E2E5EA] -mt-px">
-                    <Pagination meta={permits} links={permits.links} />
-                </div>
             </div>
         </AppLayout>
     );
