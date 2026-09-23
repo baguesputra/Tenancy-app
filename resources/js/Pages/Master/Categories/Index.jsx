@@ -206,7 +206,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     {cat.description ? (
                                         <p className="text-xs text-gray-500 mt-0.5 max-w-md line-clamp-2">{cat.description}</p>
                                     ) : (
-                                        <p className="text-xs text-gray-300 mt-0.5 italic">Tanpa keterangan</p>
+                                        <p className="text-xs text-gray-400 mt-0.5 italic">Tanpa keterangan</p>
                                     )}
                                 </td>
                                 <td className="px-5 py-3.5">

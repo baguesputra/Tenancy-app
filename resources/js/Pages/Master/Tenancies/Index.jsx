@@ -15,6 +15,8 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import StatFilter from '@/Components/StatFilter';
+import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 import { formatDateID } from '@/utils/format';
@@ -159,28 +161,9 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                     <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2.5 min-h-[44px]">Tambah Tenancy</Button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mb-4">
-                    {stats.map((s) => {
-                        const active = (filters.status ?? '') === s.key;
-                        return (
-                            <button
-                                key={s.label}
-                                onClick={() => updateFilter('status', s.key)}
-                                aria-pressed={active}
-                                className={`text-left bg-white rounded-xl border px-3.5 sm:px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
-                            >
-                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                    {s.label}
-                                </span>
-                                <span className="block text-lg sm:text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-2 sm:grid-cols-5" />
 
-                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="flex flex-col lg:flex-row gap-2">
+                <FilterBar>
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
@@ -193,25 +176,20 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                                 aria-label="Cari tenancy"
                             />
                         </div>
-                        {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 min-h-[40px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
-                                Reset
-                            </button>
-                        )}
-                    </div>
-                    <div className="flex gap-1.5 overflow-x-auto mt-2" role="group" aria-label="Filter status">
+                        {hasFilter && <FilterReset onClick={resetFilters} />}
+                    <div className="flex gap-1.5 overflow-x-auto lg:w-full mt-2 lg:mt-0" role="group" aria-label="Filter status">
                         {statusOptions.map((o) => (
                             <button
                                 key={o.key}
                                 onClick={() => updateFilter('status', o.key)}
                                 aria-pressed={(filters.status ?? '') === o.key}
-                                className={`shrink-0 px-3 py-2 min-h-[40px] rounded-full text-xs font-medium transition-colors ${(filters.status ?? '') === o.key ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                className={`shrink-0 px-3 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors ${(filters.status ?? '') === o.key ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                             >
                                 {o.label}
                             </button>
                         ))}
                     </div>
-                </div>
+                </FilterBar>
 
                 <div className="hidden sm:block">
                     <DataTable columns={columns} footer={<Pagination meta={tenancies} links={tenancies.links} />}>

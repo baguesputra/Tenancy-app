@@ -2,6 +2,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
 import QrScanModal from '@/Components/Scan/QrScanModal';
+import initials from '@/utils/initials';
 
 const menuIcons = {
     dashboard: (
@@ -53,8 +54,6 @@ const masterMenuItems = [
     { label: 'Kontrak / Tenancy', href: '/tenancies', permission: 'tenancies.view' },
     { label: 'Kategori', href: '/categories', permission: 'categories.view' },
 ];
-
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 export default function AppLayout({ children }) {
     const { auth } = usePage().props;
@@ -168,14 +167,14 @@ export default function AppLayout({ children }) {
                 </div>
 
                 <nav className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto" role="navigation">
-                    {!collapsed && <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Menu</p>}
+                    {!collapsed && <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Menu</p>}
                     <NavLink href="/dashboard" currentUrl={currentUrl} icon={menuIcons.dashboard} collapsed={collapsed}>
                         Dashboard
                     </NavLink>
 
                     {visibleMasterMenuItems.length > 0 && (
                         <div className="pt-1">
-                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Master Data</p>}
+                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Master Data</p>}
                             <button
                                 onClick={() => collapsed ? setCollapsed(false) : setMasterOpen(!masterOpen)}
                                 title="Master Data"
@@ -190,7 +189,7 @@ export default function AppLayout({ children }) {
                                     {!collapsed && <span>Master Data</span>}
                                 </span>
                                 {!collapsed && (
-                                    <svg className={`w-4 h-4 shrink-0 text-white/40 transition-transform ${masterOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                    <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${masterOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 )}
@@ -224,7 +223,7 @@ export default function AppLayout({ children }) {
                     )}
                     {isSuperAdmin && (
                         <div className="pt-1">
-                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">Pengaturan</p>}
+                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Pengaturan</p>}
                             <button
                                 onClick={() => collapsed ? setCollapsed(false) : setSettingsOpen(!settingsOpen)}
                                 title="Pengaturan"
@@ -239,7 +238,7 @@ export default function AppLayout({ children }) {
                                     {!collapsed && <span>Pengaturan</span>}
                                 </span>
                                 {!collapsed && (
-                                    <svg className={`w-4 h-4 shrink-0 text-white/40 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                    <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 )}
@@ -475,15 +474,28 @@ function NavLink({ href, currentUrl, children, icon, small = false, collapsed = 
 }
 
 function FlashBanner() {
-    const { flash } = usePage().props;
-    if (!flash?.success) return null;
+    const { flash, errors } = usePage().props;
+    const errorMessages = Object.values(errors ?? {}).flat().filter(Boolean);
+    if (!flash?.success && errorMessages.length === 0) return null;
 
     return (
-        <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-4 sm:px-6 py-3 flex items-center gap-2 shrink-0 whitespace-pre-line">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            {flash.success}
+        <div className="shrink-0">
+            {flash?.success && (
+                <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm px-4 sm:px-6 py-3 flex items-center gap-2 whitespace-pre-line" role="status">
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {flash.success}
+                </div>
+            )}
+            {errorMessages.length > 0 && (
+                <div className="bg-red-50 border-b border-red-100 text-red-700 text-sm px-4 sm:px-6 py-3" role="alert">
+                    <ul className="list-disc pl-5 space-y-0.5">
+                        {errorMessages.slice(0, 5).map((msg, i) => <li key={i}>{msg}</li>)}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
+

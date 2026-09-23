@@ -3,9 +3,11 @@ import { Link, router } from '@inertiajs/react';
 import { useMemo, useRef, useState } from 'react';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+
+import initials from '@/utils/initials';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 export default function Show({ inspection, checklistSnapshot }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
@@ -139,10 +141,17 @@ export default function Show({ inspection, checklistSnapshot }) {
         saveAnswer(sectionIdx, itemIdx, item, { note });
     };
 
+    const [confirmComplete, setConfirmComplete] = useState(false);
+    const [completing, setCompleting] = useState(false);
+
     const completeInspection = () => {
-        if (confirm('Selesaikan checklist untuk tenant ini?')) {
-            router.post(`/inspections/${inspection.id}/complete`);
-        }
+        setCompleting(true);
+        router.post(`/inspections/${inspection.id}/complete`, {}, {
+            onFinish: () => {
+                setCompleting(false);
+                setConfirmComplete(false);
+            },
+        });
     };
 
     const needsPhotoButMissing = (item) => {
@@ -365,7 +374,7 @@ export default function Show({ inspection, checklistSnapshot }) {
                                 <div className="h-full bg-emerald-400 rounded-full transition-all" style={{ width: `${stats.pct}%` }} />
                             </div>
                             {!isLocked && (
-                                <Button variant="success" onClick={completeInspection} className="w-full justify-center mt-4 !py-2.5 !bg-emerald-400 !text-[#0F1E36] hover:!bg-emerald-300 font-semibold">
+                                <Button variant="success" onClick={() => setConfirmComplete(true)} className="w-full justify-center mt-4 !py-2.5 !bg-emerald-400 !text-[#0F1E36] hover:!bg-emerald-300 font-semibold">
                                     Selesai — Simpan
                                 </Button>
                             )}
@@ -396,11 +405,24 @@ export default function Show({ inspection, checklistSnapshot }) {
 
                 {!isLocked && (
                     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E5EA] p-4 z-10" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-                        <Button variant="primary" onClick={completeInspection} className="w-full max-w-3xl mx-auto justify-center block !py-3.5 min-h-[52px] text-[15px]">
+                        <Button variant="primary" onClick={() => setConfirmComplete(true)} className="w-full max-w-3xl mx-auto justify-center block !py-3.5 min-h-[52px] text-[15px]">
                             Selesai — Simpan Checklist Ini
                         </Button>
                     </div>
                 )}
+
+                <ConfirmModal
+                    open={confirmComplete}
+                    onClose={() => setConfirmComplete(false)}
+                    onConfirm={completeInspection}
+                    loading={completing}
+                    title="Selesaikan Checklist?"
+                    confirmLabel="Ya, Selesaikan"
+                    note="Checklist tenant ini ditandai selesai. Foto yang wajib belum dilampirkan akan menandai inspeksi perlu perhatian."
+                >
+                    <ConfirmRow label="Tenant" value={inspection.tenant?.name} />
+                    <ConfirmRow label="Terjawab" value={`${stats.answered} dari ${stats.total} item`} />
+                </ConfirmModal>
             </div>
         </AppLayout>
     );

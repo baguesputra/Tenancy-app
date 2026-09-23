@@ -4,8 +4,7 @@ import { useState, useRef } from 'react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
-
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 const sidakColor = { draft: 'gray', completed: 'green' };
 const sidakLabel = { draft: 'Draft', completed: 'Selesai' };
 const permitColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
@@ -28,21 +27,42 @@ const detailTabs = [
     { key: 'kontak', label: 'Kontak' },
 ];
 
+const tabKeys = detailTabs.map((t) => t.key);
+
+function initialTab() {
+    if (typeof window === 'undefined') return 'ringkasan';
+    const q = new URLSearchParams(window.location.search).get('tab');
+    return tabKeys.includes(q) ? q : 'ringkasan';
+}
+
 export default function Show({ tenant, tenancies = [], inspections = [], permits = [], contactsByType = {}, unitQr, filters = {} }) {
-    const [activeTab, setActiveTab] = useState('ringkasan');
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [expandedSidakId, setExpandedSidakId] = useState(null);
     const [sidakCache, setSidakCache] = useState({});
     const [sidakLoading, setSidakLoading] = useState(false);
     const [expandedPermitId, setExpandedPermitId] = useState(null);
     const [permitCache, setPermitCache] = useState({});
     const [permitLoading, setPermitLoading] = useState(false);
+    const [sidakShown, setSidakShown] = useState(5);
+    const [permitShown, setPermitShown] = useState(5);
     const tabRefs = useRef({});
 
+    const selectTab = (key) => {
+        setActiveTab(key);
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', key);
+        window.history.replaceState({}, '', url);
+    };
+
     const onTabKeyDown = (e, idx) => {
-        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        let next = null;
+        if (e.key === 'ArrowRight') next = (idx + 1) % detailTabs.length;
+        else if (e.key === 'ArrowLeft') next = (idx + detailTabs.length - 1) % detailTabs.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = detailTabs.length - 1;
+        else return;
         e.preventDefault();
-        const next = (idx + (e.key === 'ArrowRight' ? 1 : detailTabs.length - 1)) % detailTabs.length;
-        setActiveTab(detailTabs[next].key);
+        selectTab(detailTabs[next].key);
         tabRefs.current[detailTabs[next].key]?.focus();
     };
 
@@ -110,7 +130,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                     </Link>
                 </div>
 
-                <div className="sticky top-14 z-10 mt-4 bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-1.5">
+                <div className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-1.5">
                     <div className="flex gap-1 overflow-x-auto bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Detail tenant">
                         {detailTabs.map((t, idx) => {
                             const count = t.key === 'kontrak' ? tenancies.length : t.key === 'sidak' ? inspections.length : t.key === 'izin' ? permits.length : null;
@@ -119,11 +139,13 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             return (
                                 <button
                                     key={t.key}
+                                    id={`tab-${t.key}`}
                                     ref={(el) => { tabRefs.current[t.key] = el; }}
                                     role="tab"
                                     aria-selected={selected}
+                                    aria-controls={`panel-${t.key}`}
                                     tabIndex={selected ? 0 : -1}
-                                    onClick={() => setActiveTab(t.key)}
+                                    onClick={() => selectTab(t.key)}
                                     onKeyDown={(e) => onTabKeyDown(e, idx)}
                                     className={`flex-1 min-w-[96px] min-h-[44px] px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${selected ? 'bg-white shadow-sm text-[#0F1E36]' : 'text-gray-500 hover:text-gray-800 active:bg-gray-200/60'}`}
                                 >
@@ -136,7 +158,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                     </div>
                 </div>
 
-                <div className="mt-4" role="tabpanel" aria-label={detailTabs.find((t) => t.key === activeTab)?.label}>
+                <div className="mt-4" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
                     {activeTab === 'ringkasan' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                             <FormSection title="Identitas & Legalitas">
@@ -175,7 +197,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                             badge: <Badge color={i.session_status === 'in_progress' ? 'yellow' : sidakColor[i.status] ?? 'gray'} size="sm">{i.session_status === 'in_progress' ? 'Penyidakan' : sidakLabel[i.status] ?? i.status}</Badge>,
                                         }))}
                                     />
-                                    {inspections.length > 2 && <TabLink onClick={() => setActiveTab('sidak')} label={`Lihat semua ${inspections.length} sidak →`} />}
+                                    {inspections.length > 2 && <TabLink onClick={() => selectTab('sidak')} label={`Lihat semua ${inspections.length} sidak →`} />}
                                 </FormSection>
 
                                 <FormSection title={`Izin Terakhir (${permits.length})`}>
@@ -189,7 +211,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                             badge: <Badge color={permitColor[p.status] ?? 'gray'} size="sm">{permitLabel[p.status] ?? p.status}</Badge>,
                                         }))}
                                     />
-                                    {permits.length > 2 && <TabLink onClick={() => setActiveTab('izin')} label={`Lihat semua ${permits.length} izin →`} />}
+                                    {permits.length > 2 && <TabLink onClick={() => selectTab('izin')} label={`Lihat semua ${permits.length} izin →`} />}
                                 </FormSection>
                             </div>
                         </div>
@@ -268,7 +290,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         <FormSection title={`Riwayat Sidak (${inspections.length})`}>
                     {inspections.length === 0 && <Empty text="Belum pernah disidak." />}
                     <div className="space-y-2">
-                        {inspections.map((i) => {
+                        {inspections.slice(0, sidakShown).map((i) => {
                             const open = expandedSidakId === i.id;
                             const cached = sidakCache[i.id];
                             return (
@@ -306,6 +328,14 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             );
                         })}
                     </div>
+                    {inspections.length > sidakShown && (
+                        <button
+                            onClick={() => setSidakShown((n) => n + 5)}
+                            className="mt-3 w-full py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-[#0F1E36] bg-[#0F1E36]/5 hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            Muat {Math.min(5, inspections.length - sidakShown)} lagi ({sidakShown}/{inspections.length})
+                        </button>
+                    )}
                         </FormSection>
                     )}
 
@@ -313,7 +343,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         <FormSection title={`Riwayat Izin (${permits.length})`}>
                     {permits.length === 0 && <Empty text="Belum ada surat izin." />}
                     <div className="space-y-2">
-                        {permits.map((p) => {
+                        {permits.slice(0, permitShown).map((p) => {
                             const open = expandedPermitId === p.id;
                             const cached = permitCache[p.id];
                             return (
@@ -356,6 +386,14 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             );
                         })}
                     </div>
+                    {permits.length > permitShown && (
+                        <button
+                            onClick={() => setPermitShown((n) => n + 5)}
+                            className="mt-3 w-full py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-[#0F1E36] bg-[#0F1E36]/5 hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            Muat {Math.min(5, permits.length - permitShown)} lagi ({permitShown}/{permits.length})
+                        </button>
+                    )}
                 </FormSection>
                     )}
                 </div>

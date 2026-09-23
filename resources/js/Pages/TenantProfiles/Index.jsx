@@ -8,8 +8,7 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import { formatDateID } from '@/utils/format';
-
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 const statusColor = { draft: 'gray', completed: 'green' };
 const statusLabel = { draft: 'Draft', completed: 'Selesai' };
 const permitColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
@@ -260,6 +259,7 @@ export default function Index({ tenants, filters = {}, productCategories = [] })
                     {tenants.data.length === 0 && (
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
                             <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
+                            <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Belum ada data tenant.'}</p>
                         </div>
                     )}
                     <div className="bg-white rounded-xl border border-[#E2E5EA]">
@@ -286,73 +286,57 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
 
     return (
         <div className="space-y-4">
-            <div className="bg-[#0F1E36] text-white rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center gap-3.5">
+            <div className="bg-[#0F1E36] text-white rounded-2xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
                     {tenant.logo_url ? (
-                        <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-14 h-14 rounded-2xl bg-white object-contain p-1 shrink-0" />
+                        <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-12 h-12 rounded-xl bg-white object-contain p-1 shrink-0" loading="lazy" />
                     ) : (
-                        <span className="w-14 h-14 rounded-2xl bg-white/10 text-white text-lg font-bold flex items-center justify-center shrink-0" aria-hidden="true">{initials(tenant.name)}</span>
+                        <span className="w-12 h-12 rounded-xl bg-white/10 text-white text-base font-bold flex items-center justify-center shrink-0" aria-hidden="true">{initials(tenant.name)}</span>
                     )}
                     <div className="min-w-0 flex-1">
-                        <h2 className="text-lg font-bold tracking-tight truncate">{tenant.name}</h2>
-                        <p className="text-xs text-white/60 truncate mt-0.5 font-mono">{unitCode}</p>
+                        <h2 className="text-base font-bold tracking-tight truncate">{tenant.name}</h2>
+                        <p className="text-xs text-white/60 truncate mt-0.5 font-mono">
+                            {unitCode} · {completedSidak} sidak OK · {pendingPermits} antre
+                        </p>
                     </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Badge color={tenant.is_active ? 'green' : 'gray'} variant="soft" size="sm">{tenant.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                    {(tenant.product_category?.name ?? tenant.productCategory?.name) && (
-                        <Badge color="blue" variant="soft" size="sm">{tenant.product_category?.name ?? tenant.productCategory?.name}</Badge>
-                    )}
-                    {(tenant.branch?.name) && (
-                        <Badge color="gray" variant="soft" size="sm">{tenant.branch.name}</Badge>
-                    )}
-                </div>
-                <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-white/10 px-2 py-2.5">
-                        <dt className="text-[10px] uppercase tracking-wide text-white/50">Kontrak</dt>
-                        <dd className="text-lg font-bold tabular-nums">{tenancies.length}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white/10 px-2 py-2.5">
-                        <dt className="text-[10px] uppercase tracking-wide text-white/50">Sidak OK</dt>
-                        <dd className="text-lg font-bold tabular-nums">{completedSidak}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white/10 px-2 py-2.5">
-                        <dt className="text-[10px] uppercase tracking-wide text-white/50">Izin Antre</dt>
-                        <dd className="text-lg font-bold tabular-nums">{pendingPermits}</dd>
-                    </div>
-                </dl>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Link
                         href={`/tenant-profiles/${tenant.id}/detail`}
-                        className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-xs font-semibold text-[#0F1E36] bg-white rounded-lg hover:bg-white/90 transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                        aria-label={`Detail lengkap ${tenant.name}`}
+                        className="shrink-0 inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-xs font-semibold text-[#0F1E36] bg-white rounded-lg hover:bg-white/90 transition-colors focus-visible:outline-2 focus-visible:outline-white"
                     >
-                        Lihat Detail Lengkap →
-                    </Link>
-                    <Link
-                        href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
-                        className="inline-flex items-center gap-1.5 px-2 py-2.5 min-h-[44px] text-xs font-medium text-white/70 hover:text-white transition-colors rounded focus-visible:outline-2 focus-visible:outline-white"
-                    >
-                        Edit di Master
+                        Detail →
                     </Link>
                 </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
-                <div className="flex gap-1 overflow-x-auto p-2" role="tablist" aria-label="Detail tenant">
-                    {tabs.map((t) => (
-                        <button
-                            key={t.key}
-                            role="tab"
-                            aria-selected={activeTab === t.key}
-                            onClick={() => setActiveTab(t.key)}
-                            className={`shrink-0 px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors ${activeTab === t.key ? 'bg-[#0F1E36] text-white' : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'}`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
+                <div className="flex gap-1 overflow-x-auto bg-gray-100 rounded-xl p-1 m-2" role="tablist" aria-label="Detail tenant">
+                    {tabs.map((t, idx) => {
+                        const selected = activeTab === t.key;
+                        return (
+                            <button
+                                key={t.key}
+                                role="tab"
+                                id={`mini-tab-${tenant.id}-${t.key}`}
+                                aria-selected={selected}
+                                aria-controls={`mini-panel-${tenant.id}`}
+                                tabIndex={selected ? 0 : -1}
+                                onClick={() => setActiveTab(t.key)}
+                                onKeyDown={(e) => {
+                                    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                                    e.preventDefault();
+                                    const next = tabs[(idx + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+                                    setActiveTab(next.key);
+                                }}
+                                className={`flex-1 min-w-[80px] min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${selected ? 'bg-white shadow-sm text-[#0F1E36]' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                                {t.label}
+                            </button>
+                        );
+                    })}
                 </div>
-                <div className="px-4 pb-4 space-y-3">
-                    {loading && <p className="text-xs text-gray-400 text-center py-6">Memuat detail…</p>}
+                <div id={`mini-panel-${tenant.id}`} role="tabpanel" aria-label="Detail tenant" className="px-4 pb-4 space-y-3">
+                    {loading && <SkeletonLines rows={4} />}
                     {!loading && activeTab === 'units' && (
                         <div className="space-y-2">
                             {tenancies.length === 0 && <Empty text="Belum ada kontrak." />}
@@ -445,7 +429,7 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                     {!loading && activeTab === 'permits' && (
                         <div className="space-y-2">
                             {permits.length === 0 && <Empty text="Belum ada surat izin." />}
-                            {permits.slice(0, 20).map((p) => (
+                            {permits.slice(0, 5).map((p) => (
                                 <Link
                                     key={p.id}
                                     href={`/permit-requests/${p.id}`}
@@ -458,6 +442,14 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                                     <p className="text-xs text-gray-500 mt-1 truncate">{p.job_type ?? '—'} — {p.request_date ? formatDateID(p.request_date) : '—'}</p>
                                 </Link>
                             ))}
+                            {permits.length > 5 && (
+                                <Link
+                                    href={`/tenant-profiles/${tenant.id}/detail`}
+                                    className="block text-center py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-[#0F1E36] bg-[#0F1E36]/5 hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    Lihat semua {permits.length} izin di Detail Lengkap →
+                                </Link>
+                            )}
                         </div>
                     )}
                     {!loading && activeTab === 'contact' && (
@@ -485,6 +477,19 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
 
 function Empty({ text }) {
     return <p className="text-xs text-gray-400 text-center py-6">{text}</p>;
+}
+
+function SkeletonLines({ rows = 4 }) {
+    return (
+        <div className="space-y-2.5 py-2" aria-label="Memuat…" role="status">
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                    <div className={`h-3 rounded-lg bg-gray-200 ${i % 3 === 2 ? 'w-2/3' : 'w-full'}`} />
+                    <div className="mt-1.5 h-3 w-1/3 rounded-lg bg-gray-100" />
+                </div>
+            ))}
+        </div>
+    );
 }
 
 function InfoRow({ label, value, mono }) {

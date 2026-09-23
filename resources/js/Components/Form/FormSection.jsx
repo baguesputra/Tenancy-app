@@ -15,9 +15,10 @@ export default function FormSection({ title, description, children, collapsible 
                     {collapsible && (
                         <button
                             onClick={onToggle}
-                            className={`p-2 rounded-lg hover:bg-[#0F1E36]/5 transition-colors
+                            aria-expanded={expanded}
+                            className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-[#0F1E36]/5 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]
                                      ${expanded ? 'text-[#0F1E36]' : 'text-gray-400'}`}
-                            aria-label={expanded ? 'Collapse section' : 'Expand section'}
+                            aria-label={expanded ? 'Ciutkan bagian' : 'Bentangkan bagian'}
                         >
                             <svg className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

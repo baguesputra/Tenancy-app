@@ -10,7 +10,7 @@ import DataTable from '@/Components/DataTable';
 import SlideOver from '@/Components/SlideOver';
 import { IconEdit } from '@/Components/Icons';
 
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 const roleColor = (role) => {
     if (role === 'super_admin' || role === 'admin') return 'red';
     if (role === 'manager') return 'blue';
@@ -442,3 +442,4 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
         </AppLayout>
     );
 }
+

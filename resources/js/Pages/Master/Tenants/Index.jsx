@@ -13,11 +13,14 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import StatFilter from '@/Components/StatFilter';
+import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
+import initials from '@/utils/initials';
+
 const emptyContact = { name: '', position: '', phone: '', email: '', type: '' };
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 export default function Index({ tenants, summary = { total: 0, active: 0, inactive: 0 }, tenantCategories = [], productCategories = [], filters = {}, branches = [], canPickBranch, tenantScope = {} }) {
     const { auth } = usePage().props;
@@ -164,28 +167,9 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                    {stats.map((s) => {
-                        const active = (filters.status ?? '') === s.key;
-                        return (
-                            <button
-                                key={s.label}
-                                onClick={() => updateFilter('status', s.key)}
-                                aria-pressed={active}
-                                className={`text-left bg-white rounded-xl border px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
-                            >
-                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                    {s.label}
-                                </span>
-                                <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-3" />
 
-                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="flex flex-col lg:flex-row gap-2">
+                <FilterBar>
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -216,17 +200,18 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <option value="">Semua Kategori Produk</option>
                             {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </SelectInput>
-                        {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
-                                Reset
-                            </button>
-                        )}
-                    </div>
-                </div>
+                        {hasFilter && <FilterReset onClick={resetFilters} />}
+                </FilterBar>
 
                 <DataTable columns={columns} footer={<Pagination meta={tenants} links={tenants.links} />}>
                     {tenants.data.map((tenant) => (
-                        <tr key={tenant.id} onClick={() => canEditRow(tenant) && openEdit(tenant)} className={`group transition-colors ${canEditRow(tenant) ? 'cursor-pointer hover:bg-gray-50/80' : ''}`}>
+                        <tr
+                            key={tenant.id}
+                            onClick={() => canEditRow(tenant) && openEdit(tenant)}
+                            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && canEditRow(tenant)) { e.preventDefault(); openEdit(tenant); } }}
+                            tabIndex={canEditRow(tenant) ? 0 : undefined}
+                            className={`group transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${canEditRow(tenant) ? 'cursor-pointer hover:bg-gray-50/80' : ''}`}
+                        >
                             <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3 min-w-0">
                                     {tenant.logo_url ? (
@@ -258,7 +243,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                                 <button
                                     onClick={(e) => { e.stopPropagation(); askDelete(tenant); }}
                                     aria-label={`Hapus ${tenant.name}`}
-                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all focus-visible:outline-2 focus-visible:outline-red-500"
+                                    className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
                                 >
                                     <IconTrash className="w-4 h-4" />
                                 </button>

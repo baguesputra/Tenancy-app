@@ -12,6 +12,8 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import StatFilter from '@/Components/StatFilter';
+import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
 import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
@@ -176,28 +178,9 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-4">
-                    {stats.map((s) => {
-                        const active = (filters.status ?? '') === s.key;
-                        return (
-                            <button
-                                key={s.label}
-                                onClick={() => updateFilter('status', s.key)}
-                                aria-pressed={active}
-                                className={`text-left bg-white rounded-xl border px-3.5 sm:px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
-                            >
-                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                    {s.label}
-                                </span>
-                                <span className="block text-lg sm:text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} />
 
-                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="flex flex-col lg:flex-row gap-2">
+                <FilterBar>
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
@@ -237,13 +220,8 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                             <option value="">Semua Nomor</option>
                             {unitNumbers.map((n) => <option key={n} value={n}>No. {n}</option>)}
                         </SelectInput>
-                        {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 min-h-[40px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
-                                Reset
-                            </button>
-                        )}
-                    </div>
-                </div>
+                        {hasFilter && <FilterReset onClick={resetFilters} />}
+                </FilterBar>
 
                 <div className="hidden sm:block">
                     <DataTable columns={columns} footer={<Pagination meta={units} links={units.links} />}>

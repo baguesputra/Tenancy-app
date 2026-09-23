@@ -13,7 +13,7 @@ import SlideOver from '@/Components/SlideOver';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash, IconRefresh } from '@/Components/Icons';
 
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 const randomPassword = (length = 12) => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     const bytes = crypto.getRandomValues(new Uint8Array(length));
@@ -343,3 +343,4 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
         </AppLayout>
     );
 }
+

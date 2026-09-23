@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import TextInput from '@/Components/Form/TextInput';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import QrScanModal from '@/Components/Scan/QrScanModal';
 
 const filters = [
@@ -13,7 +14,7 @@ const filters = [
     { key: 'flagged', label: 'Perlu Perhatian' },
 ];
 
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 
 export default function Show({ session, availableTenants }) {
     const [search, setSearch] = useState('');
@@ -47,10 +48,18 @@ export default function Show({ session, availableTenants }) {
         );
     };
 
+    const [confirmComplete, setConfirmComplete] = useState(false);
+    const [completing, setCompleting] = useState(false);
+
     const completeSession = () => {
-        if (confirm('Yakin sesi sidak ini sudah selesai? Setelah ini tidak bisa diedit lagi.')) {
-            router.post(`/inspection-sessions/${session.id}/complete`);
-        }
+        setCompleting(true);
+        router.post(`/inspection-sessions/${session.id}/complete`, {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setCompleting(false);
+                setConfirmComplete(false);
+            },
+        });
     };
 
     return (
@@ -93,7 +102,7 @@ export default function Show({ session, availableTenants }) {
                             </Button>
                             <Button
                                 variant="secondary"
-                                onClick={completeSession}
+                                onClick={() => setConfirmComplete(true)}
                                 className="w-full justify-center !py-3 min-h-[48px] !bg-white/10 !text-white !border-white/20 hover:!bg-white/20"
                             >
                                 Selesaikan Sesi
@@ -228,6 +237,19 @@ export default function Show({ session, availableTenants }) {
             </div>
 
             <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} sessionId={session.id} title="Scan QR Tenant" description="Arahkan kamera ke QR unit — otomatis lompat ke sidak" submitLabel="Buka Sidak dari Token" />
+
+            <ConfirmModal
+                open={confirmComplete}
+                onClose={() => setConfirmComplete(false)}
+                onConfirm={completeSession}
+                loading={completing}
+                title="Selesaikan Sesi?"
+                confirmLabel="Ya, Selesaikan"
+                note="Setelah selesai, sesi dan semua checklist di dalamnya tidak bisa diubah lagi."
+            >
+                <ConfirmRow label="Tenant disidak" value={`${inspections.length} tenant`} />
+                <ConfirmRow label="Selesai checklist" value={`${done} dari ${inspections.length}`} />
+            </ConfirmModal>
         </AppLayout>
     );
 }

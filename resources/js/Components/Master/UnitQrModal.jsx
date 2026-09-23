@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect } from 'react';
 
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 
 export function UnitQrCard({ unit }) {
     const tenant = unit.active_tenancy?.tenant;
@@ -100,3 +100,4 @@ export default function UnitQrModal({ open, onClose, unit }) {
 }
 
 export { initials };
+

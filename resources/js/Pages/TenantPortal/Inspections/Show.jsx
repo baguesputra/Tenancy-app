@@ -70,7 +70,7 @@ export default function Show({ inspection, checklistSnapshot, progress }) {
                                         </div>
                                     )}
                                     {!item.answer?.value && (
-                                        <p className="text-xs text-gray-300 italic mt-1">Belum dijawab</p>
+                                        <p className="text-xs text-gray-400 italic mt-1">Belum dijawab</p>
                                     )}
                                 </div>
                             ))}

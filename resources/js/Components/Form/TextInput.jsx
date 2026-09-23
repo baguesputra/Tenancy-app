@@ -59,7 +59,7 @@ export default function TextInput({ error, className = '', loading = false, clea
                 type={type}
                 value={displayValue}
                 onChange={handleChange}
-                className={`w-full pl-3.5 pr-${clearable ? '10' : '3.5'} py-2.5 text-sm text-gray-900 placeholder:text-gray-400
+                className={`w-full pl-3.5 ${clearable ? 'pr-10' : 'pr-3.5'} py-2.5 text-sm text-gray-900 placeholder:text-gray-400
                     bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-0
                     transition-all duration-200 ease-out
                     ${error

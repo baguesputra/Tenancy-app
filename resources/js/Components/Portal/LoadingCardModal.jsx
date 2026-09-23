@@ -8,7 +8,7 @@ const RULES = [
     'KELUAR BARANG WAJIB mengurus surat izin ke kantor manajemen.',
 ];
 
-const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+import initials from '@/utils/initials';
 
 export function LoadingCard({ permit, qrImage, expiresLabel, isGoods, compact = false }) {
     const logo = permit.tenant?.logo_url;
@@ -107,3 +107,4 @@ export default function LoadingCardModal({ open, onClose, permit, qrImage, expir
         document.body
     );
 }
+
