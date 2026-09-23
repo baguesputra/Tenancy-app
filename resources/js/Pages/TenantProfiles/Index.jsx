@@ -117,34 +117,36 @@ export default function Index({ tenants, filters = {}, productCategories = [] })
                                 placeholder="Cari nama / telepon / unit…"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
-                                className="!pl-9"
+                                className="!pl-9 min-h-[44px]"
                                 aria-label="Cari tenant"
                             />
                         </div>
-                        <SelectInput
-                            value={filters.product_category_id ?? ''}
-                            onChange={(e) => updateFilter('product_category_id', e.target.value)}
-                            className="lg:w-52"
-                            aria-label="Filter kategori produk"
-                        >
-                            <option value="">Semua Kategori</option>
-                            {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </SelectInput>
-                        <SelectInput
-                            value={filters.status ?? ''}
-                            onChange={(e) => updateFilter('status', e.target.value)}
-                            className="lg:w-40"
-                            aria-label="Filter status"
-                        >
-                            <option value="">Aktif + Nonaktif</option>
-                            <option value="active">Aktif</option>
-                            <option value="inactive">Nonaktif</option>
-                        </SelectInput>
-                        {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 min-h-[40px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
-                                Reset
-                            </button>
-                        )}
+                        <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-row">
+                            <SelectInput
+                                value={filters.product_category_id ?? ''}
+                                onChange={(e) => updateFilter('product_category_id', e.target.value)}
+                                className="lg:w-52 min-h-[44px]"
+                                aria-label="Filter kategori produk"
+                            >
+                                <option value="">Semua Kategori</option>
+                                {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </SelectInput>
+                            <SelectInput
+                                value={filters.status ?? ''}
+                                onChange={(e) => updateFilter('status', e.target.value)}
+                                className="lg:w-40 min-h-[44px]"
+                                aria-label="Filter status"
+                            >
+                                <option value="">Aktif + Nonaktif</option>
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </SelectInput>
+                            {hasFilter && (
+                                <button onClick={resetFilters} className="col-span-2 lg:col-span-1 px-3 py-2 min-h-[44px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
+                                    Reset
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -335,7 +337,7 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                             role="tab"
                             aria-selected={activeTab === t.key}
                             onClick={() => setActiveTab(t.key)}
-                            className={`shrink-0 px-3 py-2 min-h-[40px] rounded-full text-xs font-medium transition-colors ${activeTab === t.key ? 'bg-[#0F1E36] text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`shrink-0 px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors ${activeTab === t.key ? 'bg-[#0F1E36] text-white' : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'}`}
                         >
                             {t.label}
                         </button>
@@ -369,7 +371,7 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                                         <button
                                             onClick={() => toggleSidak(i.id)}
                                             aria-expanded={open}
-                                            className="w-full text-left px-3.5 py-3 focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded-xl"
+                                            className="w-full text-left px-3.5 py-3 min-h-[52px] focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded-xl"
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <p className="text-xs font-semibold text-gray-900 truncate">{i.template_name}</p>
@@ -408,7 +410,7 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                                                                             <div className="flex gap-1.5 flex-wrap mt-1.5">
                                                                                 {item.answer.photos.map((photo) => (
                                                                                     <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer" className="rounded-lg focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                                                                                        <img src={photo.url} alt="Foto bukti sidak" loading="lazy" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                                                                                        <img src={photo.url} alt="Foto bukti sidak" loading="lazy" className="w-20 h-20 sm:w-16 sm:h-16 object-cover rounded-lg border border-gray-200" />
                                                                                     </a>
                                                                                 ))}
                                                                             </div>
