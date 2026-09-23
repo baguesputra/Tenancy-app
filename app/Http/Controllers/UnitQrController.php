@@ -27,8 +27,12 @@ class UnitQrController extends Controller
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('unit_code', 'like', "%{$request->search}%")
                     ->orWhere('floor', 'like', "%{$request->search}%")
-                    ->orWhere('block', 'like', "%{$request->search}%");
+                    ->orWhere('block', 'like', "%{$request->search}%")
+                    ->orWhere('unit_number', 'like', "%{$request->search}%");
             }))
+            ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
+            ->when($request->block, fn ($q) => $q->where('block', $request->block))
+            ->when($request->unit_number, fn ($q) => $q->where('unit_number', $request->unit_number))
             ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
             ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))

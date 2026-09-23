@@ -20,10 +20,22 @@ class UnitController extends Controller
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('unit_code', 'like', "%{$request->search}%")
                     ->orWhere('floor', 'like', "%{$request->search}%")
-                    ->orWhere('block', 'like', "%{$request->search}%");
+                    ->orWhere('block', 'like', "%{$request->search}%")
+                    ->orWhere('unit_number', 'like', "%{$request->search}%");
             }));
 
         $this->branchScope->apply($base, $request->user());
+
+        $floors = (clone $base)->whereNotNull('floor')->distinct()->orderBy('floor')->pluck('floor');
+        $blocks = (clone $base)
+            ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
+            ->whereNotNull('block')->where('block', '!=', '')
+            ->distinct()->orderBy('block')->pluck('block');
+        $unitNumbers = (clone $base)
+            ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
+            ->when($request->block, fn ($q) => $q->where('block', $request->block))
+            ->whereNotNull('unit_number')->where('unit_number', '!=', '')
+            ->distinct()->orderBy('unit_number')->pluck('unit_number');
 
         $summaryBase = clone $base;
         $total = (clone $summaryBase)->count();
@@ -32,10 +44,13 @@ class UnitController extends Controller
         $vacant = (clone $summaryBase)->where('is_active', true)->whereDoesntHave('activeTenancy')->count();
 
         $query = (clone $base)
+            ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
+            ->when($request->block, fn ($q) => $q->where('block', $request->block))
+            ->when($request->unit_number, fn ($q) => $q->where('unit_number', $request->unit_number))
             ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
             ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
-            ->latest();
+            ->orderBy('floor')->orderBy('block')->orderBy('unit_number');
 
         $units = $query->paginate(15)->withQueryString();
         $units->getCollection()->transform(function (Unit $unit) {
@@ -56,7 +71,10 @@ class UnitController extends Controller
                 'vacant' => $vacant,
                 'inactive' => $inactive,
             ],
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'floor', 'block', 'unit_number']),
+            'floors' => $floors,
+            'blocks' => $blocks,
+            'unitNumbers' => $unitNumbers,
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);

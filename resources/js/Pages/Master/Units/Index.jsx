@@ -16,14 +16,7 @@ import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
 import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
 
-const statusOptions = [
-    { key: '', label: 'Semua' },
-    { key: 'occupied', label: 'Terisi' },
-    { key: 'vacant', label: 'Kosong' },
-    { key: 'inactive', label: 'Nonaktif' },
-];
-
-export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, filters = {}, branches, canPickBranch }) {
+export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
     const [exporting, setExporting] = useState(false);
@@ -96,8 +89,10 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
         });
     };
 
-    const updateFilter = (key, value) => {
-        router.get('/units', { ...filters, [key]: value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
+    const updateFilter = (key, value, resetKeys = []) => {
+        const next = { ...filters, [key]: value || undefined };
+        resetKeys.forEach((k) => { next[k] = undefined; });
+        router.get('/units', next, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     useEffect(() => {
@@ -107,7 +102,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
         return () => clearTimeout(t);
     }, [searchText]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const hasFilter = filters.search || filters.status;
+    const hasFilter = filters.search || filters.status || filters.floor || filters.block || filters.unit_number;
     const resetFilters = () => {
         setSearchText('');
         router.get('/units', {}, { preserveScroll: true, replace: true });
@@ -130,7 +125,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
     ];
 
     const qrParams = new URLSearchParams(
-        Object.fromEntries(Object.entries({ search: filters.search, status: filters.status }).filter(([, v]) => v))
+        Object.fromEntries(Object.entries({ search: filters.search, status: filters.status, floor: filters.floor, block: filters.block, unit_number: filters.unit_number }).filter(([, v]) => v))
     ).toString();
     const bulkQrHref = `/units-qr/bulk${qrParams ? `?${qrParams}` : ''}`;
 
@@ -201,34 +196,49 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                     })}
                 </div>
 
-                <div className="bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="flex flex-col sm:flex-row gap-2">
+                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
+                    <div className="flex flex-col lg:flex-row gap-2">
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
                             </svg>
                             <TextInput
-                                placeholder="Cari kode unit / lantai / blok…"
+                                placeholder="Cari kode / nomor unit…"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9"
                                 aria-label="Cari unit"
                             />
                         </div>
-                        <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Filter status">
-                            {statusOptions.map((o) => (
-                                <button
-                                    key={o.key}
-                                    onClick={() => updateFilter('status', o.key)}
-                                    aria-pressed={(filters.status ?? '') === o.key}
-                                    className={`shrink-0 px-3 py-2 min-h-[40px] rounded-full text-xs font-medium transition-colors ${(filters.status ?? '') === o.key ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    {o.label}
-                                </button>
-                            ))}
-                        </div>
+                        <SelectInput
+                            value={filters.floor ?? ''}
+                            onChange={(e) => updateFilter('floor', e.target.value, ['block', 'unit_number'])}
+                            className="lg:w-40"
+                            aria-label="Filter lantai"
+                        >
+                            <option value="">Semua Lantai</option>
+                            {floors.map((f) => <option key={f} value={f}>Lt. {f}</option>)}
+                        </SelectInput>
+                        <SelectInput
+                            value={filters.block ?? ''}
+                            onChange={(e) => updateFilter('block', e.target.value, ['unit_number'])}
+                            className="lg:w-40"
+                            aria-label="Filter blok"
+                        >
+                            <option value="">Semua Blok</option>
+                            {blocks.map((b) => <option key={b} value={b}>Blok {b}</option>)}
+                        </SelectInput>
+                        <SelectInput
+                            value={filters.unit_number ?? ''}
+                            onChange={(e) => updateFilter('unit_number', e.target.value)}
+                            className="lg:w-40"
+                            aria-label="Filter nomor unit"
+                        >
+                            <option value="">Semua Nomor</option>
+                            {unitNumbers.map((n) => <option key={n} value={n}>No. {n}</option>)}
+                        </SelectInput>
                         {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 min-h-[40px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors shrink-0">
+                            <button onClick={resetFilters} className="px-3 py-2 min-h-[40px] text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
                                 Reset
                             </button>
                         )}
