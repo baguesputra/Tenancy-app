@@ -101,7 +101,7 @@ export default function Index({ tenants, filters = {}, productCategories = [] })
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="mb-5">
                     <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Profile Tenant</h1>
                     <p className="text-sm text-gray-500 mt-0.5">Cari tenant, klik barisnya — detail mengembang halus di bawahnya</p>
