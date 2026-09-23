@@ -207,6 +207,11 @@ export default function AppLayout({ children }) {
                             )}
                         </div>
                     )}
+                    {can('tenants.view') && (
+                        <NavLink href="/tenant-profiles" currentUrl={currentUrl} icon={menuIcons.users} collapsed={collapsed}>
+                            Profile Tenant
+                        </NavLink>
+                    )}
                     {can('sidak.view') && (
                         <NavLink href="/inspection-sessions" currentUrl={currentUrl} icon={menuIcons.sidak} collapsed={collapsed}>
                             Sesi Sidak

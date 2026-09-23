@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TenantCategoryController;
@@ -153,6 +154,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/password/change', [PasswordChangeController::class, 'update'])->name('password.change.update');
 
     Route::middleware('can:tenants.view')->get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
+    Route::middleware('can:tenants.view')->get('/tenant-profiles', [TenantProfileController::class, 'index'])->name('tenant-profiles.index');
+    Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}', [TenantProfileController::class, 'show'])->name('tenant-profiles.show');
+    Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/inspections/{inspection}', [TenantProfileController::class, 'showInspection'])->name('tenant-profiles.inspection');
     Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store']);
     Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update']); // POST didukung karena upload logo via multipart + _method=put
     Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy']);

@@ -17,6 +17,9 @@ class BreadcrumbService
         $crumbs = match ($name) {
             'dashboard' => [$webHome],
             'tenants.index' => [$webHome, self::item('Master Tenant', '/tenants')],
+            'tenant-profiles.index' => [$webHome, self::item('Profile Tenant', '/tenant-profiles')],
+            'tenant-profiles.show' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item('Detail')],
+            'tenant-profiles.inspection' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item('Detail Sidak')],
             'units.index' => [$webHome, self::item('Master Unit', '/units')],
             'units.qr', 'units.qr.bulk' => [$webHome, self::item('Master Unit', '/units'), self::item('QR Unit')],
             'tenancies.index' => [$webHome, self::item('Master Tenancy', '/tenancies')],
