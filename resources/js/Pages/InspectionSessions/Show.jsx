@@ -20,6 +20,7 @@ export default function Show({ session, availableTenants }) {
     const [adding, setAdding] = useState(false);
     const [filter, setFilter] = useState('all');
     const [scanOpen, setScanOpen] = useState(false);
+    const isLocked = session.status !== 'in_progress';
 
     const inspections = session.inspections ?? [];
     const done = inspections.filter((i) => i.status === 'completed').length;
@@ -58,7 +59,7 @@ export default function Show({ session, availableTenants }) {
                 <div className="bg-[#0F1E36] text-white rounded-2xl p-5 sm:p-6 mb-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold">Sesi Sidak Berjalan</p>
+                            <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold">{isLocked ? 'Sesi Sidak Selesai' : 'Sesi Sidak Berjalan'}</p>
                             <h1 className="text-lg sm:text-xl font-semibold mt-0.5">
                                 {new Date(session.started_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                             </h1>
@@ -76,27 +77,29 @@ export default function Show({ session, availableTenants }) {
                             <div className="h-full bg-emerald-400 rounded-full transition-all" style={{ width: `${progress}%` }} />
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                        <Button
-                            variant="success"
-                            onClick={() => setScanOpen(true)}
-                            className="w-full justify-center !py-3 min-h-[48px] !bg-emerald-400 !text-[#0F1E36] hover:!bg-emerald-300 font-semibold"
-                            iconLeft={
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M3 12h18" />
-                                </svg>
-                            }
-                        >
-                            Scan QR Tenant
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={completeSession}
-                            className="w-full justify-center !py-3 min-h-[48px] !bg-white/10 !text-white !border-white/20 hover:!bg-white/20"
-                        >
-                            Selesaikan Sesi
-                        </Button>
-                    </div>
+                    {!isLocked && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                            <Button
+                                variant="success"
+                                onClick={() => setScanOpen(true)}
+                                className="w-full justify-center !py-3 min-h-[48px] !bg-emerald-400 !text-[#0F1E36] hover:!bg-emerald-300 font-semibold"
+                                iconLeft={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M3 12h18" />
+                                    </svg>
+                                }
+                            >
+                                Scan QR Tenant
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={completeSession}
+                                className="w-full justify-center !py-3 min-h-[48px] !bg-white/10 !text-white !border-white/20 hover:!bg-white/20"
+                            >
+                                Selesaikan Sesi
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm mb-4 overflow-hidden">
@@ -131,10 +134,16 @@ export default function Show({ session, availableTenants }) {
                             <p className="text-sm font-medium text-gray-700">
                                 {inspections.length === 0 ? 'Belum ada tenant ditambahkan.' : 'Tidak ada tenant pada filter ini.'}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">Scan QR di depan toko untuk mulai sidak tercepat.</p>
-                            <Button variant="primary" onClick={() => setScanOpen(true)} className="justify-center !py-3 min-h-[48px]">
-                                Scan QR Sekarang
-                            </Button>
+                            {isLocked ? (
+                                <p className="text-xs text-gray-400 mt-1">Sesi ini sudah selesai dan tidak bisa ditambah lagi.</p>
+                            ) : (
+                                <>
+                                    <p className="text-xs text-gray-400 mt-1 mb-4">Scan QR di depan toko untuk mulai sidak tercepat.</p>
+                                    <Button variant="primary" onClick={() => setScanOpen(true)} className="justify-center !py-3 min-h-[48px]">
+                                        Scan QR Sekarang
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -173,47 +182,49 @@ export default function Show({ session, availableTenants }) {
                     )}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
-                    <div className="px-4 sm:px-5 pt-4 pb-3">
-                        <h2 className="text-sm font-semibold text-gray-900">Tambah Manual</h2>
-                        <p className="text-xs text-gray-500 mt-0.5 mb-3">Cari nama atau kode unit. Sudah disidak tidak muncul lagi.</p>
-                        <TextInput
-                            placeholder="Cari nama tenant / kode unit…"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            clearable
-                        />
-                    </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100">
-                        {filteredTenants.map((tenant) => (
-                            <button
-                                key={tenant.id}
-                                type="button"
-                                disabled={adding}
-                                onClick={() => submitAddTenant(tenant.id)}
-                                className="w-full text-left px-4 sm:px-5 py-3 min-h-[56px] hover:bg-blue-50/60 active:bg-blue-100/60 transition-colors flex items-center gap-3 disabled:opacity-50"
-                            >
-                                {tenant.logo_url ? (
-                                    <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-9 h-9 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
-                                ) : (
-                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                        {initials(tenant.name)}
+                {!isLocked && (
+                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
+                        <div className="px-4 sm:px-5 pt-4 pb-3">
+                            <h2 className="text-sm font-semibold text-gray-900">Tambah Manual</h2>
+                            <p className="text-xs text-gray-500 mt-0.5 mb-3">Cari nama atau kode unit. Sudah disidak tidak muncul lagi.</p>
+                            <TextInput
+                                placeholder="Cari nama tenant / kode unit…"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                clearable
+                            />
+                        </div>
+                        <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100">
+                            {filteredTenants.map((tenant) => (
+                                <button
+                                    key={tenant.id}
+                                    type="button"
+                                    disabled={adding}
+                                    onClick={() => submitAddTenant(tenant.id)}
+                                    className="w-full text-left px-4 sm:px-5 py-3 min-h-[56px] hover:bg-blue-50/60 active:bg-blue-100/60 transition-colors flex items-center gap-3 disabled:opacity-50"
+                                >
+                                    {tenant.logo_url ? (
+                                        <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-9 h-9 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
+                                    ) : (
+                                        <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(tenant.name)}
+                                        </span>
+                                    )}
+                                    <span className="text-sm text-gray-800 min-w-0 flex-1">
+                                        <span className="block truncate font-medium">{tenant.name}</span>
+                                        <span className="block text-xs text-gray-400 truncate">
+                                            {tenant.unit_code ?? ''}{tenant.tenant_category === 'Anchor' ? ' · Anchor' : ''}
+                                        </span>
                                     </span>
-                                )}
-                                <span className="text-sm text-gray-800 min-w-0 flex-1">
-                                    <span className="block truncate font-medium">{tenant.name}</span>
-                                    <span className="block text-xs text-gray-400 truncate">
-                                        {tenant.unit_code ?? ''}{tenant.tenant_category === 'Anchor' ? ' · Anchor' : ''}
-                                    </span>
-                                </span>
-                                <span className="text-xs font-medium text-blue-700 bg-blue-50 rounded-full px-2.5 py-1.5 shrink-0">+ Sidak</span>
-                            </button>
-                        ))}
-                        {filteredTenants.length === 0 && (
-                            <p className="px-5 py-6 text-sm text-gray-400 text-center">Tidak ada tenant ditemukan.</p>
-                        )}
+                                    <span className="text-xs font-medium text-blue-700 bg-blue-50 rounded-full px-2.5 py-1.5 shrink-0">+ Sidak</span>
+                                </button>
+                            ))}
+                            {filteredTenants.length === 0 && (
+                                <p className="px-5 py-6 text-sm text-gray-400 text-center">Tidak ada tenant ditemukan.</p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} sessionId={session.id} title="Scan QR Tenant" description="Arahkan kamera ke QR unit — otomatis lompat ke sidak" submitLabel="Buka Sidak dari Token" />

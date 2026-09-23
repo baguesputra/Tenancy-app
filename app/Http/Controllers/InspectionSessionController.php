@@ -114,6 +114,7 @@ class InspectionSessionController extends Controller
     public function complete(InspectionSession $session, Request $request)
     {
         $this->authorizeAccess($session, $request);
+        abort_if($session->status === 'completed', 422, 'Sesi ini sudah selesai.');
 
         $this->sessionService->markCompleted($session);
 
