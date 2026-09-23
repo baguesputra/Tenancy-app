@@ -11,14 +11,14 @@ class ChecklistSeeder extends Seeder
     public function run(): void
     {
         $this->seedFnb();
-        $this->seedLifestyle();
+        $this->seedFashion();
     }
 
     private function seedFnb(): void
     {
-        $template = ChecklistTemplate::create(['name' => 'Form Sidak F&B']);
+        $template = ChecklistTemplate::firstOrCreate(['name' => 'Form Sidak F&B']);
         $fnbCategory = \App\Models\ProductCategory::where('name', 'F&B')->firstOrFail();
-        $template->productCategories()->attach($fnbCategory->id);
+        $template->productCategories()->syncWithoutDetaching([$fnbCategory->id]);
 
         $sections = [
             'Civil' => ['Lantai', 'Dinding', 'Plafond', 'Rolling Door'],
@@ -37,11 +37,11 @@ class ChecklistSeeder extends Seeder
         $this->createSections($template, $sections, optionPositive: 'Ok', optionNegative: 'Tidak');
     }
 
-    private function seedLifestyle(): void
+    private function seedFashion(): void
     {
-        $template = ChecklistTemplate::create(['name' => 'Form Sidak Lifestyle']);
-        $lifestyleCategory = \App\Models\ProductCategory::where('name', 'Lifestyle')->firstOrFail();
-        $template->productCategories()->attach($lifestyleCategory->id);
+        $template = ChecklistTemplate::firstOrCreate(['name' => 'Form Sidak Fashion']);
+        $categoryIds = \App\Models\ProductCategory::whereIn('name', ['Lifestyle', 'Sport'])->pluck('id');
+        $template->productCategories()->syncWithoutDetaching($categoryIds);
 
         $order = 1;
 
@@ -89,21 +89,23 @@ class ChecklistSeeder extends Seeder
         ];
 
         foreach ($sectionsWithCustomPairs as $sectionName => $items) {
-            $section = $template->sections()->create([
-                'name' => $sectionName,
-                'order' => $order++,
-            ]);
+            $section = $template->sections()->firstOrCreate(
+                ['name' => $sectionName],
+                ['order' => $order++]
+            );
 
             $itemOrder = 1;
             foreach ($items as $label => $pair) {
-                $section->items()->create([
-                    'label' => $label,
-                    'type' => $pair === null ? 'free_text' : 'binary_choice',
-                    'option_positive' => $pair[0] ?? null,
-                    'option_negative' => $pair[1] ?? null,
-                    'photo_required_on_negative' => $pair !== null, // free_text tidak relevan
-                    'order' => $itemOrder++,
-                ]);
+                $section->items()->firstOrCreate(
+                    ['label' => $label],
+                    [
+                        'type' => $pair === null ? 'free_text' : 'binary_choice',
+                        'option_positive' => $pair[0] ?? null,
+                        'option_negative' => $pair[1] ?? null,
+                        'photo_required_on_negative' => $pair !== null, // free_text tidak relevan
+                        'order' => $itemOrder++,
+                    ]
+                );
             }
         }
     }
@@ -115,21 +117,23 @@ class ChecklistSeeder extends Seeder
     {
         $order = 1;
         foreach ($sections as $sectionName => $labels) {
-            $section = $template->sections()->create([
-                'name' => $sectionName,
-                'order' => $order++,
-            ]);
+            $section = $template->sections()->firstOrCreate(
+                ['name' => $sectionName],
+                ['order' => $order++]
+            );
 
             $itemOrder = 1;
             foreach ($labels as $label) {
-                $section->items()->create([
-                    'label' => $label,
-                    'type' => 'binary_choice',
-                    'option_positive' => $optionPositive,
-                    'option_negative' => $optionNegative,
-                    'photo_required_on_negative' => true,
-                    'order' => $itemOrder++,
-                ]);
+                $section->items()->firstOrCreate(
+                    ['label' => $label],
+                    [
+                        'type' => 'binary_choice',
+                        'option_positive' => $optionPositive,
+                        'option_negative' => $optionNegative,
+                        'photo_required_on_negative' => true,
+                        'order' => $itemOrder++,
+                    ]
+                );
             }
         }
     }

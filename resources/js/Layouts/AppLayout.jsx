@@ -71,6 +71,7 @@ export default function AppLayout({ children }) {
         { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users },
         { label: 'Akun Portal Tenant', href: '/settings/tenant-accounts', icon: menuIcons.portal },
         { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access },
+        { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak },
     ];
     const isSettingsActive = settingsMenuItems.some((item) => currentUrl.startsWith(item.href));
     const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);

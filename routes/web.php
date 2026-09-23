@@ -22,6 +22,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\TenantAccountController;
+use App\Http\Controllers\Settings\InspectionTemplateController;
 use App\Http\Controllers\UnitQrController;
 use App\Http\Controllers\ScanController;
 
@@ -34,6 +35,9 @@ Route::middleware('can:settings.access')->prefix('settings')->name('settings.')-
     Route::get('/access-control', [AccessControlController::class, 'index'])->name('access-control.index');
     Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
     Route::put('/access-control/{role}/scopes', [AccessControlController::class, 'updateScopes'])->name('access-control.scopes');
+
+    Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
+    Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
 
     Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('tenant-accounts.index');
     Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate']);
