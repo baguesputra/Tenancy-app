@@ -19,6 +19,7 @@ class Inspection extends Model
         'checklist_template_id',
         'checklist_snapshot',
         'notes',
+        'other_notes',
         'status',
         'is_flagged',
         'synced_at',

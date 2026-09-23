@@ -5,13 +5,52 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 export default function Show({ inspection, checklistSnapshot }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
     const [savingItemId, setSavingItemId] = useState(null);
     const [itemError, setItemError] = useState({});
+    const [otherNotes, setOtherNotes] = useState(inspection.other_notes ?? '');
+    const [feedbackNotes, setFeedbackNotes] = useState(inspection.notes ?? '');
+    const [savingNotes, setSavingNotes] = useState(null);
+    const [notesSaved, setNotesSaved] = useState(false);
+    const notesTimer = useRef({});
     const versionRef = useRef({});
     const isLocked = inspection.session_status !== 'in_progress';
+
+    const saveNotes = async (field, value) => {
+        setSavingNotes(field);
+        setNotesSaved(false);
+        try {
+            const res = await fetch(`/inspections/${inspection.id}/notes`, {
+                method: 'PATCH',
+                body: JSON.stringify({ [field]: value }),
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+            });
+            if (res.ok) setNotesSaved(true);
+        } finally {
+            setSavingNotes(null);
+        }
+    };
+
+    const handleNotesBlur = (field, value, initial) => {
+        if (value === initial) return;
+        saveNotes(field, value);
+    };
+
+    const handleNotesChange = (field, value, setter) => {
+        setter(value);
+        setNotesSaved(false);
+        clearTimeout(notesTimer.current[field]);
+        notesTimer.current[field] = setTimeout(() => saveNotes(field, value), 1500);
+    };
 
     const stats = useMemo(() => {
         let total = 0;
@@ -127,6 +166,13 @@ export default function Show({ inspection, checklistSnapshot }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                             </svg>
                         </Link>
+                        {inspection.tenant?.logo_url ? (
+                            <img src={inspection.tenant.logo_url} alt={`Logo ${inspection.tenant?.name}`} className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
+                        ) : (
+                            <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                {initials(inspection.tenant?.name)}
+                            </span>
+                        )}
                         <div className="flex-1 min-w-0">
                             <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{inspection.tenant?.name}</h1>
                             <p className="text-xs text-gray-500 truncate mt-0.5">
@@ -270,6 +316,44 @@ export default function Show({ inspection, checklistSnapshot }) {
                                 </div>
                             </section>
                         ))}
+                        <section className="bg-white rounded-2xl border border-[#E2E5EA] p-4 sm:p-6 mb-3.5 shadow-sm">
+                            <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b border-gray-100">
+                                <h2 className="text-sm sm:text-[15px] font-semibold text-[#0F1E36]">Lain-lain & Keluhan / Saran</h2>
+                                {savingNotes ? (
+                                    <span className="text-xs text-gray-400 shrink-0">Menyimpan…</span>
+                                ) : notesSaved ? (
+                                    <span className="text-xs text-emerald-600 shrink-0">Tersimpan ✓</span>
+                                ) : null}
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="other-notes" className="block text-sm font-medium text-gray-700 mb-2">Lain-lain</label>
+                                    <textarea
+                                        id="other-notes"
+                                        disabled={isLocked}
+                                        value={otherNotes}
+                                        onChange={(e) => handleNotesChange('other_notes', e.target.value, setOtherNotes)}
+                                        onBlur={(e) => handleNotesBlur('other_notes', e.target.value, inspection.other_notes ?? '')}
+                                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 min-h-[88px] disabled:opacity-60"
+                                        placeholder="Catatan lain di luar checklist…"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="feedback-notes" className="block text-sm font-medium text-gray-700 mb-2">Keluhan / Saran</label>
+                                    <textarea
+                                        id="feedback-notes"
+                                        disabled={isLocked}
+                                        value={feedbackNotes}
+                                        onChange={(e) => handleNotesChange('notes', e.target.value, setFeedbackNotes)}
+                                        onBlur={(e) => handleNotesBlur('notes', e.target.value, inspection.notes ?? '')}
+                                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 min-h-[88px] disabled:opacity-60"
+                                        placeholder="Keluhan atau saran dari tenant…"
+                                        rows={3}
+                                    />
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                     <aside className="hidden lg:block sticky top-24 space-y-4">

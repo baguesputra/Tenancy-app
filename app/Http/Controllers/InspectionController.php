@@ -16,7 +16,7 @@ class InspectionController extends Controller
     {
         $this->authorizeAccess($inspection, $request);
 
-        $inspection->load(['tenant', 'session', 'answers.photos']);
+        $inspection->load(['tenant.productCategory', 'session', 'answers.photos']);
 
         // Gabungkan snapshot checklist dengan jawaban yang sudah ada,
         // supaya frontend tinggal render tanpa perlu query terpisah
@@ -43,12 +43,28 @@ class InspectionController extends Controller
                 'id' => $inspection->id,
                 'status' => $inspection->status,
                 'notes' => $inspection->notes,
+                'other_notes' => $inspection->other_notes,
                 'tenant' => $inspection->tenant,
                 'session_id' => $inspection->inspection_session_id,
                 'session_status' => $inspection->session->status,
             ],
             'checklistSnapshot' => $snapshot,
         ]);
+    }
+
+    public function updateNotes(Inspection $inspection, Request $request)
+    {
+        $this->authorizeAccess($inspection, $request);
+        abort_unless($inspection->session->status === 'in_progress', 422, 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.');
+
+        $validated = $request->validate([
+            'notes' => 'nullable|string|max:5000',
+            'other_notes' => 'nullable|string|max:5000',
+        ]);
+
+        $inspection->update($validated);
+
+        return back()->with('success', 'Catatan tersimpan.');
     }
 
     public function saveAnswer(Inspection $inspection, Request $request)

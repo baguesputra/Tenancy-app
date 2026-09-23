@@ -171,6 +171,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/inspection-sessions/{session}/scan', [InspectionSessionController::class, 'scan'])->name('sessions.scan');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
+        Route::patch('/inspections/{inspection}/notes', [InspectionController::class, 'updateNotes'])->name('inspections.updateNotes');
         Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
     });
 
