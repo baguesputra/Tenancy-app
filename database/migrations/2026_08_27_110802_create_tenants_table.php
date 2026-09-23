@@ -13,10 +13,10 @@ return new class extends Migration
             $table->foreignId('branch_id')->constrained();
 
             $table->string('name');
-            $table->string('business_type'); // 'f&b', 'fashion' — cocok dengan business_type di checklist_templates
+            $table->string('business_type'); // legacy: 'f&b', 'fashion' — kini digantikan product_category_id
             $table->boolean('is_anchor')->default(false);
 
-            // Lokasi unit (dari form Fashion: Lantai/Blok/No)
+            // Lokasi unit (Lantai/Blok/No)
             $table->string('floor')->nullable();
             $table->string('block')->nullable();
             $table->string('unit_number')->nullable();

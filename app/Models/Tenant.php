@@ -71,8 +71,8 @@ class Tenant extends Model
     }
 
     /**
-     * Template checklist yang relevan, sekarang dicocokkan lewat product_category_id
-     * (menggantikan business_type string yang lama).
+     * Template checklist yang relevan, dicocokkan lewat product_category_id.
+     * Saat ini: F&B → Form Sidak F&B, Lifestyle → Form Sidak Lifestyle.
      */
     public function checklistTemplates()
     {
