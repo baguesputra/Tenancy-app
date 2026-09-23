@@ -12,12 +12,25 @@ class TenancyController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Tenancy::with(['unit.branch', 'tenant'])
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->search, fn ($q) => $q->whereHas('tenant', fn ($qq) => $qq->where('name', 'like', "%{$request->search}%")))
-            ->latest('start_date');
+        $base = Tenancy::with(['unit.branch', 'tenant'])
+            ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
+                $qq->whereHas('tenant', fn ($t) => $t->where('name', 'like', "%{$request->search}%"))
+                    ->orWhereHas('unit', fn ($u) => $u->where('unit_code', 'like', "%{$request->search}%"))
+                    ->orWhere('contract_number', 'like', "%{$request->search}%");
+            }));
 
-        $this->applyBranchScope($query, $request->user());
+        $this->applyBranchScope($base, $request->user());
+
+        $summaryBase = clone $base;
+        $total = (clone $summaryBase)->count();
+        $active = (clone $summaryBase)->where('status', 'active')->count();
+        $draft = (clone $summaryBase)->where('status', 'draft')->count();
+        $ended = (clone $summaryBase)->where('status', 'ended')->count();
+        $terminated = (clone $summaryBase)->where('status', 'terminated')->count();
+
+        $query = (clone $base)
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->latest('start_date');
 
         $unitQuery = Unit::query()->where('is_active', true);
         $this->applyBranchScopeToUnits($unitQuery, $request->user());
@@ -29,6 +42,13 @@ class TenancyController extends Controller
 
         return Inertia::render('Master/Tenancies/Index', [
             'tenancies' => $query->paginate(15)->withQueryString(),
+            'summary' => [
+                'total' => $total,
+                'active' => $active,
+                'draft' => $draft,
+                'ended' => $ended,
+                'terminated' => $terminated,
+            ],
             'filters' => $request->only(['search', 'status']),
             'units' => $unitQuery->orderBy('unit_code')->get(['id', 'unit_code', 'branch_id']),
             'tenants' => $tenantQuery->orderBy('name')->get(['id', 'name']),
