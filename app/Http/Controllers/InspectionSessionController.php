@@ -52,6 +52,7 @@ class InspectionSessionController extends Controller
             ->map(fn ($tenant) => [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
+                'logo_url' => $tenant->logo_url,
                 'tenant_category' => $tenant->tenantCategory?->name,
                 'product_category' => $tenant->productCategory?->name,
                 'unit_code' => $tenant->activeTenancy?->unit?->unit_code,

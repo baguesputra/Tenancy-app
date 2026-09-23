@@ -13,6 +13,8 @@ const filters = [
     { key: 'flagged', label: 'Perlu Perhatian' },
 ];
 
+const initials = (name = '') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+
 export default function Show({ session, availableTenants }) {
     const [search, setSearch] = useState('');
     const [adding, setAdding] = useState(false);
@@ -142,11 +144,13 @@ export default function Show({ session, availableTenants }) {
                                     href={`/inspections/${inspection.id}`}
                                     className="flex items-center gap-3 px-4 sm:px-5 py-3.5 min-h-[64px] hover:bg-gray-50/80 active:bg-gray-100 transition-colors"
                                 >
-                                    <span className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
-                                        inspection.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                    }`} aria-hidden="true">
-                                        {inspection.status === 'completed' ? '✓' : (inspection.tenant?.name?.[0] ?? '?').toUpperCase()}
-                                    </span>
+                                    {inspection.tenant?.logo_url ? (
+                                        <img src={inspection.tenant.logo_url} alt={`Logo ${inspection.tenant?.name}`} className="w-10 h-10 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
+                                    ) : (
+                                        <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(inspection.tenant?.name)}
+                                        </span>
+                                    )}
                                     <span className="flex-1 min-w-0">
                                         <span className="block text-sm font-medium text-gray-900 truncate">{inspection.tenant?.name}</span>
                                         <span className="block text-xs text-gray-400 truncate mt-0.5">
@@ -187,9 +191,16 @@ export default function Show({ session, availableTenants }) {
                                 type="button"
                                 disabled={adding}
                                 onClick={() => submitAddTenant(tenant.id)}
-                                className="w-full text-left px-4 sm:px-5 py-3 min-h-[56px] hover:bg-blue-50/60 active:bg-blue-100/60 transition-colors flex justify-between items-center gap-3 disabled:opacity-50"
+                                className="w-full text-left px-4 sm:px-5 py-3 min-h-[56px] hover:bg-blue-50/60 active:bg-blue-100/60 transition-colors flex items-center gap-3 disabled:opacity-50"
                             >
-                                <span className="text-sm text-gray-800 min-w-0">
+                                {tenant.logo_url ? (
+                                    <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-9 h-9 rounded-full object-contain bg-gray-50 border border-[#E2E5EA] p-0.5 shrink-0" loading="lazy" />
+                                ) : (
+                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(tenant.name)}
+                                    </span>
+                                )}
+                                <span className="text-sm text-gray-800 min-w-0 flex-1">
                                     <span className="block truncate font-medium">{tenant.name}</span>
                                     <span className="block text-xs text-gray-400 truncate">
                                         {tenant.unit_code ?? ''}{tenant.tenant_category === 'Anchor' ? ' · Anchor' : ''}
