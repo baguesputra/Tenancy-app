@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             MasterScopeSeeder::class,
             TenantSeeder::class,
             UnitTenantSeeder::class,
+            UnitXlsxImportSeeder::class,
             ChecklistSeeder::class,
 
         ]);
