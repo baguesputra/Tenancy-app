@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inspection;
+use App\Models\PermitRequest;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Services\BranchScopeService;
 use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class TenantProfileController extends Controller
 {
@@ -76,8 +78,185 @@ class TenantProfileController extends Controller
         $this->authorizeView($tenant, $request);
         abort_unless($inspection->tenant_id === $tenant->id, 404);
 
-        $inspection->load(['session', 'answers.photos']);
+        $inspection->load(['session.user', 'answers.photos']);
+        $snapshot = $this->mergeSnapshot($inspection);
 
+        $failed = 0;
+        $photoCount = 0;
+        foreach ($snapshot['sections'] as $section) {
+            foreach ($section['items'] ?? [] as $item) {
+                if (($item['answer']['value'] ?? null) === ($item['option_negative'] ?? "\0")) {
+                    $failed++;
+                }
+                $photoCount += count($item['answer']['photos'] ?? []);
+            }
+        }
+
+        return response()->json([
+            'inspection' => [
+                'id' => $inspection->id,
+                'status' => $inspection->status,
+                'is_flagged' => $inspection->is_flagged,
+                'notes' => $inspection->notes,
+                'other_notes' => $inspection->other_notes,
+                'synced_at' => $inspection->synced_at?->toDateTimeString(),
+                'session_status' => $inspection->session->status,
+                'session_started_at' => $inspection->session->started_at?->toDateTimeString(),
+                'session_ended_at' => $inspection->session->ended_at?->toDateTimeString(),
+                'session_officer' => $inspection->session->user?->name,
+                'failed_count' => $failed,
+                'photo_count' => $photoCount,
+            ],
+            'checklistSnapshot' => $snapshot,
+        ]);
+    }
+
+    public function full(Tenant $tenant, Request $request)
+    {
+        $this->authorizeView($tenant, $request);
+
+        $tenant->load([
+            'branch', 'tenantCategory', 'productCategory', 'contacts', 'tenantUser',
+            'activeTenancy.unit.branch', 'activeTenancy.unit.scannableCode',
+            'tenancies' => fn ($q) => $q->with(['unit.branch', 'unit.scannableCode'])->latest('start_date')->take(30),
+            'inspections' => fn ($q) => $q->with('session.user')->latest()->take(30),
+            'permitRequests' => fn ($q) => $q->latest()->take(30),
+        ]);
+
+        $now = now()->startOfDay();
+        $tenancies = $tenant->tenancies->map(function ($c) use ($now) {
+            $end = $c->end_date ? \Carbon\Carbon::parse($c->end_date)->startOfDay() : null;
+            $arr = $c->toArray();
+            $arr['days_remaining'] = $end ? (int) $now->diffInDays($end, false) : null;
+            $arr['unit'] = $c->unit ? array_merge($c->unit->toArray(), [
+                'scan_url' => $c->unit->scanUrl,
+            ]) : null;
+
+            return $arr;
+        })->values();
+
+        $inspections = $tenant->inspections->map(function ($i) {
+            $answered = $i->answers()->whereNotNull('value')->where('value', '!=', '')->count();
+            $total = collect($i->checklist_snapshot['sections'] ?? [])->sum(fn ($s) => count($s['items'] ?? []));
+
+            return [
+                'id' => $i->id,
+                'template_name' => $i->checklist_snapshot['template_name'] ?? '—',
+                'status' => $i->status,
+                'is_flagged' => $i->is_flagged,
+                'synced_at' => $i->synced_at?->toDateTimeString(),
+                'session_status' => $i->session->status,
+                'session_started_at' => $i->session->started_at?->toDateTimeString(),
+                'session_ended_at' => $i->session->ended_at?->toDateTimeString(),
+                'session_officer' => $i->session->user?->name,
+                'answered' => $answered,
+                'total' => $total,
+            ];
+        })->values();
+
+        $permits = $tenant->permitRequests->map(function ($p) {
+            $workers = $p->workers;
+            $goods = $p->goods;
+
+            return [
+                'id' => $p->id,
+                'permit_number' => $p->permit_number,
+                'status' => $p->status,
+                'is_flagged' => $p->is_flagged,
+                'is_expired' => $p->is_expired,
+                'expires_at' => $p->expires_at?->toDateTimeString(),
+                'job_type' => $p->job_type,
+                'activity_types' => $p->activity_types,
+                'request_date' => $p->request_date?->toDateString(),
+                'work_start_date' => $p->work_start_date?->toDateString(),
+                'work_end_date' => $p->work_end_date?->toDateString(),
+                'work_start_time' => $p->work_start_time?->format('H:i'),
+                'work_end_time' => $p->work_end_time?->format('H:i'),
+                'location' => trim(collect([$p->floor_snapshot, $p->block_snapshot, $p->unit_number_snapshot])->filter()->implode(' / ')) ?: null,
+                'pic_name' => $p->pic_name,
+                'pic_phone' => $p->pic_phone,
+                'is_external' => $p->is_external,
+                'contractor_company' => $p->contractor_company,
+                'contractor_pic' => $p->contractor_pic,
+                'contractor_phone' => $p->contractor_phone,
+                'access_route' => $p->access_route,
+                'notes' => $p->notes,
+                'workers_present' => $workers->where('is_present', true)->count(),
+                'workers_total' => $workers->count(),
+                'goods_verified' => $goods->where('is_verified', true)->count(),
+                'goods_total' => $goods->count(),
+                'approvals' => $p->approvals->map(fn ($a) => [
+                    'label' => $a->label,
+                    'status' => $a->status,
+                    'approved_by' => $a->approvedBy?->name,
+                    'approved_at' => $a->approved_at?->toDateTimeString(),
+                ])->values(),
+            ];
+        })->values();
+
+        $activeUnit = $tenant->activeTenancy?->unit;
+        $unitQr = $activeUnit?->scanUrl
+            ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($activeUnit->scanUrl))
+            : null;
+
+        $contactsByType = $tenant->contacts->groupBy(fn ($c) => $c->type ?: 'Umum')->map->values();
+
+        return Inertia::render('TenantProfiles/Show', [
+            'tenant' => array_merge($tenant->toArray(), [
+                'active_tenancy_scan_url' => $activeUnit?->scanUrl,
+            ]),
+            'tenancies' => $tenancies,
+            'inspections' => $inspections,
+            'permits' => $permits,
+            'contactsByType' => $contactsByType,
+            'unitQr' => $unitQr,
+            'filters' => $request->only(['search', 'product_category_id', 'status']),
+        ]);
+    }
+
+    public function showPermit(Tenant $tenant, PermitRequest $permit, Request $request)
+    {
+        $this->authorizeView($tenant, $request);
+        abort_unless($permit->tenant_id === $tenant->id, 404);
+
+        $permit->load(['workers', 'goods', 'approvals.approvedBy', 'scannableCode']);
+
+        return response()->json([
+            'permit' => array_merge($permit->toArray(), [
+                'scan_url' => $permit->scan_url,
+                'expires_at' => $permit->expires_at?->toDateTimeString(),
+                'location_snapshot' => trim(collect([$permit->floor_snapshot, $permit->block_snapshot, $permit->unit_number_snapshot])->filter()->implode(' / ')) ?: null,
+                'workers_present' => $permit->workers->where('is_present', true)->count(),
+                'workers_total' => $permit->workers->count(),
+                'goods_verified' => $permit->goods->where('is_verified', true)->count(),
+                'goods_total' => $permit->goods->count(),
+                'workers_detail' => $permit->workers->map(fn ($w) => [
+                    'id' => $w->id,
+                    'name' => $w->name,
+                    'is_present' => $w->is_present,
+                    'mismatch_note' => $w->mismatch_note,
+                ])->values(),
+                'goods_detail' => $permit->goods->map(fn ($g) => [
+                    'id' => $g->id,
+                    'description' => $g->description,
+                    'quantity_note' => $g->quantity_note,
+                    'photo_url' => $g->photo_url,
+                    'is_verified' => $g->is_verified,
+                    'mismatch_note' => $g->mismatch_note,
+                ])->values(),
+                'approvals' => $permit->approvals->map(fn ($a) => [
+                    'label' => $a->label,
+                    'status' => $a->status,
+                    'notes' => $a->notes,
+                    'approved_by' => $a->approvedBy?->name,
+                    'approved_at' => $a->approved_at?->toDateTimeString(),
+                ])->values(),
+            ]),
+        ]);
+    }
+
+    private function mergeSnapshot(Inspection $inspection): array
+    {
         $answersByItemId = $inspection->answers->keyBy('checklist_item_id');
         $snapshot = $inspection->checklist_snapshot;
         foreach ($snapshot['sections'] as &$section) {
@@ -94,18 +273,7 @@ class TenantProfileController extends Controller
             }
         }
 
-        return response()->json([
-            'inspection' => [
-                'id' => $inspection->id,
-                'status' => $inspection->status,
-                'is_flagged' => $inspection->is_flagged,
-                'notes' => $inspection->notes,
-                'other_notes' => $inspection->other_notes,
-                'session_status' => $inspection->session->status,
-                'session_started_at' => $inspection->session->started_at?->toDateTimeString(),
-            ],
-            'checklistSnapshot' => $snapshot,
-        ]);
+        return $snapshot;
     }
 
     private function authorizeView(Tenant $tenant, Request $request): void

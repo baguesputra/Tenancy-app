@@ -155,8 +155,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:tenants.view')->get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
     Route::middleware('can:tenants.view')->get('/tenant-profiles', [TenantProfileController::class, 'index'])->name('tenant-profiles.index');
+    Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/detail', [TenantProfileController::class, 'full'])->name('tenant-profiles.detail');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}', [TenantProfileController::class, 'show'])->name('tenant-profiles.show');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/inspections/{inspection}', [TenantProfileController::class, 'showInspection'])->name('tenant-profiles.inspection');
+    Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/permits/{permit}', [TenantProfileController::class, 'showPermit'])->name('tenant-profiles.permit');
     Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store']);
     Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update']); // POST didukung karena upload logo via multipart + _method=put
     Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy']);

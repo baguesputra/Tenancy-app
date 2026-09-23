@@ -19,7 +19,9 @@ class BreadcrumbService
             'tenants.index' => [$webHome, self::item('Master Tenant', '/tenants')],
             'tenant-profiles.index' => [$webHome, self::item('Profile Tenant', '/tenant-profiles')],
             'tenant-profiles.show' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item('Detail')],
+            'tenant-profiles.detail' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item(self::profileLabel($request))],
             'tenant-profiles.inspection' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item('Detail Sidak')],
+            'tenant-profiles.permit' => [$webHome, self::item('Profile Tenant', '/tenant-profiles'), self::item('Detail Izin')],
             'units.index' => [$webHome, self::item('Master Unit', '/units')],
             'units.qr', 'units.qr.bulk' => [$webHome, self::item('Master Unit', '/units'), self::item('QR Unit')],
             'tenancies.index' => [$webHome, self::item('Master Tenancy', '/tenancies')],
@@ -66,6 +68,13 @@ class BreadcrumbService
         }
 
         return 'Detail Sesi';
+    }
+
+    private static function profileLabel(Request $request): string
+    {
+        $tenant = $request->route()?->parameter('tenant');
+
+        return is_object($tenant) ? ($tenant->name ?? 'Detail Lengkap') : 'Detail Lengkap';
     }
 
     private static function inspectionLabel(Request $request): string

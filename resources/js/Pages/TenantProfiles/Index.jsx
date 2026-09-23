@@ -321,12 +321,20 @@ function DetailCard({ tenant, activeTenancy, inspections, tenancies, permits, lo
                         <dd className="text-lg font-bold tabular-nums">{pendingPermits}</dd>
                     </div>
                 </dl>
-                <Link
-                    href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors rounded focus-visible:outline-2 focus-visible:outline-white"
-                >
-                    Edit di Master Tenant →
-                </Link>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Link
+                        href={`/tenant-profiles/${tenant.id}/detail`}
+                        className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-xs font-semibold text-[#0F1E36] bg-white rounded-lg hover:bg-white/90 transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                    >
+                        Lihat Detail Lengkap →
+                    </Link>
+                    <Link
+                        href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
+                        className="inline-flex items-center gap-1.5 px-2 py-2.5 min-h-[44px] text-xs font-medium text-white/70 hover:text-white transition-colors rounded focus-visible:outline-2 focus-visible:outline-white"
+                    >
+                        Edit di Master
+                    </Link>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
