@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
@@ -20,13 +20,31 @@ function daysLabel(days) {
     return `${days} hari tersisa`;
 }
 
+const detailTabs = [
+    { key: 'ringkasan', label: 'Ringkasan' },
+    { key: 'kontrak', label: 'Unit & Kontrak' },
+    { key: 'sidak', label: 'Sidak' },
+    { key: 'izin', label: 'Izin' },
+    { key: 'kontak', label: 'Kontak' },
+];
+
 export default function Show({ tenant, tenancies = [], inspections = [], permits = [], contactsByType = {}, unitQr, filters = {} }) {
+    const [activeTab, setActiveTab] = useState('ringkasan');
     const [expandedSidakId, setExpandedSidakId] = useState(null);
     const [sidakCache, setSidakCache] = useState({});
     const [sidakLoading, setSidakLoading] = useState(false);
     const [expandedPermitId, setExpandedPermitId] = useState(null);
     const [permitCache, setPermitCache] = useState({});
     const [permitLoading, setPermitLoading] = useState(false);
+    const tabRefs = useRef({});
+
+    const onTabKeyDown = (e, idx) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        const next = (idx + (e.key === 'ArrowRight' ? 1 : detailTabs.length - 1)) % detailTabs.length;
+        setActiveTab(detailTabs[next].key);
+        tabRefs.current[detailTabs[next].key]?.focus();
+    };
 
     const backHref = `/tenant-profiles${toQuery(filters)}`;
     const activeTenancy = tenant.active_tenancy ?? tenancies.find((t) => t.status === 'active');
@@ -92,45 +110,120 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                     </Link>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                    <FormSection title="Identitas & Legalitas">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <InfoRow label="Badan hukum" value={tenant.legal_entity_name} />
-                            <InfoRow label="Telepon" value={tenant.company_phone} />
-                            <InfoRow label="Email" value={tenant.company_email} />
-                            <InfoRow label="Alamat" value={tenant.company_address} full />
-                            <InfoRow label="NPWP" value={tenant.npwp_number} mono missing="Belum diisi" />
-                            <InfoRow label="SIUP" value={tenant.siup_number} mono missing="Belum diisi" />
-                        </div>
-                    </FormSection>
-
-                    <FormSection title="Kontak & Akses Portal">
-                        {Object.keys(contactsByType).length === 0 && <Empty text="Belum ada kontak." />}
-                        {Object.entries(contactsByType).map(([type, list]) => (
-                            <div key={type} className="mb-3 last:mb-0">
-                                <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mb-1.5">{type}</p>
-                                <div className="space-y-1.5">
-                                    {list.map((c) => (
-                                        <div key={c.id} className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5">
-                                            <p className="text-xs font-semibold text-gray-900">{c.name} <span className="font-normal text-gray-400">· {c.position || '—'}</span></p>
-                                            <p className="text-xs text-gray-500 mt-0.5">{[c.phone, c.email].filter(Boolean).join(' · ') || '—'}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                        <div className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5 mt-2">
-                            <p className="text-[10px] uppercase tracking-wide text-gray-400">Akun portal tenant</p>
-                            {tenant.tenant_user ? (
-                                <p className="text-xs text-gray-800 mt-0.5 font-mono">{tenant.tenant_user.username} · {tenant.tenant_user.is_active ? 'Aktif' : 'Nonaktif'}</p>
-                            ) : (
-                                <p className="text-xs text-gray-400 mt-0.5">Belum punya akun portal</p>
-                            )}
-                        </div>
-                    </FormSection>
+                <div className="sticky top-14 z-10 mt-4 bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-1.5">
+                    <div className="flex gap-1 overflow-x-auto bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Detail tenant">
+                        {detailTabs.map((t, idx) => {
+                            const count = t.key === 'kontrak' ? tenancies.length : t.key === 'sidak' ? inspections.length : t.key === 'izin' ? permits.length : null;
+                            const dot = t.key === 'sidak' && flaggedSidak > 0 ? 'bg-red-500' : t.key === 'izin' && pendingPermits > 0 ? 'bg-amber-500' : null;
+                            const selected = activeTab === t.key;
+                            return (
+                                <button
+                                    key={t.key}
+                                    ref={(el) => { tabRefs.current[t.key] = el; }}
+                                    role="tab"
+                                    aria-selected={selected}
+                                    tabIndex={selected ? 0 : -1}
+                                    onClick={() => setActiveTab(t.key)}
+                                    onKeyDown={(e) => onTabKeyDown(e, idx)}
+                                    className={`flex-1 min-w-[96px] min-h-[44px] px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${selected ? 'bg-white shadow-sm text-[#0F1E36]' : 'text-gray-500 hover:text-gray-800 active:bg-gray-200/60'}`}
+                                >
+                                    {t.label}
+                                    {count !== null && <span className="tabular-nums text-[11px] opacity-70">{count}</span>}
+                                    {dot && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} aria-hidden="true" />}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <FormSection title={`Unit & Kontrak (${tenancies.length})`}>
+                <div className="mt-4" role="tabpanel" aria-label={detailTabs.find((t) => t.key === activeTab)?.label}>
+                    {activeTab === 'ringkasan' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                            <FormSection title="Identitas & Legalitas">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <InfoRow label="Badan hukum" value={tenant.legal_entity_name} />
+                                    <InfoRow label="Telepon" value={tenant.company_phone} />
+                                    <InfoRow label="Email" value={tenant.company_email} />
+                                    <InfoRow label="Alamat" value={tenant.company_address} full />
+                                    <InfoRow label="NPWP" value={tenant.npwp_number} mono missing="Belum diisi" />
+                                    <InfoRow label="SIUP" value={tenant.siup_number} mono missing="Belum diisi" />
+                                </div>
+                            </FormSection>
+
+                            <div className="space-y-4">
+                                <FormSection title="Unit Aktif">
+                                    {activeTenancy ? (
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3.5">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-sm font-bold text-gray-900 font-mono">{activeTenancy.unit?.unit_code ?? '—'}</p>
+                                                <Badge color="green" size="sm">Aktif</Badge>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">{formatDateRange(activeTenancy.start_date, activeTenancy.end_date)}</p>
+                                        </div>
+                                    ) : (
+                                        <Empty text="Tanpa unit aktif." />
+                                    )}
+                                </FormSection>
+
+                                <FormSection title={`Sidak Terakhir (${inspections.length})`}>
+                                    <MiniList
+                                        empty={inspections.length === 0}
+                                        emptyText="Belum pernah disidak."
+                                        items={inspections.slice(0, 2).map((i) => ({
+                                            title: i.template_name,
+                                            sub: `${i.session_started_at ? formatDateID(i.session_started_at) : '—'} · ${i.answered}/${i.total} terjawab`,
+                                            badge: <Badge color={i.session_status === 'in_progress' ? 'yellow' : sidakColor[i.status] ?? 'gray'} size="sm">{i.session_status === 'in_progress' ? 'Penyidakan' : sidakLabel[i.status] ?? i.status}</Badge>,
+                                        }))}
+                                    />
+                                    {inspections.length > 2 && <TabLink onClick={() => setActiveTab('sidak')} label={`Lihat semua ${inspections.length} sidak →`} />}
+                                </FormSection>
+
+                                <FormSection title={`Izin Terakhir (${permits.length})`}>
+                                    <MiniList
+                                        empty={permits.length === 0}
+                                        emptyText="Belum ada surat izin."
+                                        items={permits.slice(0, 2).map((p) => ({
+                                            title: p.permit_number,
+                                            mono: true,
+                                            sub: `${p.job_type ?? '—'} — ${p.request_date ? formatDateID(p.request_date) : '—'}`,
+                                            badge: <Badge color={permitColor[p.status] ?? 'gray'} size="sm">{permitLabel[p.status] ?? p.status}</Badge>,
+                                        }))}
+                                    />
+                                    {permits.length > 2 && <TabLink onClick={() => setActiveTab('izin')} label={`Lihat semua ${permits.length} izin →`} />}
+                                </FormSection>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'kontak' && (
+                        <FormSection title="Kontak & Akses Portal">
+                            {Object.keys(contactsByType).length === 0 && <Empty text="Belum ada kontak." />}
+                            {Object.entries(contactsByType).map(([type, list]) => (
+                                <div key={type} className="mb-3 last:mb-0">
+                                    <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mb-1.5">{type}</p>
+                                    <div className="space-y-1.5">
+                                        {list.map((c) => (
+                                            <div key={c.id} className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5">
+                                                <p className="text-xs font-semibold text-gray-900">{c.name} <span className="font-normal text-gray-400">· {c.position || '—'}</span></p>
+                                                <p className="text-xs text-gray-500 mt-0.5">{[c.phone, c.email].filter(Boolean).join(' · ') || '—'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5 mt-2">
+                                <p className="text-[10px] uppercase tracking-wide text-gray-400">Akun portal tenant</p>
+                                {tenant.tenant_user ? (
+                                    <p className="text-xs text-gray-800 mt-0.5 font-mono">{tenant.tenant_user.username} · {tenant.tenant_user.is_active ? 'Aktif' : 'Nonaktif'}</p>
+                                ) : (
+                                    <p className="text-xs text-gray-400 mt-0.5">Belum punya akun portal</p>
+                                )}
+                            </div>
+                        </FormSection>
+                    )}
+
+                    {activeTab === 'kontrak' && (
+                        <FormSection title={`Unit & Kontrak (${tenancies.length})`}>
                     {tenancies.length === 0 && <Empty text="Belum ada kontrak." />}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                         {tenancies.map((c) => (
@@ -168,9 +261,11 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             </div>
                         ))}
                     </div>
-                </FormSection>
+                        </FormSection>
+                    )}
 
-                <FormSection title={`Riwayat Sidak (${inspections.length})`}>
+                    {activeTab === 'sidak' && (
+                        <FormSection title={`Riwayat Sidak (${inspections.length})`}>
                     {inspections.length === 0 && <Empty text="Belum pernah disidak." />}
                     <div className="space-y-2">
                         {inspections.map((i) => {
@@ -211,9 +306,11 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             );
                         })}
                     </div>
-                </FormSection>
+                        </FormSection>
+                    )}
 
-                <FormSection title={`Riwayat Izin (${permits.length})`}>
+                    {activeTab === 'izin' && (
+                        <FormSection title={`Riwayat Izin (${permits.length})`}>
                     {permits.length === 0 && <Empty text="Belum ada surat izin." />}
                     <div className="space-y-2">
                         {permits.map((p) => {
@@ -260,6 +357,8 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         })}
                     </div>
                 </FormSection>
+                    )}
+                </div>
             </div>
         </AppLayout>
     );
@@ -347,6 +446,34 @@ function InfoMini({ label, value }) {
 
 function Empty({ text }) {
     return <p className="text-xs text-gray-400 text-center py-6">{text}</p>;
+}
+
+function MiniList({ empty, emptyText, items }) {
+    if (empty) return <Empty text={emptyText} />;
+    return (
+        <div className="space-y-1.5">
+            {items.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5">
+                    <div className="min-w-0">
+                        <p className={`text-xs font-semibold text-gray-900 truncate ${item.mono ? 'font-mono' : ''}`}>{item.title}</p>
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{item.sub}</p>
+                    </div>
+                    {item.badge}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function TabLink({ onClick, label }) {
+    return (
+        <button
+            onClick={onClick}
+            className="mt-2 inline-flex items-center text-xs font-medium text-[#0F1E36] hover:underline rounded min-h-[44px] focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+        >
+            {label}
+        </button>
+    );
 }
 
 function SkeletonLines({ rows = 4 }) {
