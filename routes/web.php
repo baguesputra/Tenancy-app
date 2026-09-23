@@ -18,6 +18,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\PermitCheckController;
 use App\Http\Controllers\PermitRequestController;
 use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
+use App\Http\Controllers\TenantPortal\InspectionController as PortalInspectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\AccessControlController;
@@ -94,6 +95,26 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
             $recent = (clone $base)->latest()->take(5)->get()->map($mapPermit)->values();
             $tenancy = $tenant->activeTenancy;
 
+            $sidakBase = \App\Models\Inspection::with('session')->where('tenant_id', $tenant->id);
+            $sidakActive = (clone $sidakBase)->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))->exists();
+            $sidakRecent = (clone $sidakBase)
+                ->where(function ($q) {
+                    $q->where('status', 'completed')
+                        ->orWhereHas('session', fn ($s) => $s->where('status', 'completed'));
+                })
+                ->latest()
+                ->take(3)
+                ->get()
+                ->map(fn ($i) => [
+                    'id' => $i->id,
+                    'template_name' => $i->checklist_snapshot['template_name'] ?? '—',
+                    'status' => $i->status,
+                    'is_flagged' => $i->is_flagged,
+                    'session_status' => $i->session->status,
+                    'session_started_at' => $i->session->started_at?->toDateTimeString(),
+                ])
+                ->values();
+
             return Inertia::render('TenantPortal/Dashboard', [
                 'store' => [
                     'name' => $tenant->name,
@@ -106,6 +127,8 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
                 'stats' => $stats,
                 'activePermit' => $activePermit ? $mapPermit($activePermit) : null,
                 'recent' => $recent,
+                'sidak_active' => $sidakActive,
+                'sidak_recent' => $sidakRecent,
             ]);
         })->name('dashboard');
     });
@@ -220,6 +243,8 @@ Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)-
 
 // Portal (staff toko)
 Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
+    Route::get('inspections', [PortalInspectionController::class, 'index'])->name('inspections.index');
+    Route::get('inspections/{inspection}', [PortalInspectionController::class, 'show'])->name('inspections.show');
     Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
     Route::post('permits/{permit}/revise', [PortalPermitRequestController::class, 'revise'])->name('permits.revise');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);

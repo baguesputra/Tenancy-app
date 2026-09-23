@@ -9,7 +9,7 @@ const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak
 
 const pipeline = ['Tenancy', 'Building Service', 'Security'];
 
-export default function Dashboard({ store, stats, activePermit, recent }) {
+export default function Dashboard({ store, stats, activePermit, recent, sidak_active, sidak_recent = [] }) {
     return (
         <PortalLayout>
             <section aria-label="Identitas toko" className="bg-[#0F1E36] text-white rounded-2xl p-5 sm:p-6 relative overflow-hidden animate-stagger-in">
@@ -93,6 +93,47 @@ export default function Dashboard({ store, stats, activePermit, recent }) {
                         <span className="shrink-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg">+ Ajukan</span>
                     </Link>
                 )}
+            </section>
+
+            {sidak_active && (
+                <section aria-label="Status sidak" className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-5 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }} role="status">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" aria-hidden="true" />
+                    <p className="text-sm"><span className="font-semibold">Sedang dilaksanakan penyidakan</span> di toko Anda. Hasil muncul setelah sesi selesai.</p>
+                </section>
+            )}
+
+            <section aria-label="Hasil sidak" className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden animate-stagger-in" style={{ animationDelay: '170ms' }}>
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold text-gray-900">Hasil Sidak</h2>
+                    <Link href="/portal/inspections" className="text-xs font-medium text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                        Lihat semua
+                    </Link>
+                </div>
+                <div className="divide-y divide-gray-100">
+                    {sidak_recent.map((s) => (
+                        <Link
+                            key={s.id}
+                            href={`/portal/inspections/${s.id}`}
+                            className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
+                        >
+                            <span className="min-w-0">
+                                <span className="block text-sm font-medium text-gray-900 truncate">{s.template_name}</span>
+                                <span className="block text-xs text-gray-400 mt-0.5 truncate">
+                                    {s.session_started_at ? formatDateID(s.session_started_at) : '—'}
+                                    {s.is_flagged ? ' · Perlu perhatian' : ''}
+                                </span>
+                            </span>
+                            <Badge color={s.session_status === 'in_progress' ? 'yellow' : 'green'} variant="soft" size="sm">
+                                {s.session_status === 'in_progress' ? 'Penyidakan' : 'Selesai'}
+                            </Badge>
+                        </Link>
+                    ))}
+                    {sidak_recent.length === 0 && (
+                        <p className="px-5 py-8 text-sm text-gray-400 text-center">
+                            {sidak_active ? 'Penyidakan masih berjalan.' : 'Belum ada hasil sidak.'}
+                        </p>
+                    )}
+                </div>
             </section>
 
             <section aria-label="Riwayat izin" className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden animate-stagger-in" style={{ animationDelay: '180ms' }}>
