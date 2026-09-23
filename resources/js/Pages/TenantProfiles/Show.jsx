@@ -52,11 +52,11 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
 
                 <div className="mt-3 bg-[#0F1E36] text-white rounded-2xl p-5 sm:p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
                             {tenant.logo_url ? (
-                                <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white object-contain p-1.5 shrink-0" />
+                                <img src={tenant.logo_url} alt={`Logo ${tenant.name}`} className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-white object-contain p-2 shrink-0" />
                             ) : (
-                                <span className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 text-white text-xl font-bold flex items-center justify-center shrink-0" aria-hidden="true">{initials(tenant.name)}</span>
+                                <span className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-white/10 text-white text-2xl sm:text-3xl font-bold flex items-center justify-center shrink-0" aria-hidden="true">{initials(tenant.name)}</span>
                             )}
                             <div className="min-w-0 flex-1">
                                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{tenant.name}</h1>
