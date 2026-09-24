@@ -40,15 +40,28 @@ class InspectionSessionController extends Controller
     {
         $this->authorizeAccess($session, $request);
 
-        $session->load(['inspections.tenant.productCategory', 'inspections.tenant.activeTenancy.unit']);
+        $session->load([
+            'inspections:id,inspection_session_id,tenant_id,status,is_flagged',
+            'inspections.tenant:id,name,logo_path,tenant_category_id,product_category_id',
+            'inspections.tenant.productCategory:id,name',
+            'inspections.tenant.activeTenancy:id,tenant_id,unit_id',
+            'inspections.tenant.activeTenancy.unit:id,unit_code',
+        ]);
 
         $addedTenantIds = $session->inspections->pluck('tenant_id');
 
-        $availableTenants = Tenant::with(['tenantCategory', 'productCategory', 'activeTenancy.unit'])
+        $availableTenants = Tenant::select(['id', 'name', 'logo_path', 'tenant_category_id', 'product_category_id'])
+            ->with([
+                'tenantCategory:id,name',
+                'productCategory:id,name',
+                'activeTenancy:id,tenant_id,unit_id',
+                'activeTenancy.unit:id,unit_code',
+            ])
             ->where('branch_id', $session->branch_id)
             ->where('is_active', true)
             ->whereNotIn('id', $addedTenantIds)
             ->orderBy('name')
+            ->limit(100)
             ->get()
             ->map(fn ($tenant) => [
                 'id' => $tenant->id,
