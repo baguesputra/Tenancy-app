@@ -12,6 +12,7 @@ use App\Models\Unit;
 use App\Services\BranchScopeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -23,31 +24,23 @@ class DashboardController extends Controller
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
 
-        // Stats
-        $tenantQuery = Tenant::where('is_active', true);
-        if ($branchScoped) {
-            $tenantQuery->where('branch_id', $user->branch_id);
-        }
-        $totalTenants = $tenantQuery->count();
+        $statsKey = 'dashboard.stats.'.($branchScoped ? 'b'.$user->branch_id : 'all');
+        $cached = Cache::remember($statsKey, 60, function () use ($branchScoped, $user) {
+            $totalTenants = Tenant::where('is_active', true)
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            $totalUnits = Unit::where('is_active', true)
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            $occupiedUnits = Unit::where('is_active', true)
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+                ->whereHas('activeTenancy')->count();
+            $pendingPermits = PermitRequest::where('status', 'pending')
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            $activeSessions = InspectionSession::where('status', 'in_progress')
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
 
-        $unitQuery = Unit::where('is_active', true);
-        if ($branchScoped) {
-            $unitQuery->where('branch_id', $user->branch_id);
-        }
-        $totalUnits = (clone $unitQuery)->count();
-        $occupiedUnits = (clone $unitQuery)->whereHas('activeTenancy')->count();
-
-        $permitQuery = PermitRequest::where('status', 'pending');
-        if ($branchScoped) {
-            $permitQuery->where('branch_id', $user->branch_id);
-        }
-        $pendingPermits = (clone $permitQuery)->count();
-
-        $sessionQuery = InspectionSession::where('status', 'in_progress');
-        if ($branchScoped) {
-            $sessionQuery->where('branch_id', $user->branch_id);
-        }
-        $activeSessions = $sessionQuery->count();
+            return compact('totalTenants', 'totalUnits', 'occupiedUnits', 'pendingPermits', 'activeSessions');
+        });
+        ['totalTenants' => $totalTenants, 'totalUnits' => $totalUnits, 'occupiedUnits' => $occupiedUnits, 'pendingPermits' => $pendingPermits, 'activeSessions' => $activeSessions] = $cached;
 
         $actionNeeded = collect();
         if ($user->department_id) {
