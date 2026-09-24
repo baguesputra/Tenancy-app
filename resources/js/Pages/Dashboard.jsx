@@ -34,10 +34,10 @@ function formatRelativeTime(dateStr) {
 
 export default function Dashboard({ stats, actionNeeded, recentActivity, calendar }) {
     const { auth } = usePage().props;
-    const { refresh, isRefreshing, formattedLastUpdated, setRefreshCallback } = useAutoRefresh(true, 30000);
+    const { refresh, isRefreshing, formattedLastUpdated, setRefreshCallback } = useAutoRefresh(true, 60000);
 
     useEffect(() => {
-        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity', 'calendar'] }));
+        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity'] }));
     }, [setRefreshCallback]);
 
     const byOldest = (a, b) => new Date(a.requested_at ?? a.time ?? 0) - new Date(b.requested_at ?? b.time ?? 0);

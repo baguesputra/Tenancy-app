@@ -25,15 +25,18 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $webUser ? fn () => [
-                    ...$webUser->toArray(),
-                    'branch' => $webUser->branch,
+                    'id' => $webUser->id,
+                    'name' => $webUser->name,
+                    'email' => $webUser->email,
+                    'branch_id' => $webUser->branch_id,
+                    'branch' => $webUser->branch ? ['id' => $webUser->branch->id, 'name' => $webUser->branch->name] : null,
                     'permissions' => $webUser->getAllPermissions()->pluck('name'),
                     'roles' => $webUser->getRoleNames(),
                 ] : null,
-                'tenantUser' => fn () => $tenantUser?->load('tenant'),
+                'tenantUser' => fn () => $tenantUser?->load('tenant:id,name'),
             ],
             'notifications' => fn () => $notifiable
-                ? $notifiable->unreadNotifications()->latest()->take(10)->get()->map(fn ($n) => [
+                ? $notifiable->unreadNotifications()->latest()->take(5)->get()->map(fn ($n) => [
                     'id' => $n->id,
                     'title' => $n->data['title'],
                     'message' => $n->data['message'],
