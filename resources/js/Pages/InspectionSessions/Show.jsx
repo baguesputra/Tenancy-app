@@ -146,12 +146,7 @@ export default function Show({ session, availableTenants }) {
                             {isLocked ? (
                                 <p className="text-xs text-gray-400 mt-1">Sesi ini sudah selesai dan tidak bisa ditambah lagi.</p>
                             ) : (
-                                <>
-                                    <p className="text-xs text-gray-400 mt-1 mb-4">Scan QR di depan toko untuk mulai sidak tercepat.</p>
-                                    <Button variant="primary" onClick={() => setScanOpen(true)} className="justify-center !py-3 min-h-[48px]">
-                                        Scan QR Sekarang
-                                    </Button>
-                                </>
+                                <p className="text-xs text-gray-400 mt-1">Scan QR di depan toko untuk mulai sidak tercepat — atau cari nama tenant di bawah untuk tambah manual.</p>
                             )}
                         </div>
                     ) : (
