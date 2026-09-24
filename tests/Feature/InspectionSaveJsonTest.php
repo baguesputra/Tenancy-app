@@ -114,6 +114,49 @@ class InspectionSaveJsonTest extends TestCase
         $this->assertCount(1, $second->fresh()->photos);
     }
 
+    public function test_portal_inspection_breadcrumbs_stay_in_portal(): void
+    {
+        [$staff, $inspection, $item] = $this->seedInspection();
+
+        $request = Request::create('/portal/inspections', 'GET');
+        $request->setRouteResolver(fn () => new class
+        {
+            public function getName()
+            {
+                return 'tenant-portal.inspections.index';
+            }
+
+            public function parameter($key)
+            {
+                return null;
+            }
+        });
+        $crumbs = BreadcrumbService::forRequest($request);
+        $this->assertSame('/portal/dashboard', $crumbs[0]['href']);
+        $this->assertSame('Hasil Sidak', $crumbs[1]['label']);
+
+        $request = Request::create("/portal/inspections/{$inspection->id}", 'GET');
+        $request->setRouteResolver(fn () => new class($inspection)
+        {
+            public function __construct(private $inspection) {}
+
+            public function getName()
+            {
+                return 'tenant-portal.inspections.show';
+            }
+
+            public function parameter($key)
+            {
+                return $key === 'inspection' ? $this->inspection : null;
+            }
+        });
+        $crumbs = BreadcrumbService::forRequest($request);
+        $this->assertCount(3, $crumbs);
+        $this->assertSame('/portal/dashboard', $crumbs[0]['href']);
+        $this->assertSame('/portal/inspections', $crumbs[1]['href']);
+        $this->assertSame('F&B Std', $crumbs[2]['label']);
+    }
+
     public function test_inspection_breadcrumb_has_session_parent(): void
     {
         [$staff, $inspection, $item, $session, $tenant] = $this->seedInspection();

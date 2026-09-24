@@ -41,6 +41,8 @@ class BreadcrumbService
             'tenant-portal.permits.index' => [$portalHome, self::item('Surat Izin', '/portal/permits')],
             'tenant-portal.permits.create' => [$portalHome, self::item('Surat Izin', '/portal/permits'), self::item('Tambah')],
             'tenant-portal.permits.show' => [$portalHome, self::item('Surat Izin', '/portal/permits'), self::item(self::permitLabel($request, 'permit'))],
+            'tenant-portal.inspections.index' => [$portalHome, self::item('Hasil Sidak')],
+            'tenant-portal.inspections.show' => [$portalHome, self::item('Hasil Sidak', '/portal/inspections'), self::item(self::portalInspectionLabel($request))],
             default => [$webHome, ...self::fallback($request)],
         };
 
@@ -90,6 +92,21 @@ class BreadcrumbService
         }
 
         return 'Detail Inspeksi';
+    }
+
+    private static function portalInspectionLabel(Request $request): string
+    {
+        $inspection = $request->route()?->parameter('inspection');
+
+        if (is_object($inspection)) {
+            try {
+                return $inspection->checklist_snapshot['template_name'] ?? 'Detail Sidak';
+            } catch (\Throwable) {
+                return 'Detail Sidak';
+            }
+        }
+
+        return 'Detail Sidak';
     }
 
     private static function inspectionParents(Request $request): array
