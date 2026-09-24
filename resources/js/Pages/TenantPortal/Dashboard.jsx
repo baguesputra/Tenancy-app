@@ -4,8 +4,8 @@ import Badge from '@/Components/Badge';
 import StepProgressMini from '@/Components/StepProgressMini';
 import { formatDateID } from '@/utils/format';
 
-const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
-const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak' };
+const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
+const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
 const pipeline = ['Tenancy', 'Building Service', 'Security'];
 

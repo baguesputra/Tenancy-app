@@ -32,8 +32,9 @@ class TenantController extends Controller
         $this->tenantScope->applyView($query, $request->user());
 
         $summaryBase = clone $query;
-        $total = (clone $summaryBase)->count();
-        $active = (clone $summaryBase)->where('is_active', true)->count();
+        $agg = $summaryBase->toBase()->selectRaw('count(*) as total, sum(is_active = 1) as active')->first();
+        $total = (int) ($agg->total ?? 0);
+        $active = (int) ($agg->active ?? 0);
 
         $creatable = $this->tenantScope->creatableCategoryIds($request->user());
 
@@ -153,20 +154,33 @@ class TenantController extends Controller
                 ? 'required|exists:branches,id'
                 : 'nullable',
             'is_active' => 'boolean',
+            'contacts' => 'nullable|array|max:20',
+            'contacts.*.id' => 'nullable|integer',
+            'contacts.*.name' => 'required_with:contacts|string|max:255',
+            'contacts.*.position' => 'nullable|string|max:100',
+            'contacts.*.phone' => 'nullable|string|max:30',
+            'contacts.*.email' => 'nullable|email|max:255',
+            'contacts.*.type' => 'nullable|string|max:50',
         ]);
     }
 
     private function syncContacts(Tenant $tenant, array $contacts): void
     {
         $keepIds = [];
+        $ownedIds = $tenant->contacts()->pluck('id')->map(fn ($v) => (int) $v)->all();
 
         foreach ($contacts as $contact) {
             if (empty($contact['name'])) {
                 continue;
             }
 
+            $contactId = isset($contact['id']) ? (int) $contact['id'] : null;
+            if ($contactId && ! in_array($contactId, $ownedIds, true)) {
+                abort(403, 'Kontak bukan milik tenant ini.');
+            }
+
             $saved = $tenant->contacts()->updateOrCreate(
-                ['id' => $contact['id'] ?? null],
+                ['id' => $contactId, 'tenant_id' => $tenant->id],
                 [
                     'name' => $contact['name'],
                     'position' => $contact['position'] ?? null,

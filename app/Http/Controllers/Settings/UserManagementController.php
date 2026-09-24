@@ -38,14 +38,14 @@ class UserManagementController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validateUser($request);
+        $validated = $this->validateUser($request, null, true);
 
         $user = User::create([
             'name' => $validated['name'],
             'employee_number' => $validated['employee_number'],
             'branch_id' => $validated['branch_id'],
             'department_id' => $validated['department_id'] ?: null,
-            'password' => bcrypt($validated['password'] ?? 'password'),
+            'password' => bcrypt($validated['password']),
             'must_change_password' => true,
         ]);
 
@@ -86,7 +86,7 @@ class UserManagementController extends Controller
         return back()->with('success', 'User berhasil dihapus.');
     }
 
-    private function validateUser(Request $request, ?int $ignoreId = null): array
+    private function validateUser(Request $request, ?int $ignoreId = null, bool $requirePassword = false): array
     {
         return $request->validate([
             'name' => 'required|string|max:255',
@@ -97,7 +97,7 @@ class UserManagementController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'department_id' => 'nullable|exists:departments,id',
             'role' => 'required|exists:roles,name',
-            'password' => 'nullable|string|min:8',
+            'password' => $requirePassword ? 'required|string|min:8' : 'nullable|string|min:8',
         ]);
     }
 }

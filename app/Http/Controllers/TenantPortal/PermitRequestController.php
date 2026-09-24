@@ -111,6 +111,16 @@ class PermitRequestController extends Controller
         return back()->with('success', 'Revisi diajukan. Menunggu approval ulang BS.');
     }
 
+    public function cancel(PermitRequest $permit, Request $request)
+    {
+        $tenantUser = $request->user('tenant');
+        abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
+
+        $this->service->cancel($permit);
+
+        return redirect()->route('tenant-portal.permits.index')->with('success', 'Surat izin dibatalkan.');
+    }
+
     public function qrPdf(PermitRequest $permit, Request $request)
     {
         $tenantUser = $request->user('tenant');

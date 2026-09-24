@@ -17,6 +17,7 @@ class User extends Authenticatable
         'email',
         'employee_number',
         'branch_id',
+        'department_id',
         'auth_provider',
         'sso_id',
         'password',

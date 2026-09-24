@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inspection;
 use App\Models\InspectionSession;
 use App\Models\ScannableCode;
 use App\Models\Tenant;
@@ -73,7 +74,13 @@ class InspectionSessionController extends Controller
         ]);
 
         $tenant = Tenant::findOrFail($request->tenant_id);
-        $inspection = $this->inspectionService->addInspection($session, $tenant);
+        abort_if($tenant->branch_id !== $session->branch_id, 422, 'Tenant tidak berada di cabang yang sama dengan sesi ini.');
+        abort_if(Inspection::where('inspection_session_id', $session->id)->where('tenant_id', $tenant->id)->exists(), 422, 'Tenant ini sudah ada di sesi ini.');
+        try {
+            $inspection = $this->inspectionService->addInspection($session, $tenant);
+        } catch (ValidationException $e) {
+            return back()->withErrors(['tenant_id' => $e->errors()['tenant_id'][0] ?? 'Tenant tidak bisa ditambahkan ke sesi ini.']);
+        }
 
         return redirect()->route('inspections.show', $inspection->id);
     }

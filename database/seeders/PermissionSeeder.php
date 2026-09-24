@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
             'users.manage',
+            'settings.access',
         ]);
 
         $this->assignRolePermissions('manager', [

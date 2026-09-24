@@ -21,12 +21,12 @@ class TenancyController extends Controller
 
         $this->applyBranchScope($base, $request->user());
 
-        $summaryBase = clone $base;
-        $total = (clone $summaryBase)->count();
-        $active = (clone $summaryBase)->where('status', 'active')->count();
-        $draft = (clone $summaryBase)->where('status', 'draft')->count();
-        $ended = (clone $summaryBase)->where('status', 'ended')->count();
-        $terminated = (clone $summaryBase)->where('status', 'terminated')->count();
+        $agg = (clone $base)->toBase()->selectRaw("count(*) as total, sum(status = 'active') as active, sum(status = 'draft') as draft, sum(status = 'ended') as ended, sum(status = 'terminated') as terminated")->first();
+        $total = (int) ($agg->total ?? 0);
+        $active = (int) ($agg->active ?? 0);
+        $draft = (int) ($agg->draft ?? 0);
+        $ended = (int) ($agg->ended ?? 0);
+        $terminated = (int) ($agg->terminated ?? 0);
 
         $query = (clone $base)
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
@@ -50,8 +50,9 @@ class TenancyController extends Controller
                 'terminated' => $terminated,
             ],
             'filters' => $request->only(['search', 'status']),
-            'units' => $unitQuery->orderBy('unit_code')->get(['id', 'unit_code', 'branch_id']),
-            'tenants' => $tenantQuery->orderBy('name')->get(['id', 'name']),
+            // ponytail: cap 500, async select2 saat data besar
+            'units' => $unitQuery->orderBy('unit_code')->limit(500)->get(['id', 'unit_code', 'branch_id']),
+            'tenants' => $tenantQuery->orderBy('name')->limit(500)->get(['id', 'name']),
         ]);
     }
 
@@ -137,7 +138,7 @@ class TenancyController extends Controller
 
     private function validateTenancy(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'unit_id' => 'required|exists:units,id',
             'tenant_id' => 'required|exists:tenants,id',
             'contract_number' => 'nullable|string|max:100',
@@ -155,6 +156,14 @@ class TenancyController extends Controller
             'percentage_rent_breakpoint' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
+
+        $unit = Unit::find($validated['unit_id']);
+        $tenant = Tenant::find($validated['tenant_id']);
+        if ($unit && $tenant && (int) $unit->branch_id !== (int) $tenant->branch_id) {
+            abort(422, 'Tenant dan unit harus berada di cabang yang sama.');
+        }
+
+        return $validated;
     }
 
     private function formProps(Request $request): array

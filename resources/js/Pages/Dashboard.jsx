@@ -11,7 +11,7 @@ import EventCalendar from '@/Components/Dashboard/EventCalendar';
 const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak' };
 
 const statusLabel = {
-    pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', draft: 'Draft',
+    pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan', draft: 'Draft',
     active: 'Aktif', ended: 'Berakhir', terminated: 'Diakhiri',
 };
 

@@ -7,16 +7,24 @@ import { formatDateID } from '@/utils/format';
 const statusColor = { draft: 'gray', active: 'gray', completed: 'green', ended: 'yellow', terminated: 'red' };
 const statusLabel = { draft: 'Draft', active: 'Aktif', completed: 'Selesai', ended: 'Berakhir', terminated: 'Diakhiri' };
 
-export default function Index({ inspections, sidak_active }) {
+export default function Index({ inspections, sidak_active, active_inspections = [] }) {
     return (
         <PortalLayout>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight animate-stagger-in">Hasil Sidak</h1>
             <p className="text-sm text-gray-500 mt-0.5 animate-stagger-in">Riwayat pemeriksaan toko — hanya lihat, tidak bisa diubah</p>
 
             {sidak_active && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-2xl flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '60ms' }} role="status">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" aria-hidden="true" />
-                    <p><span className="font-semibold">Sedang dilaksanakan penyidakan</span> di toko Anda. Hasil muncul di sini setelah sesi selesai.</p>
+                <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-2xl animate-stagger-in" style={{ animationDelay: '60ms' }} role="status">
+                    <p className="flex items-center gap-3"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" aria-hidden="true" /><span><span className="font-semibold">Sedang dilaksanakan penyidakan</span> di toko Anda. Hasil muncul di sini setelah sesi selesai.</span></p>
+                    {active_inspections.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {active_inspections.map((a) => (
+                                <Link key={a.id} href={`/portal/inspections/${a.id}`} className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-900 bg-white border border-amber-200 rounded-full hover:bg-amber-100">
+                                    Lihat: {a.template_name}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

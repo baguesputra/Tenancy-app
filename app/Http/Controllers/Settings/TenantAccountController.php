@@ -23,13 +23,13 @@ class TenantAccountController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $withoutAccountCount = Tenant::whereDoesntHave('tenantUser')->count();
+        $withoutAccountCount = Tenant::whereDoesntHave('tenantUser')->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"))->count();
 
         return Inertia::render('Settings/TenantAccounts/Index', [
             'tenants' => $tenants,
             'filters' => $request->only(['search', 'status']),
             'withoutAccountCount' => $withoutAccountCount,
-            'withAccountCount' => Tenant::whereHas('tenantUser')->count(),
+            'withAccountCount' => Tenant::whereHas('tenantUser')->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"))->count(),
         ]);
     }
 
@@ -68,19 +68,21 @@ class TenantAccountController extends Controller
 
     public function bulkCreate()
     {
-        $tenantsWithoutAccount = Tenant::whereDoesntHave('tenantUser')->get();
         $created = [];
 
-        foreach ($tenantsWithoutAccount as $tenant) {
-            $password = Str::random(10);
-            $tenantUser = TenantUser::create([
-                'tenant_id' => $tenant->id,
-                'username' => TenantUser::generateUsernameFrom($tenant->name),
-                'password' => Hash::make($password),
-                'is_active' => true,
-            ]);
-            $created[] = ['tenant_name' => $tenant->name, 'username' => $tenantUser->username, 'password' => $password];
-        }
+        Tenant::whereDoesntHave('tenantUser')->orderBy('id')->chunk(200, function ($tenants) use (&$created) {
+            foreach ($tenants as $tenant) {
+                $password = Str::random(10);
+                $tenantUser = TenantUser::create([
+                    'tenant_id' => $tenant->id,
+                    'username' => TenantUser::generateUsernameFrom($tenant->name),
+                    'password' => Hash::make($password),
+                    'is_active' => true,
+                ]);
+                $created[] = ['tenant_name' => $tenant->name, 'username' => $tenantUser->username, 'password' => $password];
+            }
+        });
+        // ponytail: loop create cukup kini, ganti upsert batch saat >1k tenant
 
         if (empty($created)) {
             return back()->with('success', 'Semua tenant sudah punya akun.');

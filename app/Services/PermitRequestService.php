@@ -9,6 +9,7 @@ use App\Models\ScannableCode;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class PermitRequestService
@@ -165,34 +166,38 @@ class PermitRequestService
 
     private function setupApprovalSteps(PermitRequest $permit): void
     {
-        $bsDept = Department::where('name', 'Building Service')->first();
-        $securityDept = Department::where('name', 'Security')->first();
+        $deptId = fn (string $name) => Cache::remember("dept.id.{$name}", 3600, fn () => Department::where('name', $name)->value('id'));
+        $bsDeptId = $deptId('Building Service');
+        $securityDeptId = $deptId('Security');
 
         if (in_array('pameran', $permit->activity_types ?? [])) {
-            $marketingDept = Department::where('name', 'Marketing')->first();
-            $financeDept = Department::where('name', 'Keuangan')->first();
+            $marketingDeptId = $deptId('Marketing');
+            $financeDeptId = $deptId('Keuangan');
 
             $this->approvalService->setupSteps($permit, [
-                ['step_key' => 'marketing', 'label' => 'Approval Marketing', 'department_id' => $marketingDept?->id],
-                ['step_key' => 'finance', 'label' => 'Approval Keuangan', 'department_id' => $financeDept?->id],
-                ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDept?->id],
-                ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDept?->id],
+                ['step_key' => 'marketing', 'label' => 'Approval Marketing', 'department_id' => $marketingDeptId],
+                ['step_key' => 'finance', 'label' => 'Approval Keuangan', 'department_id' => $financeDeptId],
+                ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDeptId],
+                ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDeptId],
             ]);
 
             return;
         }
 
-        $tenancyDept = Department::where('name', 'Tenancy')->first();
+        $tenancyDeptId = $deptId('Tenancy');
 
         $this->approvalService->setupSteps($permit, [
-            ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDept?->id],
-            ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDept?->id],
-            ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDept?->id],
+            ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDeptId],
+            ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDeptId],
+            ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDeptId],
         ]);
     }
 
     public function syncStatus(PermitRequest $permit): void
     {
+        if ($permit->status === 'cancelled') {
+            return;
+        }
         if ($this->approvalService->hasRejection($permit)) {
             $permit->update(['status' => 'rejected']);
         } elseif ($this->approvalService->isFullyApproved($permit)) {
@@ -203,6 +208,12 @@ class PermitRequestService
     }
 
     public const REVISABLE = ['work_start_date', 'work_end_date', 'work_end_time', 'access_route'];
+
+    public function cancel(PermitRequest $permit): void
+    {
+        abort_unless($permit->status === 'pending', 422, 'Hanya izin pending yang bisa dibatalkan.');
+        $permit->update(['status' => 'cancelled']);
+    }
 
     private const RESET_ON_REVISE = ['marketing', 'finance', 'bs', 'security'];
 
@@ -243,10 +254,10 @@ class PermitRequestService
             $this->syncStatus($permit->fresh());
 
             $summary = collect($changes)->map(fn ($c, $f) => $this->revisionLabel($f).': '.($c['old'] ?? '—').' → '.($c['new'] ?? '—'))->values()->join('; ');
-            $bsDept = Department::where('name', 'Building Service')->first();
-            if ($bsDept) {
+            $bsDeptId = Cache::remember('dept.id.Building Service', 3600, fn () => Department::where('name', 'Building Service')->value('id'));
+            if ($bsDeptId) {
                 $this->notificationService->notifyDepartment(
-                    $bsDept->id,
+                    $bsDeptId,
                     'Revisi Surat Izin',
                     "{$permit->permit_number} direvisi: {$summary}. Alasan: {$data['reason']}",
                     "/permit-requests/{$permit->id}",

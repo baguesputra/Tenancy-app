@@ -1,5 +1,5 @@
 import PortalLayout from '@/Layouts/PortalLayout';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
@@ -8,13 +8,18 @@ import LoadingCardModal from '@/Components/Portal/LoadingCardModal';
 import ReviseModal, { RevisionTimeline } from '@/Components/Permits/ReviseModal';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 
-const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
-const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak' };
+const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
+const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
 export default function Show({ permit, qr_image, show_qr, expires_label, is_expired, is_goods_permit, can_revise }) {
     const rejectedStep = permit.approvals.find((a) => a.status === 'rejected');
     const [cardOpen, setCardOpen] = useState(false);
     const [reviseOpen, setReviseOpen] = useState(false);
+
+    const cancelPermit = () => {
+        if (!confirm('Batalkan surat izin ini?')) return;
+        router.post(`/portal/permits/${permit.id}/cancel`);
+    };
 
     return (
         <PortalLayout>
@@ -101,6 +106,11 @@ export default function Show({ permit, qr_image, show_qr, expires_label, is_expi
                     {can_revise && (
                         <Button onClick={() => setReviseOpen(true)} className="w-full justify-center !py-3 min-h-[48px]">
                             Ajukan Revisi
+                        </Button>
+                    )}
+                    {permit.status === 'pending' && (
+                        <Button variant="danger" onClick={cancelPermit} className="w-full justify-center !py-3 min-h-[48px]">
+                            Batalkan Pengajuan
                         </Button>
                     )}
                     {(permit.revisions ?? []).length > 0 && (

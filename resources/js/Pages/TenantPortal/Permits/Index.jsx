@@ -7,14 +7,15 @@ import Pagination from '@/Components/Pagination';
 import TextInput from '@/Components/Form/TextInput';
 import { formatDateID } from '@/utils/format';
 
-const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
-const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak' };
+const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
+const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
 const tabs = [
     { value: '', label: 'Semua' },
     { value: 'pending', label: 'Antre' },
     { value: 'completed', label: 'Selesai' },
     { value: 'rejected', label: 'Ditolak' },
+    { value: 'cancelled', label: 'Dibatalkan' },
 ];
 
 export default function Index({ permits, filters }) {

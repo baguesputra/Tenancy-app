@@ -9,6 +9,7 @@ use App\Models\InspectionAnswer;
 use App\Models\InspectionPhoto;
 use App\Models\InspectionSession;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -36,7 +37,7 @@ class InspectionService
             }
         }
 
-        $template = ChecklistTemplate::whereHas('productCategories', fn ($q) =>
+        $template = ChecklistTemplate::with('sections.items')->whereHas('productCategories', fn ($q) =>
             $q->where('product_categories.id', $tenant->product_category_id)
         )->where('is_active', true)->first();
 

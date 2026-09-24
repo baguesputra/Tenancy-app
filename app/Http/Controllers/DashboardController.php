@@ -103,7 +103,7 @@ class DashboardController extends Controller
                 'url' => "/permit-requests/{$p->id}",
             ]);
 
-        $recentInspections = Inspection::with('tenant')
+        $recentInspections = Inspection::with('tenant:id,name')
             ->whereHas('session', fn ($q) => $branchScoped ? $q->where('branch_id', $user->branch_id) : $q)
             ->latest()->take(5)->get()
             ->map(fn ($i) => [
@@ -114,7 +114,7 @@ class DashboardController extends Controller
                 'url' => "/inspections/{$i->id}",
             ]);
 
-        $recentTenancies = Tenancy::with('tenant')
+        $recentTenancies = Tenancy::with('tenant:id,name')
             ->whereHas('unit', fn ($q) => $branchScoped ? $q->where('branch_id', $user->branch_id) : $q)
             ->latest()->take(5)->get()
             ->map(fn ($t) => [
@@ -162,7 +162,7 @@ class DashboardController extends Controller
         $warnFrom = now()->toDateString();
         $warnTo = now()->addDays(30)->toDateString();
 
-        $permitQuery = PermitRequest::with('tenant')
+        $permitQuery = PermitRequest::query()
             ->where(fn ($q) => $q
                 ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
                 ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
@@ -183,7 +183,7 @@ class DashboardController extends Controller
         ]);
 
         if (! $isMarketing) {
-            $tenancies = Tenancy::with(['tenant', 'unit'])
+            $tenancies = Tenancy::with(['tenant:id,name'])
                 ->where(fn ($q) => $q
                     ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
                     ->orWhereBetween('end_date', [$start->toDateString(), $end->toDateString()])

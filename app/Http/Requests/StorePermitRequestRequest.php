@@ -28,6 +28,7 @@ class StorePermitRequestRequest extends FormRequest
 
             'permit_number' => 'prohibited',
             'activity_types' => $isMarketing ? 'exclude' : 'required|array|min:1',
+            'activity_types.*' => 'in:kerja,lembur,masuk_keluar_barang,masuk_keluar_alat,fit_out_pull_out_renovasi,pameran',
             'request_date' => 'required|date',
             'pic_name' => $isMarketing ? 'required|string|max:255' : 'nullable|string|max:255',
             'pic_phone' => $isMarketing ? 'required|string|max:30' : 'nullable|string|max:30',
@@ -39,8 +40,8 @@ class StorePermitRequestRequest extends FormRequest
             'job_type' => 'nullable|string|max:255',
             'work_start_date' => $isMarketing ? 'required|date' : 'nullable|date',
             'work_end_date' => $isMarketing ? 'required|date|after_or_equal:work_start_date' : 'nullable|date',
-            'work_start_time' => 'nullable',
-            'work_end_time' => 'nullable',
+            'work_start_time' => 'nullable|date_format:H:i',
+            'work_end_time' => 'nullable|date_format:H:i',
             'access_route' => 'nullable|string',
             'notes' => 'nullable|string',
             'stand_name' => $isMarketing ? 'required|string|max:255' : 'exclude',

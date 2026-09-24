@@ -11,8 +11,8 @@ import ReviseModal, { RevisionTimeline } from '@/Components/Permits/ReviseModal'
 import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from '@/utils/format';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
-const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red' };
-const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', approved: 'Disetujui', rejected: 'Ditolak' };
+const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red', cancelled: 'gray' };
+const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', approved: 'Disetujui', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
@@ -97,6 +97,11 @@ export default function Show({ permit, can_revise }) {
 
     const completeSecurityCheck = () => {
         router.post(`/permit-requests/${permit.id}/complete-security-check`, {}, { preserveScroll: true });
+    };
+
+    const cancelPermit = () => {
+        if (!confirm('Batalkan surat izin ini?')) return;
+        router.post(`/permit-requests/${permit.id}/cancel`);
     };
 
     const securityStep = permit.approvals.find((a) => a.step_key === 'security');
@@ -301,6 +306,11 @@ export default function Show({ permit, can_revise }) {
                         {can_revise && (
                             <Button variant="secondary" onClick={() => setReviseOpen(true)} className="w-full justify-center">
                                 Ajukan Revisi
+                            </Button>
+                        )}
+                        {permit.status === 'pending' && (
+                            <Button variant="danger" onClick={cancelPermit} className="w-full justify-center">
+                                Batalkan Pengajuan
                             </Button>
                         )}
                         {(permit.revisions ?? []).length > 0 && (

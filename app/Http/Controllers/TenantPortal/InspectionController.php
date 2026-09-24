@@ -27,11 +27,23 @@ class InspectionController extends Controller
 
         $activeCount = Inspection::where('tenant_id', $tenantUser->tenant_id)
             ->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))
-            ->count();
+            ->exists();
+
+        $activeInspections = $activeCount
+            ? Inspection::with('session')
+                ->where('tenant_id', $tenantUser->tenant_id)
+                ->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))
+                ->latest()->take(5)->get()->map(fn ($i) => [
+                    'id' => $i->id,
+                    'template_name' => $i->checklist_snapshot['template_name'] ?? '—',
+                    'session_started_at' => $i->session->started_at?->toDateTimeString(),
+                ])->values()
+            : collect();
 
         return Inertia::render('TenantPortal/Inspections/Index', [
             'inspections' => $inspections,
-            'sidak_active' => $activeCount > 0,
+            'sidak_active' => $activeCount,
+            'active_inspections' => $activeInspections,
         ]);
     }
 

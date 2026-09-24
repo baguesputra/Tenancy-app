@@ -25,23 +25,25 @@ class UnitController extends Controller
             }));
 
         $this->branchScope->apply($base, $request->user());
+        $filterBase = Unit::query();
+        $this->branchScope->apply($filterBase, $request->user());
 
-        $floors = (clone $base)->whereNotNull('floor')->distinct()->orderBy('floor')->pluck('floor');
-        $blocks = (clone $base)
+        $floors = (clone $filterBase)->whereNotNull('floor')->distinct()->orderBy('floor')->pluck('floor');
+        $blocks = (clone $filterBase)
             ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
             ->whereNotNull('block')->where('block', '!=', '')
             ->distinct()->orderBy('block')->pluck('block');
-        $unitNumbers = (clone $base)
+        $unitNumbers = (clone $filterBase)
             ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
             ->when($request->block, fn ($q) => $q->where('block', $request->block))
             ->whereNotNull('unit_number')->where('unit_number', '!=', '')
             ->distinct()->orderBy('unit_number')->pluck('unit_number');
 
-        $summaryBase = clone $base;
-        $total = (clone $summaryBase)->count();
-        $occupied = (clone $summaryBase)->whereHas('activeTenancy')->count();
-        $inactive = (clone $summaryBase)->where('is_active', false)->count();
-        $vacant = (clone $summaryBase)->where('is_active', true)->whereDoesntHave('activeTenancy')->count();
+        $agg = (clone $filterBase)->toBase()->selectRaw("count(*) as total, sum(is_active = 0) as inactive, sum((select count(*) from tenancies where tenancies.unit_id = units.id and tenancies.status = 'active') > 0) as occupied")->first();
+        $total = (int) ($agg->total ?? 0);
+        $inactive = (int) ($agg->inactive ?? 0);
+        $occupied = (int) ($agg->occupied ?? 0);
+        $vacant = $total - $occupied - $inactive;
 
         $query = (clone $base)
             ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
@@ -56,6 +58,7 @@ class UnitController extends Controller
         $units->getCollection()->transform(function (Unit $unit) {
             $unit->is_occupied = $unit->activeTenancy !== null;
             $unit->scan_url = $unit->scanUrl;
+            // ponytail: QR inline 15x per page, pindah ke endpoint/PDF saat lambat
             $unit->qr_image = $unit->scanUrl
                 ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($unit->scanUrl))
                 : null;
@@ -128,6 +131,8 @@ class UnitController extends Controller
 
     private function validateUnit(Request $request, ?int $ignoreId = null): array
     {
+        $canPickBranch = $request->user()->canViewAllBranches();
+
         return $request->validate([
             'floor' => 'required|string|max:50',
             'block' => 'nullable|string|max:50',
@@ -137,7 +142,7 @@ class UnitController extends Controller
                 Rule::unique('units', 'unit_code')->ignore($ignoreId),
             ],
             'size' => 'nullable|numeric|min:0',
-            'branch_id' => 'required_if:canPickBranch,true|exists:branches,id',
+            'branch_id' => $canPickBranch ? 'required|exists:branches,id' : 'nullable',
             'is_active' => 'boolean',
         ]);
     }

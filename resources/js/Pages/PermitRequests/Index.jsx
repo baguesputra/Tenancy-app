@@ -9,8 +9,8 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
 
-const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red' };
-const statusLabel = { pending: 'Menunggu', completed: 'Selesai', rejected: 'Ditolak' };
+const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
+const statusLabel = { pending: 'Menunggu', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
 const categoryMeta = {
     pameran: { label: 'Pameran / Open Counter', color: 'coral', code: 'E&P' },

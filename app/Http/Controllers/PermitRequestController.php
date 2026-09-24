@@ -31,7 +31,7 @@ class PermitRequestController extends Controller
     {
         $isMarketing = $request->user()->hasRole('marketing_staff');
 
-        $base = PermitRequest::with(['tenant', 'requestedBy', 'approvals' => fn ($q) => $q->orderBy('order')])
+        $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->activity_type, fn ($q) => $q->where('activity_types', 'like', "%{$request->activity_type}%"))
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
@@ -58,6 +58,7 @@ class PermitRequestController extends Controller
                     'area' => $this->applyCategory(clone $base, 'area')->count(),
                 ],
         ];
+        // ponytail: 5 count di atas cukup untuk skala kini, gabung selectRaw CASE saat >50k row
 
         $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 
@@ -178,7 +179,7 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
         abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
-        $permitRequest->load(['tenant', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
+        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
 
         $requestedBy = $permitRequest->requestedBy;
@@ -188,7 +189,7 @@ class PermitRequestController extends Controller
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
-            'can_revise' => $permitRequest->status === 'pending',
+            'can_revise' => $permitRequest->status === 'pending' && $user->can('permits.create'),
         ]);
     }
 
@@ -202,6 +203,19 @@ class PermitRequestController extends Controller
 
         $this->service->revise($permitRequest, $validated, $request->user());
 
-        return back()->with('success', 'Revisi diajukan. Approval BS, Finance/Marketing, dan Security diulang.');
+        return back()->with('success', 'Revisi diajukan. Menunggu approval ulang BS.');
+    }
+
+    public function cancel(PermitRequest $permitRequest, Request $request)
+    {
+        if ((string) $permitRequest->requested_by_id !== (string) $request->user()->id
+            || ! str_contains($permitRequest->requested_by_type ?? '', 'User')) {
+            abort(403, 'Hanya pembuat yang bisa membatalkan.');
+        }
+        abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
+
+        $this->service->cancel($permitRequest);
+
+        return redirect()->route('permit-requests.index')->with('success', 'Surat izin dibatalkan.');
     }
 }

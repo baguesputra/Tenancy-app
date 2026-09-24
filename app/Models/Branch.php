@@ -22,4 +22,14 @@ class Branch extends Model
     {
         return $this->hasMany(Unit::class);
     }
+
+    public function tenants()
+    {
+        return $this->hasMany(Tenant::class);
+    }
+
+    public function permitRequests()
+    {
+        return $this->hasMany(PermitRequest::class);
+    }
 }

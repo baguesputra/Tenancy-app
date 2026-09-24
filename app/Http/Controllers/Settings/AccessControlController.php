@@ -30,6 +30,7 @@ class AccessControlController extends Controller
     {
         $roles = Role::where('name', '!=', 'super_admin')
             ->orderBy('name')
+            ->with(['permissions', 'users'])
             ->withCount('users')
             ->get()
             ->map(fn (Role $role) => [

@@ -40,6 +40,6 @@ class TenantUser extends Authenticatable
 
     public function branch()
     {
-        return $this->tenant->branch ?? null;
+        return $this->hasOneThrough(Branch::class, Tenant::class, 'id', 'id', 'tenant_id', 'branch_id');
     }
 }

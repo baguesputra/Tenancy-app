@@ -16,7 +16,7 @@ class RevisePermitRequestRequest extends FormRequest
         return [
             'work_start_date' => 'required|date',
             'work_end_date' => 'required|date|after_or_equal:work_start_date',
-            'work_end_time' => 'nullable',
+            'work_end_time' => 'nullable|date_format:H:i',
             'access_route' => 'nullable|string',
             'reason' => 'required|string|min:10|max:1000',
         ];

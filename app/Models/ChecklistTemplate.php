@@ -13,11 +13,6 @@ class ChecklistTemplate extends Model
         return ['is_active' => 'boolean'];
     }
 
-    public function businessTypes()
-    {
-        return $this->hasMany(ChecklistTemplateBusinessType::class);
-    }
-
     public function sections()
     {
         return $this->hasMany(ChecklistSection::class)->orderBy('order');

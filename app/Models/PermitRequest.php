@@ -39,10 +39,6 @@ class PermitRequest extends Model
             'work_end_date' => 'date',
             'work_start_time' => 'datetime:H:i',
             'work_end_time' => 'datetime:H:i',
-            'tenancy_approved_at' => 'datetime',
-            'bs_approved_at' => 'datetime',
-            'security_checked_at' => 'datetime',
-            'rejected_at' => 'datetime',
         ];
     }
 
@@ -69,21 +65,6 @@ class PermitRequest extends Model
     public function accompanyingDepartments()
     {
         return $this->belongsToMany(Department::class, 'permit_request_departments');
-    }
-
-    public function tenancyApprovedBy()
-    {
-        return $this->belongsTo(User::class, 'tenancy_approved_by');
-    }
-
-    public function bsApprovedBy()
-    {
-        return $this->belongsTo(User::class, 'bs_approved_by');
-    }
-
-    public function securityCheckedBy()
-    {
-        return $this->belongsTo(User::class, 'security_checked_by');
     }
 
     public function approvals()

@@ -10,9 +10,11 @@ use Illuminate\Support\Str;
 
 class UnitQrController extends Controller
 {
-    public function single($id)
+    public function single($id, Request $request)
     {
         $unit = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])->findOrFail($id);
+        $user = $request->user();
+        abort_unless($unit->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
         $this->ensureCodes(collect([$unit]));
 
         $pdf = Pdf::loadView('pdf.unit-qr-label', ['units' => collect([$unit]), 'logos' => $this->logos(collect([$unit]))])
@@ -55,33 +57,55 @@ class UnitQrController extends Controller
     private function logos($units): array
     {
         $out = [];
+        $paths = [];
         foreach ($units as $unit) {
             $path = $unit->activeTenancy?->tenant?->logo_path;
-            if ($path && \Storage::disk('public')->exists($path)) {
-                $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
-                    'png' => 'image/png',
-                    'webp' => 'image/webp',
-                    default => 'image/jpeg',
-                };
-                $out[$unit->id] = 'data:'.$mime.';base64,'.base64_encode(\Storage::disk('public')->get($path));
+            if ($path) {
+                $paths[$unit->id] = $path;
             }
         }
 
-        return $out;
+        return \Cache::remember('unit-qr-logos.'.md5(implode('|', $paths)), 3600, function () use ($units, $paths) {
+            $out = [];
+            foreach ($units as $unit) {
+                $path = $paths[$unit->id] ?? null;
+                if ($path && \Storage::disk('public')->exists($path)) {
+                    $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+                        'png' => 'image/png',
+                        'webp' => 'image/webp',
+                        default => 'image/jpeg',
+                    };
+                    $out[$unit->id] = 'data:'.$mime.';base64,'.base64_encode(\Storage::disk('public')->get($path));
+                }
+            }
+
+            return $out;
+        });
     }
 
     private function ensureCodes($units): void
     {
-        foreach ($units as $unit) {
-            if ($unit->scannableCode) {
-                continue;
-            }
+        $missing = $units->filter(fn ($unit) => ! $unit->scannableCode)->values();
+        if ($missing->isEmpty()) {
+            return;
+        }
 
-            $unit->setRelation('scannableCode', ScannableCode::create([
-                'token' => (string) Str::uuid(),
-                'scannable_type' => Unit::class,
-                'scannable_id' => $unit->id,
-            ]));
+        $rows = $missing->map(fn ($unit) => [
+            'token' => (string) Str::uuid(),
+            'scannable_type' => Unit::class,
+            'scannable_id' => $unit->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->all();
+        ScannableCode::insert($rows);
+
+        $fresh = ScannableCode::where('scannable_type', Unit::class)
+            ->whereIn('scannable_id', $missing->pluck('id')->all())
+            ->get()->keyBy('scannable_id');
+        foreach ($missing as $unit) {
+            if ($code = $fresh->get($unit->id)) {
+                $unit->setRelation('scannableCode', $code);
+            }
         }
     }
 }

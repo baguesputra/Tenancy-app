@@ -95,6 +95,7 @@ class ScanController extends Controller
         }
 
         abort_unless($webUser->can('permits.view'), 403);
+        abort_unless($permit->branch_id === $webUser->branch_id || $webUser->canViewAllBranches(), 403);
 
         return redirect()->route('permit-requests.show', $permit->id);
     }

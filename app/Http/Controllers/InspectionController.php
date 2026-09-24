@@ -79,6 +79,9 @@ class InspectionController extends Controller
         ]);
 
         $item = ChecklistItem::findOrFail($validated['checklist_item_id']);
+        $snapshotIds = collect($inspection->checklist_snapshot['sections'] ?? [])
+            ->flatMap(fn ($s) => $s['items'] ?? [])->pluck('id')->map(fn ($v) => (string) $v)->all();
+        abort_unless(in_array((string) $item->id, $snapshotIds, true), 422, 'Item bukan bagian dari checklist inspeksi ini.');
 
         $answer = $this->inspectionService->saveAnswer(
             $inspection,
@@ -117,6 +120,7 @@ class InspectionController extends Controller
     private function authorizeAccess(Inspection $inspection, Request $request): void
     {
         $user = $request->user();
+        $inspection->loadMissing('session');
         $isOwner = $inspection->session->user_id === $user->id;
         abort_unless($isOwner || $user->canViewAllBranches(), 403);
     }

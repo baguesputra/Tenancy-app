@@ -52,8 +52,8 @@ class TenantProfileController extends Controller
             'branch', 'tenantCategory', 'productCategory', 'contacts',
             'activeTenancy.unit.branch',
             'tenancies' => fn ($q) => $q->with('unit.branch')->latest('start_date')->take(20),
-            'inspections' => fn ($q) => $q->with('session')->latest()->take(20),
-            'permitRequests' => fn ($q) => $q->latest()->take(20),
+            'inspections' => fn ($q) => $q->with('session')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(20),
+            'permitRequests' => fn ($q) => $q->with(['workers', 'goods', 'approvals.approvedBy'])->latest()->take(20),
         ]);
 
         $inspections = $tenant->inspections->map(fn ($i) => [
@@ -63,7 +63,7 @@ class TenantProfileController extends Controller
             'is_flagged' => $i->is_flagged,
             'session_status' => $i->session->status,
             'session_started_at' => $i->session->started_at?->toDateTimeString(),
-            'answered' => $i->answers()->whereNotNull('value')->where('value', '!=', '')->count(),
+            'answered' => $i->answered_count ?? 0,
             'total' => collect($i->checklist_snapshot['sections'] ?? [])->sum(fn ($s) => count($s['items'] ?? [])),
         ])->values();
 
@@ -119,8 +119,8 @@ class TenantProfileController extends Controller
             'branch', 'tenantCategory', 'productCategory', 'contacts', 'tenantUser',
             'activeTenancy.unit.branch', 'activeTenancy.unit.scannableCode',
             'tenancies' => fn ($q) => $q->with(['unit.branch', 'unit.scannableCode'])->latest('start_date')->take(30),
-            'inspections' => fn ($q) => $q->with('session.user')->latest()->take(30),
-            'permitRequests' => fn ($q) => $q->latest()->take(30),
+            'inspections' => fn ($q) => $q->with('session.user')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
+            'permitRequests' => fn ($q) => $q->with(['workers', 'goods', 'approvals.approvedBy'])->latest()->take(30),
         ]);
 
         $now = now()->startOfDay();
@@ -136,7 +136,6 @@ class TenantProfileController extends Controller
         })->values();
 
         $inspections = $tenant->inspections->map(function ($i) {
-            $answered = $i->answers()->whereNotNull('value')->where('value', '!=', '')->count();
             $total = collect($i->checklist_snapshot['sections'] ?? [])->sum(fn ($s) => count($s['items'] ?? []));
 
             return [
@@ -149,7 +148,7 @@ class TenantProfileController extends Controller
                 'session_started_at' => $i->session->started_at?->toDateTimeString(),
                 'session_ended_at' => $i->session->ended_at?->toDateTimeString(),
                 'session_officer' => $i->session->user?->name,
-                'answered' => $answered,
+                'answered' => $i->answered_count ?? 0,
                 'total' => $total,
             ];
         })->values();

@@ -84,9 +84,9 @@ class ApprovalService
             ]);
         }
 
-        if ($approval->approvable->status === 'rejected') {
+        if (in_array($approval->approvable->status, ['rejected', 'cancelled'], true)) {
             throw ValidationException::withMessages([
-                'approval' => 'Permohonan ini sudah ditolak, tidak ada aksi lanjutan yang bisa dilakukan.',
+                'approval' => 'Permohonan ini sudah ditolak/dibatalkan, tidak ada aksi lanjutan yang bisa dilakukan.',
             ]);
         }
 

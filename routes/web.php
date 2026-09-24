@@ -34,7 +34,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
+Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users', [UserManagementController::class, 'store']);
     Route::put('/users/{id}', [UserManagementController::class, 'update']);
@@ -165,24 +165,27 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}', [TenantProfileController::class, 'show'])->name('tenant-profiles.show');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/inspections/{inspection}', [TenantProfileController::class, 'showInspection'])->name('tenant-profiles.inspection');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/permits/{permit}', [TenantProfileController::class, 'showPermit'])->name('tenant-profiles.permit');
-    Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store']);
-    Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update']); // POST didukung karena upload logo via multipart + _method=put
-    Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy']);
+    Route::middleware('can:tenants.create')->get('/tenants/create', [TenantController::class, 'create'])->name('tenants.create');
+    Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
+    Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update'])->name('tenants.update'); // POST didukung karena upload logo via multipart + _method=put
+    Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy'])->name('tenants.destroy');
 
     Route::middleware('can:units.view')->get('/units', [UnitController::class, 'index'])->name('units.index');
-    Route::middleware('can:units.create')->post('/units', [UnitController::class, 'store']);
-    Route::middleware('can:units.edit')->put('/units/{id}', [UnitController::class, 'update']);
-    Route::middleware('can:units.delete')->delete('/units/{id}', [UnitController::class, 'destroy']);
+    Route::middleware('can:units.create')->get('/units/create', [UnitController::class, 'create'])->name('units.create');
+    Route::middleware('can:units.create')->post('/units', [UnitController::class, 'store'])->name('units.store');
+    Route::middleware('can:units.edit')->put('/units/{id}', [UnitController::class, 'update'])->name('units.update');
+    Route::middleware('can:units.delete')->delete('/units/{id}', [UnitController::class, 'destroy'])->name('units.destroy');
     
-    Route::middleware(['auth', 'can:units.view'])->group(function () {
+    Route::middleware('can:units.view')->group(function () {
         Route::get('/units/{id}/qr', [UnitQrController::class, 'single'])->name('units.qr');
         Route::get('/units-qr/bulk', [UnitQrController::class, 'bulk'])->name('units.qr.bulk');
     });
 
     Route::middleware('can:tenancies.view')->get('/tenancies', [TenancyController::class, 'index'])->name('tenancies.index');
-    Route::middleware('can:tenancies.create')->post('/tenancies', [TenancyController::class, 'store']);
-    Route::middleware('can:tenancies.edit')->post('/tenancies/{id}', [TenancyController::class, 'update']); // pakai POST karena ada file upload + method spoofing
-    Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy']);
+    Route::middleware('can:tenancies.create')->get('/tenancies/create', [TenancyController::class, 'create'])->name('tenancies.create');
+    Route::middleware('can:tenancies.create')->post('/tenancies', [TenancyController::class, 'store'])->name('tenancies.store');
+    Route::middleware('can:tenancies.edit')->post('/tenancies/{id}', [TenancyController::class, 'update'])->name('tenancies.update'); // pakai POST karena ada file upload + method spoofing
+    Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy'])->name('tenancies.destroy');
 
     Route::middleware('can:categories.view')->group(function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
@@ -190,12 +193,12 @@ Route::middleware('auth')->group(function () {
         Route::redirect('/product-categories', '/categories?tab=product', 301);
     });
     Route::middleware('can:categories.manage')->group(function () {
-        Route::post('/tenant-categories', [TenantCategoryController::class, 'store']);
-        Route::put('/tenant-categories/{id}', [TenantCategoryController::class, 'update']);
-        Route::delete('/tenant-categories/{id}', [TenantCategoryController::class, 'destroy']);
-        Route::post('/product-categories', [ProductCategoryController::class, 'store']);
-        Route::put('/product-categories/{id}', [ProductCategoryController::class, 'update']);
-        Route::delete('/product-categories/{id}', [ProductCategoryController::class, 'destroy']);
+        Route::post('/tenant-categories', [TenantCategoryController::class, 'store'])->name('tenant-categories.store');
+        Route::put('/tenant-categories/{id}', [TenantCategoryController::class, 'update'])->name('tenant-categories.update');
+        Route::delete('/tenant-categories/{id}', [TenantCategoryController::class, 'destroy'])->name('tenant-categories.destroy');
+        Route::post('/product-categories', [ProductCategoryController::class, 'store'])->name('product-categories.store');
+        Route::put('/product-categories/{id}', [ProductCategoryController::class, 'update'])->name('product-categories.update');
+        Route::delete('/product-categories/{id}', [ProductCategoryController::class, 'destroy'])->name('product-categories.destroy');
     });
 
     Route::middleware('can:sidak.view')->group(function () {
@@ -224,11 +227,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:permits.create')->group(function () {
         // PENTING: taruh SEBELUM route wildcard {permitRequest}
         Route::get('/permit-requests/create', [PermitRequestController::class, 'create'])->name('permit-requests.create');
-        Route::post('/permit-requests', [PermitRequestController::class, 'store']);
+        Route::post('/permit-requests', [PermitRequestController::class, 'store'])->name('permit-requests.store');
+        Route::post('/permit-requests/{permitRequest}/cancel', [PermitRequestController::class, 'cancel'])->name('permit-requests.cancel');
     });
 
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
-    Route::middleware('can:permits.view')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
+    Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
 
     Route::middleware('can:permits.approve')->group(function () {
         Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
@@ -239,15 +243,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
     });
 
-    Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
-        // akan diisi di bagian berikutnya (User Management + Hak Akses)
-    });
-
-    // Notifikasi — semua yang login boleh
+    // Notifikasi — semua yang login boleh (web + tenant)
     Route::post('/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
-        $request->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
+        $notifiable = $request->user() ?? $request->user('tenant');
+        abort_unless($notifiable, 401);
+        $notifiable->notifications()->where('id', $id)->update(['read_at' => now()]);
         return back();
-    })->name('notifications.read');
+    })->name('notifications.read')->withoutMiddleware('auth');
 });
 
 Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)->name('scan.resolve');
@@ -259,6 +261,7 @@ Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->grou
     Route::get('inspections/{inspection}', [PortalInspectionController::class, 'show'])->name('inspections.show');
     Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
     Route::post('permits/{permit}/revise', [PortalPermitRequestController::class, 'revise'])->name('permits.revise');
+    Route::post('permits/{permit}/cancel', [PortalPermitRequestController::class, 'cancel'])->name('permits.cancel');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });
 

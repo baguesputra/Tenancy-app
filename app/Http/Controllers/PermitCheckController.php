@@ -10,6 +10,7 @@ use App\Services\ApprovalService;
 use App\Services\NotificationService;
 use App\Services\PermitRequestService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class PermitCheckController extends Controller
@@ -82,7 +83,7 @@ class PermitCheckController extends Controller
      */
     public function completeSecurityCheck(PermitRequest $permitRequest, Request $request)
     {
-        $this->authorizeSecurityAction($permitRequest, $request);
+        $securityStep = $this->authorizeSecurityAction($permitRequest, $request);
 
         $allWorkersChecked = $permitRequest->workers()->where('is_present', false)->doesntExist();
         $allGoodsVerified = $permitRequest->goods()->where('is_verified', false)->doesntExist();
@@ -97,6 +98,7 @@ class PermitCheckController extends Controller
             || $permitRequest->goods()->whereNotNull('mismatch_note')->exists();
 
         $securityStep = $permitRequest->approvals()->where('step_key', 'security')->first();
+        abort_if(! $securityStep, 422, 'Tahap Security tidak ditemukan untuk izin ini.');
         $this->approvalService->approve($securityStep, $request->user());
 
         if ($hasMismatch) {
@@ -121,14 +123,13 @@ class PermitCheckController extends Controller
         }
 
         $isExhibition = in_array('pameran', $permitRequest->activity_types ?? []);
-        $firstDeptName = $isExhibition ? 'Marketing' : 'Tenancy';
-        $firstDept = \App\Models\Department::where('name', $firstDeptName)->first();
-        $bsDept = \App\Models\Department::where('name', 'Building Service')->first();
+        $firstDeptId = self::departmentId($isExhibition ? 'Marketing' : 'Tenancy');
+        $bsDeptId = self::departmentId('Building Service');
 
-        foreach ([$firstDept, $bsDept] as $dept) {
-            if ($dept) {
+        foreach ([$firstDeptId, $bsDeptId] as $deptId) {
+            if ($deptId) {
                 $this->notificationService->notifyDepartment(
-                    $dept->id,
+                    $deptId,
                     'Surat Izin Selesai',
                     "{$permitRequest->permit_number} telah selesai diproses Security.",
                     "/permit-requests/{$permitRequest->id}",
@@ -141,12 +142,17 @@ class PermitCheckController extends Controller
             ->with('success', 'Pemeriksaan fisik selesai.' . ($hasMismatch ? ' Ada catatan ketidaksesuaian yang ditandai.' : ''));
     }
 
-    private function authorizeSecurityAction(PermitRequest $permit, Request $request): void
+    private static function departmentId(string $name): ?int
     {
-        $securityDept = Department::where('name', 'Security')->first();
+        return Cache::remember("dept.id.{$name}", 3600, fn () => Department::where('name', $name)->value('id'));
+    }
+
+    private function authorizeSecurityAction(PermitRequest $permit, Request $request)
+    {
+        $securityDeptId = self::departmentId('Security');
 
         abort_unless(
-            $request->user()->department_id === $securityDept?->id,
+            $request->user()->department_id === $securityDeptId,
             403,
             'Hanya staff Security yang bisa melakukan aksi ini.'
         );
@@ -160,5 +166,7 @@ class PermitCheckController extends Controller
             403,
             'Belum waktunya cek fisik — approval sebelumnya belum selesai, atau tahap ini sudah diproses.'
         );
+
+        return $securityStep;
     }
 }

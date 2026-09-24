@@ -12,4 +12,9 @@ class Department extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function approvals()
+    {
+        return $this->hasMany(Approval::class);
+    }
 }
