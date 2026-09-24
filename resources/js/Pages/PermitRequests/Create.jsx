@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { ACTIVITY_TYPES } from '@/Constants/permitActivityTypes';
 import FormSection from '@/Components/Form/FormSection';
@@ -20,13 +20,14 @@ import { formatDateRange, formatTimeRange } from '@/utils/format';
 const STEPS = ['Kategori', 'Jadwal', 'Pekerja & Barang', 'Detail', 'Review'];
 const MARKETING_STEPS = ['Tenant & Stand', 'Jadwal Pameran', 'Barang Pameran', 'Penanggung Jawab', 'Review'];
 
-export default function Create({ tenants, departments, isMarketingLocked = false }) {
+export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'umum', canChooseMode = false }) {
     const [step, setStep] = useState(1);
     const [locationType, setLocationType] = useState(isMarketingLocked ? 'exhibition' : 'area');
     const [clientErrors, setClientErrors] = useState({});
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
+        form_mode: isMarketingLocked ? 'pameran' : formMode,
         tenant_id: '',
         store_name_snapshot: '',
         stand_name: '',
@@ -201,7 +202,28 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         <AppLayout>
             <div className="px-6 sm:px-8 py-6 flex-1">
                 <h1 className="text-xl font-semibold text-gray-900 mb-1">{isMarketingLocked ? 'Ajukan Izin Pameran / Open Counter' : 'Ajukan Surat Izin'}</h1>
-                <p className="text-sm text-gray-500 mb-6">{isMarketingLocked ? 'Form khusus Marketing — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security' : 'Ikuti langkah di bawah untuk mengajukan izin baru'}</p>
+                <p className="text-sm text-gray-500 mb-4">{isMarketingLocked ? (canChooseMode ? 'Mode pameran — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security' : 'Form khusus Marketing — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security') : 'Ikuti langkah di bawah untuk mengajukan izin baru'}</p>
+                {canChooseMode && (
+                    <div className="flex gap-2 mb-6">
+                        {[
+                            { value: 'umum', label: 'Umum (Tenant/Vendor/Area)' },
+                            { value: 'pameran', label: 'Pameran / Open Counter' },
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => { if ((opt.value === 'pameran') !== isMarketingLocked) router.get('/permit-requests/create', { mode: opt.value }); }}
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    (opt.value === 'pameran') === isMarketingLocked
+                                        ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36] shadow-sm'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <form onSubmit={submit}>
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">

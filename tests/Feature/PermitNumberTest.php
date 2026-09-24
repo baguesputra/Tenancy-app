@@ -254,6 +254,55 @@ class PermitNumberTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_staff_can_choose_exhibition_mode(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $staff = $this->staff();
+        $oc = $this->openCounterTenant();
+
+        $res = $this->actingAs($staff)->get('/permit-requests/create?mode=pameran')->assertOk();
+        $props = $res->viewData('page')['props'];
+        $this->assertTrue($props['isMarketingLocked']);
+        $this->assertTrue($props['canChooseMode']);
+        $this->assertCount(1, $props['tenants']);
+
+        $res = $this->actingAs($staff)->post('/permit-requests', [
+            'form_mode' => 'pameran',
+            'tenant_id' => $oc->id,
+            'request_date' => '2026-09-22',
+            'stand_name' => 'Stand Admin',
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-24',
+            'pic_name' => 'Admin',
+            'pic_phone' => '0812',
+        ]);
+        $res->assertRedirect();
+        $permit = PermitRequest::latest('id')->firstOrFail();
+        $this->assertSame(['pameran'], $permit->activity_types);
+        $this->assertSame(
+            ['marketing', 'finance', 'bs', 'security'],
+            $permit->approvals()->orderBy('order')->pluck('step_key')->all()
+        );
+        Carbon::setTestNow();
+    }
+
+    public function test_staff_exhibition_rejects_non_open_counter(): void
+    {
+        $staff = $this->staff();
+        $regular = $this->regularTenant();
+
+        $this->actingAs($staff)->post('/permit-requests', [
+            'form_mode' => 'pameran',
+            'tenant_id' => $regular->id,
+            'request_date' => '2026-09-22',
+            'stand_name' => 'Stand X',
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-24',
+            'pic_name' => 'Admin',
+            'pic_phone' => '0812',
+        ])->assertForbidden();
+    }
+
     public function test_revise_resets_bs_and_logs_changes(): void
     {
         Carbon::setTestNow('2026-09-22');

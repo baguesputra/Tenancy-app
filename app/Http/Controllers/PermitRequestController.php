@@ -129,30 +129,36 @@ class PermitRequestController extends Controller
 
     public function create(Request $request)
     {
-        $isMarketing = $request->user()->hasRole('marketing_staff');
+        // ponytail: marketing paksa pameran; non-marketing bebas ?mode=umum|pameran
+        $isRoleMarketing = $request->user()->hasRole('marketing_staff');
+        $mode = $isRoleMarketing ? 'pameran' : ($request->query('mode') === 'pameran' ? 'pameran' : 'umum');
+        $isExhibition = $mode === 'pameran';
 
         $viewable = $this->tenantScope->viewableCategoryIds($request->user());
 
         $tenants = Tenant::where('is_active', true)
-            ->when($isMarketing, fn ($q) => $q->whereHas('tenantCategory', fn ($c) => $c->where('name', 'Open Counter')))
-            ->when(! $isMarketing && $viewable !== null, fn ($q) => $q->whereIn('tenant_category_id', $viewable))
+            ->when($isExhibition, fn ($q) => $q->whereHas('tenantCategory', fn ($c) => $c->where('name', 'Open Counter')))
+            ->when(! $isExhibition && $viewable !== null, fn ($q) => $q->whereIn('tenant_category_id', $viewable))
             ->orderBy('name')
             ->get(['id', 'name']);
 
         return Inertia::render('PermitRequests/Create', [
             'tenants' => $tenants,
             'departments' => Department::orderBy('name')->get(['id', 'name']),
-            'isMarketingLocked' => $isMarketing,
+            'isMarketingLocked' => $isExhibition,
+            'formMode' => $mode,
+            'canChooseMode' => ! $isRoleMarketing,
         ]);
     }
 
     public function store(StorePermitRequestRequest $request)
     {
-        $isMarketing = $request->user()->hasRole('marketing_staff');
+        $isRoleMarketing = $request->user()->hasRole('marketing_staff');
+        $isExhibition = $isRoleMarketing || $request->input('form_mode') === 'pameran';
 
-        if ($isMarketing) {
+        if ($isExhibition) {
             $tenant = Tenant::with('tenantCategory')->find($request->tenant_id);
-            abort_unless($tenant && $tenant->tenantCategory?->name === 'Open Counter', 403, 'Marketing hanya bisa mengajukan untuk tenant Open Counter.');
+            abort_unless($tenant && $tenant->tenantCategory?->name === 'Open Counter', 403, 'Mode pameran hanya bisa mengajukan untuk tenant Open Counter.');
         } else {
             $request->merge(['tenant_id' => $request->tenant_id ?: null]);
             if ($request->tenant_id) {
@@ -163,7 +169,7 @@ class PermitRequestController extends Controller
         }
 
         $validated = $request->validated();
-        if ($isMarketing) {
+        if ($isExhibition) {
             $validated['activity_types'] = ['pameran'];
         }
 
