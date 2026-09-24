@@ -11,9 +11,9 @@ use App\Models\InspectionSession;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
 
 class InspectionService
 {
@@ -37,8 +37,7 @@ class InspectionService
             }
         }
 
-        $template = ChecklistTemplate::with('sections.items')->whereHas('productCategories', fn ($q) =>
-            $q->where('product_categories.id', $tenant->product_category_id)
+        $template = ChecklistTemplate::with('sections.items')->whereHas('productCategories', fn ($q) => $q->where('product_categories.id', $tenant->product_category_id)
         )->where('is_active', true)->first();
 
         if (! $template) {
@@ -71,17 +70,18 @@ class InspectionService
     ): InspectionAnswer {
         $this->ensureSessionIsEditable($inspection->session);
 
-        $answer = InspectionAnswer::updateOrCreate(
-            [
-                'inspection_id' => $inspection->id,
-                'checklist_item_id' => $item->id,
-            ],
-            [
-                'id' => $answerUuid ?? (string) Str::uuid(),
-                'value' => $value,
-                'note' => $note,
-            ]
-        );
+        // ponytail: id jawaban stabil — UUID kiriman hanya dipakai saat create,
+        // update tak boleh sentuh PK karena foto FK ke id ini (1451)
+        $answer = InspectionAnswer::firstOrNew([
+            'inspection_id' => $inspection->id,
+            'checklist_item_id' => $item->id,
+        ]);
+        if (! $answer->exists) {
+            $answer->id = $answerUuid ?? (string) Str::uuid();
+        }
+        $answer->value = $value;
+        $answer->note = $note;
+        $answer->save();
 
         // Kalau jawaban sekarang positif (atau bukan lagi option_negative),
         // foto lama yang menempel jadi tidak relevan — hapus otomatis

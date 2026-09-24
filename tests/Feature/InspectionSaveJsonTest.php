@@ -13,10 +13,14 @@ use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\User;
 use App\Services\BreadcrumbService;
+use App\Services\InspectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class InspectionSaveJsonTest extends TestCase
@@ -26,7 +30,7 @@ class InspectionSaveJsonTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function seedInspection(): array
@@ -96,15 +100,38 @@ class InspectionSaveJsonTest extends TestCase
         ]);
     }
 
+    public function test_resave_answer_keeps_id_and_photos(): void
+    {
+        Storage::fake('public');
+        [$staff, $inspection, $item] = $this->seedInspection();
+        $service = app(InspectionService::class);
+
+        $first = $service->saveAnswer($inspection, $item, 'Tidak', null, UploadedFile::fake()->image('a.jpg'));
+        $this->assertCount(1, $first->photos);
+
+        $second = $service->saveAnswer($inspection, $item, 'Tidak');
+        $this->assertSame($first->id, $second->id);
+        $this->assertCount(1, $second->fresh()->photos);
+    }
+
     public function test_inspection_breadcrumb_has_session_parent(): void
     {
         [$staff, $inspection, $item, $session, $tenant] = $this->seedInspection();
 
         $request = Request::create("/inspections/{$inspection->id}", 'GET');
-        $request->setRouteResolver(fn () => new class($inspection) {
+        $request->setRouteResolver(fn () => new class($inspection)
+        {
             public function __construct(private $inspection) {}
-            public function getName() { return 'inspections.show'; }
-            public function parameter($key) { return $key === 'inspection' ? $this->inspection : null; }
+
+            public function getName()
+            {
+                return 'inspections.show';
+            }
+
+            public function parameter($key)
+            {
+                return $key === 'inspection' ? $this->inspection : null;
+            }
         });
 
         $crumbs = BreadcrumbService::forRequest($request);
