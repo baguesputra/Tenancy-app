@@ -7,11 +7,9 @@ import { formatDateID } from '@/utils/format';
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
 const statusLabel = { pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
-const pipeline = ['Tenancy', 'Building Service', 'Security'];
-
 export default function Dashboard({ store, stats, activePermit, recent, sidak_active, sidak_recent = [] }) {
     return (
-        <PortalLayout>
+        <PortalLayout hideBreadcrumbs>
             <section aria-label="Identitas toko" className="bg-[#0F1E36] text-white rounded-2xl p-5 sm:p-6 relative overflow-hidden animate-stagger-in">
                 <div className="absolute -right-10 -top-14 w-48 h-48 rounded-full bg-white/[0.06]" aria-hidden="true" />
                 <div className="absolute right-16 -bottom-20 w-56 h-56 rounded-full bg-white/[0.04]" aria-hidden="true" />
@@ -43,16 +41,28 @@ export default function Dashboard({ store, stats, activePermit, recent, sidak_ac
                             Kontrak sampai {new Date(store.tenancy_end).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                     )}
+                    {!store?.is_active && (
+                        <p className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-red-200 bg-red-500/20 border border-red-300/30 rounded-lg px-3 py-2" role="alert">
+                            Kontrak tidak aktif — hubungi kantor manajemen untuk perpanjangan.
+                        </p>
+                    )}
                 </div>
             </section>
 
-            <dl className="mt-4 grid grid-cols-3 gap-3 animate-stagger-in" style={{ animationDelay: '60ms' }}>
-                <Stat label="Antre" value={stats?.pending ?? 0} tone="text-amber-700 bg-amber-50 border-amber-100" />
-                <Stat label="Selesai" value={stats?.completed ?? 0} tone="text-emerald-700 bg-emerald-50 border-emerald-100" />
-                <Stat label="Ditolak" value={stats?.rejected ?? 0} tone="text-red-700 bg-red-50 border-red-100" />
+            <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 animate-stagger-in" style={{ animationDelay: '60ms' }}>
+                <Stat label="Antre" value={stats?.pending ?? 0} tone="text-amber-700 bg-amber-50 border-amber-100" href="/portal/permits?status=pending" />
+                <Stat label="Selesai" value={stats?.completed ?? 0} tone="text-emerald-700 bg-emerald-50 border-emerald-100" href="/portal/permits?status=completed" />
+                <Stat label="Ditolak" value={stats?.rejected ?? 0} tone="text-red-700 bg-red-50 border-red-100" href="/portal/permits?status=rejected" />
+                <Stat label="Total" value={stats?.total ?? 0} tone="text-gray-700 bg-white border-[#E2E5EA]" href="/portal/permits" />
             </dl>
 
             <section aria-label="Izin berjalan" className="mt-4 animate-stagger-in" style={{ animationDelay: '120ms' }}>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                    <h2 className="text-sm font-semibold text-gray-900">Izin Berjalan</h2>
+                    <Link href="/portal/permits/create" className="shrink-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
+                        + Ajukan
+                    </Link>
+                </div>
                 {activePermit ? (
                     <Link
                         href={`/portal/permits/${activePermit.id}`}
@@ -72,9 +82,9 @@ export default function Dashboard({ store, stats, activePermit, recent, sidak_ac
                             <div className="mt-4">
                                 <StepProgressMini steps={activePermit.step_progress} />
                                 <ol className="mt-2 flex flex-wrap gap-1.5">
-                                    {pipeline.map((name) => (
-                                        <li key={name} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-100">
-                                            {name}
+                                    {activePermit.step_progress.map((step) => (
+                                        <li key={step.label} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-100">
+                                            {step.label}
                                         </li>
                                     ))}
                                 </ol>
@@ -82,23 +92,22 @@ export default function Dashboard({ store, stats, activePermit, recent, sidak_ac
                         )}
                     </Link>
                 ) : (
-                    <Link
-                        href="/portal/permits/create"
-                        className="flex items-center justify-between gap-4 bg-white rounded-2xl border border-dashed border-gray-300 p-5 hover:border-[#0F1E36]/40 hover:bg-gray-50/60 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
-                    >
-                        <span>
-                            <span className="block text-sm font-semibold text-gray-900">Belum ada izin antre</span>
-                            <span className="block text-xs text-gray-500 mt-0.5">Ajukan izin baru, selesai dalam 3 tahap</span>
-                        </span>
-                        <span className="shrink-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg">+ Ajukan</span>
-                    </Link>
+                    <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-5 text-center">
+                        <p className="text-sm font-semibold text-gray-900">Belum ada izin antre</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Ajukan izin baru lewat tombol + Ajukan di atas</p>
+                    </div>
                 )}
             </section>
 
             {sidak_active && (
-                <section aria-label="Status sidak" className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-5 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }} role="status">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" aria-hidden="true" />
-                    <p className="text-sm"><span className="font-semibold">Sedang dilaksanakan penyidakan</span> di toko Anda. Hasil muncul setelah sesi selesai.</p>
+                <section aria-label="Status sidak" className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-5 animate-stagger-in" style={{ animationDelay: '150ms' }} role="status">
+                    <div className="flex items-center gap-3">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" aria-hidden="true" />
+                        <p className="text-sm"><span className="font-semibold">Sedang dilaksanakan penyidakan</span> di toko Anda. Hasil muncul setelah sesi selesai.</p>
+                    </div>
+                    <Link href="/portal/inspections" className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium text-amber-900 bg-white border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
+                        Lihat Sidak Berjalan
+                    </Link>
                 </section>
             )}
 
@@ -168,11 +177,11 @@ export default function Dashboard({ store, stats, activePermit, recent, sidak_ac
     );
 }
 
-function Stat({ label, value, tone }) {
+function Stat({ label, value, tone, href }) {
     return (
-        <div className={`rounded-2xl border px-4 py-3.5 ${tone}`}>
+        <Link href={href} className={`rounded-2xl border px-4 py-3.5 transition-all hover:shadow-sm hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${tone}`} aria-label={`${label}: ${value} pengajuan. Lihat daftar.`}>
             <dt className="text-xs font-medium opacity-80">{label}</dt>
             <dd className="mt-0.5 text-2xl font-bold font-mono tabular-nums">{value}</dd>
-        </div>
+        </Link>
     );
 }

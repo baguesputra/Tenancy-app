@@ -2,7 +2,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
 
-export default function PortalLayout({ children }) {
+export default function PortalLayout({ children, hideBreadcrumbs = false }) {
     const { auth } = usePage().props;
     const currentUrl = usePage().url;
     const [profileOpen, setProfileOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function PortalLayout({ children }) {
 
             <FlashBanner />
             <main className="mx-auto w-full max-w-5xl px-4 sm:px-6 pt-5 sm:pt-7 pb-28 sm:pb-12 flex-1 flex flex-col">
-                <Breadcrumbs className="mb-4" />
+                {!hideBreadcrumbs && <Breadcrumbs className="mb-4" />}
                 {children}
             </main>
 
