@@ -28,6 +28,12 @@ use App\Http\Controllers\Settings\InspectionTemplateController;
 use App\Http\Controllers\UnitQrController;
 use App\Http\Controllers\ScanController;
 
+Route::get('/', function () {
+    if (auth()->check()) return redirect()->route('dashboard');
+    if (auth('tenant')->check()) return redirect()->route('tenant-portal.dashboard');
+    return redirect()->route('login');
+})->name('home');
+
 Route::middleware('can:settings.access')->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users', [UserManagementController::class, 'store']);
