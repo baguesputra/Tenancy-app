@@ -93,7 +93,8 @@ class DashboardController extends Controller
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
-        $recentPermits = PermitRequest::when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+        $recentPermits = PermitRequest::select(['id', 'permit_number', 'store_name_snapshot', 'status', 'created_at'])
+            ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
             ->latest()->take(5)->get()
             ->map(fn ($p) => [
                 'type' => 'permit',
@@ -103,7 +104,7 @@ class DashboardController extends Controller
                 'url' => "/permit-requests/{$p->id}",
             ]);
 
-        $recentInspections = Inspection::with('tenant:id,name')
+        $recentInspections = Inspection::select(['id', 'tenant_id', 'status', 'created_at'])->with('tenant:id,name')
             ->whereHas('session', fn ($q) => $branchScoped ? $q->where('branch_id', $user->branch_id) : $q)
             ->latest()->take(5)->get()
             ->map(fn ($i) => [
@@ -114,7 +115,7 @@ class DashboardController extends Controller
                 'url' => "/inspections/{$i->id}",
             ]);
 
-        $recentTenancies = Tenancy::with('tenant:id,name')
+        $recentTenancies = Tenancy::select(['id', 'tenant_id', 'status', 'created_at'])->with('tenant:id,name')
             ->whereHas('unit', fn ($q) => $branchScoped ? $q->where('branch_id', $user->branch_id) : $q)
             ->latest()->take(5)->get()
             ->map(fn ($t) => [
@@ -163,6 +164,7 @@ class DashboardController extends Controller
         $warnTo = now()->addDays(30)->toDateString();
 
         $permitQuery = PermitRequest::query()
+            ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id'])
             ->where(fn ($q) => $q
                 ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
                 ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
@@ -183,7 +185,7 @@ class DashboardController extends Controller
         ]);
 
         if (! $isMarketing) {
-            $tenancies = Tenancy::with(['tenant:id,name'])
+            $tenancies = Tenancy::select(['id', 'tenant_id', 'start_date', 'end_date', 'status'])->with(['tenant:id,name'])
                 ->where(fn ($q) => $q
                     ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
                     ->orWhereBetween('end_date', [$start->toDateString(), $end->toDateString()])
@@ -216,7 +218,7 @@ class DashboardController extends Controller
             }
 
             if ($user->can('sidak.view')) {
-                $sessions = InspectionSession::with('user')
+                $sessions = InspectionSession::select(['id', 'user_id', 'branch_id', 'status', 'started_at'])->with('user:id,name')
                     ->whereDate('started_at', '>=', $start->toDateString())
                     ->whereDate('started_at', '<=', $end->toDateString())
                     ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
