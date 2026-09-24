@@ -70,16 +70,19 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
 
         Route::get('/dashboard', function (Illuminate\Http\Request $request) {
             $tenantUser = $request->user('tenant');
-            $tenant = \App\Models\Tenant::with(['activeTenancy.unit', 'branch'])->findOrFail($tenantUser->tenant_id);
+            $tenant = \App\Models\Tenant::select(['id', 'name', 'logo_path', 'branch_id'])
+                ->with(['activeTenancy:id,tenant_id,unit_id,end_date', 'activeTenancy.unit:id,unit_code', 'branch:id,name'])
+                ->findOrFail($tenantUser->tenant_id);
 
-            $base = \App\Models\PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
+            $base = \App\Models\PermitRequest::select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])
+                ->with(['approvals' => fn ($q) => $q->select(['id', 'approvable_id', 'status', 'label', 'order'])->orderBy('order')])
                 ->where('tenant_id', $tenant->id);
 
-            $stats = [
+            $stats = \Illuminate\Support\Facades\Cache::remember('portal.stats.'.$tenant->id, 60, fn () => [
                 'pending' => (clone $base)->where('status', 'pending')->count(),
                 'completed' => (clone $base)->where('status', 'completed')->count(),
                 'rejected' => (clone $base)->where('status', 'rejected')->count(),
-            ];
+            ]);
             $stats['total'] = array_sum($stats);
 
             $mapPermit = function ($permit) {
@@ -102,7 +105,8 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
             $recent = (clone $base)->latest()->take(5)->get()->map($mapPermit)->values();
             $tenancy = $tenant->activeTenancy;
 
-            $sidakBase = \App\Models\Inspection::with('session')->where('tenant_id', $tenant->id);
+            $sidakBase = \App\Models\Inspection::select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])
+                ->with('session:id,status,started_at')->where('tenant_id', $tenant->id);
             $sidakActive = (clone $sidakBase)->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))->exists();
             $sidakRecent = (clone $sidakBase)
                 ->where(function ($q) {
