@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { router, usePage } from '@inertiajs/react';
-import Button from '@/Components/Form/Button';
-import TextInput from '@/Components/Form/TextInput';
 
 function extractToken(raw) {
     const text = (raw ?? '').trim();
@@ -20,13 +18,12 @@ function extractToken(raw) {
     return text;
 }
 
-export default function QrScanModal({ open, onClose, sessionId = null, title = 'Scan QR', description = 'Arahkan kamera ke QR — otomatis buka halaman terkait', submitLabel = 'Buka dari Token' }) {
+export default function QrScanModal({ open, onClose, sessionId = null, title = 'Scan QR', description = 'Arahkan kamera ke QR — otomatis buka halaman terkait' }) {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const timerRef = useRef(null);
     const navigatedRef = useRef(false);
     const [error, setError] = useState('');
-    const [manualToken, setManualToken] = useState('');
     const [scanning, setScanning] = useState(false);
     const [detectorMissing, setDetectorMissing] = useState(false);
     const { errors } = usePage().props;
@@ -62,18 +59,17 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
         if (!open) return;
         navigatedRef.current = false;
         setError('');
-        setManualToken('');
         setDetectorMissing(false);
 
         const insecure = typeof window !== 'undefined'
             && !window.isSecureContext
             && !['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
         if (insecure) {
-            setError('Kamera butuh HTTPS. Di jaringan ini pakai input token manual di bawah.');
+            setError('Kamera butuh HTTPS atau localhost. Buka aplikasi lewat koneksi aman untuk scan.');
             return undefined;
         }
         if (!navigator.mediaDevices?.getUserMedia) {
-            setError('Browser ini tidak mendukung kamera. Pakai input token manual di bawah.');
+            setError('Perangkat ini tidak mendukung kamera. Gunakan perangkat berkamera.');
             return undefined;
         }
 
@@ -114,8 +110,8 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
             } catch (err) {
                 const name = err?.name ?? '';
                 if (name === 'NotAllowedError') setError('Izin kamera ditolak. Klik ikon gembok di address bar lalu Allow kamera.');
-                else if (name === 'NotFoundError' || name === 'OverconstrainedError') setError('Tidak ada kamera terdeteksi. Pakai input token manual di bawah.');
-                else if (name === 'SecurityError') setError('Kamera butuh HTTPS atau localhost. Pakai input token manual di bawah.');
+                else if (name === 'NotFoundError' || name === 'OverconstrainedError') setError('Tidak ada kamera terdeteksi. Gunakan perangkat berkamera.');
+                else if (name === 'SecurityError') setError('Kamera butuh HTTPS atau localhost. Buka aplikasi lewat koneksi aman.');
                 else setError('Kamera tidak dapat diakses. Pastikan tidak dipakai aplikasi lain.');
             }
         };
@@ -169,29 +165,9 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
                     )}
                     {detectorMissing && !error && (
                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            Browser ini tidak bisa baca QR otomatis. Pakai input token manual di bawah.
+                            Browser ini tidak bisa baca QR otomatis. Buka di Chrome/Edge terbaru atau gunakan perangkat lain.
                         </p>
                     )}
-
-                    <div>
-                        <label htmlFor="qr-manual-token" className="block text-xs font-medium text-gray-600 mb-1.5">
-                            Token QR manual (fallback desktop / HTTP)
-                        </label>
-                        <TextInput
-                            id="qr-manual-token"
-                            placeholder="cth: 550e8400-e29b-41d4-a716-…"
-                            value={manualToken}
-                            onChange={(e) => setManualToken(e.target.value)}
-                        />
-                        <Button
-                            variant="primary"
-                            className="w-full justify-center mt-2 !py-3 min-h-[48px]"
-                            disabled={!manualToken.trim()}
-                            onClick={() => goToToken(manualToken)}
-                        >
-                            {submitLabel}
-                        </Button>
-                    </div>
                 </div>
             </div>
         </div>,

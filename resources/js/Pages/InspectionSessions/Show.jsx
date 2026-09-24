@@ -236,7 +236,7 @@ export default function Show({ session, availableTenants }) {
                 )}
             </div>
 
-            <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} sessionId={session.id} title="Scan QR Tenant" description="Arahkan kamera ke QR unit — otomatis lompat ke sidak" submitLabel="Buka Sidak dari Token" />
+            <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} sessionId={session.id} title="Scan QR Tenant" description="Arahkan kamera ke QR unit — otomatis lompat ke sidak" />
 
             <ConfirmModal
                 open={confirmComplete}
