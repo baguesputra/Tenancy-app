@@ -298,7 +298,6 @@ Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->grou
     Route::get('inspections', [PortalInspectionController::class, 'index'])->name('inspections.index');
     Route::get('inspections/{inspection}', [PortalInspectionController::class, 'show'])->name('inspections.show');
     Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
-    Route::post('permits/{permit}/revise', [PortalPermitRequestController::class, 'revise'])->name('permits.revise');
     Route::post('permits/{permit}/cancel', [PortalPermitRequestController::class, 'cancel'])->name('permits.cancel');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });

@@ -5,16 +5,15 @@ import FormSection from '@/Components/Form/FormSection';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import LoadingCardModal from '@/Components/Portal/LoadingCardModal';
-import ReviseModal, { RevisionTimeline } from '@/Components/Permits/ReviseModal';
+import { RevisionTimeline } from '@/Components/Permits/ReviseModal';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 
 const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
 const statusLabel = { pending: 'Sedang Diproses', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 
-export default function Show({ permit, qr_image, show_qr, expires_label, is_expired, is_goods_permit, can_revise }) {
+export default function Show({ permit, qr_image, show_qr, expires_label, is_expired, is_goods_permit }) {
     const rejectedStep = permit.approvals.find((a) => a.status === 'rejected');
     const [cardOpen, setCardOpen] = useState(false);
-    const [reviseOpen, setReviseOpen] = useState(false);
 
     const cancelPermit = () => {
         if (!confirm('Batalkan surat izin ini?')) return;
@@ -103,11 +102,6 @@ export default function Show({ permit, qr_image, show_qr, expires_label, is_expi
                 </FormSection>
 
                 <div className="space-y-4 lg:sticky lg:top-24">
-                    {can_revise && (
-                        <Button onClick={() => setReviseOpen(true)} className="w-full justify-center !py-3 min-h-[48px]">
-                            Ajukan Revisi
-                        </Button>
-                    )}
                     {permit.status === 'pending' && (
                         <Button variant="danger" onClick={cancelPermit} className="w-full justify-center !py-3 min-h-[48px]">
                             Batalkan Pengajuan
@@ -164,12 +158,6 @@ export default function Show({ permit, qr_image, show_qr, expires_label, is_expi
                         qrImage={qr_image}
                         expiresLabel={expires_label}
                         isGoods={is_goods_permit}
-                    />
-                    <ReviseModal
-                        open={reviseOpen}
-                        onClose={() => setReviseOpen(false)}
-                        permit={permit}
-                        postUrl={`/portal/permits/${permit.id}/revise`}
                     />
 
                     <FormSection title="Hasil Pemeriksaan Fisik">

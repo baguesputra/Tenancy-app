@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\TenantPortal;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RevisePermitRequestRequest;
 use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
 use App\Models\PermitRequest;
@@ -94,21 +93,7 @@ class PermitRequestController extends Controller
             'expires_label' => $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA',
             'is_expired' => $permit->is_expired,
             'is_goods_permit' => $permit->is_goods_permit,
-            'can_revise' => $permit->status === 'pending',
         ]);
-    }
-
-    public function revise(PermitRequest $permit, RevisePermitRequestRequest $request)
-    {
-        $tenantUser = $request->user('tenant');
-        abort_unless($permit->tenant_id === $tenantUser->tenant_id, 403);
-        abort_unless($permit->status === 'pending', 422, 'Hanya izin pending yang bisa direvisi.');
-
-        $validated = $request->validated();
-
-        $this->service->revise($permit, $validated, $tenantUser);
-
-        return back()->with('success', 'Revisi diajukan. Menunggu approval ulang BS.');
     }
 
     public function cancel(PermitRequest $permit, Request $request)
