@@ -69,6 +69,7 @@ export default function Index({ templates = [], productCategories = [] }) {
                     <p className="text-sm text-gray-500 mt-0.5">Atur nama template dan kategori produk yang memakai tiap template</p>
                 </div>
 
+                <div className="hidden sm:block">
                 <DataTable columns={columns}>
                     {templates.map((t) => (
                         <tr
@@ -103,8 +104,39 @@ export default function Index({ templates = [], productCategories = [] }) {
                                 </span>
                             </td>
                         </tr>
-                    ))}
+                    )                    )}
                 </DataTable>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {templates.map((t) => (
+                        <div
+                            key={t.id}
+                            onClick={() => openEdit(t)}
+                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                        >
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5 tabular-nums">{t.sections_count} section · {t.items_count} item</p>
+                                </div>
+                                <Badge color={t.is_active ? 'green' : 'gray'} size="sm">{t.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                            </div>
+                            {(t.product_categories ?? []).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {(t.product_categories ?? []).map((c) => (
+                                        <Badge key={c.id} color="blue" size="sm">{c.name}</Badge>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    {templates.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm text-gray-400">Belum ada template.</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <SlideOver

@@ -123,7 +123,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
                         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Manajemen User</h1>
@@ -132,7 +132,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                     <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>Tambah User</Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                     {stats.map((s) => (
                         <div key={s.label} className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3">
                             <span className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -186,6 +186,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                     </div>
                 </div>
 
+                <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={users} links={users.links} />}>
                     {users.data.map((user) => (
                         <tr
@@ -235,6 +236,52 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         </tr>
                     )}
                 </DataTable>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {users.data.map((user) => (
+                        <div
+                            key={user.id}
+                            onClick={() => openEdit(user)}
+                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                {user.photo_url ? (
+                                    <img src={user.photo_url} alt={user.name} className="w-10 h-10 rounded-full object-cover shrink-0" loading="lazy" />
+                                ) : (
+                                    <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(user.name)}
+                                    </span>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">
+                                        {user.name}
+                                        {isSelf(user) && <span className="ml-2 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">Anda</span>}
+                                    </p>
+                                    <p className="text-xs text-gray-400 truncate font-mono">{user.employee_number}</p>
+                                </div>
+                                <Badge color={roleColor(user.roles[0]?.name)} size="sm">{user.roles[0]?.name ?? '—'}</Badge>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 truncate">
+                                {[user.department?.name, user.division?.name, user.position?.name].filter(Boolean).join(' · ') || '—'} · {user.branch?.name ?? '—'}
+                            </p>
+                        </div>
+                    ))}
+                    {users.data.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm font-medium text-gray-700">Belum ada user ditemukan.</p>
+                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah User untuk data pertama.'}</p>
+                            {hasFilter ? (
+                                <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
+                            ) : (
+                                <Button onClick={openCreate} className="justify-center !py-3 min-h-[48px]">Tambah User</Button>
+                            )}
+                        </div>
+                    )}
+                    <div className="bg-white rounded-xl border border-[#E2E5EA]">
+                        <Pagination meta={users} links={users.links} />
+                    </div>
+                </div>
 
                 <SlideOver
                     open={!!panel}

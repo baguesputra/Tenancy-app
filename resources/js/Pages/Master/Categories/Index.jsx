@@ -181,6 +181,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             {filtered.length} dari {categories.length} kategori · klik baris untuk edit
                         </p>
                     )}
+                <div className="hidden sm:block">
                     <DataTable columns={[
                         { key: 'name', label: 'Nama' },
                         { key: 'count', label: 'Pemakaian' },
@@ -265,6 +266,61 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             </tr>
                         )}
                     </DataTable>
+                    </div>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {filtered.map((cat) => {
+                        const used = cat.tenants_count ?? 0;
+                        const templates = cat.checklist_templates_count ?? 0;
+                        return (
+                            <div
+                                key={cat.id}
+                                onClick={() => openEdit(cat)}
+                                className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">{cat.name}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{cat.description || 'Tanpa keterangan'}</p>
+                                    </div>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); askDelete(cat); }}
+                                        disabled={used > 0}
+                                        aria-label={`Hapus ${cat.name}`}
+                                        className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:text-gray-300 shrink-0"
+                                    >
+                                        <IconTrash className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-2">
+                                    <Badge color={used > 0 ? 'blue' : 'gray'} size="sm"><span className="tabular-nums">{used} tenant</span></Badge>
+                                    {tab === 'product' && templates > 0 && (
+                                        <Badge color="blue" size="sm"><span className="tabular-nums">{templates} template</span></Badge>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {filtered.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm font-medium text-gray-700">
+                                {search ? 'Tidak ada kategori yang cocok.' : 'Belum ada kategori di tab ini.'}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1 mb-4">
+                                {search ? 'Coba kata kunci lain atau tambah baru di atas.' : `Klik Tambah ${tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'} untuk data pertama.`}
+                            </p>
+                            {search ? (
+                                <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
+                                    Reset pencarian
+                                </Button>
+                            ) : (
+                                <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
+                                    Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 

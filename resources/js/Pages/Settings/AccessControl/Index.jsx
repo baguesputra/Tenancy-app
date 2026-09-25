@@ -156,13 +156,13 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="mb-5">
                     <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hak Akses</h1>
                     <p className="text-sm text-gray-500 mt-0.5">Atur permission per role · Super Admin selalu akses penuh · klik baris untuk kelola</p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                     {stats.map((s) => (
                         <div key={s.label} className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3">
                             <span className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -189,6 +189,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                     </div>
                 </div>
 
+                <div className="hidden sm:block">
                 <DataTable columns={columns}>
                     {filteredRoles.map((role) => {
                         const modules = roleModules(role);
@@ -244,6 +245,36 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                         </tr>
                     )}
                 </DataTable>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {filteredRoles.map((role) => (
+                        <div
+                            key={role.id}
+                            onClick={() => openPanel(role)}
+                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                    {initials(role.name)}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">
+                                        {role.name}
+                                        {authRoles.includes(role.name) && <span className="ml-2 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">Role Anda</span>}
+                                    </p>
+                                    <p className="text-xs text-gray-400 truncate">{role.users_count ?? 0} user · {role.permissions.length} akses</p>
+                                </div>
+                                <Badge color={role.permissions.length > 0 ? 'blue' : 'gray'} size="sm">{role.permissions.length}</Badge>
+                            </div>
+                        </div>
+                    ))}
+                    {filteredRoles.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm text-gray-400">Tidak ada role yang cocok.</p>
+                        </div>
+                    )}
+                </div>
 
                 <SlideOver
                     open={!!panelRole}

@@ -133,7 +133,7 @@ export default function Index({ tenants, filters, withoutAccountCount, withAccou
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
                         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Akun Portal Tenant</h1>
@@ -146,7 +146,7 @@ export default function Index({ tenants, filters, withoutAccountCount, withAccou
                     )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                     {stats.map((s) => (
                         <button
                             key={s.label}
@@ -234,6 +234,7 @@ export default function Index({ tenants, filters, withoutAccountCount, withAccou
                     </div>
                 </div>
 
+                <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={tenants} links={tenants.links} />}>
                     {tenants.data.map((tenant) => (
                         <tr
@@ -281,6 +282,44 @@ export default function Index({ tenants, filters, withoutAccountCount, withAccou
                         </tr>
                     )}
                 </DataTable>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {tenants.data.map((tenant) => (
+                        <div
+                            key={tenant.id}
+                            onClick={() => openPanel(tenant)}
+                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                {tenant.logo_url ? (
+                                    <img src={tenant.logo_url} alt={`Foto ${tenant.name}`} className="w-10 h-10 rounded-full object-cover bg-gray-50 border border-[#E2E5EA] shrink-0" loading="lazy" />
+                                ) : (
+                                    <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(tenant.name)}
+                                    </span>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{tenant.name}</p>
+                                    <p className="text-xs text-gray-400 truncate font-mono">{tenant.tenant_user?.username ?? 'Belum ada akun — klik untuk buat'}</p>
+                                </div>
+                                {tenant.tenant_user ? (
+                                    <Badge color={tenant.tenant_user.is_active ? 'green' : 'gray'} size="sm">{tenant.tenant_user.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                                ) : (
+                                    <Badge color="yellow" size="sm">Belum Ada</Badge>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {tenants.data.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm text-gray-400">Tidak ada tenant yang cocok.</p>
+                        </div>
+                    )}
+                    <div className="bg-white rounded-xl border border-[#E2E5EA]">
+                        <Pagination meta={tenants} links={tenants.links} />
+                    </div>
+                </div>
 
                 <SlideOver
                     open={!!panel}

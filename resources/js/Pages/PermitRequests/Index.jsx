@@ -82,7 +82,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1 max-w-7xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
                         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">{locked ? 'Pengajuan Pameran' : 'Surat Izin'}</h1>
@@ -174,6 +174,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                     </div>
                 </div>
 
+                <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
                     {permits.data.map((p) => {
                         const cat = categoryMeta[p.category] ?? categoryMeta.area;
@@ -252,6 +253,59 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         </tr>
                     )}
                 </DataTable>
+                </div>
+
+                <div className="sm:hidden space-y-2.5">
+                    {permits.data.map((p) => {
+                        const cat = categoryMeta[p.category] ?? categoryMeta.area;
+                        return (
+                            <div
+                                key={p.id}
+                                onClick={() => router.visit(`/permit-requests/${p.id}`)}
+                                className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 truncate">{p.permit_number}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5 truncate">{p.store_name_snapshot}</p>
+                                    </div>
+                                    {p.status === 'pending' && p.current_step_label ? (
+                                        <Badge color="yellow" size="sm">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
+                                    ) : (
+                                        <Badge color={statusColor[p.status]} size="sm">{statusLabel[p.status] ?? p.status}</Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-2">
+                                    <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
+                                        {cat.code}
+                                    </span>
+                                    <span className="text-xs text-gray-400 truncate">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
+                                    {p.is_my_turn && (
+                                        <span className="ml-auto shrink-0 text-[10px] font-medium text-amber-600 uppercase tracking-wide">
+                                            Menunggu Anda
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {permits.data.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                            <p className="text-sm font-medium text-gray-700">{locked ? 'Belum ada pengajuan pameran.' : 'Belum ada surat izin ditemukan.'}</p>
+                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.'}</p>
+                            {hasFilter ? (
+                                <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
+                            ) : (
+                                <Link href="/permit-requests/create">
+                                    <Button className="justify-center !py-3 min-h-[48px]">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
+                                </Link>
+                            )}
+                        </div>
+                    )}
+                    <div className="bg-white rounded-xl border border-[#E2E5EA]">
+                        <Pagination meta={permits} links={permits.links} />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
