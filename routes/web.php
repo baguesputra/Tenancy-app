@@ -14,6 +14,7 @@ use App\Http\Controllers\PermitRequestController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\Settings\AccessControlController;
+use App\Http\Controllers\Settings\GateSyncController;
 use App\Http\Controllers\Settings\InspectionTemplateController;
 use App\Http\Controllers\Settings\TenantAccountController;
 use App\Http\Controllers\Settings\UserManagementController;
@@ -65,6 +66,13 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
     Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store']);
     Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword']);
     Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive']);
+
+    Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
+    Route::middleware('can:gate.sync')->group(function () {
+        Route::post('/gate/sync', [GateSyncController::class, 'syncSemua'])->name('gate.sync');
+        Route::post('/gate/sync-master', [GateSyncController::class, 'syncMaster'])->name('gate.sync-master');
+        Route::post('/gate/sync-karyawan', [GateSyncController::class, 'syncKaryawan'])->name('gate.sync-karyawan');
+    });
 });
 
 Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Request $request) {

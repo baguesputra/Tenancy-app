@@ -46,6 +46,11 @@ const menuIcons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
     ),
+    refresh: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a8 8 0 0114-3.5M19 15a8 8 0 01-14 3.5" />
+        </svg>
+    ),
 };
 
 const masterMenuItems = [
@@ -70,6 +75,7 @@ export default function AppLayout({ children }) {
         { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users },
         { label: 'Akun Portal Tenant', href: '/settings/tenant-accounts', icon: menuIcons.portal },
         { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access },
+        { label: 'Sinkronisasi Gate', href: '/settings/gate', icon: menuIcons.refresh },
         { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak },
     ];
     const isSettingsActive = settingsMenuItems.some((item) => currentUrl.startsWith(item.href));
@@ -400,9 +406,13 @@ function Topbar({ user, onMenuClick, onLogout }) {
                             aria-expanded={profileOpen}
                             aria-label="Menu pengguna"
                         >
-                            <span className="w-8 h-8 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                {initials(user?.name ?? '?')}
-                            </span>
+                            {user?.photo_url ? (
+                                <img src={user.photo_url} alt={user?.name ?? 'Foto pengguna'} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                            ) : (
+                                <span className="w-8 h-8 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                    {initials(user?.name ?? '?')}
+                                </span>
+                            )}
                             <span className="hidden sm:block text-sm font-medium text-gray-700 truncate max-w-[140px]">{user?.name}</span>
                             <svg className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -411,9 +421,13 @@ function Topbar({ user, onMenuClick, onLogout }) {
                         {profileOpen && (
                             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#E2E5EA] shadow-xl z-30 overflow-hidden">
                                 <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-                                    <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                        {initials(user?.name ?? '?')}
-                                    </span>
+                                    {user?.photo_url ? (
+                                        <img src={user.photo_url} alt={user?.name ?? 'Foto pengguna'} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                                    ) : (
+                                        <span className="w-9 h-9 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(user?.name ?? '?')}
+                                        </span>
+                                    )}
                                     <span className="min-w-0">
                                         <span className="block text-sm font-medium text-gray-800 truncate">{user?.name}</span>
                                         <span className="block text-xs text-gray-500 truncate">{user?.branch?.name ?? 'Semua Cabang'}</span>

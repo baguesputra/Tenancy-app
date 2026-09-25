@@ -28,6 +28,7 @@ class HandleInertiaRequests extends Middleware
                     'id' => $webUser->id,
                     'name' => $webUser->name,
                     'email' => $webUser->email,
+                    'photo_url' => $webUser->photo_url,
                     'branch_id' => $webUser->branch_id,
                     'branch' => $webUser->branch ? ['id' => $webUser->branch->id, 'name' => $webUser->branch->name] : null,
                     'permissions' => $webUser->getAllPermissions()->pluck('name'),

@@ -19,6 +19,7 @@ class PermissionSeeder extends Seeder
             'permits.view', 'permits.create', 'permits.approve',
             'users.manage',
             'settings.access',
+            'gate.sync',
         ];
 
         foreach ($permissions as $permission) {
@@ -34,6 +35,7 @@ class PermissionSeeder extends Seeder
             'permits.view', 'permits.create', 'permits.approve',
             'users.manage',
             'settings.access',
+            'gate.sync',
         ]);
 
         $this->assignRolePermissions('manager', [

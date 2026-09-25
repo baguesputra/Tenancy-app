@@ -36,6 +36,7 @@ class BreadcrumbService
             'settings.users.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Manajemen User')],
             'settings.tenant-accounts.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Akun Portal Tenant')],
             'settings.access-control.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Hak Akses')],
+            'settings.gate.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Sinkronisasi Gate')],
             'password.change.form' => [$webHome, self::item('Ubah Password')],
             'tenant-portal.dashboard' => [$portalHome],
             'tenant-portal.permits.index' => [$portalHome, self::item('Surat Izin', '/portal/permits')],
