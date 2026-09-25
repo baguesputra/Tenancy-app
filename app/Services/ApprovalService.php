@@ -78,6 +78,20 @@ class ApprovalService
             ]);
         }
 
+        if ($approval->step_key === 'marketing') {
+            $positionName = strtolower($user->position?->name ?? '');
+            if ($positionName !== 'manager') {
+                throw ValidationException::withMessages([
+                    'approval' => 'Approval Marketing hanya oleh jabatan Manager.',
+                ]);
+            }
+            if (! $user->hasRole('manager')) {
+                throw ValidationException::withMessages([
+                    'approval' => 'Approval Marketing hanya oleh role manager.',
+                ]);
+            }
+        }
+
         if ($approval->status !== 'pending') {
             throw ValidationException::withMessages([
                 'approval' => 'Tahap approval ini sudah diproses sebelumnya.',

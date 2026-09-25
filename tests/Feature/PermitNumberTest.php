@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\Department;
 use App\Models\PermitRequest;
+use App\Models\Position;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
@@ -356,6 +358,108 @@ class PermitNumberTest extends TestCase
             'work_end_date' => '2026-09-30',
             'reason' => 'Pendek.',
         ])->assertSessionHasErrors('reason');
+        Carbon::setTestNow();
+    }
+
+    private function marketingManager(): User
+    {
+        foreach (['permits.view', 'permits.create', 'permits.approve'] as $p) {
+            Permission::firstOrCreate(['name' => $p]);
+        }
+        Role::firstOrCreate(['name' => 'manager'])->syncPermissions(['permits.view', 'permits.create', 'permits.approve']);
+        $dept = Department::firstOrCreate(['name' => 'Marketing']);
+        $pos = Position::firstOrCreate(['name' => 'Manager'], ['department_id' => $dept->id]);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $user = User::create([
+            'name' => 'Mgr Mkt', 'email' => 'mgrmkt@t.id',
+            'employee_number' => 'MGRMKT-1', 'branch_id' => $branch->id,
+            'department_id' => $dept->id, 'position_id' => $pos->id,
+            'password' => bcrypt('x'),
+        ]);
+        $user->assignRole('manager');
+
+        return $user;
+    }
+
+    public function test_marketing_approval_needs_manager_position_and_role(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $this->marketingManager());
+        $marketingStep = $permit->approvals()->where('step_key', 'marketing')->firstOrFail();
+
+        $mktStaff = $this->marketingStaff();
+        $mktDept = Department::where('name', 'Marketing')->firstOrFail();
+        $mktStaff->update(['department_id' => $mktDept->id]);
+        $mktStaff->givePermissionTo(Permission::firstOrCreate(['name' => 'permits.approve']));
+        $mktStaff->refresh();
+
+        $this->actingAs($mktStaff)->post("/approvals/{$marketingStep->id}/approve")
+            ->assertSessionHasErrors('approval');
+
+        $this->assertSame('pending', $marketingStep->fresh()->status);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_marketing_approval_by_manager_succeeds(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $mgrMkt = $this->marketingManager();
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $mgrMkt);
+        $step = $permit->approvals()->where('step_key', 'marketing')->firstOrFail();
+
+        $this->actingAs($mgrMkt)->post("/approvals/{$step->id}/approve")
+            ->assertRedirect();
+
+        $this->assertSame('approved', $step->fresh()->status);
+        Carbon::setTestNow();
+    }
+
+    public function test_marketing_approval_needs_department(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $this->marketingManager());
+        $step = $permit->approvals()->where('step_key', 'marketing')->firstOrFail();
+
+        foreach (['permits.view', 'permits.approve'] as $p) {
+            Permission::firstOrCreate(['name' => $p]);
+        }
+        Role::firstOrCreate(['name' => 'manager'])->syncPermissions(['permits.view', 'permits.approve']);
+        $pos = Position::firstOrCreate(['name' => 'Manager']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $mgrNoDept = User::create([
+            'name' => 'Mgr NoDept', 'email' => 'mgrnodept@t.id',
+            'employee_number' => 'MGRND-1', 'branch_id' => $branch->id,
+            'position_id' => $pos->id, 'password' => bcrypt('x'),
+        ]);
+        $mgrNoDept->assignRole('manager');
+
+        $this->actingAs($mgrNoDept)->post("/approvals/{$step->id}/approve")
+            ->assertSessionHasErrors('approval');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_marketing_approval_needs_role_manager(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $this->marketingManager());
+        $step = $permit->approvals()->where('step_key', 'marketing')->firstOrFail();
+
+        $dept = Department::where('name', 'Marketing')->firstOrFail();
+        $pos = Position::where('name', 'Manager')->firstOrFail();
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $noRole = User::create([
+            'name' => 'Mkt NoRole', 'email' => 'mktnorole@t.id',
+            'employee_number' => 'MKTNR-1', 'branch_id' => $branch->id,
+            'department_id' => $dept->id, 'position_id' => $pos->id,
+            'password' => bcrypt('x'),
+        ]);
+        $noRole->givePermissionTo(Permission::firstOrCreate(['name' => 'permits.approve']));
+
+        $this->actingAs($noRole)->post("/approvals/{$step->id}/approve")
+            ->assertSessionHasErrors('approval');
+
         Carbon::setTestNow();
     }
 }

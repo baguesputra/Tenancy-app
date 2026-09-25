@@ -187,6 +187,9 @@ class PermitRequestController extends Controller
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
+        $permitRequest->can_approve_marketing = strtolower($user->department?->name ?? '') === 'marketing'
+            && strtolower($user->position?->name ?? '') === 'manager'
+            && $user->hasRole('manager');
 
         $requestedBy = $permitRequest->requestedBy;
         $permitRequest->requested_by_label = $requestedBy instanceof User

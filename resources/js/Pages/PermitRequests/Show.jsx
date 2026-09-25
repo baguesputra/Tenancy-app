@@ -348,7 +348,7 @@ export default function Show({ permit, can_revise }) {
                                             </p>
                                         )}
 
-                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (
+                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (
                                             <div className="mt-2.5 flex gap-2">
                                                 <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                                     Approve
