@@ -32,3 +32,4 @@ Thumbs.db
 !/storage/logs/
 .opencode/
 /bootstrap/cache/*
+/AGENTS.md
