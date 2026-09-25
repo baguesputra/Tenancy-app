@@ -11,12 +11,32 @@ use App\Models\InspectionSession;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InspectionService
 {
+    public function findOngoingInspection(User $user, Tenant $tenant): ?Inspection
+    {
+        return Inspection::where('tenant_id', $tenant->id)
+            ->whereHas('session', fn ($q) => $q->where('user_id', $user->id)->where('status', 'in_progress'))
+            ->latest()
+            ->first();
+    }
+
+    public function findOtherOngoingInspection(User $user, Tenant $tenant): ?Inspection
+    {
+        return Inspection::with('session.user:id,name')
+            ->where('tenant_id', $tenant->id)
+            ->whereHas('session', fn ($q) => $q->where('user_id', '!=', $user->id)
+                ->where('branch_id', $user->branch_id)
+                ->where('status', 'in_progress'))
+            ->latest()
+            ->first();
+    }
+
     public function addInspection(InspectionSession $session, Tenant $tenant, ?string $uuid = null): Inspection
     {
         $this->ensureSessionIsEditable($session);
@@ -25,6 +45,11 @@ class InspectionService
             throw ValidationException::withMessages([
                 'tenant_id' => 'Tenant tidak berada di cabang yang sama dengan sesi ini.',
             ]);
+        }
+
+        $ongoing = $this->findOngoingInspection($session->user, $tenant);
+        if ($ongoing && ! $uuid) {
+            return $ongoing;
         }
 
         if (! $uuid) {
@@ -48,16 +73,27 @@ class InspectionService
 
         $id = $uuid ?? (string) Str::uuid();
 
-        return Inspection::updateOrCreate(
-            ['id' => $id],
-            [
-                'inspection_session_id' => $session->id,
-                'tenant_id' => $tenant->id,
-                'checklist_template_id' => $template->id,
-                'checklist_snapshot' => $template->toSnapshotArray(),
-                'status' => 'draft',
-            ]
-        );
+        return DB::transaction(function () use ($id, $session, $tenant, $template) {
+            $existing = Inspection::where('inspection_session_id', $session->id)
+                ->where('tenant_id', $tenant->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            return Inspection::updateOrCreate(
+                ['id' => $id],
+                [
+                    'inspection_session_id' => $session->id,
+                    'tenant_id' => $tenant->id,
+                    'checklist_template_id' => $template->id,
+                    'checklist_snapshot' => $template->toSnapshotArray(),
+                    'status' => 'draft',
+                ]
+            );
+        });
     }
 
     public function saveAnswer(

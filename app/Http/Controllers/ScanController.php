@@ -65,6 +65,18 @@ class ScanController extends Controller
             $tenancy = $unit->activeTenancy;
             abort_unless($tenancy && $tenancy->tenant, 404, 'Unit kosong, tidak ada tenant aktif.');
 
+            $ongoing = $inspections->findOngoingInspection($webUser, $tenancy->tenant);
+            if ($ongoing) {
+                return redirect()->route('inspections.show', $ongoing->id);
+            }
+
+            $other = $inspections->findOtherOngoingInspection($webUser, $tenancy->tenant);
+            if ($other) {
+                $name = $other->session->user->name ?? 'inspector lain';
+
+                return back()->withErrors(['token' => "Tenant {$tenancy->tenant->name} sedang disidak {$name}."]);
+            }
+
             $session = $sessions->getOrCreateActiveSession($webUser);
             $inspection = $inspections->addInspection($session, $tenancy->tenant);
 

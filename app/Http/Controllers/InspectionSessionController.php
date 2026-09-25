@@ -89,6 +89,19 @@ class InspectionSessionController extends Controller
         $tenant = Tenant::findOrFail($request->tenant_id);
         abort_if($tenant->branch_id !== $session->branch_id, 422, 'Tenant tidak berada di cabang yang sama dengan sesi ini.');
         abort_if(Inspection::where('inspection_session_id', $session->id)->where('tenant_id', $tenant->id)->exists(), 422, 'Tenant ini sudah ada di sesi ini.');
+
+        $ongoing = $this->inspectionService->findOngoingInspection($request->user(), $tenant);
+        if ($ongoing && $ongoing->inspection_session_id !== $session->id) {
+            return redirect()->route('inspections.show', $ongoing->id);
+        }
+
+        $other = $this->inspectionService->findOtherOngoingInspection($request->user(), $tenant);
+        if ($other) {
+            $name = $other->session->user->name ?? 'inspector lain';
+
+            return back()->withErrors(['tenant_id' => "Tenant {$tenant->name} sedang disidak {$name}."]);
+        }
+
         try {
             $inspection = $this->inspectionService->addInspection($session, $tenant);
         } catch (ValidationException $e) {
@@ -122,8 +135,21 @@ class InspectionSessionController extends Controller
             return back()->withErrors(['token' => "Unit {$unit->unit_code} kosong, tidak ada tenant aktif."]);
         }
 
+        $tenant = $unit->activeTenancy->tenant;
+        $ongoing = $this->inspectionService->findOngoingInspection($request->user(), $tenant);
+        if ($ongoing && $ongoing->inspection_session_id !== $session->id) {
+            return redirect()->route('inspections.show', $ongoing->id);
+        }
+
+        $other = $this->inspectionService->findOtherOngoingInspection($request->user(), $tenant);
+        if ($other) {
+            $name = $other->session->user->name ?? 'inspector lain';
+
+            return back()->withErrors(['token' => "Tenant {$tenant->name} sedang disidak {$name}."]);
+        }
+
         try {
-            $inspection = $this->inspectionService->addInspection($session, $unit->activeTenancy->tenant);
+            $inspection = $this->inspectionService->addInspection($session, $tenant);
         } catch (ValidationException $e) {
             return back()->withErrors(['token' => $e->errors()['tenant_id'][0] ?? 'Tenant tidak bisa ditambahkan ke sesi ini.']);
         }

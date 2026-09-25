@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\ChecklistTemplate;
+use App\Models\Inspection;
 use App\Models\InspectionSession;
 use App\Models\ProductCategory;
 use App\Models\Tenancy;
@@ -11,9 +12,11 @@ use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\InspectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class SessionScanTest extends TestCase
@@ -23,7 +26,7 @@ class SessionScanTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function makeStaff(Branch $branch, array $perms = ['sidak.view', 'sidak.create']): User
@@ -98,6 +101,54 @@ class SessionScanTest extends TestCase
 
         $this->actingAs($staff)
             ->post("/inspection-sessions/{$session->id}/scan", ['token' => 'token-ngaco'])
+            ->assertSessionHasErrors('token');
+    }
+
+    public function test_scan_twice_returns_same_inspection(): void
+    {
+        $branch = Branch::create(['name' => 'Cabang Scan', 'code' => 'SCN']);
+        $staff = $this->makeStaff($branch);
+        [$unit] = $this->seedUnitTenant($branch);
+        $session = InspectionSession::create([
+            'branch_id' => $branch->id, 'user_id' => $staff->id,
+            'started_at' => now(), 'status' => 'in_progress',
+        ]);
+
+        $first = $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $unit->scannableCode->token])
+            ->assertRedirect();
+        $firstId = basename($first->headers->get('Location'));
+
+        $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $unit->scannableCode->token])
+            ->assertRedirect("/inspections/{$firstId}");
+
+        $this->assertSame(1, Inspection::where('inspection_session_id', $session->id)->count());
+    }
+
+    public function test_scan_tenant_inspected_by_other_returns_token_error(): void
+    {
+        $branch = Branch::create(['name' => 'Cabang Scan', 'code' => 'SCN']);
+        $staff = $this->makeStaff($branch);
+        $other = User::create([
+            'name' => 'Other', 'email' => 'other@t.id', 'employee_number' => 'INSP-2',
+            'branch_id' => $branch->id, 'password' => bcrypt('x'),
+        ]);
+        $other->assignRole('inspector');
+        [$unit, $tenant] = $this->seedUnitTenant($branch);
+        $otherSession = InspectionSession::create([
+            'branch_id' => $branch->id, 'user_id' => $other->id,
+            'started_at' => now(), 'status' => 'in_progress',
+        ]);
+        app(InspectionService::class)->addInspection($otherSession, $tenant);
+
+        $session = InspectionSession::create([
+            'branch_id' => $branch->id, 'user_id' => $staff->id,
+            'started_at' => now(), 'status' => 'in_progress',
+        ]);
+
+        $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $unit->scannableCode->token])
             ->assertSessionHasErrors('token');
     }
 
