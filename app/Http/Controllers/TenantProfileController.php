@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Services\BranchScopeService;
 use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -18,7 +19,8 @@ class TenantProfileController extends Controller
 
     public function index(Request $request)
     {
-        $query = Tenant::with(['branch', 'tenantCategory', 'productCategory', 'activeTenancy.unit'])
+        $query = Tenant::select(['id', 'branch_id', 'name', 'logo_path', 'tenant_category_id', 'product_category_id', 'is_active'])
+            ->with(['branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name', 'activeTenancy:id,tenant_id,unit_id,status', 'activeTenancy.unit:id,unit_code'])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('tenants.name', 'like', "%{$request->search}%")
                     ->orWhere('tenants.company_phone', 'like', "%{$request->search}%")
@@ -49,11 +51,12 @@ class TenantProfileController extends Controller
         $this->authorizeView($tenant, $request);
 
         $tenant->load([
-            'branch', 'tenantCategory', 'productCategory', 'contacts',
-            'activeTenancy.unit.branch',
-            'tenancies' => fn ($q) => $q->with('unit.branch')->latest('start_date')->take(20),
-            'inspections' => fn ($q) => $q->with('session')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(20),
-            'permitRequests' => fn ($q) => $q->with(['workers', 'goods', 'approvals.approvedBy'])->latest()->take(20),
+            'branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name',
+            'contacts:id,tenant_id,name,position,phone,email,type',
+            'activeTenancy:id,tenant_id,unit_id,status', 'activeTenancy.unit:id,unit_code',
+            'tenancies' => fn ($q) => $q->select(['id', 'tenant_id', 'unit_id', 'status', 'start_date', 'end_date', 'contract_number'])->with('unit:id,unit_code')->latest('start_date')->take(20),
+            'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])->with('session:id,status,started_at')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(20),
+            'permitRequests' => fn ($q) => $q->select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])->latest()->take(20),
         ]);
 
         $inspections = $tenant->inspections->map(fn ($i) => [
@@ -68,7 +71,20 @@ class TenantProfileController extends Controller
         ])->values();
 
         return response()->json([
-            'tenant' => $tenant,
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'logo_url' => $tenant->logo_url,
+                'legal_entity_name' => $tenant->legal_entity_name,
+                'company_phone' => $tenant->company_phone,
+                'company_email' => $tenant->company_email,
+                'company_address' => $tenant->company_address,
+                'npwp_number' => $tenant->npwp_number,
+                'siup_number' => $tenant->siup_number,
+                'contacts' => $tenant->contacts,
+                'tenancies' => $tenant->tenancies,
+                'permit_requests' => $tenant->permitRequests,
+            ],
             'inspections' => $inspections,
         ]);
     }
@@ -116,24 +132,43 @@ class TenantProfileController extends Controller
         $this->authorizeView($tenant, $request);
 
         $tenant->load([
-            'branch', 'tenantCategory', 'productCategory', 'contacts', 'tenantUser',
-            'activeTenancy.unit.branch', 'activeTenancy.unit.scannableCode',
-            'tenancies' => fn ($q) => $q->with(['unit.branch', 'unit.scannableCode'])->latest('start_date')->take(30),
-            'inspections' => fn ($q) => $q->with('session.user')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
-            'permitRequests' => fn ($q) => $q->with(['workers', 'goods', 'approvals.approvedBy'])->latest()->take(30),
+            'branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name',
+            'contacts:id,tenant_id,name,position,phone,email,type',
+            'tenantUser:id,tenant_id,username,is_active',
+            'activeTenancy:id,tenant_id,unit_id,status,start_date,end_date',
+            'activeTenancy.unit:id,unit_code',
+            'activeTenancy.unit.scannableCode:scannable_type,scannable_id,token',
+            'tenancies' => fn ($q) => $q->with(['unit:id,unit_code,size,floor,block', 'unit.scannableCode:scannable_type,scannable_id,token'])->latest('start_date')->take(30),
+            'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged', 'synced_at'])->with('session.user:id,name')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
+            'permitRequests' => fn ($q) => $q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name'])->latest()->take(30),
         ]);
 
         $now = now()->startOfDay();
-        $tenancies = $tenant->tenancies->map(function ($c) use ($now) {
-            $end = $c->end_date ? \Carbon\Carbon::parse($c->end_date)->startOfDay() : null;
-            $arr = $c->toArray();
-            $arr['days_remaining'] = $end ? (int) $now->diffInDays($end, false) : null;
-            $arr['unit'] = $c->unit ? array_merge($c->unit->toArray(), [
+        $tenancies = $tenant->tenancies->map(fn ($c) => [
+            'id' => $c->id,
+            'status' => $c->status,
+            'start_date' => $c->start_date?->toDateString(),
+            'end_date' => $c->end_date?->toDateString(),
+            'signed_date' => $c->signed_date?->toDateString(),
+            'contract_number' => $c->contract_number,
+            'contract_document_path' => $c->contract_document_path,
+            'rent_value' => $c->rent_value,
+            'rent_period' => $c->rent_period,
+            'service_charge' => $c->service_charge,
+            'deposit_value' => $c->deposit_value,
+            'payment_term' => $c->payment_term,
+            'percentage_rent_rate' => $c->percentage_rent_rate,
+            'percentage_rent_breakpoint' => $c->percentage_rent_breakpoint,
+            'notes' => $c->notes,
+            'days_remaining' => $c->end_date ? (int) $now->diffInDays($c->end_date->copy()->startOfDay(), false) : null,
+            'unit' => $c->unit ? [
+                'unit_code' => $c->unit->unit_code,
+                'size' => $c->unit->size,
+                'floor' => $c->unit->floor,
+                'block' => $c->unit->block,
                 'scan_url' => $c->unit->scanUrl,
-            ]) : null;
-
-            return $arr;
-        })->values();
+            ] : null,
+        ])->values();
 
         $inspections = $tenant->inspections->map(function ($i) {
             $total = collect($i->checklist_snapshot['sections'] ?? [])->sum(fn ($s) => count($s['items'] ?? []));
@@ -187,6 +222,7 @@ class TenantProfileController extends Controller
                 'approvals' => $p->approvals->map(fn ($a) => [
                     'label' => $a->label,
                     'status' => $a->status,
+                    'notes' => $a->notes,
                     'approved_by' => $a->approvedBy?->name,
                     'approved_at' => $a->approved_at?->toDateTimeString(),
                 ])->values(),
@@ -194,16 +230,23 @@ class TenantProfileController extends Controller
         })->values();
 
         $activeUnit = $tenant->activeTenancy?->unit;
-        $unitQr = $activeUnit?->scanUrl
-            ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($activeUnit->scanUrl))
+        $scanUrl = $activeUnit?->scanUrl;
+        // ponytail: QR svg ~2.4KB tapi generate P50 42ms — cache 60m per scanUrl
+        $unitQr = $scanUrl
+            ? Cache::remember('tenant-qr.'.md5($scanUrl), 3600, fn () => 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($scanUrl)))
             : null;
 
         $contactsByType = $tenant->contacts->groupBy(fn ($c) => $c->type ?: 'Umum')->map->values();
 
+        // ponytail: kirim kolom yg dipakai FE saja — toArray() full bawa relasi duplikat
+        $tenantArr = $tenant->only(['id', 'name', 'logo_url', 'legal_entity_name', 'npwp_number', 'siup_number', 'company_phone', 'company_email', 'company_address', 'is_active'])
+            + ['tenant_user' => $tenant->tenantUser?->only(['username', 'is_active'])]
+            + ['tenant_category' => $tenant->tenantCategory?->only(['name'])]
+            + ['product_category' => $tenant->productCategory?->only(['name'])]
+            + ['branch' => $tenant->branch?->only(['name'])];
+
         return Inertia::render('TenantProfiles/Show', [
-            'tenant' => array_merge($tenant->toArray(), [
-                'active_tenancy_scan_url' => $activeUnit?->scanUrl,
-            ]),
+            'tenant' => $tenantArr,
             'tenancies' => $tenancies,
             'inspections' => $inspections,
             'permits' => $permits,

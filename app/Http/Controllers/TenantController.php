@@ -20,7 +20,7 @@ class TenantController extends Controller
 
     public function index(Request $request)
     {
-        $query = Tenant::with(['branch', 'tenantCategory', 'productCategory'])
+        $query = Tenant::with(['branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name', 'contacts:id,tenant_id,name,position,phone,email,type'])
             ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"))
             ->when($request->tenant_category_id, fn ($q) => $q->where('tenant_category_id', $request->tenant_category_id))
             ->when($request->product_category_id, fn ($q) => $q->where('product_category_id', $request->product_category_id))
