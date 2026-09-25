@@ -18,6 +18,24 @@ class PermitRequestController extends Controller
 {
     public function __construct(private PermitRequestService $service, private TenantScopeService $tenantScope) {}
 
+    private const PRIVILEGED_ROLES = ['manager', 'admin', 'super_admin'];
+
+    private function isPameranForm(PermitRequest $permit): bool
+    {
+        return in_array('pameran', $permit->activity_types ?? [], true);
+    }
+
+    private function canManageForm(User $user, PermitRequest $permit): bool
+    {
+        if ($user->hasAnyRole(self::PRIVILEGED_ROLES)) {
+            return true;
+        }
+
+        return $this->isPameranForm($permit)
+            ? $user->hasRole('marketing_staff')
+            : $user->hasRole('tenancy_staff');
+    }
+
     private const ACTIVITY_TYPES = [
         ['value' => 'kerja', 'label' => 'Kerja'],
         ['value' => 'lembur', 'label' => 'Lembur'],
@@ -198,7 +216,11 @@ class PermitRequestController extends Controller
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
-            'can_revise' => $permitRequest->status === 'pending' && $user->can('permits.create'),
+            'can_revise' => $permitRequest->status === 'pending' && $this->canManageForm($user, $permitRequest),
+            'can_cancel' => $permitRequest->status === 'pending'
+                && (string) $permitRequest->requested_by_id === (string) $user->id
+                && str_contains($permitRequest->requested_by_type ?? '', 'User')
+                && $this->canManageForm($user, $permitRequest),
         ]);
     }
 
@@ -207,6 +229,8 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->status === 'pending', 422, 'Hanya izin pending yang bisa direvisi.');
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
         abort_if($request->user()->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
+            $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing_staff.' : 'Revisi form tenant hanya oleh tenancy_staff.');
 
         $validated = $request->validated();
 
@@ -222,6 +246,8 @@ class PermitRequestController extends Controller
             abort(403, 'Hanya pembuat yang bisa membatalkan.');
         }
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
+        abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
+            $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing_staff.' : 'Pembatalan form tenant hanya oleh tenancy_staff.');
 
         $this->service->cancel($permitRequest);
 

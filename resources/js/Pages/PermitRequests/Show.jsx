@@ -16,7 +16,7 @@ const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', app
 const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
-export default function Show({ permit, can_revise }) {
+export default function Show({ permit, can_revise, can_cancel }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
     const [reviseOpen, setReviseOpen] = useState(false);
@@ -308,7 +308,7 @@ export default function Show({ permit, can_revise }) {
                                 Ajukan Revisi
                             </Button>
                         )}
-                        {permit.status === 'pending' && (
+                        {can_cancel && (
                             <Button variant="danger" onClick={cancelPermit} className="w-full justify-center">
                                 Batalkan Pengajuan
                             </Button>

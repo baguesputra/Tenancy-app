@@ -462,4 +462,119 @@ class PermitNumberTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    private function tenancyStaff(): User
+    {
+        foreach (['permits.view', 'permits.create'] as $p) {
+            Permission::firstOrCreate(['name' => $p]);
+        }
+        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['permits.view', 'permits.create']);
+        $mktDept = Department::firstOrCreate(['name' => 'Marketing']);
+        $dept = Department::firstOrCreate(['name' => 'Tenancy']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $user = User::create([
+            'name' => 'Tnc', 'email' => 'tnc@t.id',
+            'employee_number' => 'TNC-1', 'branch_id' => $branch->id,
+            'department_id' => $dept->id, 'password' => bcrypt('x'),
+        ]);
+        $user->assignRole('tenancy_staff');
+
+        return $user;
+    }
+
+    private function revisePayload(array $over = []): array
+    {
+        return array_merge([
+            'work_start_date' => '2026-09-23',
+            'work_end_date' => '2026-09-30',
+            'work_end_time' => '18:00',
+            'access_route' => 'Pintu timur',
+            'reason' => 'Pekerjaan mundur seminggu karena material telat.',
+        ], $over);
+    }
+
+    public function test_tenancy_can_revise_and_cancel_tenant_form(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $tnc = $this->tenancyStaff();
+        $permit = app(PermitRequestService::class)->create($this->payload(['kerja']), $tnc);
+
+        $res = $this->actingAs($tnc)->get("/permit-requests/{$permit->id}")->assertOk();
+        $props = $res->viewData('page')['props'];
+        $this->assertTrue($props['can_revise']);
+        $this->assertTrue($props['can_cancel']);
+
+        $this->actingAs($tnc)->post("/permit-requests/{$permit->id}/revise", $this->revisePayload())
+            ->assertRedirect();
+
+        $permit2 = app(PermitRequestService::class)->create($this->payload(['kerja']), $tnc);
+        $this->actingAs($tnc)->post("/permit-requests/{$permit2->id}/cancel")
+            ->assertRedirect();
+        $this->assertSame('cancelled', $permit2->fresh()->status);
+        Carbon::setTestNow();
+    }
+
+    public function test_tenancy_blocked_on_pameran_form(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $tnc = $this->tenancyStaff();
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $this->marketingManager());
+
+        $this->actingAs($tnc)->post("/permit-requests/{$permit->id}/revise", $this->revisePayload())
+            ->assertForbidden();
+        $this->assertSame('pending', $permit->fresh()->approvals()->where('step_key', 'marketing')->first()->status);
+
+        $own = app(PermitRequestService::class)->create($this->payload(['kerja']), $tnc);
+        $other = User::create([
+            'name' => 'Tnc2', 'email' => 'tnc2@t.id',
+            'employee_number' => 'TNC-2', 'branch_id' => $tnc->branch_id,
+            'department_id' => $tnc->department_id, 'password' => bcrypt('x'),
+        ]);
+        $other->assignRole('tenancy_staff');
+        $other->refresh();
+        $this->actingAs($other)->post("/permit-requests/{$own->id}/cancel")
+            ->assertForbidden();
+        Carbon::setTestNow();
+    }
+
+    public function test_marketing_can_revise_and_cancel_pameran_form(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $mkt = $this->marketingStaff();
+        $mkt->givePermissionTo(Permission::firstOrCreate(['name' => 'permits.approve']));
+        $mktDept = Department::firstOrCreate(['name' => 'Marketing']);
+        $mkt->update(['department_id' => $mktDept->id, 'branch_id' => Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test'])->id]);
+        $mkt->refresh();
+        $permit = app(PermitRequestService::class)->create($this->payload(['pameran']), $mkt);
+
+        $res = $this->actingAs($mkt)->get("/permit-requests/{$permit->id}")->assertOk();
+        $props = $res->viewData('page')['props'];
+        $this->assertTrue($props['can_revise']);
+        $this->assertTrue($props['can_cancel']);
+
+        $this->actingAs($mkt)->post("/permit-requests/{$permit->id}/revise", $this->revisePayload())
+            ->assertRedirect();
+
+        $permit2 = app(PermitRequestService::class)->create($this->payload(['pameran']), $mkt);
+        $this->actingAs($mkt)->post("/permit-requests/{$permit2->id}/cancel")
+            ->assertRedirect();
+        $this->assertSame('cancelled', $permit2->fresh()->status);
+        Carbon::setTestNow();
+    }
+
+    public function test_manager_can_revise_both_forms(): void
+    {
+        $mgr = $this->marketingManager();
+        $tnc = $this->tenancyStaff();
+        $tnc->update(['branch_id' => $mgr->branch_id]);
+        $tnc->refresh();
+        $service = app(PermitRequestService::class);
+        $pameran = $service->create($this->payload(['pameran']), $mgr);
+        $tenant = $service->create($this->payload(['kerja']), $tnc);
+
+        $this->actingAs($mgr)->post("/permit-requests/{$pameran->id}/revise", $this->revisePayload())
+            ->assertRedirect();
+        $this->actingAs($mgr)->post("/permit-requests/{$tenant->id}/revise", $this->revisePayload())
+            ->assertRedirect();
+    }
 }
