@@ -139,4 +139,28 @@ class SsoCallbackTest extends TestCase
         $this->get(route('sso.slo'))->assertRedirect(route('login'));
         $this->assertGuest();
     }
+
+    public function test_logout_sso_409_location_ke_idp(): void
+    {
+        config(['auth.mode' => 'sso']);
+        config()->set('services.perusahaan.metadata', 'https://gate.appdutamall.com/saml/metadata');
+
+        $user = $this->existingUser(['sso_id' => 'budi@dutamall.com']);
+        $response = $this->actingAs($user)->post('/logout', [], ['X-Inertia' => 'true']);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertStatus(409);
+        $this->assertStringStartsWith('https://gate.appdutamall.com/saml/slo', $response->headers->get('X-Inertia-Location'));
+    }
+
+    public function test_logout_tanpa_sso_bersihkan_sesi(): void
+    {
+        config(['auth.mode' => 'sso']);
+
+        $user = $this->existingUser(['sso_id' => null]);
+        $response = $this->actingAs($user)->post('/logout');
+
+        $this->assertGuest();
+        $response->assertRedirect();
+    }
 }
