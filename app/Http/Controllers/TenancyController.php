@@ -21,7 +21,7 @@ class TenancyController extends Controller
 
         $this->applyBranchScope($base, $request->user());
 
-        $agg = (clone $base)->toBase()->selectRaw("count(*) as total, sum(status = 'active') as active, sum(status = 'draft') as draft, sum(status = 'ended') as ended, sum(status = 'terminated') as terminated")->first();
+        $agg = (clone $base)->toBase()->selectRaw("count(*) as total, sum(status = 'active') as active, sum(status = 'draft') as draft, sum(status = 'ended') as ended, sum(status = 'terminated') as `terminated`")->first();
         $total = (int) ($agg->total ?? 0);
         $active = (int) ($agg->active ?? 0);
         $draft = (int) ($agg->draft ?? 0);
