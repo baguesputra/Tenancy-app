@@ -257,6 +257,11 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                     }
                 >
                     <form id="user-form" onSubmit={submit}>
+                        {panel?.type === 'edit' && panel.user?.gate_id && (
+                            <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-3.5 py-2.5 mb-3">
+                                User dari Gate — identitas & organisasi ikut sync, hanya role yang bisa diubah.
+                            </p>
+                        )}
                         <div className="bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm">
                             <div className="flex items-center gap-4">
                                 {(panel?.user?.photo_url) ? (
@@ -276,6 +281,8 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                             </div>
                         </div>
 
+                        {!(panel?.type === 'edit' && panel.user?.gate_id) && (
+                        <>
                         <FormSection variant="drawer" title="Identitas" description="Nama tampil dan nomor induk pegawai">
                             <FormField compact label="Nama" error={errors.name} required>
                                 <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Nama lengkap" autoComplete="off" />
@@ -319,7 +326,21 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                 </SelectInput>
                             </FormField>
                         </FormSection>
+                        </>
+                        )}
 
+                        {panel?.type === 'edit' && panel.user?.gate_id && (
+                            <FormSection variant="drawer" title="Hak Akses" description="Hanya role yang bisa diubah">
+                                <FormField compact label="Role" error={errors.role} required>
+                                    <SelectInput value={data.role} onChange={(e) => setData('role', e.target.value)}>
+                                        <option value="">Pilih...</option>
+                                        {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                                    </SelectInput>
+                                </FormField>
+                            </FormSection>
+                        )}
+
+                        {!(panel?.type === 'edit' && panel.user?.gate_id) && (
                         <FormSection variant="drawer" title="Password" description={panel?.type === 'create' ? 'Minimal 8 karakter' : 'Kosongkan jika tidak ingin ganti'}>
                             <FormField
                                 compact
@@ -352,6 +373,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                 </div>
                             </FormField>
                         </FormSection>
+                        )}
 
                         {panel?.type === 'edit' && isSelf(panel.user) && (
                             <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">

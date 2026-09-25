@@ -65,6 +65,17 @@ class UserManagementController extends Controller
     public function update($id, Request $request)
     {
         $user = User::findOrFail($id);
+
+        // ponytail: user Gate readonly kecuali role — org/password ikut Gate
+        if ($user->gate_id) {
+            $validated = $request->validate([
+                'role' => 'required|exists:roles,name',
+            ]);
+            $user->syncRoles([$validated['role']]);
+
+            return back()->with('success', 'Role user diperbarui. Data lain ikut Gate.');
+        }
+
         $validated = $this->validateUser($request, $user->id);
 
         $user->update([

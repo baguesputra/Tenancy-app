@@ -68,4 +68,26 @@ class UserManagementTest extends TestCase
             ->get(route('settings.users.index'))
             ->assertOk();
     }
+
+    public function test_gate_update_hanya_role(): void
+    {
+        Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
+        $branch = Branch::firstOrCreate(['code' => 'BJM'], ['name' => 'Banjarmasin']);
+        $user = User::create([
+            'name' => 'Gate User', 'employee_number' => 'NIK-G',
+            'branch_id' => $branch->id, 'password' => bcrypt('x'),
+            'gate_id' => 'gate-9',
+        ]);
+        $user->assignRole('staff');
+
+        $this->actingAs($this->admin())->put("/settings/users/{$user->id}", [
+            'role' => 'manager',
+        ])->assertRedirect();
+
+        $user->refresh();
+        $this->assertTrue($user->hasRole('manager'));
+        $this->assertSame('Gate User', $user->name);
+        $this->assertSame($branch->id, $user->branch_id);
+    }
 }
