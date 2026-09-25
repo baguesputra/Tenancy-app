@@ -26,7 +26,7 @@ const roleColor = (role) => {
     return 'gray';
 };
 
-export default function Index({ users, filters = {}, summary = { total: 0 }, roles = [], departments = [], branches = [] }) {
+export default function Index({ users, filters = {}, summary = { total: 0 }, roles = [], departments = [], divisions = [], positions = [], branches = [] }) {
     const { auth } = usePage().props;
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const [panel, setPanel] = useState(null);
@@ -35,7 +35,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
     const [showPassword, setShowPassword] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
-        name: '', employee_number: '', branch_id: '', department_id: '', role: '', password: '',
+        name: '', employee_number: '', branch_id: '', department_id: '', division_id: '', position_id: '', role: '', password: '',
     });
 
     useEffect(() => {
@@ -51,7 +51,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
         router.get('/settings/users', { ...filters, [key]: value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     };
 
-    const hasFilter = filters.search || filters.role || filters.branch_id || filters.department_id;
+    const hasFilter = filters.search || filters.role || filters.branch_id || filters.department_id || filters.division_id || filters.position_id;
     const resetFilters = () => {
         setSearchText('');
         router.get('/settings/users', {}, { preserveScroll: true, replace: true });
@@ -60,7 +60,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
     const openCreate = () => {
         reset();
         clearErrors();
-        setData({ name: '', employee_number: '', branch_id: '', department_id: '', role: '', password: randomPassword() });
+        setData({ name: '', employee_number: '', branch_id: '', department_id: '', division_id: '', position_id: '', role: '', password: randomPassword() });
         setShowPassword(false);
         setPanel({ type: 'create', user: null });
     };
@@ -73,6 +73,8 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
             employee_number: user.employee_number,
             branch_id: user.branch_id,
             department_id: user.department_id ?? '',
+            division_id: user.division_id ?? '',
+            position_id: user.position_id ?? '',
             role: user.roles[0]?.name ?? '',
             password: '',
         });
@@ -114,7 +116,8 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
 
     const columns = [
         { key: 'user', label: 'User' },
-        { key: 'role', label: 'Role / Departemen' },
+        { key: 'role', label: 'Role' },
+        { key: 'org', label: 'Organisasi' },
         { key: 'branch', label: 'Cabang', className: 'text-right' },
     ];
 
@@ -167,6 +170,14 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                             <option value="">Semua Departemen</option>
                             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </SelectInput>
+                        <SelectInput value={filters.division_id ?? ''} onChange={(e) => updateFilter('division_id', e.target.value)} className="lg:w-48" aria-label="Filter divisi">
+                            <option value="">Semua Divisi</option>
+                            {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </SelectInput>
+                        <SelectInput value={filters.position_id ?? ''} onChange={(e) => updateFilter('position_id', e.target.value)} className="lg:w-48" aria-label="Filter jabatan">
+                            <option value="">Semua Jabatan</option>
+                            {positions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </SelectInput>
                         {hasFilter && (
                             <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
                                 Reset
@@ -184,9 +195,13 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         >
                             <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                        {initials(user.name)}
-                                    </span>
+                                    {user.photo_url ? (
+                                        <img src={user.photo_url} alt={user.name} className="w-10 h-10 rounded-full object-cover shrink-0" loading="lazy" />
+                                    ) : (
+                                        <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                            {initials(user.name)}
+                                        </span>
+                                    )}
                                     <span className="min-w-0">
                                         <span className="block font-medium text-gray-900 truncate">
                                             {user.name}
@@ -198,14 +213,17 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                             </td>
                             <td className="px-5 py-3.5">
                                 <Badge color={roleColor(user.roles[0]?.name)}>{user.roles[0]?.name ?? '—'}</Badge>
-                                {user.department && <span className="text-xs text-gray-400 ml-2">{user.department.name}</span>}
+                            </td>
+                            <td className="px-5 py-3.5">
+                                <span className="block text-sm text-gray-700">{user.department?.name ?? '—'}</span>
+                                <span className="block text-xs text-gray-400">{[user.division?.name, user.position?.name].filter(Boolean).join(' · ') || '—'}</span>
                             </td>
                             <td className="px-5 py-3.5 text-right text-sm text-gray-500 whitespace-nowrap">{user.branch?.name ?? '—'}</td>
                         </tr>
                     ))}
                     {users.data.length === 0 && (
                         <tr>
-                            <td colSpan={3} className="px-5 py-12 text-center">
+                            <td colSpan={4} className="px-5 py-12 text-center">
                                 <p className="text-sm font-medium text-gray-700">Belum ada user ditemukan.</p>
                                 <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah User untuk data pertama.'}</p>
                                 {hasFilter && (
@@ -241,9 +259,13 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                     <form id="user-form" onSubmit={submit}>
                         <div className="bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm">
                             <div className="flex items-center gap-4">
-                                <span className="w-20 h-20 rounded-2xl bg-[#0F1E36] text-white text-xl font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                    {initials(data.name || panel?.user?.name || '?')}
-                                </span>
+                                {(panel?.user?.photo_url) ? (
+                                    <img src={panel.user.photo_url} alt={panel?.user?.name ?? 'Foto user'} className="w-20 h-20 rounded-2xl object-cover shrink-0" />
+                                ) : (
+                                    <span className="w-20 h-20 rounded-2xl bg-[#0F1E36] text-white text-xl font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
+                                        {initials(data.name || panel?.user?.name || '?')}
+                                    </span>
+                                )}
                                 <div className="min-w-0 flex-1">
                                     <p className="text-base font-semibold text-gray-900 truncate">{data.name?.trim() || panel?.user?.name || 'User baru'}</p>
                                     <p className="text-xs text-gray-500 mt-0.5 truncate font-mono">{data.employee_number || 'NIP belum diisi'}</p>
@@ -276,6 +298,20 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                                 </SelectInput>
                             </FormField>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <FormField compact label="Divisi" error={errors.division_id}>
+                                    <SelectInput value={data.division_id} onChange={(e) => setData('division_id', e.target.value)}>
+                                        <option value="">Tidak ada</option>
+                                        {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </SelectInput>
+                                </FormField>
+                                <FormField compact label="Jabatan" error={errors.position_id}>
+                                    <SelectInput value={data.position_id} onChange={(e) => setData('position_id', e.target.value)}>
+                                        <option value="">Tidak ada</option>
+                                        {positions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </SelectInput>
+                                </FormField>
+                            </div>
                             <FormField compact label="Role" error={errors.role} required>
                                 <SelectInput value={data.role} onChange={(e) => setData('role', e.target.value)}>
                                     <option value="">Pilih...</option>

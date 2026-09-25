@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Department;
+use App\Models\Division;
+use App\Models\Position;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,23 +17,27 @@ class UserManagementController extends Controller
 {
     public function index(Request $request)
     {
-        $users = User::with(['branch', 'department', 'roles'])
+        $users = User::with(['branch:id,name', 'department:id,name', 'division:id,name', 'position:id,name', 'roles'])
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$request->search}%")
                 ->orWhere('employee_number', 'like', "%{$request->search}%")))
             ->when($request->role, fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $request->role)))
             ->when($request->branch_id, fn ($q) => $q->where('branch_id', $request->branch_id))
             ->when($request->department_id, fn ($q) => $q->where('department_id', $request->department_id))
+            ->when($request->division_id, fn ($q) => $q->where('division_id', $request->division_id))
+            ->when($request->position_id, fn ($q) => $q->where('position_id', $request->position_id))
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Settings/Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['search', 'role', 'branch_id', 'department_id']),
+            'filters' => $request->only(['search', 'role', 'branch_id', 'department_id', 'division_id', 'position_id']),
             'summary' => ['total' => User::count()],
             'roles' => Role::orderBy('name')->pluck('name'),
             'departments' => Department::orderBy('name')->get(['id', 'name']),
+            'divisions' => Division::orderBy('name')->get(['id', 'name']),
+            'positions' => Position::orderBy('name')->get(['id', 'name']),
             'branches' => Branch::orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -45,6 +51,8 @@ class UserManagementController extends Controller
             'employee_number' => $validated['employee_number'],
             'branch_id' => $validated['branch_id'],
             'department_id' => $validated['department_id'] ?: null,
+            'division_id' => $validated['division_id'] ?: null,
+            'position_id' => $validated['position_id'] ?: null,
             'password' => bcrypt($validated['password']),
             'must_change_password' => true,
         ]);
@@ -64,6 +72,8 @@ class UserManagementController extends Controller
             'employee_number' => $validated['employee_number'],
             'branch_id' => $validated['branch_id'],
             'department_id' => $validated['department_id'] ?: null,
+            'division_id' => $validated['division_id'] ?: null,
+            'position_id' => $validated['position_id'] ?: null,
         ]);
 
         if (! empty($validated['password'])) {
@@ -96,6 +106,8 @@ class UserManagementController extends Controller
             ],
             'branch_id' => 'required|exists:branches,id',
             'department_id' => 'nullable|exists:departments,id',
+            'division_id' => 'nullable|exists:divisions,id',
+            'position_id' => 'nullable|exists:positions,id',
             'role' => 'required|exists:roles,name',
             'password' => $requirePassword ? 'required|string|min:8' : 'nullable|string|min:8',
         ]);
