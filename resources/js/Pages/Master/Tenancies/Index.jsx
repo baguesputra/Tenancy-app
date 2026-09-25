@@ -24,20 +24,13 @@ import { formatDateID } from '@/utils/format';
 const statusColor = { draft: 'gray', active: 'green', ended: 'yellow', terminated: 'red' };
 const statusLabel = { draft: 'Draft', active: 'Aktif', ended: 'Berakhir', terminated: 'Diakhiri' };
 
-const statusOptions = [
-    { key: '', label: 'Semua' },
-    { key: 'draft', label: 'Draft' },
-    { key: 'active', label: 'Aktif' },
-    { key: 'ended', label: 'Berakhir' },
-    { key: 'terminated', label: 'Diakhiri' },
-];
-
 export default function Index({ tenancies, summary = { total: 0, active: 0, draft: 0, ended: 0, terminated: 0 }, filters = {}, units, tenants }) {
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingTenancy, setEditingTenancy] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [searchText, setSearchText] = useState(filters.search ?? '');
+    const [showFinancial, setShowFinancial] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         unit_id: '', tenant_id: '', contract_number: '', contract_document: null,
@@ -143,7 +136,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                 onClick={(e) => { e.stopPropagation(); askDelete(t); }}
                 aria-label={`Hapus tenancy ${t.tenant?.name}`}
                 title="Hapus"
-                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
             >
                 <IconTrash className="w-4 h-4" />
             </button>
@@ -177,18 +170,6 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                             />
                         </div>
                         {hasFilter && <FilterReset onClick={resetFilters} />}
-                    <div className="flex gap-1.5 overflow-x-auto lg:w-full mt-2 lg:mt-0" role="group" aria-label="Filter status">
-                        {statusOptions.map((o) => (
-                            <button
-                                key={o.key}
-                                onClick={() => updateFilter('status', o.key)}
-                                aria-pressed={(filters.status ?? '') === o.key}
-                                className={`shrink-0 px-3 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors ${(filters.status ?? '') === o.key ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                {o.label}
-                            </button>
-                        ))}
-                    </div>
                 </FilterBar>
 
                 <div className="hidden sm:block">
@@ -247,10 +228,16 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                                 {t.contract_number ? ` · ${t.contract_number}` : ''}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">{periodLabel(t)}</p>
-                            <div className="mt-3">
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-gray-700 bg-gray-100 active:bg-gray-200 transition-colors"
+                                >
+                                    Edit
+                                </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); askDelete(t); }}
-                                    className="w-full py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-red-50 active:bg-red-100 transition-colors"
+                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-red-50 active:bg-red-100 transition-colors"
                                 >
                                     Hapus
                                 </button>
@@ -315,7 +302,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                                 <option value="draft">Draft</option>
                                 <option value="active">Aktif</option>
                                 <option value="ended">Berakhir</option>
-                                <option value="terminated">Diakhiri Sepihak</option>
+                                <option value="terminated">Diakhiri</option>
                             </SelectInput>
                         </FormField>
                     </FormSection>
@@ -345,7 +332,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                         </div>
                     </FormSection>
 
-                    <FormSection variant="drawer" title="Finansial" description="Sewa, charge, deposit, dan bagi hasil">
+                    <FormSection variant="drawer" title="Finansial" description="Sewa, charge, deposit, dan bagi hasil" collapsible expanded={showFinancial} onToggle={() => setShowFinancial((v) => !v)}>
                         <div className="grid grid-cols-2 gap-2.5">
                             <FormField compact label="Nilai Sewa (Rp)" error={errors.rent_value}>
                                 <NumberInput value={data.rent_value} onChange={(e) => setData('rent_value', e.target.value)} />
@@ -379,7 +366,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                         </div>
                     </FormSection>
 
-                    <FormSection variant="drawer" title="Catatan" description="Catatan tambahan kontrak">
+                    <FormSection variant="drawer" title="Catatan" description="Catatan tambahan kontrak" collapsible expanded={showFinancial} onToggle={() => setShowFinancial((v) => !v)}>
                         <FormField compact label="Catatan" error={errors.notes}>
                             <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
                         </FormField>
