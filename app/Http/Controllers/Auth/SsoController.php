@@ -125,8 +125,12 @@ class SsoController extends Controller
         $user = Auth::guard('web')->user();
         if ($user && $user->sso_id) {
             try {
-                return Socialite::driver('perusahaan')
-                    ->logoutRequest($user->sso_id);
+                // ponytail: full-page ke domain IdP via Inertia::location (XHR tak bisa lintas domain)
+                $tujuan = Socialite::driver('perusahaan')
+                    ->logoutRequest($user->sso_id)
+                    ->getTargetUrl();
+
+                return Inertia::location($tujuan);
             } catch (\Exception $e) {
                 report($e);
             }
@@ -138,7 +142,7 @@ class SsoController extends Controller
 
         $sloUrl = env('SAML_IDP_SLO_URL', route('login'));
 
-        return redirect()->away($sloUrl);
+        return Inertia::location($sloUrl);
     }
 
     public function slo(Request $request)

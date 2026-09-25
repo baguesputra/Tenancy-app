@@ -114,7 +114,9 @@ export default function AppLayout({ children }) {
         localStorage.setItem('sidebar-collapsed', next ? '1' : '0');
     };
 
-    const logout = () => router.post('/logout');
+    const csrfToken = typeof document !== 'undefined'
+        ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
+        : '';
 
     return (
         <div className="min-h-screen bg-[#F7F8FA]">
@@ -265,7 +267,7 @@ export default function AppLayout({ children }) {
             </aside>
 
             <div className={`min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[232px]'}`}>
-                <Topbar user={auth.user} onMenuClick={() => setMobileNavOpen(true)} onLogout={logout} />
+                    <Topbar user={auth.user} onMenuClick={() => setMobileNavOpen(true)} csrfToken={csrfToken} />
                 <FlashBanner />
                 <div className="flex-1 flex flex-col">{children}</div>
             </div>
@@ -273,7 +275,7 @@ export default function AppLayout({ children }) {
     );
 }
 
-function Topbar({ user, onMenuClick, onLogout }) {
+function Topbar({ user, onMenuClick, csrfToken }) {
     const [profileOpen, setProfileOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [scanOpen, setScanOpen] = useState(false);
@@ -444,15 +446,18 @@ function Topbar({ user, onMenuClick, onLogout }) {
                                         </svg>
                                         Ubah Kata Sandi
                                     </Link>
-                                    <button
-                                        onClick={onLogout}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 min-h-[40px] text-sm text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-500"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                        </svg>
-                                        Keluar
-                                    </button>
+                                    <form method="POST" action="/logout">
+                                        <input type="hidden" name="_token" value={csrfToken} />
+                                        <button
+                                            type="submit"
+                                            className="w-full flex items-center gap-2.5 px-4 py-2.5 min-h-[40px] text-sm text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-500"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Keluar
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         )}

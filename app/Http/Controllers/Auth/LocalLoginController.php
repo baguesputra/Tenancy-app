@@ -66,7 +66,7 @@ class LocalLoginController extends Controller
         $request->session()->regenerateToken();
 
         if (config('auth.mode') === 'sso') {
-            return redirect()->away(config('services.gate.base_url', 'https://gate.appdutamall.com').'/dashboard');
+            return Inertia::location(config('services.gate.base_url', 'https://gate.appdutamall.com').'/dashboard');
         }
 
         return redirect()->route('login');
