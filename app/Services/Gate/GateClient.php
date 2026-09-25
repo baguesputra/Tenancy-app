@@ -15,6 +15,51 @@ class GateClient
         return $this->ambil('/api/users', $filter, 'karyawan');
     }
 
+    public function ambilPerusahaan(): array
+    {
+        return $this->ambil('/api/companies', [], 'perusahaan');
+    }
+
+    public function ambilDepartemen(int|string|null $companyId = null): array
+    {
+        $query = $companyId ? ['company_id' => $companyId] : [];
+
+        return $this->ambil('/api/departments', $query, 'departemen');
+    }
+
+    public function ambilDivisi(int|string|null $companyId = null): array
+    {
+        $query = $companyId ? ['company_id' => $companyId] : [];
+
+        return $this->ambil('/api/divisions', $query, 'divisi');
+    }
+
+    public function ambilJabatan(int|string|null $companyId = null, array $filter = []): array
+    {
+        $query = array_merge($filter, $companyId ? ['company_id' => $companyId] : []);
+
+        return $this->ambil('/api/positions', $query, 'jabatan');
+    }
+
+    public function ambilTreeCompany(int|string $companyId): array
+    {
+        try {
+            $respon = $this->get(
+                rtrim(config('services.gate.base_url'), '/'),
+                config('services.gate.token'),
+                "/api/companies/{$companyId}/tree",
+                []
+            )->throw()->json();
+        } catch (ConnectionException|RequestException $e) {
+            Log::warning('GATE gagal', ['jenis' => 'tree', 'path' => "/api/companies/{$companyId}/tree", 'error' => $e->getMessage()]);
+            throw new RuntimeException('Gagal mengambil tree perusahaan dari GATE: '.$e->getMessage(), 0, $e);
+        }
+
+        $data = $respon['data'] ?? [];
+
+        return is_array($data) ? $data : [];
+    }
+
     public function cariKaryawanByEmail(string $email): ?array
     {
         try {

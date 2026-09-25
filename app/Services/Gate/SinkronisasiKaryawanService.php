@@ -2,8 +2,10 @@
 
 namespace App\Services\Gate;
 
-use App\Models\GateCompanyBranchMap;
-use App\Models\GateDepartmentMap;
+use App\Models\Branch;
+use App\Models\Department;
+use App\Models\Division;
+use App\Models\Position;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -74,12 +76,18 @@ class SinkronisasiKaryawanService
             $user = User::where('gate_id', $gateId)->first()
                 ?? User::where('employee_number', $nik)->first();
 
+            $org = $this->resolveOrg($baris);
+            $fotoUrl = $this->normalisasiFoto($baris['photo_url'] ?? $baris['photo'] ?? null);
+
             $attrs = [
                 'name' => $nama,
                 'email' => $email ?: ($user?->email),
+                'photo_url' => $fotoUrl ?? $user?->photo_url,
                 'gate_id' => $gateId,
-                'branch_id' => $this->resolveBranchId($baris) ?? $user?->branch_id,
-                'department_id' => $this->resolveDepartmentId($baris) ?? $user?->department_id,
+                'branch_id' => $org['branch_id'] ?? $user?->branch_id,
+                'department_id' => $org['department_id'] ?? $user?->department_id,
+                'division_id' => $org['division_id'] ?? $user?->division_id,
+                'position_id' => $org['position_id'] ?? $user?->position_id,
                 'auth_provider' => $user?->auth_provider ?? 'sso',
                 'is_active' => (bool) ($baris['is_active'] ?? true),
                 'must_change_password' => false,
@@ -87,6 +95,7 @@ class SinkronisasiKaryawanService
 
             if (! $user) {
                 $user = User::create($attrs + ['employee_number' => $nik]);
+                // ponytail: role selalu staff — jabatan Gate tidak dipetakan ke role
                 $user->assignRole('staff');
 
                 return 'baru';
@@ -103,35 +112,55 @@ class SinkronisasiKaryawanService
 
     public function enrichDariGate(User $user, array $baris): void
     {
-        DB::transaction(function () use ($user, $baris) {
+        $org = $this->resolveOrg($baris);
+        $fotoUrl = $this->normalisasiFoto($baris['photo_url'] ?? $baris['photo'] ?? null);
+
+        DB::transaction(function () use ($user, $baris, $org, $fotoUrl) {
             $user->update([
                 'gate_id' => $user->gate_id ?? ($baris['id'] ?? null),
                 'employee_number' => $user->employee_number ?: (trim((string) ($baris['nik'] ?? '')) ?: null),
                 'name' => trim((string) ($baris['name'] ?? '')) ?: $user->name,
-                'branch_id' => $user->branch_id ?? $this->resolveBranchId($baris),
-                'department_id' => $user->department_id ?? $this->resolveDepartmentId($baris),
+                'photo_url' => $fotoUrl ?? $user->photo_url,
+                'branch_id' => $user->branch_id ?? $org['branch_id'] ?? null,
+                'department_id' => $user->department_id ?? $org['department_id'] ?? null,
+                'division_id' => $user->division_id ?? $org['division_id'] ?? null,
+                'position_id' => $user->position_id ?? $org['position_id'] ?? null,
                 'is_active' => (bool) ($baris['is_active'] ?? $user->is_active ?? true),
             ]);
         });
     }
 
-    private function resolveBranchId(array $baris): ?int
+    private function normalisasiFoto(mixed $url): ?string
     {
-        $companyId = $baris['company_id'] ?? (is_array($baris['position'] ?? null) ? ($baris['position']['company_id'] ?? null) : null);
-        if (! $companyId) {
+        $url = trim((string) $url);
+        if ($url === '' || strlen($url) > 500) {
             return null;
         }
 
-        return GateCompanyBranchMap::where('gate_company_id', $companyId)->value('branch_id');
+        return preg_match('#^https?://#i', $url) ? $url : null;
     }
 
-    private function resolveDepartmentId(array $baris): ?int
+    private function resolveOrg(array $baris): array
     {
-        $deptId = $baris['department_id'] ?? (is_array($baris['position'] ?? null) ? ($baris['position']['department']['id'] ?? null) : null);
-        if (! $deptId) {
-            return null;
-        }
+        $pos = is_array($baris['position'] ?? null) ? $baris['position'] : null;
 
-        return GateDepartmentMap::where('gate_department_id', $deptId)->value('department_id');
+        $jabGateId = $baris['position_id'] ?? $pos['id'] ?? null;
+        $position = $jabGateId ? Position::where('gate_id', $jabGateId)->first() : null;
+
+        $deptGateId = $baris['department_id'] ?? $pos['department']['id'] ?? $pos['department_id'] ?? null;
+        $department = $deptGateId ? Department::where('gate_id', $deptGateId)->first() : null;
+
+        $divGateId = $pos['division']['id'] ?? $pos['division_id'] ?? $baris['division_id'] ?? null;
+        $division = $divGateId ? Division::where('gate_id', $divGateId)->first() : null;
+
+        // ponytail: full gate_id, tanpa tabel mapping — master wajib sync dulu
+        $companyId = $baris['company_id'] ?? $pos['company_id'] ?? null;
+
+        return [
+            'branch_id' => $companyId ? Branch::where('gate_id', $companyId)->value('id') : null,
+            'department_id' => $department?->id ?? $position?->department_id,
+            'division_id' => $division?->id ?? $position?->division_id,
+            'position_id' => $position?->id,
+        ];
     }
 }

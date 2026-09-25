@@ -15,9 +15,12 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'photo_url',
         'employee_number',
         'branch_id',
         'department_id',
+        'division_id',
+        'position_id',
         'auth_provider',
         'sso_id',
         'gate_id',
@@ -57,5 +60,15 @@ class User extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
+    }
+
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
     }
 }

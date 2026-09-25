@@ -6,11 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'description', 'gate_id'];
 
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function divisions()
+    {
+        return $this->hasMany(Division::class);
+    }
+
+    public function positions()
+    {
+        return $this->hasMany(Position::class);
     }
 
     public function approvals()
