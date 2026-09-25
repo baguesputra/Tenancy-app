@@ -84,28 +84,28 @@ class SinkronisasiMasterService
                 }
                 $deptModel = Department::updateOrCreate(
                     ['gate_id' => $dept['id']],
-                    ['name' => $dept['name']]
+                    ['name' => $dept['name'], 'company_gate_id' => $company['id']]
                 );
                 $counts['departemen'] += $deptModel->wasRecentlyCreated ? 1 : 0;
 
                 foreach ($dept['divisions'] ?? [] as $div) {
-                    $counts['divisi'] += $this->simpanDivisi($div, $deptModel->id) ? 1 : 0;
+                    $counts['divisi'] += $this->simpanDivisi($div, $deptModel->id, $company['id']) ? 1 : 0;
                 }
 
                 foreach ($dept['positions'] ?? [] as $jab) {
-                    $counts['jabatan'] += $this->simpanJabatan($jab, $deptModel->id, null) ? 1 : 0;
+                    $counts['jabatan'] += $this->simpanJabatan($jab, $deptModel->id, null, $company['id']) ? 1 : 0;
                 }
             }
 
             foreach ($tree['direct_divisions'] ?? [] as $div) {
-                $counts['divisi'] += $this->simpanDivisi($div, null) ? 1 : 0;
+                $counts['divisi'] += $this->simpanDivisi($div, null, $company['id']) ? 1 : 0;
             }
 
             return $counts;
         });
     }
 
-    private function simpanDivisi(array $div, ?int $departmentId): bool
+    private function simpanDivisi(array $div, ?int $departmentId, ?string $companyGateId): bool
     {
         if (empty($div['id']) || empty($div['name'])) {
             return false;
@@ -115,6 +115,7 @@ class SinkronisasiMasterService
             ['gate_id' => $div['id']],
             [
                 'name' => $div['name'],
+                'company_gate_id' => $companyGateId,
                 'department_id' => ! empty($div['department_id'])
                     ? Department::where('gate_id', $div['department_id'])->value('id') ?? $departmentId
                     : $departmentId,
@@ -123,13 +124,13 @@ class SinkronisasiMasterService
         $baru = $model->wasRecentlyCreated;
 
         foreach ($div['positions'] ?? [] as $jab) {
-            $this->simpanJabatan($jab, $model->department_id, $model->id);
+            $this->simpanJabatan($jab, $model->department_id, $model->id, $companyGateId);
         }
 
         return $baru;
     }
 
-    private function simpanJabatan(array $jab, ?int $departmentId, ?int $divisionId): bool
+    private function simpanJabatan(array $jab, ?int $departmentId, ?int $divisionId, ?string $companyGateId): bool
     {
         if (empty($jab['id']) || empty($jab['name'])) {
             return false;
@@ -147,6 +148,7 @@ class SinkronisasiMasterService
             [
                 'name' => $jab['name'],
                 'level' => $jab['level'] ?? null,
+                'company_gate_id' => $companyGateId,
                 'department_id' => $deptId,
                 'division_id' => $divId,
             ]

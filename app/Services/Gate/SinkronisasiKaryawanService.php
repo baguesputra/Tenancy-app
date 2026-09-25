@@ -153,8 +153,9 @@ class SinkronisasiKaryawanService
         $divGateId = $pos['division']['id'] ?? $pos['division_id'] ?? $baris['division_id'] ?? null;
         $division = $divGateId ? Division::where('gate_id', $divGateId)->first() : null;
 
-        // ponytail: full gate_id, tanpa tabel mapping — master wajib sync dulu
-        $companyId = $baris['company_id'] ?? $pos['company_id'] ?? null;
+        // ponytail: rantai company via position->dept/div (baris /api/users tanpa company_id) — master wajib sync dulu
+        $companyId = $baris['company_id'] ?? $pos['company_id'] ?? null
+            ?? $position?->company_gate_id ?? $department?->company_gate_id ?? $division?->company_gate_id;
 
         return [
             'branch_id' => $companyId ? Branch::where('gate_id', $companyId)->value('id') : null,

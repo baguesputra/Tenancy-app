@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    protected $fillable = ['name', 'description', 'gate_id'];
+    protected $fillable = ['name', 'description', 'gate_id', 'company_gate_id'];
 
     public function users()
     {

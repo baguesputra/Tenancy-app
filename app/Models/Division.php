@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Division extends Model
 {
-    protected $fillable = ['gate_id', 'department_id', 'name'];
+    protected $fillable = ['gate_id', 'department_id', 'name', 'company_gate_id'];
 
     public function department()
     {
