@@ -9,7 +9,7 @@ const highlights = [
     { title: 'Teraudit', desc: 'Seluruh aktivitas tercatat dan dapat ditelusuri' },
 ];
 
-export default function Login({ allowLocalLogin }) {
+export default function Login({ allowLocalLogin, ssoEnabled }) {
     const { data, setData, post, processing, errors } = useForm({
         employee_number: '',
         password: '',
@@ -35,7 +35,24 @@ export default function Login({ allowLocalLogin }) {
                     </div>
 
                     <h1 className="mt-8 text-2xl font-bold tracking-tight text-gray-900">Masuk</h1>
-                    <p className="text-sm text-gray-500 mt-1">Masuk menggunakan kredensial karyawan yang terdaftar.</p>
+                    <p className="text-sm text-gray-500 mt-1">Masuk menggunakan akun perusahaan (SSO) atau kredensial karyawan.</p>
+
+                    {ssoEnabled && (
+                        <a
+                            href="/auth/sso/redirect"
+                            className="mt-6 w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:py-3 text-[15px] sm:text-sm font-semibold text-white bg-[#0F1E36] rounded-xl hover:bg-[#1a2f52] active:scale-[0.99] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            Masuk dengan SSO Perusahaan
+                        </a>
+                    )}
+
+                    {ssoEnabled && allowLocalLogin && (
+                        <div className="mt-5 flex items-center gap-3" aria-hidden="true">
+                            <span className="flex-1 h-px bg-gray-200" />
+                            <span className="text-xs text-gray-400">atau login lokal</span>
+                            <span className="flex-1 h-px bg-gray-200" />
+                        </div>
+                    )}
 
                     {hasError && (
                         <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex gap-2.5" role="alert">
@@ -46,11 +63,12 @@ export default function Login({ allowLocalLogin }) {
                         </div>
                     )}
 
-                    {!allowLocalLogin ? (
+                    {!allowLocalLogin && !ssoEnabled ? (
                         <div className="mt-6 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl" role="status">
                             Autentikasi lokal tidak tersedia pada environment ini. Hubungi administrator sistem.
                         </div>
-                    ) : (
+                    ) : null}
+                    {allowLocalLogin ? (
                         <form onSubmit={submit} className="mt-6 space-y-4">
                             <FormField label="Nomor Induk Karyawan" error={errors.employee_number ? ' ' : null} required>
                                 <TextInput
@@ -107,7 +125,7 @@ export default function Login({ allowLocalLogin }) {
                                 {processing ? 'Memproses…' : 'Masuk'}
                             </button>
                         </form>
-                    )}
+                    ) : null}
 
                     <p className="mt-6 text-xs text-gray-400 leading-relaxed">
                         Mengalami kendala akses? Hubungi administrator sistem.

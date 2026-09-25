@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\TenantUser;
 use App\Models\User;
 
 return [
@@ -76,7 +77,7 @@ return [
         // Provider baru khusus staff toko
         'tenant_users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\TenantUser::class,
+            'model' => TenantUser::class,
         ],
 
         // 'users' => [
@@ -125,5 +126,7 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    'mode' => env('AUTH_MODE', 'local'),
 
 ];

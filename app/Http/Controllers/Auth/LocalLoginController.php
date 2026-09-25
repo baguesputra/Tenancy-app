@@ -14,6 +14,7 @@ class LocalLoginController extends Controller
     {
         return Inertia::render('Auth/Login', [
             'allowLocalLogin' => config('app.allow_local_login'),
+            'ssoEnabled' => (bool) config('services.perusahaan.metadata'),
         ]);
     }
 
@@ -21,10 +22,11 @@ class LocalLoginController extends Controller
     {
         abort_unless(config('app.allow_local_login'), 403, 'Login lokal dinonaktifkan di environment ini.');
 
-        $key = 'login:' . $request->ip();
+        $key = 'login:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
+
             return back()->withErrors([
                 'employee_number' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
             ]);
@@ -37,6 +39,7 @@ class LocalLoginController extends Controller
 
         if (! Auth::attempt($credentials)) {
             RateLimiter::hit($key, 60);
+
             return back()->withErrors([
                 'employee_number' => 'Employee number atau password salah.',
             ]);
@@ -54,9 +57,17 @@ class LocalLoginController extends Controller
 
     public function destroy(Request $request)
     {
+        if (config('auth.mode') === 'sso' && Auth::user()?->sso_id) {
+            return app(SsoController::class)->logout();
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if (config('auth.mode') === 'sso') {
+            return redirect()->away(config('services.gate.base_url', 'https://gate.appdutamall.com').'/dashboard');
+        }
 
         return redirect()->route('login');
     }

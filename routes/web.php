@@ -1,36 +1,49 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use App\Http\Controllers\Auth\LocalLoginController;
-use App\Http\Controllers\Auth\SsoController;
-use App\Http\Controllers\Auth\PasswordChangeController;
-use App\Http\Controllers\InspectionSessionController;
-use App\Http\Controllers\InspectionController;
-use App\Http\Controllers\TenantController;
-use App\Http\Controllers\TenantProfileController;
-use App\Http\Controllers\UnitController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\TenantCategoryController;
-use App\Http\Controllers\ProductCategoryController;
-use App\Http\Controllers\TenancyController;
-use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\Auth\LocalLoginController;
+use App\Http\Controllers\Auth\PasswordChangeController;
+use App\Http\Controllers\Auth\SsoController;
+use App\Http\Controllers\Auth\TenantLoginController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InspectionController;
+use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\PermitCheckController;
 use App\Http\Controllers\PermitRequestController;
-use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
-use App\Http\Controllers\TenantPortal\InspectionController as PortalInspectionController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Settings\UserManagementController;
-use App\Http\Controllers\Settings\AccessControlController;
-use App\Http\Controllers\Settings\TenantAccountController;
-use App\Http\Controllers\Settings\InspectionTemplateController;
-use App\Http\Controllers\UnitQrController;
+use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ScanController;
+use App\Http\Controllers\Settings\AccessControlController;
+use App\Http\Controllers\Settings\InspectionTemplateController;
+use App\Http\Controllers\Settings\TenantAccountController;
+use App\Http\Controllers\Settings\UserManagementController;
+use App\Http\Controllers\TenancyController;
+use App\Http\Controllers\TenantCategoryController;
+use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantPortal\InspectionController as PortalInspectionController;
+use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
+use App\Http\Controllers\TenantProfileController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UnitQrController;
+use App\Models\Inspection;
+use App\Models\PermitRequest;
+use App\Models\Tenant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
-    if (auth()->check()) return redirect()->route('dashboard');
-    if (auth('tenant')->check()) return redirect()->route('tenant-portal.dashboard');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    if (auth('tenant')->check()) {
+        return redirect()->route('tenant-portal.dashboard');
+    }
+    if (config('auth.mode') === 'sso') {
+        return redirect()->route('sso.redirect');
+    }
+
     return redirect()->route('login');
 })->name('home');
 
@@ -54,8 +67,9 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
     Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive']);
 });
 
-Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
+Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Request $request) {
     $request->user('tenant')->notifications()->where('id', $id)->update(['read_at' => now()]);
+
     return back();
 })->name('tenant-portal.notifications.read');
 
@@ -68,17 +82,17 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('auth:tenant')->group(function () {
         Route::post('/logout', [TenantLoginController::class, 'destroy'])->name('logout');
 
-        Route::get('/dashboard', function (Illuminate\Http\Request $request) {
+        Route::get('/dashboard', function (Request $request) {
             $tenantUser = $request->user('tenant');
-            $tenant = \App\Models\Tenant::select(['id', 'name', 'logo_path', 'branch_id'])
+            $tenant = Tenant::select(['id', 'name', 'logo_path', 'branch_id'])
                 ->with(['activeTenancy:id,tenant_id,unit_id,end_date', 'activeTenancy.unit:id,unit_code', 'branch:id,name'])
                 ->findOrFail($tenantUser->tenant_id);
 
-            $base = \App\Models\PermitRequest::select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])
+            $base = PermitRequest::select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])
                 ->with(['approvals' => fn ($q) => $q->select(['id', 'approvable_id', 'status', 'label', 'order'])->orderBy('order')])
                 ->where('tenant_id', $tenant->id);
 
-            $stats = \Illuminate\Support\Facades\Cache::remember('portal.stats.'.$tenant->id, 60, fn () => [
+            $stats = Cache::remember('portal.stats.'.$tenant->id, 60, fn () => [
                 'pending' => (clone $base)->where('status', 'pending')->count(),
                 'completed' => (clone $base)->where('status', 'completed')->count(),
                 'rejected' => (clone $base)->where('status', 'rejected')->count(),
@@ -87,6 +101,7 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
 
             $mapPermit = function ($permit) {
                 $current = $permit->approvals->firstWhere('status', 'pending');
+
                 return [
                     'id' => $permit->id,
                     'permit_number' => $permit->permit_number,
@@ -105,7 +120,7 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
             $recent = (clone $base)->latest()->take(5)->get()->map($mapPermit)->values();
             $tenancy = $tenant->activeTenancy;
 
-            $sidakBase = \App\Models\Inspection::select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])
+            $sidakBase = Inspection::select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])
                 ->with('session:id,status,started_at')->where('tenant_id', $tenant->id);
             $sidakActive = (clone $sidakBase)->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))->exists();
             $sidakRecent = (clone $sidakBase)
@@ -146,12 +161,23 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
 });
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [LocalLoginController::class, 'create'])->name('login');
-    Route::post('/login', [LocalLoginController::class, 'store']);
+    Route::get('/login', [LocalLoginController::class, 'create'])->name('login')->middleware('sso.local-guard');
+    Route::post('/login', [LocalLoginController::class, 'store'])->middleware('sso.local-guard');
 });
 
 Route::get('/auth/sso/redirect', [SsoController::class, 'redirect'])->name('sso.redirect');
-Route::get('/auth/sso/callback', [SsoController::class, 'callback']);
+Route::match(['get', 'post'], '/auth/sso/callback', [SsoController::class, 'callback'])
+    ->name('sso.callback')
+    ->middleware('throttle:sso-callback');
+Route::get('/auth/sso/logout', [SsoController::class, 'logout'])->name('sso.logout');
+Route::match(['get', 'post'], '/auth/sso/slo', [SsoController::class, 'slo'])->name('sso.slo');
+Route::get('/auth/sso/metadata', [SsoController::class, 'metadata'])->name('sso.metadata');
+Route::get('/auth/sso/gagal', function () {
+    return Inertia::render('Auth/SsoGagal', [
+        'error' => session('error'),
+        'ssoLogoutUrl' => config('services.gate.base_url', 'https://gate.appdutamall.com').'/dashboard',
+    ]);
+})->middleware('guest')->name('sso.gagal');
 
 // routes/web.php — pola yang lebih ringkas
 
@@ -179,7 +205,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:units.create')->post('/units', [UnitController::class, 'store'])->name('units.store');
     Route::middleware('can:units.edit')->put('/units/{id}', [UnitController::class, 'update'])->name('units.update');
     Route::middleware('can:units.delete')->delete('/units/{id}', [UnitController::class, 'destroy'])->name('units.destroy');
-    
+
     Route::middleware('can:units.view')->group(function () {
         Route::get('/units/{id}/qr', [UnitQrController::class, 'single'])->name('units.qr');
         Route::get('/units-qr/bulk', [UnitQrController::class, 'bulk'])->name('units.qr.bulk');
@@ -206,8 +232,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:sidak.view')->group(function () {
-    Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
-    Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
+        Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
+        Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
     });
 
     Route::middleware('can:sidak.create')->group(function () {
@@ -248,16 +274,16 @@ Route::middleware('auth')->group(function () {
     });
 
     // Notifikasi — semua yang login boleh (web + tenant)
-    Route::post('/notifications/{id}/read', function ($id, Illuminate\Http\Request $request) {
+    Route::post('/notifications/{id}/read', function ($id, Request $request) {
         $notifiable = $request->user() ?? $request->user('tenant');
         abort_unless($notifiable, 401);
         $notifiable->notifications()->where('id', $id)->update(['read_at' => now()]);
+
         return back();
     })->name('notifications.read')->withoutMiddleware('auth');
 });
 
 Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)->name('scan.resolve');
-
 
 // Portal (staff toko)
 Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
@@ -268,5 +294,3 @@ Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->grou
     Route::post('permits/{permit}/cancel', [PortalPermitRequestController::class, 'cancel'])->name('permits.cancel');
     Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
 });
-
-

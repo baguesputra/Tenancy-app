@@ -2,61 +2,23 @@
 
 namespace App\Services\SSO;
 
-use Laravel\Socialite\Two\AbstractProvider;
-use Laravel\Socialite\Two\ProviderInterface;
-use Laravel\Socialite\Two\User as SocialiteUser;
+use Carbon\Carbon;
+use LightSaml\Validator\Model\Assertion\AssertionTimeValidator;
+use SocialiteProviders\Saml2\Provider as Saml2Provider;
 
-class PerusahaanProvider extends AbstractProvider implements ProviderInterface
+class PerusahaanProvider extends Saml2Provider
 {
-    protected $scopes = [];
-
-    protected function getAuthUrl($state): string
+    public static function additionalConfigKeys(): array
     {
-        return $this->buildAuthUrlFromBase(
-            config('services.sso.authorize_url'),
-            $state
+        return array_merge(parent::additionalConfigKeys(), ['validation']);
+    }
+
+    protected function validateTimestamps(): void
+    {
+        (new AssertionTimeValidator)->validateTimeRestrictions(
+            $this->getFirstAssertion(),
+            Carbon::now()->timestamp,
+            (int) config('services.perusahaan.validation.clock_skew', 600)
         );
-    }
-
-    protected function getTokenUrl(): string
-    {
-        return config('services.sso.token_url');
-    }
-
-    protected function getTokenFields($code)
-    {
-        return [
-            'grant_type' => 'authorization_code',
-            'client_id' => config('services.sso.client_id'),
-            'client_secret' => config('services.sso.client_secret'),
-            'code' => $code,
-            'redirect_uri' => config('services.sso.redirect'),
-        ];
-    }
-
-    protected function getUserByToken($token): array
-    {
-        $response = $this->getHttpClient()->get(
-            config('services.sso.profile_url'),
-            [
-                'headers' => [
-                    'Authorization' => 'Bearer '.$token,
-                    'Accept' => 'application/json',
-                ],
-            ]
-        );
-
-        return json_decode($response->getBody(), true);
-    }
-
-    protected function mapUserToObject(array $user): SocialiteUser
-    {
-        return (new SocialiteUser)
-            ->setRaw($user)
-            ->map([
-                'id' => $user['id'] ?? $user['sub'] ?? null,
-                'name' => $user['name'] ?? null,
-                'email' => $user['email'] ?? null,
-            ]);
     }
 }

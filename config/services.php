@@ -35,13 +35,29 @@ return [
         ],
     ],
 
-    'sso' => [
-        'client_id' => env('SSO_CLIENT_ID'),
-        'client_secret' => env('SSO_CLIENT_SECRET'),
-        'redirect' => env('SSO_REDIRECT_URI'),
-        'authorize_url' => env('SSO_AUTHORIZE_URL'),
-        'token_url' => env('SSO_TOKEN_URL'),
-        'profile_url' => env('SSO_PROFILE_URL'),
+    'perusahaan' => [
+        'metadata' => env('SAML_METADATA_URL'),
+        'sp_entityid' => env('SAML_SPENTITY_ID', env('SSO_REDIRECT_URI', 'http://localhost:8000/auth/sso/callback')),
+        'sp_acs' => env('SAML_SP_ACS_URL', env('SSO_REDIRECT_URI', 'http://localhost:8000/auth/sso/callback')),
+        'sp_sls' => env('SAML_SP_SLS_URL') ?: rtrim(env('APP_URL', 'http://localhost:8000'), '/').'/auth/sso/slo',
+        'sp_name_id_format' => env('SAML_NAME_ID_FORMAT', 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'),
+        'sp_sign_assertions' => env('SAML_SP_SIGN_ASSERTIONS', false),
+        'sp_certificate' => env('SAML_SP_CERT'),
+        'sp_private_key' => env('SAML_SP_PRIVATE_KEY'),
+        'sp_private_key_passphrase' => env('SAML_SP_PRIVATE_KEY_PASSPHRASE'),
+        'validation' => [
+            'clock_skew' => (int) env('SAML_CLOCK_SKEW', 600),
+        ],
+        'attribute_map' => [
+            'email' => ['email', 'mail', 'userPrincipalName'],
+            'name' => ['name', 'displayName', 'cn', 'givenName'],
+        ],
+    ],
+
+    'gate' => [
+        'base_url' => env('GATE_BASE_URL', 'https://gate.appdutamall.com'),
+        'token' => env('GATE_TOKEN'),
+        'timeout' => (float) env('GATE_TIMEOUT', 15),
     ],
 
 ];

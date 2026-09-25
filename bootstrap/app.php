@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureLocalLoginAllowed;
+use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\EnsurePasswordIsChanged;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,9 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-            $middleware->web(append: [
+        $middleware->web(append: [
             HandleInertiaRequests::class,
             EnsurePasswordIsChanged::class,
+        ]);
+        $middleware->alias([
+            'sso.local-guard' => EnsureLocalLoginAllowed::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
