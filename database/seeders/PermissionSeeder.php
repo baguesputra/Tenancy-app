@@ -20,6 +20,13 @@ class PermissionSeeder extends Seeder
             'users.manage',
             'settings.access',
             'gate.sync',
+            // LOO workflow
+            'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
+            'loos.legal_edit', 'loos.legal_submit',
+            'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
+            'loos.measurement_edit', 'loos.termin_manage',
+            'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ];
 
         foreach ($permissions as $permission) {
@@ -36,6 +43,12 @@ class PermissionSeeder extends Seeder
             'users.manage',
             'settings.access',
             'gate.sync',
+            'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
+            'loos.legal_edit', 'loos.legal_submit',
+            'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
+            'loos.measurement_edit', 'loos.termin_manage',
+            'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('manager', [
@@ -45,6 +58,9 @@ class PermissionSeeder extends Seeder
             'categories.view',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
+            'loos.view', 'loos.dashboard', 'loos.transition',
+            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
+            'loos.fitout_approve',
         ]);
 
         $this->assignRolePermissions('tenancy_staff', [
@@ -54,6 +70,7 @@ class PermissionSeeder extends Seeder
             'categories.view',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.approve',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
         ]);
 
         $this->assignRolePermissions('bs_staff', [
@@ -76,6 +93,45 @@ class PermissionSeeder extends Seeder
 
         $this->assignRolePermissions('finance_staff', [
             'permits.view', 'permits.approve',
+            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
+        ]);
+
+        // LOO — Marketing: input LOO baru (cover + isi), submit ke legal
+        $this->assignRolePermissions('marketing_loo_input', [
+            'tenants.view',
+            'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
+        ]);
+
+        // LOO — Legal: isi section legalitas, review isi LOO
+        $this->assignRolePermissions('legal_staff', [
+            'loos.view', 'loos.legal_edit', 'loos.legal_submit', 'loos.transition',
+        ]);
+        $this->assignRolePermissions('legal_manager', [
+            'loos.view', 'loos.legal_edit', 'loos.legal_submit', 'loos.transition',
+        ]);
+
+        // LOO — Accounting: isi biaya/termin, measurement, hitung ulang luas
+        $this->assignRolePermissions('accounting_staff', [
+            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
+        ]);
+        $this->assignRolePermissions('accounting_manager', [
+            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
+        ]);
+
+        // LOO — Tenant Management: section manajemen tenant, pre-fitout, BA, fitout
+        $this->assignRolePermissions('tenant_mgmt_staff', [
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+        ]);
+        $this->assignRolePermissions('tenant_mgmt_manager', [
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+        ]);
+
+        // LOO — GM: approval fitout + monitoring dashboard
+        $this->assignRolePermissions('gm_approval', [
+            'loos.view', 'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('staff', []);

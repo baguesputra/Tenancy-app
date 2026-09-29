@@ -8,6 +8,7 @@ import SearchableSelect from '@/Components/Form/SearchableSelect';
 import DateInput from '@/Components/Form/DateInput';
 import NumberInput from '@/Components/Form/NumberInput';
 import FileInput from '@/Components/Form/FileInput';
+import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 
 export default function TenancyForm({ tenancy, units, tenants }) {
@@ -149,6 +150,29 @@ export default function TenancyForm({ tenancy, units, tenants }) {
                 <FormField label="Catatan" error={errors.notes}>
                     <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
                 </FormField>
+            </FormSection>
+
+            <FormSection title="Surat Peringatan (SP)">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Tgl SP" error={errors.sp_date}>
+                        <DateInput value={data.sp_date} onChange={(e) => setData('sp_date', e.target.value)} />
+                    </FormField>
+                    <FormField label="No Surat" error={errors.sp_number}>
+                        <TextInput value={data.sp_number} onChange={(e) => setData('sp_number', e.target.value)} />
+                    </FormField>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Dept" error={errors.sp_department}>
+                        <TextInput value={data.sp_department} onChange={(e) => setData('sp_department', e.target.value)} />
+                    </FormField>
+                    <FormField label="Tindakan" error={errors.sp_action}>
+                        <TextInput value={data.sp_action} onChange={(e) => setData('sp_action', e.target.value)} />
+                    </FormField>
+                </div>
+                <FormField label="File SP" error={errors.sp_file_path}>
+                    <TextInput value={data.sp_file_path} onChange={(e) => setData('sp_file_path', e.target.value)} placeholder="Path file..." />
+                </FormField>
+                <input type="file" name="sp_file" onChange={(e) => setData('sp_file', e.target.files[0] ?? null)} className="hidden" />
             </FormSection>
 
             <Button type="submit" disabled={processing}>

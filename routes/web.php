@@ -187,7 +187,19 @@ Route::get('/auth/sso/gagal', function () {
     ]);
 })->middleware('guest')->name('sso.gagal');
 
-// routes/web.php — pola yang lebih ringkas
+use App\Http\Controllers\LooController;
+
+// Loo Tenant Management System
+Route::middleware('auth')->prefix('loos')->name('loos.')->group(function () {
+    Route::get('/', [LooController::class, 'index'])->name('index');
+    Route::get('/create', [LooController::class, 'create'])->name('create');
+    Route::post('/store', [LooController::class, 'store'])->name('store');
+    Route::get('/{loo}', [LooController::class, 'show'])->name('show');
+    Route::get('/{loo}/edit', [LooController::class, 'edit'])->name('edit');
+    Route::post('/{loo}', [LooController::class, 'update'])->name('update');
+    Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
+    Route::post('/{loo}/destroy', [LooController::class, 'destroy'])->name('destroy');
+});
 
 Route::middleware('auth')->group(function () {
 

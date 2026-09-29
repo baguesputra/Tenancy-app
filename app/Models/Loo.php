@@ -7,34 +7,6 @@ use Illuminate\Support\Str;
 
 class Loo extends Model
 {
-    // remove HasUuids trait
-    // use HasUuids;
-
-    public $incrementing = true;  // default for bigint auto-increment
-    protected $keyType = 'int';  // default for auto-incrementing int IDs
-
-    protected $fillable = [
-        'loo_number',
-        'branch_id',
-        'marketing_id',
-        'tenant_id',
-        'tenant_category_id',
-        'status',
-        'current_stage',
-        'cover_file_path',
-        'cover_hash',
-        'isi_file_path',
-        'isi_hash',
-        'loo_received_date',
-        'loo_distributor',
-        'loo_letter_file_path',
-        'loo_proposal_file_path',
-        'submitted_at',
-        'completed_at',
-        'cancelled_at',
-        'cancel_reason',
-    ];
-
     protected $fillable = [
         'loo_number',
         'branch_id',
@@ -126,12 +98,12 @@ class Loo extends Model
     public static function generateLooNumber(string $branchCode, int $year): string
     {
         $prefix = "LOO/{$year}/{$branchCode}/";
-        $last = self::where('loo_number', 'like', $prefix . '%')
+        $last = self::where('loo_number', 'like', $prefix.'%')
             ->orderBy('loo_number', 'desc')
             ->value('loo_number');
 
         $sequence = $last ? (int) Str::after($last, $prefix) + 1 : 1;
 
-        return $prefix . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 }
