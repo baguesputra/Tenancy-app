@@ -13,6 +13,7 @@ class Loo extends Model
         'marketing_id',
         'tenant_id',
         'tenant_category_id',
+        'prospective_tenant_name',
         'status',
         'current_stage',
         'cover_file_path',
@@ -61,20 +62,40 @@ class Loo extends Model
         return $this->hasMany(LooHistory::class);
     }
 
+    public function sections()
+    {
+        return $this->hasMany(LooSection::class);
+    }
+
+    /**
+     * Section milik stage saat ini — dipakai gate UI: hanya section ini yang boleh diedit.
+     */
+    public function currentSectionKey(): ?string
+    {
+        return collect(config('loo_sections'))
+            ->first(fn ($cfg) => $cfg['stage'] === $this->current_stage)
+            ? array_key_first(array_filter(config('loo_sections'), fn ($c) => $c['stage'] === $this->current_stage))
+            : null;
+    }
+
     public function updateStatus(string $status): bool
     {
         $oldStatus = $this->status;
         $this->status = $status;
-        $this->current_stage = $this->getStageFromStatus($status);
+
+        // Status terminal tidak mengubah stage — LOO berhenti di stage saat dibatalkan/selesai.
+        $terminal = in_array($status, ['completed', 'cancelled'], true);
+        if (! $terminal) {
+            $this->current_stage = self::getStageFromStatus($status);
+        }
 
         if ($status === 'completed') {
             $this->completed_at = now();
         } elseif ($status === 'cancelled') {
             $this->cancelled_at = now();
-        } elseif ($status === 'draft') {
-            if (! $this->submitted_at) {
-                $this->submitted_at = now();
-            }
+        } elseif ($oldStatus === 'draft' && $status !== 'draft' && ! $this->submitted_at) {
+            // LOO keluar dari draft untuk pertama kali = benar-benar disubmit.
+            $this->submitted_at = now();
         }
 
         return $this->save();
@@ -91,6 +112,8 @@ class Loo extends Model
             'ba_handover' => 'ba_handover',
             'fitout' => 'fitout',
             'pre_handover' => 'pre_handover',
+            // Status terminal tidak punya stage sendiri.
+            'completed', 'cancelled' => 'completed',
             default => 'marketing',
         };
     }

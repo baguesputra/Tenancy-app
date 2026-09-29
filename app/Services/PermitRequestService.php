@@ -11,6 +11,7 @@ use App\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PermitRequestService
 {
@@ -30,6 +31,13 @@ class PermitRequestService
     private function createOnce(array $data, User|TenantUser $requestedBy): PermitRequest
     {
         $tenant = isset($data['tenant_id']) ? Tenant::with('activeTenancy.unit')->find($data['tenant_id']) : null;
+
+        // Tenant tanpa tenancy aktif belum boleh ajukan izin — kontrak belum aktif.
+        if ($tenant && ! $tenant->activeTenancy) {
+            throw ValidationException::withMessages([
+                'tenant_id' => 'Tenancy tenant belum aktif, izin belum bisa dibuat.',
+            ]);
+        }
 
         $locationSnapshot = $this->resolveLocationSnapshot($tenant, $data);
 

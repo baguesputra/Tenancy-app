@@ -155,6 +155,7 @@ class PermitRequestController extends Controller
         $viewable = $this->tenantScope->viewableCategoryIds($request->user());
 
         $tenants = Tenant::where('is_active', true)
+            ->whereHas('activeTenancy')
             ->when($isExhibition, fn ($q) => $q->whereHas('tenantCategory', fn ($c) => $c->where('name', 'Open Counter')))
             ->when(! $isExhibition && $viewable !== null, fn ($q) => $q->whereIn('tenant_category_id', $viewable))
             ->orderBy('name')

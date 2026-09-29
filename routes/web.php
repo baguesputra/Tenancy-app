@@ -189,18 +189,6 @@ Route::get('/auth/sso/gagal', function () {
 
 use App\Http\Controllers\LooController;
 
-// Loo Tenant Management System
-Route::middleware('auth')->prefix('loos')->name('loos.')->group(function () {
-    Route::get('/', [LooController::class, 'index'])->name('index');
-    Route::get('/create', [LooController::class, 'create'])->name('create');
-    Route::post('/store', [LooController::class, 'store'])->name('store');
-    Route::get('/{loo}', [LooController::class, 'show'])->name('show');
-    Route::get('/{loo}/edit', [LooController::class, 'edit'])->name('edit');
-    Route::post('/{loo}', [LooController::class, 'update'])->name('update');
-    Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
-    Route::post('/{loo}/destroy', [LooController::class, 'destroy'])->name('destroy');
-});
-
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -292,6 +280,27 @@ Route::middleware('auth')->group(function () {
         Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
         Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
     });
+
+    // LOO — Tenant Management System
+    // PENTING: `/create` harus didaftarkan sebelum wildcard `/{loo}`
+    Route::middleware('can:loos.create')->prefix('loos')->name('loos.')->group(function () {
+        Route::get('/create', [LooController::class, 'create'])->name('create');
+        Route::post('/store', [LooController::class, 'store'])->name('store');
+        Route::post('/{loo}', [LooController::class, 'update'])->name('update');
+    });
+
+    Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
+        Route::get('/', [LooController::class, 'index'])->name('index');
+        Route::get('/{loo}', [LooController::class, 'show'])->name('show');
+        Route::get('/{loo}/edit', [LooController::class, 'edit'])->name('edit');
+    });
+
+    Route::middleware('can:loos.transition')->prefix('loos')->name('loos.')->group(function () {
+        Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
+        Route::post('/{loo}/sections/{key}', [LooController::class, 'section'])->name('section');
+    });
+
+    Route::middleware('can:loos.delete')->post('/loos/{loo}/destroy', [LooController::class, 'destroy'])->name('loos.destroy');
 
     // Notifikasi — semua yang login boleh (web + tenant)
     Route::post('/notifications/{id}/read', function ($id, Request $request) {

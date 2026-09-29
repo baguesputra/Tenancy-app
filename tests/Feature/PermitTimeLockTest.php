@@ -4,14 +4,15 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Department;
-use App\Models\PermitRequest;
-use App\Models\Position;
 use App\Models\ProductCategory;
+use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
-use App\Services\PermitRequestService;
 use Carbon\Carbon;
+use Database\Seeders\DepartmentSeeder;
+use Database\Seeders\TenantCategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -24,8 +25,8 @@ class PermitTimeLockTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\TenantCategorySeeder::class);
-        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $this->seed(TenantCategorySeeder::class);
+        $this->seed(DepartmentSeeder::class);
         config(['permit.enabled' => true]);
     }
 
@@ -39,7 +40,7 @@ class PermitTimeLockTest extends TestCase
         $user = User::create([
             'name' => 'Test User',
             'email' => 'test@t.id',
-            'employee_number' => 'TST-' . uniqid(),
+            'employee_number' => 'TST-'.uniqid(),
             'branch_id' => $branch->id,
             'department_id' => $dept->id,
             'password' => bcrypt('password'),
@@ -52,6 +53,7 @@ class PermitTimeLockTest extends TestCase
                 $user->assignRole($role);
             }
         }
+
         return $user;
     }
 
@@ -60,12 +62,20 @@ class PermitTimeLockTest extends TestCase
         $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
         $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $unit = Unit::create([
+            'branch_id' => $branch->id, 'floor' => 'GF',
+            'unit_number' => uniqid(), 'unit_code' => 'GF-'.uniqid(), 'is_active' => true,
+        ]);
         $tenant = Tenant::create([
-            'name' => 'Test Tenant ' . uniqid(),
+            'name' => 'Test Tenant '.uniqid(),
             'branch_id' => $branch->id,
             'tenant_category_id' => $cat->id,
             'product_category_id' => $pc->id,
             'is_active' => true,
+        ]);
+        Tenancy::create([
+            'unit_id' => $unit->id, 'tenant_id' => $tenant->id,
+            'status' => 'active', 'start_date' => Carbon::today()->toDateString(),
         ]);
 
         return [

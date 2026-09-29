@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\ProductCategory;
+use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,17 +17,17 @@ class LooWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function userWithRole(string $roleName): User
+    private function userWithRole(string $roleName, array $permissions = ['loos.view', 'loos.create', 'loos.edit', 'loos.transition']): User
     {
-        foreach (['loos.view', 'loos.create', 'loos.edit', 'loos.transition'] as $p) {
+        foreach ($permissions as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
         $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
-        $role->syncPermissions(['loos.view', 'loos.create', 'loos.edit', 'loos.transition']);
+        $role->syncPermissions($permissions);
 
         $user = User::create([
             'name' => 'Test '.$roleName,
-            'email' => $roleName.'@t.id',
+            'email' => $roleName.'@'.uniqid().'.t.id',
             'employee_number' => 'T-'.uniqid(),
             'branch_id' => Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test'])->id,
             'password' => bcrypt('x'),
@@ -119,5 +121,139 @@ class LooWorkflowTest extends TestCase
         $other->assignRole('marketing_loo_input');
 
         $this->actingAs($other)->get("/loos/{$loo->id}")->assertForbidden();
+    }
+
+    public function test_transition_rejects_skipping_stages(): void
+    {
+        $loo = $this->makeLoo();
+        $user = $this->userWithRole('marketing_loo_input');
+
+        // draft -> pre_handover lompat 5 stage
+        $this->actingAs($user)
+            ->from("/loos/{$loo->id}")
+            ->post("/loos/{$loo->id}/transition", ['status' => 'pre_handover'])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('draft', $loo->fresh()->status);
+    }
+
+    public function test_transition_logs_history(): void
+    {
+        $loo = $this->makeLoo();
+        $user = $this->userWithRole('marketing_loo_input');
+
+        $this->actingAs($user)->post("/loos/{$loo->id}/transition", ['status' => 'legal_review']);
+
+        $this->assertSame('legal_review', $loo->fresh()->status);
+        $this->assertDatabaseHas('loo_histories', [
+            'loo_id' => $loo->id,
+            'user_id' => $user->id,
+            'action' => 'status_changed',
+            'from_status' => 'draft',
+            'to_status' => 'legal_review',
+        ]);
+    }
+
+    public function test_legal_can_fill_legalitas_and_advances_stage(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+
+        $this->actingAs($legal)->post("/loos/{$loo->id}/sections/legalitas", [
+            'entity_name' => 'PT Contoh Sengkala',
+            'entity_type' => 'PT',
+            'submit' => '1',
+        ]);
+
+        $this->assertDatabaseHas('loo_sections', [
+            'loo_id' => $loo->id,
+            'section_key' => 'legalitas',
+            'is_submitted' => true,
+        ]);
+
+        $this->assertSame('accounting_review', $loo->fresh()->status);
+        $this->assertSame('accounting', $loo->fresh()->current_stage);
+    }
+
+    public function test_user_cannot_fill_section_without_permission(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+
+        // marketing punya loos.transition tapi TIDAK punya loos.legal_edit
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/biaya_termin", ['monthly_rent' => '5000000'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('loo_sections', [
+            'loo_id' => $loo->id,
+            'section_key' => 'biaya_termin',
+        ]);
+    }
+
+    public function test_save_draft_does_not_advance_stage(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+
+        $this->actingAs($legal)->post("/loos/{$loo->id}/sections/legalitas", [
+            'entity_name' => 'PT Draft Saja',
+            'submit' => '0',
+        ]);
+
+        $this->assertDatabaseHas('loo_sections', [
+            'loo_id' => $loo->id,
+            'section_key' => 'legalitas',
+            'is_submitted' => false,
+        ]);
+        $this->assertSame('legal_review', $loo->fresh()->status);
+    }
+
+    public function test_unknown_section_key_returns_404(): void
+    {
+        $loo = $this->makeLoo();
+        $user = $this->userWithRole('marketing_loo_input');
+
+        $this->actingAs($user)
+            ->post("/loos/{$loo->id}/sections/tidak_ada", ['x' => 'y'])
+            ->assertNotFound();
+    }
+
+    public function test_current_section_key_follows_stage(): void
+    {
+        $loo = $this->makeLoo();
+        $this->assertNull($loo->currentSectionKey()); // draft/marketing = no section
+
+        $loo->update(['current_stage' => 'legal']);
+        $this->assertSame('legalitas', $loo->fresh()->currentSectionKey());
+
+        $loo->update(['current_stage' => 'accounting']);
+        $this->assertSame('biaya_termin', $loo->fresh()->currentSectionKey());
+
+        $loo->update(['current_stage' => 'tenant_mgmt']);
+        $this->assertSame('manajemen_tenant', $loo->fresh()->currentSectionKey());
+    }
+
+    public function test_tenant_from_other_branch_rejected_on_store(): void
+    {
+        $user = $this->userWithRole('marketing_loo_input');
+        $otherTenant = Tenant::create([
+            'name' => 'Tenant Cabang Lain',
+            'branch_id' => Branch::create(['code' => 'OTH', 'name' => 'Lain'])->id,
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'Retail'])->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post('/loos/store', [
+                'branch_id' => $user->branch_id,
+                'marketing_id' => $user->id,
+                'tenant_id' => $otherTenant->id,
+            ])
+            ->assertSessionHasErrors('tenant_id');
     }
 }

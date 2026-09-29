@@ -7,8 +7,10 @@ use App\Models\Department;
 use App\Models\PermitRequest;
 use App\Models\Position;
 use App\Models\ProductCategory;
+use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Services\PermitNumberService;
 use App\Services\PermitRequestService;
@@ -80,30 +82,36 @@ class PermitNumberTest extends TestCase
         return $staff;
     }
 
-    private function openCounterTenant(): Tenant
+    private function tenantWithActiveTenancy(string $catName, string $tenantName): Tenant
     {
-        $cat = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
+        $cat = TenantCategory::firstOrCreate(['name' => $catName]);
         $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
-
-        return Tenant::create([
-            'name' => 'Bazar Test', 'branch_id' => $branch->id,
+        $unit = Unit::create([
+            'branch_id' => $branch->id, 'floor' => 'GF',
+            'unit_number' => uniqid(), 'unit_code' => 'GF-'.uniqid(), 'is_active' => true,
+        ]);
+        $tenant = Tenant::create([
+            'name' => $tenantName, 'branch_id' => $branch->id,
             'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
             'is_active' => true,
         ]);
+        Tenancy::create([
+            'unit_id' => $unit->id, 'tenant_id' => $tenant->id,
+            'status' => 'active', 'start_date' => today()->toDateString(),
+        ]);
+
+        return $tenant;
+    }
+
+    private function openCounterTenant(): Tenant
+    {
+        return $this->tenantWithActiveTenancy('Open Counter', 'Bazar Test');
     }
 
     private function regularTenant(): Tenant
     {
-        $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
-        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
-        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
-
-        return Tenant::create([
-            'name' => 'Toko Biasa', 'branch_id' => $branch->id,
-            'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
-            'is_active' => true,
-        ]);
+        return $this->tenantWithActiveTenancy('Tenant', 'Toko Biasa');
     }
 
     public function test_code_for_picks_ep_for_pameran(): void

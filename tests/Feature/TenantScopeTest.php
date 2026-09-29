@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\MasterScope;
 use App\Models\ProductCategory;
+use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Services\PermitRequestService;
 use App\Services\TenantScopeService;
@@ -48,12 +50,21 @@ class TenantScopeTest extends TestCase
         $cat = TenantCategory::firstOrCreate(['name' => $category]);
         $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
-
-        return Tenant::create([
+        $unit = Unit::create([
+            'branch_id' => $branch->id, 'floor' => 'GF',
+            'unit_number' => uniqid(), 'unit_code' => 'GF-'.uniqid(), 'is_active' => true,
+        ]);
+        $tenant = Tenant::create([
             'name' => $category.' Test', 'branch_id' => $branch->id,
             'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
             'is_active' => true, 'created_by' => $createdBy,
         ]);
+        Tenancy::create([
+            'unit_id' => $unit->id, 'tenant_id' => $tenant->id,
+            'status' => 'active', 'start_date' => today()->toDateString(),
+        ]);
+
+        return $tenant;
     }
 
     public function test_marketing_index_only_open_counter(): void

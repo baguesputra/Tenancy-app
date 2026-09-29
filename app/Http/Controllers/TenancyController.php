@@ -154,8 +154,32 @@ class TenancyController extends Controller
             'payment_term' => 'nullable|string|max:100',
             'percentage_rent_rate' => 'nullable|numeric|min:0|max:100',
             'percentage_rent_breakpoint' => 'nullable|numeric|min:0',
+            'total_area_sqm' => 'nullable|numeric|min:0',
+            'rent_per_sqm_indoor' => 'nullable|numeric|min:0',
+            'area_sqm_indoor' => 'nullable|numeric|min:0',
+            'rent_per_sqm_outdoor' => 'nullable|numeric|min:0',
+            'area_sqm_outdoor' => 'nullable|numeric|min:0',
+            'revenue_sharing' => 'nullable|numeric|min:0|max:100',
+            'non_revenue_sharing' => 'nullable|numeric|min:0|max:100',
+            'down_payment_percent' => 'nullable|numeric|min:0|max:100',
+            'down_payment_installment_count' => 'nullable|integer|min:0',
+            'installment_count' => 'nullable|integer|min:0',
+            'remaining_payment' => 'nullable|numeric|min:0',
+            'archive_location' => 'nullable|string|max:255',
+            'sp_date' => 'nullable|date',
+            'sp_number' => 'nullable|string|max:100',
+            'sp_count' => 'nullable|integer|min:0',
+            'sp_department' => 'nullable|string|max:255',
+            'sp_action' => 'nullable|string|max:255',
+            'sp_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'notes' => 'nullable|string',
         ]);
+
+        if ($request->hasFile('sp_file')) {
+            $validated['sp_file_path'] = $request->file('sp_file')->store('tenancy-sp', 'public');
+        } else {
+            unset($validated['sp_file']);
+        }
 
         $unit = Unit::find($validated['unit_id']);
         $tenant = Tenant::find($validated['tenant_id']);

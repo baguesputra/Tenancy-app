@@ -4,17 +4,49 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\User;
 use App\Services\BranchScopeService;
+use App\Services\LooSectionService;
+use App\Services\LooStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class LooController extends Controller
 {
-    public function __construct(private BranchScopeService $branchScope) {}
+    public function __construct(
+        private BranchScopeService $branchScope,
+        private LooStateService $state,
+        private LooSectionService $sections,
+    ) {}
+
+    private const STATUSES = [
+        'draft' => 'Draft',
+        'legal_review' => 'Legal Review',
+        'accounting_review' => 'Accounting Review',
+        'tenant_mgmt_review' => 'Tenant Mgmt Review',
+        'measurement' => 'Measurement',
+        'ba_handover' => 'BA Handover',
+        'fitout' => 'Fitout',
+        'pre_handover' => 'Pre-Handover',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ];
+
+    private const STAGES = [
+        'marketing' => 'Marketing',
+        'legal' => 'Legal',
+        'accounting' => 'Accounting',
+        'tenant_mgmt' => 'Tenant Mgmt',
+        'measurement' => 'Measurement',
+        'ba_handover' => 'BA Handover',
+        'fitout' => 'Fitout',
+        'pre_handover' => 'Pre-Handover',
+    ];
 
     public function index(Request $request)
     {
@@ -27,213 +59,157 @@ class LooController extends Controller
 
         $this->branchScope->apply($query, $request->user());
 
-        $summary = [
-            'total' => (clone $query)->count(),
-            'draft' => (clone $query)->where('status', 'draft')->count(),
-            'legal_review' => (clone $query)->where('status', 'legal_review')->count(),
-            'accounting_review' => (clone $query)->where('status', 'accounting_review')->count(),
-            'tenant_mgmt_review' => (clone $query)->where('status', 'tenant_mgmt_review')->count(),
-            'measurement' => (clone $query)->where('status', 'measurement')->count(),
-            'ba_handover' => (clone $query)->where('status', 'ba_handover')->count(),
-            'fitout' => (clone $query)->where('status', 'fitout')->count(),
-            'pre_handover' => (clone $query)->where('status', 'pre_handover')->count(),
-            'completed' => (clone $query)->where('status', 'completed')->count(),
-        ];
+        $summary = (clone $query)
+            ->selectRaw('count(*) as total')
+            ->selectRaw('sum(status = "draft") as draft')
+            ->selectRaw('sum(status = "legal_review") as legal_review')
+            ->selectRaw('sum(status = "accounting_review") as accounting_review')
+            ->selectRaw('sum(status = "measurement") as measurement')
+            ->selectRaw('sum(status = "fitout") as fitout')
+            ->selectRaw('sum(status = "completed") as completed')
+            ->first()
+            ->only(array_keys(self::STATUSES));
 
         return Inertia::render('Loos/Index', [
             'loos' => $query->paginate(15)->withQueryString(),
             'summary' => $summary,
             'filters' => $request->only(['search', 'status', 'current_stage']),
-            'statusOptions' => [
-                ['value' => 'draft', 'label' => 'Draft'],
-                ['value' => 'legal_review', 'label' => 'Legal Review'],
-                ['value' => 'accounting_review', 'label' => 'Accounting Review'],
-                ['value' => 'tenant_mgmt_review', 'label' => 'Tenant Mgmt Review'],
-                ['value' => 'measurement', 'label' => 'Measurement'],
-                ['value' => 'ba_handover', 'label' => 'BA Handover'],
-                ['value' => 'fitout', 'label' => 'Fitout'],
-                ['value' => 'pre_handover', 'label' => 'Pre-Handover'],
-                ['value' => 'completed', 'label' => 'Completed'],
-                ['value' => 'cancelled', 'label' => 'Cancelled'],
-            ],
-            'stageOptions' => [
-                ['value' => 'marketing', 'label' => 'Marketing'],
-                ['value' => 'legal', 'label' => 'Legal'],
-                ['value' => 'accounting', 'label' => 'Accounting'],
-                ['value' => 'tenant_mgmt', 'label' => 'Tenant Mgmt'],
-                ['value' => 'measurement', 'label' => 'Measurement'],
-                ['value' => 'ba_handover', 'label' => 'BA Handover'],
-                ['value' => 'fitout', 'label' => 'Fitout'],
-                ['value' => 'pre_handover', 'label' => 'Pre-Handover'],
-            ],
+            'statusOptions' => $this->options(self::STATUSES),
+            'stageOptions' => $this->options(self::STAGES),
         ]);
     }
 
     public function create(Request $request)
     {
-        $user = $request->user();
-
         return Inertia::render('Loos/Create', [
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-            'marketings' => User::whereHas('roles', fn ($q) => $q->whereIn('name', ['marketing_loo_input', 'marketing_manager']))
-                ->get(['id', 'name']),
-            'tenants' => $user->canViewAllBranches()
-                ? Tenant::where('is_active', true)->orderBy('name')->get(['id', 'name'])
-                : Tenant::where('branch_id', $user->branch_id)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'marketings' => $this->marketings(),
+            'tenants' => $this->activeTenants($request->user()),
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'marketing_id' => 'required|exists:users,id',
-            'tenant_id' => 'nullable|exists:tenants,id',
-            'tenant_category_id' => 'nullable|exists:tenant_categories,id',
-            'prospective_tenant_name' => 'nullable|string|max:255',
-            'loo_received_date' => 'nullable|date',
-            'loo_distributor' => 'nullable|string|max:255',
-            'cover_file' => 'nullable|file|mimes:pdf|max:10240',
-            'isi_file' => 'nullable|file|mimes:pdf|max:10240',
-            'loo_letter_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'loo_proposal_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        $data = $this->validated($request);
+        $branch = Branch::findOrFail($data['branch_id']);
+
+        $loo = Loo::create([
+            ...$data,
+            ...$this->storeFiles($request, []),
+            'loo_number' => Loo::generateLooNumber($branch->code, now()->year),
+            'status' => 'draft',
+            'current_stage' => 'marketing',
         ]);
 
-        if ($request->hasFile('cover_file')) {
-            $validated['cover_file_path'] = $request->file('cover_file')->store('loos/covers', 'public');
-        }
-        if ($request->hasFile('isi_file')) {
-            $validated['isi_file_path'] = $request->file('isi_file')->store('loos/isi', 'public');
-        }
-        if ($request->hasFile('loo_letter_file')) {
-            $validated['loo_letter_file_path'] = $request->file('loo_letter_file')->store('loos/letters', 'public');
-        }
-        if ($request->hasFile('loo_proposal_file')) {
-            $validated['loo_proposal_file_path'] = $request->file('loo_proposal_file')->store('loos/proposals', 'public');
-        }
-
-        unset($validated['cover_file'], $validated['isi_file'], $validated['loo_letter_file'], $validated['loo_proposal_file']);
-
-        $branch = Branch::find($validated['branch_id']);
-        $year = now()->year;
-        $validated['loo_number'] = Loo::generateLooNumber($branch->code, $year);
-        $validated['status'] = 'draft';
-        $validated['current_stage'] = 'marketing';
-
-        $loo = Loo::create($validated);
+        $this->state->log($loo, $request->user(), 'created');
 
         return redirect()->route('loos.show', $loo->id)->with('success', 'LOO berhasil dibuat.');
     }
 
     public function show(Loo $loo, Request $request)
     {
-        $this->authorize('view', $loo);
-        $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'history.user']);
+        $this->authorizeAccess($loo, $request);
+        $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'sections.filler', 'history.user']);
 
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
+            'canEdit' => $this->canEditSection($loo, $request->user()),
+            'sectionKey' => $loo->currentSectionKey(),
+            'sectionConfig' => $this->sectionConfig($loo->currentSectionKey()),
+            'transitions' => $this->allowedTransitions($loo),
+            'options' => ['productCategories' => ProductCategory::orderBy('name')->get(['id', 'name'])],
         ]);
     }
 
     public function edit(Loo $loo, Request $request)
     {
-        $this->authorize('update', $loo);
+        $this->authorizeAccess($loo, $request);
+        abort_unless($loo->status === 'draft', 422, 'LOO yang sudah tidak draft tidak bisa diubah.');
 
-        return Inertia::render('Loos/Edit', [
+        return Inertia::render('Loos/Create', [
             'loo' => $loo,
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-            'marketings' => User::role('marketing_loo_input')->orWhereHas('roles', fn ($q) => $q->where('name', 'marketing_manager'))->get(['id', 'name']),
+            'marketings' => $this->marketings(),
             'tenants' => Tenant::where('branch_id', $loo->branch_id)->where('is_active', true)->get(['id', 'name']),
         ]);
     }
 
     public function update(Request $request, Loo $loo)
     {
-        $this->authorize('update', $loo);
+        $this->authorizeAccess($loo, $request);
         abort_unless($loo->status === 'draft', 422, 'LOO yang sudah tidak draft tidak bisa diubah.');
 
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'marketing_id' => 'required|exists:users,id',
-            'tenant_id' => 'nullable|exists:tenants,id',
-            'tenant_category_id' => 'nullable|exists:tenant_categories,id',
-            'prospective_tenant_name' => 'nullable|string|max:255',
-            'loo_received_date' => 'nullable|date',
-            'loo_distributor' => 'nullable|string|max:255',
-            'cover_file' => 'nullable|file|mimes:pdf|max:10240',
-            'isi_file' => 'nullable|file|mimes:pdf|max:10240',
-            'loo_letter_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'loo_proposal_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        $loo->update([
+            ...$this->validated($request),
+            ...$this->storeFiles($request, $loo->only(array_keys($this->fileColumns()))),
         ]);
-
-        if ($request->hasFile('cover_file')) {
-            if ($loo->cover_file_path) {
-                Storage::disk('public')->delete($loo->cover_file_path);
-            }
-            $validated['cover_file_path'] = $request->file('cover_file')->store('loos/covers', 'public');
-        }
-        if ($request->hasFile('isi_file')) {
-            if ($loo->isi_file_path) {
-                Storage::disk('public')->delete($loo->isi_file_path);
-            }
-            $validated['isi_file_path'] = $request->file('isi_file')->store('loos/isi', 'public');
-        }
-        if ($request->hasFile('loo_letter_file')) {
-            if ($loo->loo_letter_file_path) {
-                Storage::disk('public')->delete($loo->loo_letter_file_path);
-            }
-            $validated['loo_letter_file_path'] = $request->file('loo_letter_file')->store('loos/letters', 'public');
-        }
-        if ($request->hasFile('loo_proposal_file')) {
-            if ($loo->loo_proposal_file_path) {
-                Storage::disk('public')->delete($loo->loo_proposal_file_path);
-            }
-            $validated['loo_proposal_file_path'] = $request->file('loo_proposal_file')->store('loos/proposals', 'public');
-        }
-
-        unset($validated['cover_file'], $validated['isi_file'], $validated['loo_letter_file'], $validated['loo_proposal_file']);
-
-        $loo->update($validated);
 
         return back()->with('success', 'LOO berhasil diperbarui.');
     }
 
+    public function section(Request $request, Loo $loo, string $key)
+    {
+        $this->authorizeAccess($loo, $request);
+
+        $config = config("loo_sections.{$key}");
+        abort_unless($config, 404);
+        abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
+
+        $current = $loo->sections()->where('section_key', $key)->first();
+        $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
+
+        $section = $this->state->fillSection(
+            $loo,
+            $key,
+            $config['label'],
+            $data,
+            $request->user(),
+            $request->boolean('submit'),
+        );
+
+        if ($request->boolean('submit')) {
+            $next = $this->nextStatusFor($loo);
+            if ($next) {
+                $this->state->transition($loo, $next, $request->user());
+            }
+        }
+
+        return back()->with('success', $section->is_submitted
+            ? "Section {$config['label']} disubmit."
+            : "Section {$config['label']} disimpan.");
+    }
+
     public function transition(Request $request, Loo $loo)
     {
-        $this->authorize('transition', $loo);
+        $this->authorizeAccess($loo, $request);
 
-        $validated = $request->validate([
-            'status' => 'required|in:legal_review,accounting_review,tenant_mgmt_review,measurement,ba_handover,fitout,pre_handover,completed,cancelled',
-            'cancel_reason' => 'nullable|string',
+        $data = $request->validate([
+            'status' => 'required|in:'.implode(',', array_keys(self::STATUSES)),
+            'cancel_reason' => 'nullable|string|max:1000',
         ]);
 
-        $loo->updateStatus($validated['status']);
-        if ($validated['status'] === 'cancelled') {
-            $loo->cancel_reason = $validated['cancel_reason'];
-            $loo->save();
+        if ($data['status'] === 'cancelled') {
+            $request->validate(['cancel_reason' => 'required|string|max:1000']);
         }
+
+        $this->state->transition($loo, $data['status'], $request->user(), array_filter([
+            'cancel_reason' => $data['cancel_reason'] ?? null,
+        ]));
 
         return back()->with('success', 'Status LOO berhasil diperbarui.');
     }
 
     public function destroy(Loo $loo, Request $request)
     {
-        $this->authorize('delete', $loo);
+        $this->authorizeAccess($loo, $request);
         abort_unless($loo->status === 'draft', 422, 'Hanya LOO draft yang bisa dihapus.');
 
-        if ($loo->cover_file_path) {
-            Storage::disk('public')->delete($loo->cover_file_path);
-        }
-        if ($loo->isi_file_path) {
-            Storage::disk('public')->delete($loo->isi_file_path);
-        }
-        if ($loo->loo_letter_file_path) {
-            Storage::disk('public')->delete($loo->loo_letter_file_path);
-        }
-        if ($loo->loo_proposal_file_path) {
-            Storage::disk('public')->delete($loo->loo_proposal_file_path);
+        foreach ($this->fileColumns() as $column) {
+            if ($loo->{$column}) {
+                Storage::disk('public')->delete($loo->{$column});
+            }
         }
 
         $loo->delete();
@@ -241,9 +217,145 @@ class LooController extends Controller
         return redirect()->route('loos.index')->with('success', 'LOO berhasil dihapus.');
     }
 
-    private function authorize(string $ability, Loo $loo): void
+    private function validated(Request $request): array
     {
+        $data = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'marketing_id' => 'required|exists:users,id',
+            'tenant_id' => 'nullable|exists:tenants,id',
+            'tenant_category_id' => 'nullable|exists:tenant_categories,id',
+            'prospective_tenant_name' => 'nullable|string|max:255',
+            'loo_received_date' => 'nullable|date',
+            'loo_distributor' => 'nullable|string|max:255',
+            'cover_file' => 'nullable|file|mimes:pdf|max:10240',
+            'isi_file' => 'nullable|file|mimes:pdf|max:10240',
+            'loo_letter_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'loo_proposal_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $this->assertBranchOwnsTenant($request, $data);
+
+        return collect($data)->except(array_keys($this->fileColumns()))->all();
+    }
+
+    /**
+     * Guard trust boundary: tenant_id harus cabang yang sama, kecuali user lintas cabang.
+     */
+    private function assertBranchOwnsTenant(Request $request, array $data): void
+    {
+        if (empty($data['tenant_id'])) {
+            return;
+        }
+
+        $tenant = Tenant::find($data['tenant_id']);
+
+        if (! $tenant || $request->user()->canViewAllBranches()) {
+            return;
+        }
+
+        $mismatch = $tenant->branch_id !== $request->user()->branch_id
+            || (int) $data['branch_id'] !== $tenant->branch_id;
+
+        if ($mismatch) {
+            throw ValidationException::withMessages([
+                'tenant_id' => 'Tenant tidak berada di cabang yang dipilih.',
+            ]);
+        }
+    }
+
+    private function fileColumns(): array
+    {
+        return [
+            'cover_file' => 'cover_file_path',
+            'isi_file' => 'isi_file_path',
+            'loo_letter_file' => 'loo_letter_file_path',
+            'loo_proposal_file' => 'loo_proposal_file_path',
+        ];
+    }
+
+    private function storeFiles(Request $request, array $current): array
+    {
+        $paths = [];
+
+        foreach ($this->fileColumns() as $input => $column) {
+            if (! $request->hasFile($input)) {
+                continue;
+            }
+
+            if ($current[$column] ?? null) {
+                Storage::disk('public')->delete($current[$column]);
+            }
+
+            $dir = str_replace('_file', '', $input);
+            $paths[$column] = $request->file($input)->store("loos/{$dir}", 'public');
+        }
+
+        return $paths;
+    }
+
+    private function sectionConfig(?string $key): ?array
+    {
+        return $key ? config("loo_sections.{$key}") : null;
+    }
+
+    private function canEditSection(Loo $loo, User $user): bool
+    {
+        $key = $loo->currentSectionKey();
+        $permission = $key ? config("loo_sections.{$key}.permission") : null;
+
+        return $permission && $user->can($permission);
+    }
+
+    private function allowedTransitions(Loo $loo): array
+    {
+        $targets = config("loo.transitions.{$loo->status}") ?? [];
         $user = request()->user();
+
+        return collect($targets)
+            ->reject(fn ($to) => $to === 'cancelled')
+            ->filter(fn ($to) => $user->can('loos.transition'))
+            ->map(fn ($to) => ['value' => $to, 'label' => self::STATUSES[$to]])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Submit section = LOO maju ke stage berikutnya. Forward transition selalu
+     * ditulis pertama di config, jadi ambil entri pertama tanpa `cancelled`.
+     */
+    private function nextStatusFor(Loo $loo): ?string
+    {
+        $forward = collect(config("loo.transitions.{$loo->status}") ?? [])
+            ->reject(fn ($to) => $to === 'cancelled')
+            ->first();
+
+        return $forward;
+    }
+
+    private function options(array $map): array
+    {
+        return collect($map)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all();
+    }
+
+    private function marketings(): array
+    {
+        return User::whereHas('roles', fn ($q) => $q->whereIn('name', ['marketing_loo_input', 'marketing_manager']))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->all();
+    }
+
+    private function activeTenants(User $user)
+    {
+        return Tenant::where('is_active', true)
+            ->when(! $user->canViewAllBranches(), fn ($q) => $q->where('branch_id', $user->branch_id))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    private function authorizeAccess(Loo $loo, Request $request): void
+    {
+        $user = $request->user();
         abort_unless($loo->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
     }
 }

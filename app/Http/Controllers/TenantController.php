@@ -67,6 +67,12 @@ class TenantController extends Controller
         if ($request->hasFile('logo')) {
             $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
         }
+        if ($request->hasFile('denah_file')) {
+            $validated['denah_path'] = $request->file('denah_file')->store('tenant-denah', 'public');
+        }
+        if ($request->hasFile('bapur_file')) {
+            $validated['bapur_path'] = $request->file('bapur_file')->store('tenant-bapur', 'public');
+        }
 
         $tenant = Tenant::create([
             ...$validated,
@@ -108,6 +114,18 @@ class TenantController extends Controller
             }
             $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
         }
+        if ($request->hasFile('denah_file')) {
+            if ($tenant->denah_path) {
+                \Storage::disk('public')->delete($tenant->denah_path);
+            }
+            $validated['denah_path'] = $request->file('denah_file')->store('tenant-denah', 'public');
+        }
+        if ($request->hasFile('bapur_file')) {
+            if ($tenant->bapur_path) {
+                \Storage::disk('public')->delete($tenant->bapur_path);
+            }
+            $validated['bapur_path'] = $request->file('bapur_file')->store('tenant-bapur', 'public');
+        }
 
         $tenant->update([
             ...$validated,
@@ -139,11 +157,32 @@ class TenantController extends Controller
 
     private function validateTenant(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'trade_name' => 'nullable|string|max:255',
             'legal_entity_name' => 'nullable|string|max:255',
+            'entity_type' => 'nullable|string|max:50',
             'npwp_number' => 'nullable|string|max:50',
             'siup_number' => 'nullable|string|max:50',
+            'nib' => 'nullable|string|max:50',
+            'tdp' => 'nullable|string|max:50',
+            'sk_pendirian' => 'nullable|string|max:100',
+            'tgl_sk_pendirian' => 'nullable|date',
+            'notaris_pendirian' => 'nullable|string|max:100',
+            'akta_perubahan_terakhir' => 'nullable|string|max:100',
+            'tgl_akta_terakhir' => 'nullable|date',
+            'notaris_terakhir' => 'nullable|string|max:100',
+            'pic_legal_name' => 'nullable|string|max:100',
+            'pic_legal_phone' => 'nullable|string|max:30',
+            'pic_legal_email' => 'nullable|email|max:100',
+            'authorized_signatory_name' => 'nullable|string|max:100',
+            'authorized_signatory_jabatan' => 'nullable|string|max:100',
+            'authorized_signatory_ktp' => 'nullable|string|max:50',
+            'map_id' => 'nullable|string|max:100',
+            'map_x' => 'nullable|numeric|between:-180,180',
+            'map_y' => 'nullable|numeric|between:-90,90',
+            'denah_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'bapur_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'company_phone' => 'nullable|string|max:30',
             'company_email' => 'nullable|email|max:255',
             'company_address' => 'nullable|string',
@@ -162,6 +201,10 @@ class TenantController extends Controller
             'contacts.*.email' => 'nullable|email|max:255',
             'contacts.*.type' => 'nullable|string|max:50',
         ]);
+
+        unset($validated['denah_file'], $validated['bapur_file']);
+
+        return $validated;
     }
 
     private function syncContacts(Tenant $tenant, array $contacts): void
