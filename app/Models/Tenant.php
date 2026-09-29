@@ -21,13 +21,76 @@ class Tenant extends Model
         'product_category_id',
         'is_active',
         'created_by',
+
+        // Deskripsi & Lokasi Fisik
+        'description',
+        'floor_map',
+        'location_map',
+        'ownership_status',
+        'owner_name',
+        'owner_address',
+        'owner_phone',
+        'owner_fax',
+        'owner_email',
+
+        // PIC FitOut
+        'fitout_pic_name',
+        'fitout_pic_phone',
+        'fitout_pic_email',
+
+        // PIC Legal
+        'legal_pic_name',
+        'legal_pic_phone',
+        'legal_pic_email',
+
+        // PIC Accounting
+        'accounting_pic_name',
+        'accounting_pic_phone',
+        'accounting_pic_email',
+
+        // SIUP (lanjutan)
+        'siup_expired_date',
+        'siup_file_path',
+
+        // TDP
+        'tdp_number',
+        'tdp_expired_date',
+        'tdp_file_path',
+
+        // NPWP & KTP
+        'npwp_file_path',
+        'ktp_number',
+        'ktp_file_path',
+
+        // Akte Pendirian
+        'akta_number',
+        'akta_date',
+        'akta_kemenkeh_number',
+        'notaris_name',
+        'akta_file_path',
+        'power_of_attorney_file_path',
+
+        // Domisili
+        'domisili_number',
+        'domisili_expired_date',
+        'domisili_file_path',
+
+        // Dokumen Tambahan
+        'fitout_drawing_file_path',
+        'bapur_file_path',
     ];
 
     protected $appends = ['logo_url'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'siup_expired_date' => 'date',
+            'tdp_expired_date' => 'date',
+            'akta_date' => 'date',
+            'domisili_expired_date' => 'date',
+        ];
     }
 
     public function branch()
