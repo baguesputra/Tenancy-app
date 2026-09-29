@@ -265,7 +265,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:permits.create')->group(function () {
         // PENTING: taruh SEBELUM route wildcard {permitRequest}
         Route::get('/permit-requests/create', [PermitRequestController::class, 'create'])->name('permit-requests.create');
-        Route::post('/permit-requests', [PermitRequestController::class, 'store'])->name('permit-requests.store');
+        Route::post('/permit-requests', [PermitRequestController::class, 'store'])->name('permit-requests.store')->middleware('permit.time-lock');
         Route::post('/permit-requests/{permitRequest}/cancel', [PermitRequestController::class, 'cancel'])->name('permit-requests.cancel');
     });
 

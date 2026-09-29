@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureLocalLoginAllowed;
 use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\EnsurePermitTimeLock;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'sso.local-guard' => EnsureLocalLoginAllowed::class,
+            'permit.time-lock' => EnsurePermitTimeLock::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
