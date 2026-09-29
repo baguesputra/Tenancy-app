@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useForm, router, usePage } from '@inertiajs/react';
+import { useForm, router, usePage, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import SlideOver from '@/Components/SlideOver';
 import FormField from '@/Components/Form/FormField';
@@ -27,12 +27,9 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     const permissions = auth.user?.permissions ?? [];
     const isSuperAdmin = auth.user?.roles?.includes('super_admin');
     const can = (perm) => isSuperAdmin || permissions.includes(perm);
-    const canCreate = can('tenants.create') && (tenantScope.creatableCategoryIds === null || tenantScope.creatableCategoryIds === undefined || (tenantScope.creatableCategoryIds ?? []).length > 0);
     const canEdit = can('tenants.edit');
     const canDelete = can('tenants.delete');
-    const creatableIds = tenantScope.creatableCategoryIds ?? null;
     const editOwnOnlyIds = (tenantScope.editOwnOnlyCategoryIds ?? null)?.map(String) ?? null;
-    const creatableCategories = creatableIds === null || creatableIds === undefined ? tenantCategories : tenantCategories.filter((c) => creatableIds.map(String).includes(String(c.id)));
     const canEditRow = (tenant) => {
         if (!canEdit) return false;
         if (editOwnOnlyIds === null || editOwnOnlyIds === undefined) return true;
@@ -44,23 +41,17 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [logoPreview, setLogoPreview] = useState(null);
+    const isLooBacked = editingTenant?.loo_id != null;
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '', legal_entity_name: '', npwp_number: '', siup_number: '',
         company_phone: '', company_email: '', company_address: '',
         tenant_category_id: '', product_category_id: '', branch_id: '', is_active: true,
+        pic_name: '', pic_position: '', pic_phone: '',
         logo: null,
         contacts: [emptyContact],
     });
-    const [logoPreview, setLogoPreview] = useState(null);
-
-    const openCreate = () => {
-        setEditingTenant(null);
-        reset();
-        clearErrors();
-        setLogoPreview(null);
-        setPanelOpen(true);
-    };
 
     const openEdit = (tenant) => {
         setEditingTenant(tenant);
@@ -76,6 +67,9 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
             product_category_id: tenant.product_category_id,
             branch_id: tenant.branch_id,
             is_active: tenant.is_active,
+            pic_name: tenant.pic_name ?? '',
+            pic_position: tenant.pic_position ?? '',
+            pic_phone: tenant.pic_phone ?? '',
             logo: null,
             contacts: tenant.contacts?.length ? tenant.contacts : [emptyContact],
         });
@@ -95,10 +89,11 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
 
     const submit = (e) => {
         e.preventDefault();
-        const options = { forceFormData: true, onSuccess: closePanel };
-        editingTenant
-            ? post(`/tenants/${editingTenant.id}`, { ...options, data: { ...data, _method: 'put' } })
-            : post('/tenants', options);
+        post(`/tenants/${editingTenant.id}`, {
+            forceFormData: true,
+            data: { ...data, _method: 'put' },
+            onSuccess: closePanel,
+        });
     };
 
     const askDelete = (tenant) => setConfirmDelete(tenant);
@@ -162,9 +157,10 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Master Tenant</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{summary.total} tenant terdaftar · {summary.active} aktif</p>
                     </div>
-                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} disabled={!canCreate}>
-                        Tambah Tenant
-                    </Button>
+                    <Link href="/loos" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0F1E36] hover:underline">
+                        <IconPlus className="w-4 h-4" aria-hidden="true" />
+                        Tenant baru dari LOO
+                    </Link>
                 </div>
 
                 <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-3" />
@@ -240,7 +236,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                                 </Badge>
                             </td>
                             <td className="px-5 py-3.5">
-                                {canDelete && (
+                                {canDelete && tenant.loo_id == null && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); askDelete(tenant); }}
                                     aria-label={`Hapus ${tenant.name}`}
@@ -256,7 +252,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                         <tr>
                             <td colSpan={5} className="px-5 py-12 text-center">
                                 <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                                <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Tenant untuk data pertama.'}</p>
+                                <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}</p>
                                 {hasFilter && (
                                     <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
                                         Reset filter
@@ -297,11 +293,9 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     {tenants.data.length === 0 && (
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
                             <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Tenant untuk data pertama.'}</p>
-                            {hasFilter ? (
+                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}</p>
+                            {hasFilter && (
                                 <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
-                            ) : (
-                                <Button onClick={openCreate} className="justify-center !py-3 min-h-[48px]" disabled={!canCreate}>Tambah Tenant</Button>
                             )}
                         </div>
                     )}
@@ -321,7 +315,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     <div className="flex gap-2">
                         <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>
                         <Button type="submit" form="tenant-form" loading={processing} className="flex-1 justify-center">
-                            {editingTenant ? 'Simpan Perubahan' : 'Tambah Tenant'}
+                            Simpan Perubahan
                         </Button>
                     </div>
                 }
@@ -367,6 +361,8 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             </div>
                         );
                     })()}
+                    {!isLooBacked && (
+                        <>
                     <FormSection variant="drawer" title="Identitas Bisnis" description="Nama tampil, kategori, dan cabang">
                         <FormField compact label="Nama Toko/Brand" error={errors.name} required>
                             <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="cth. Kopi Senja" />
@@ -378,7 +374,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <FormField compact label="Kategori Tenant" error={errors.tenant_category_id} required>
                                 <SelectInput value={data.tenant_category_id} onChange={(e) => setData('tenant_category_id', e.target.value)}>
                                     <option value="">Pilih...</option>
-                                    {(editingTenant ? tenantCategories : creatableCategories).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </SelectInput>
                             </FormField>
                             <FormField compact label="Kategori Produk" error={errors.product_category_id} required>
@@ -404,14 +400,6 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
 
                     <FormSection variant="drawer" title="Legal & Kontak Perusahaan" description="Dokumen dan kanal resmi tenant">
                         <div className="grid grid-cols-2 gap-2.5">
-                            <FormField compact label="NPWP" error={errors.npwp_number}>
-                                <TextInput value={data.npwp_number} onChange={(e) => setData('npwp_number', e.target.value)} placeholder="00.000.000.0-000.000" />
-                            </FormField>
-                            <FormField compact label="SIUP / NIB" error={errors.siup_number}>
-                                <TextInput value={data.siup_number} onChange={(e) => setData('siup_number', e.target.value)} placeholder="No. izin usaha" />
-                            </FormField>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2.5">
                             <FormField compact label="Telepon" error={errors.company_phone}>
                                 <TextInput value={data.company_phone} onChange={(e) => setData('company_phone', e.target.value)} placeholder="08xx-xxxx-xxxx" />
                             </FormField>
@@ -423,6 +411,8 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <Textarea value={data.company_address} onChange={(e) => setData('company_address', e.target.value)} rows={2} placeholder="Alamat lengkap toko/kantor" />
                         </FormField>
                     </FormSection>
+                    </>
+                    )}
 
                     <FormSection variant="drawer" title={`PIC / Kontak (${data.contacts.length})`} description="Min. 1 penanggung jawab tenant">
                         {data.contacts.map((contact, idx) => (

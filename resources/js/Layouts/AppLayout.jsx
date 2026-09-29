@@ -54,10 +54,9 @@ const menuIcons = {
 };
 
 const masterMenuItems = [
+    { label: 'LOO', href: '/loos', permission: 'loos.view' },
     { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
     { label: 'Unit', href: '/units', permission: 'units.view' },
-    { label: 'Kontrak / Tenancy', href: '/tenancies', permission: 'tenancies.view' },
-    { label: 'LOO', href: '/loos', permission: 'loos.view' },
     { label: 'Kategori', href: '/categories', permission: 'categories.view' },
 ];
 

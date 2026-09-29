@@ -13,6 +13,7 @@ class Loo extends Model
         'marketing_id',
         'tenant_id',
         'tenant_category_id',
+        'unit_id',
         'prospective_tenant_name',
         'status',
         'current_stage',
@@ -55,6 +56,11 @@ class Loo extends Model
     public function tenantCategory()
     {
         return $this->belongsTo(TenantCategory::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
     }
 
     public function history()

@@ -22,6 +22,12 @@ class Tenant extends Model
         'is_active',
         'created_by',
 
+        // Sumber LOO — null = tenant legacy, bukan dibuat dari LOO
+        'loo_id',
+        'trade_name',
+        'entity_type',
+        'nib',
+
         // Deskripsi & Lokasi Fisik
         'description',
         'floor_map',
@@ -152,5 +158,37 @@ class Tenant extends Model
     public function permitRequests()
     {
         return $this->hasMany(PermitRequest::class);
+    }
+
+    public function loo()
+    {
+        return $this->belongsTo(Loo::class);
+    }
+
+    /**
+     * Tenant yang dibuat dari LOO punya data master terkunci — hanya PIC/contact
+     * yang boleh diedit. Tenant legacy (loo_id null) tetap full CRUD.
+     */
+    public function isLooBacked(): bool
+    {
+        return $this->loo_id !== null;
+    }
+
+    /**
+     * Field yang boleh diedit manual untuk tenant LOO-backed. Semua field lain
+     * diisi dari LOO section saat LOO `completed` dan jadi read-only di master.
+     */
+    public function editableFields(): array
+    {
+        return [
+            'pic_name',
+            'pic_position',
+            'pic_phone',
+            'company_phone',
+            'company_email',
+            'company_address',
+            'is_active',
+            'logo',
+        ];
     }
 }

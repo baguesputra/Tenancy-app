@@ -56,31 +56,10 @@ class TenancyController extends Controller
         ]);
     }
 
-    public function create(Request $request)
-    {
-        return Inertia::render('Master/Tenancies/Create', $this->formProps($request));
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $this->validateTenancy($request);
-        $unit = Unit::findOrFail($validated['unit_id']);
-        $this->authorizeUnitAccess($unit, $request);
-
-        if ($request->hasFile('contract_document')) {
-            $validated['contract_document_path'] = $request->file('contract_document')
-                ->store('tenancy-contracts', 'public');
-        }
-
-        $tenancy = Tenancy::create($validated);
-
-        if ($tenancy->status === 'active') {
-            $this->endOtherActiveTenancies($tenancy->unit_id, $tenancy->id);
-        }
-
-        return redirect()->route('tenancies.index')->with('success', 'Tenancy berhasil ditambahkan.');
-    }
-
+    /**
+     * Tenancy tidak bisa dibuat manual — hanya dari LOO `completed`
+     * (lihat TenantSyncService). Route `create`/`store` sudah dihapus.
+     */
     public function update($id, Request $request)
     {
         $tenancy = Tenancy::findOrFail($id);
@@ -188,22 +167,6 @@ class TenancyController extends Controller
         }
 
         return $validated;
-    }
-
-    private function formProps(Request $request): array
-    {
-        $query = Unit::query()->where('is_active', true);
-        $this->applyBranchScopeToUnits($query, $request->user());
-
-        $tenantQuery = Tenant::query()->where('is_active', true);
-        if (! $request->user()->canViewAllBranches()) {
-            $tenantQuery->where('branch_id', $request->user()->branch_id);
-        }
-
-        return [
-            'units' => $query->orderBy('unit_code')->get(['id', 'unit_code', 'branch_id']),
-            'tenants' => $tenantQuery->orderBy('name')->get(['id', 'name']),
-        ];
     }
 
     private function applyBranchScope($query, $user): void

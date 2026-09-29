@@ -82,9 +82,9 @@ class TenantScopeTest extends TestCase
         $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
         $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
 
-        $this->actingAs($mkt)->post('/tenants', [
-            'name' => 'X', 'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
-        ])->assertForbidden();
+        // Tenant manual sudah dihapus — gate create kini dicek via service.
+        $svc = app(TenantScopeService::class);
+        $this->assertFalse($svc->canCreate($mkt, (int) $cat->id));
     }
 
     public function test_marketing_edit_only_own(): void
@@ -134,15 +134,11 @@ class TenantScopeTest extends TestCase
         $this->assertNotContains('Open Counter Test', $names);
 
         $oc = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
-        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
-        $this->actingAs($tnc)->post('/tenants', [
-            'name' => 'X', 'tenant_category_id' => $oc->id, 'product_category_id' => $pc->id,
-        ])->assertForbidden();
-
         $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
-        $this->actingAs($tnc)->post('/tenants', [
-            'name' => 'OK', 'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id,
-        ])->assertRedirect();
+
+        $svc = app(TenantScopeService::class);
+        $this->assertFalse($svc->canCreate($tnc, (int) $oc->id));
+        $this->assertTrue($svc->canCreate($tnc, (int) $cat->id));
     }
 
     public function test_tenancy_can_see_pameran_permits_but_tenant_dropdown_scoped(): void

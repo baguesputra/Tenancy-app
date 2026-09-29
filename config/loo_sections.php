@@ -93,6 +93,17 @@ return [
             ['name' => 'pre_fitout_notes', 'type' => 'textarea', 'label' => 'Catatan Pre-Fitout'],
         ],
     ],
+    'measurement' => [
+        'label' => 'Measurement',
+        'stage' => 'measurement',
+        'permission' => 'loos.measurement_edit',
+        'fields' => [
+            ['name' => 'unit_id', 'type' => 'unit', 'label' => 'Unit', 'required' => true],
+            ['name' => 'measured_area_sqm', 'type' => 'number', 'label' => 'Luas Terukur (m²)', 'step' => 0.01],
+            ['name' => 'measurement_date', 'type' => 'date', 'label' => 'Tanggal Pengukuran'],
+            ['name' => 'measurement_notes', 'type' => 'textarea', 'label' => 'Catatan Measurement'],
+        ],
+    ],
     'ba_handover' => [
         'label' => 'BA Serah Terima',
         'stage' => 'ba_handover',

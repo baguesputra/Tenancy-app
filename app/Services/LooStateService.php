@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class LooStateService
 {
+    public function __construct(private TenantSyncService $tenantSync) {}
+
     public function canTransition(Loo $loo, string $to): bool
     {
         return in_array($to, config("loo.transitions.{$loo->status}") ?? [], true);
@@ -40,6 +42,12 @@ class LooStateService
                 'from_stage' => $fromStage,
                 'to_stage' => $loo->current_stage,
             ], $meta);
+
+            // LOO selesai = materialize ke master Tenant + Tenancy.
+            if ($to === 'completed') {
+                $this->tenantSync->sync($loo);
+                $this->log($loo, $actor, 'handover_completed');
+            }
 
             return $loo->fresh();
         });

@@ -39,13 +39,6 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
         percentage_rent_rate: '', percentage_rent_breakpoint: '', notes: '',
     });
 
-    const openCreate = () => {
-        setEditingTenancy(null);
-        reset();
-        clearErrors();
-        setPanelOpen(true);
-    };
-
     const openEdit = (tenancy) => {
         setEditingTenancy(tenancy);
         setData({
@@ -72,13 +65,14 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
 
     const submit = (e) => {
         e.preventDefault();
-        const options = { forceFormData: true, preserveScroll: true, onSuccess: closePanel };
+        if (!editingTenancy) return;
 
-        if (editingTenancy) {
-            post(`/tenancies/${editingTenancy.id}`, { ...options, data: { ...data, _method: 'put' } });
-        } else {
-            post('/tenancies', options);
-        }
+        post(`/tenancies/${editingTenancy.id}`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: closePanel,
+            data: { ...data, _method: 'put' },
+        });
     };
 
     const askDelete = (tenancy) => setConfirmDelete(tenancy);
@@ -151,7 +145,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                         <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Kontrak / Tenancy</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{summary.total} kontrak tercatat · {summary.active} aktif</p>
                     </div>
-                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2.5 min-h-[44px]">Tambah Tenancy</Button>
+                    <p className="text-xs text-gray-400">Kontrak dibuat otomatis dari LOO yang selesai</p>
                 </div>
 
                 <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-2 sm:grid-cols-5" />
@@ -200,7 +194,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                             <tr>
                                 <td colSpan={5} className="px-5 py-12 text-center">
                                     <p className="text-sm font-medium text-gray-700">Belum ada tenancy ditemukan.</p>
-                                    <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Tenancy untuk data pertama.'}</p>
+                                    <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Kontrak dibuat otomatis dari LOO yang selesai.'}</p>
                                     {hasFilter && (
                                         <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline rounded">
                                             Reset filter
@@ -247,8 +241,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                     {tenancies.data.length === 0 && (
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
                             <p className="text-sm font-medium text-gray-700">Belum ada tenancy ditemukan.</p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Tenancy untuk data pertama.'}</p>
-                            <Button onClick={openCreate} className="justify-center !py-3 min-h-[48px]">Tambah Tenancy</Button>
+                            <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Kontrak dibuat otomatis dari LOO yang selesai.'}</p>
                         </div>
                     )}
                     <div className="bg-white rounded-xl border border-[#E2E5EA]">
@@ -262,7 +255,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                 onClose={closePanel}
                 title={editingTenancy ? 'Edit Tenancy' : 'Tambah Tenancy'}
                 subtitle={editingTenancy ? `${editingTenancy.tenant?.name} · ${editingTenancy.unit?.unit_code}` : 'Lengkapi unit, tenant, dan kontrak'}
-                icon={editingTenancy ? <IconEdit className="w-4 h-4" /> : <IconPlus className="w-4 h-4" />}
+                icon={<IconEdit className="w-4 h-4" />}
                 footer={
                     <div className="flex gap-2">
                         <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>

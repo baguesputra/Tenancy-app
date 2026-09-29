@@ -27,11 +27,11 @@ class TenantLogoTest extends TestCase
 
     private function staff(): User
     {
-        foreach (['tenants.view', 'tenants.create', 'tenants.edit', 'tenants.delete'] as $p) {
+        foreach (['tenants.view', 'tenants.edit', 'tenants.delete'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'manager']);
-        $role->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit', 'tenants.delete']);
+        $role->syncPermissions(['tenants.view', 'tenants.edit', 'tenants.delete']);
         $staff = User::create([
             'name' => 'Manager', 'email' => 'mgr@t.id',
             'employee_number' => 'MGR-1', 'branch_id' => null,
@@ -42,27 +42,37 @@ class TenantLogoTest extends TestCase
         return $staff;
     }
 
-    private function payload(array $over = []): array
+    private function makeTenant(): Tenant
     {
-        $branch = Branch::firstOrCreate(['code' => 'BJM'], ['name' => 'BJM']);
-        $tc = TenantCategory::firstOrCreate(['name' => 'Tenant']);
-        $pc = ProductCategory::firstOrCreate(['name' => 'F&B']);
-
-        return array_merge([
+        return Tenant::create([
             'name' => 'Kopi Senja',
-            'tenant_category_id' => $tc->id,
-            'product_category_id' => $pc->id,
-            'branch_id' => $branch->id,
+            'branch_id' => Branch::firstOrCreate(['code' => 'BJM'], ['name' => 'BJM'])->id,
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
+            'is_active' => true,
+        ]);
+    }
+
+    private function payload(Tenant $tenant, array $over = []): array
+    {
+        return array_merge([
+            'name' => $tenant->name,
+            'tenant_category_id' => $tenant->tenant_category_id,
+            'product_category_id' => $tenant->product_category_id,
+            'branch_id' => $tenant->branch_id,
         ], $over);
     }
 
-    public function test_store_with_logo_saves_file(): void
+    public function test_update_saves_logo_file(): void
     {
-        $this->actingAs($this->staff())->post('/tenants', $this->payload([
+        $staff = $this->staff();
+        $tenant = $this->makeTenant();
+
+        $this->actingAs($staff)->put("/tenants/{$tenant->id}", $this->payload($tenant, [
             'logo' => UploadedFile::fake()->image('logo.png'),
         ]))->assertRedirect();
 
-        $tenant = Tenant::first();
+        $tenant->refresh();
         $this->assertNotNull($tenant->logo_path);
         Storage::disk('public')->assertExists($tenant->logo_path);
         $this->assertStringStartsWith('/storage/', $tenant->logo_url);
@@ -71,20 +81,18 @@ class TenantLogoTest extends TestCase
     public function test_update_replaces_logo_and_deletes_old(): void
     {
         $staff = $this->staff();
-        $this->actingAs($staff)->post('/tenants', $this->payload([
+        $tenant = $this->makeTenant();
+
+        $this->actingAs($staff)->put("/tenants/{$tenant->id}", $this->payload($tenant, [
             'logo' => UploadedFile::fake()->image('old.png'),
         ]));
 
-        $tenant = Tenant::first();
+        $tenant->refresh();
         $old = $tenant->logo_path;
 
-        $this->actingAs($staff)->put("/tenants/{$tenant->id}", [
-            'name' => 'Kopi Senja',
-            'tenant_category_id' => $tenant->tenant_category_id,
-            'product_category_id' => $tenant->product_category_id,
-            'branch_id' => $tenant->branch_id,
+        $this->actingAs($staff)->put("/tenants/{$tenant->id}", $this->payload($tenant, [
             'logo' => UploadedFile::fake()->image('new.png'),
-        ])->assertRedirect();
+        ]))->assertRedirect();
 
         $tenant->refresh();
         $this->assertNotEquals($old, $tenant->logo_path);
@@ -95,15 +103,23 @@ class TenantLogoTest extends TestCase
     public function test_destroy_deletes_logo_file(): void
     {
         $staff = $this->staff();
-        $this->actingAs($staff)->post('/tenants', $this->payload([
+        $tenant = $this->makeTenant();
+
+        $this->actingAs($staff)->put("/tenants/{$tenant->id}", $this->payload($tenant, [
             'logo' => UploadedFile::fake()->image('logo.png'),
         ]));
 
-        $tenant = Tenant::first();
+        $tenant->refresh();
         $path = $tenant->logo_path;
 
-        $tenant->tenantUser()->delete();
         $this->actingAs($staff)->delete("/tenants/{$tenant->id}")->assertRedirect();
         Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_manual_tenant_create_route_is_gone(): void
+    {
+        $this->actingAs($this->staff())
+            ->post('/tenants', ['name' => 'X'])
+            ->assertStatus(405);
     }
 }

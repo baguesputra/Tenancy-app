@@ -203,8 +203,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}', [TenantProfileController::class, 'show'])->name('tenant-profiles.show');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/inspections/{inspection}', [TenantProfileController::class, 'showInspection'])->name('tenant-profiles.inspection');
     Route::middleware('can:tenants.view')->get('/tenant-profiles/{tenant}/permits/{permit}', [TenantProfileController::class, 'showPermit'])->name('tenant-profiles.permit');
-    Route::middleware('can:tenants.create')->get('/tenants/create', [TenantController::class, 'create'])->name('tenants.create');
-    Route::middleware('can:tenants.create')->post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
+    // Master Tenant — tidak bisa dibuat manual, hanya dari LOO `completed`
     Route::middleware('can:tenants.edit')->match(['put', 'post'], '/tenants/{id}', [TenantController::class, 'update'])->name('tenants.update'); // POST didukung karena upload logo via multipart + _method=put
     Route::middleware('can:tenants.delete')->delete('/tenants/{id}', [TenantController::class, 'destroy'])->name('tenants.destroy');
 
@@ -220,10 +219,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:tenancies.view')->get('/tenancies', [TenancyController::class, 'index'])->name('tenancies.index');
-    Route::middleware('can:tenancies.create')->get('/tenancies/create', [TenancyController::class, 'create'])->name('tenancies.create');
-    Route::middleware('can:tenancies.create')->post('/tenancies', [TenancyController::class, 'store'])->name('tenancies.store');
+    // Master Tenancy — output dari LOO `completed`, tidak bisa dibuat manual
     Route::middleware('can:tenancies.edit')->post('/tenancies/{id}', [TenancyController::class, 'update'])->name('tenancies.update'); // pakai POST karena ada file upload + method spoofing
-    Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy'])->name('tenancies.destroy');
+    Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy'])->name('tenancies.delete');
 
     Route::middleware('can:categories.view')->group(function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');

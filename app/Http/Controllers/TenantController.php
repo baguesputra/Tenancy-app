@@ -6,12 +6,9 @@ use App\Models\Branch;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
-use App\Models\TenantUser;
 use App\Services\BranchScopeService;
 use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class TenantController extends Controller
@@ -31,12 +28,9 @@ class TenantController extends Controller
         $this->branchScope->apply($query, $request->user());
         $this->tenantScope->applyView($query, $request->user());
 
-        $summaryBase = clone $query;
-        $agg = $summaryBase->toBase()->selectRaw('count(*) as total, sum(is_active = 1) as active')->first();
+        $agg = (clone $query)->toBase()->selectRaw('count(*) as total, sum(is_active = 1) as active')->first();
         $total = (int) ($agg->total ?? 0);
         $active = (int) ($agg->active ?? 0);
-
-        $creatable = $this->tenantScope->creatableCategoryIds($request->user());
 
         return Inertia::render('Master/Tenants/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
@@ -47,88 +41,31 @@ class TenantController extends Controller
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
             'tenantScope' => [
-                'creatableCategoryIds' => $creatable,
                 'editOwnOnlyCategoryIds' => $this->tenantScope->editOwnOnlyCategoryIds($request->user()),
             ],
         ]);
     }
 
-    public function create(Request $request)
-    {
-        return Inertia::render('Master/Tenants/Create', $this->formProps($request));
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $this->validateTenant($request);
-        abort_unless($this->tenantScope->canCreate($request->user(), (int) $validated['tenant_category_id']), 403, 'Tidak boleh membuat tenant kategori ini.');
-        unset($validated['logo']);
-
-        if ($request->hasFile('logo')) {
-            $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
-        }
-        if ($request->hasFile('denah_file')) {
-            $validated['denah_path'] = $request->file('denah_file')->store('tenant-denah', 'public');
-        }
-        if ($request->hasFile('bapur_file')) {
-            $validated['bapur_path'] = $request->file('bapur_file')->store('tenant-bapur', 'public');
-        }
-
-        $tenant = Tenant::create([
-            ...$validated,
-            'branch_id' => $request->user()->canViewAllBranches()
-                ? $validated['branch_id']
-                : $request->user()->branch_id,
-            'created_by' => $request->user()->id,
-        ]);
-
-        $this->syncContacts($tenant, $request->input('contacts', []));
-
-        // Auto-buat akun login untuk staff toko
-        $generatedPassword = Str::random(10);
-        $tenantUser = TenantUser::create([
-            'tenant_id' => $tenant->id,
-            'username' => TenantUser::generateUsernameFrom($tenant->name),
-            'password' => Hash::make($generatedPassword),
-            'is_active' => true,
-        ]);
-
-        return redirect()->route('tenants.index')->with('success',
-            "Tenant berhasil ditambahkan. Akun login toko: username \"{$tenantUser->username}\", password \"{$generatedPassword}\" — catat sekarang, password tidak akan ditampilkan lagi."
-        );
-    }
-
+    /**
+     * Tenant tidak bisa dibuat manual — hanya dari LOO `completed`
+     * (lihat TenantSyncService). Route `create`/`store` sudah dihapus.
+     */
     public function update($id, Request $request)
     {
         $tenant = Tenant::findOrFail($id);
         $this->authorizeAccess($tenant, $request);
         abort_unless($this->tenantScope->canEdit($request->user(), $tenant), 403, 'Tidak boleh mengubah tenant ini.');
 
+        if ($tenant->isLooBacked()) {
+            return $this->updatePicOnly($tenant, $request);
+        }
+
         $validated = $this->validateTenant($request);
         abort_unless($this->tenantScope->canCreate($request->user(), (int) $validated['tenant_category_id']), 403, 'Tidak boleh memindah tenant ke kategori ini.');
-        unset($validated['logo']);
-
-        if ($request->hasFile('logo')) {
-            if ($tenant->logo_path) {
-                \Storage::disk('public')->delete($tenant->logo_path);
-            }
-            $validated['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
-        }
-        if ($request->hasFile('denah_file')) {
-            if ($tenant->denah_path) {
-                \Storage::disk('public')->delete($tenant->denah_path);
-            }
-            $validated['denah_path'] = $request->file('denah_file')->store('tenant-denah', 'public');
-        }
-        if ($request->hasFile('bapur_file')) {
-            if ($tenant->bapur_path) {
-                \Storage::disk('public')->delete($tenant->bapur_path);
-            }
-            $validated['bapur_path'] = $request->file('bapur_file')->store('tenant-bapur', 'public');
-        }
 
         $tenant->update([
             ...$validated,
+            ...$this->storeTenantFiles($request, $tenant),
             'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $tenant->branch_id,
         ]);
 
@@ -137,10 +74,55 @@ class TenantController extends Controller
         return back()->with('success', 'Data tenant berhasil diperbarui.');
     }
 
+    /**
+     * Tenant hasil LOO: master data terkunci. Hanya PIC/kontak yang boleh
+     * berubah — sisanya milik LOO dan harus diubah lewat revisi LOO.
+     */
+    private function updatePicOnly(Tenant $tenant, Request $request)
+    {
+        $validated = $request->validate([
+            'pic_name' => 'nullable|string|max:100',
+            'pic_position' => 'nullable|string|max:100',
+            'pic_phone' => 'nullable|string|max:30',
+            'company_phone' => 'nullable|string|max:30',
+            'company_email' => 'nullable|email|max:255',
+            'company_address' => 'nullable|string',
+            'is_active' => 'boolean',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'contacts' => 'nullable|array|max:20',
+            'contacts.*.id' => 'nullable|integer',
+            'contacts.*.name' => 'required_with:contacts|string|max:255',
+            'contacts.*.position' => 'nullable|string|max:100',
+            'contacts.*.phone' => 'nullable|string|max:30',
+            'contacts.*.email' => 'nullable|email|max:255',
+            'contacts.*.type' => 'nullable|string|max:50',
+        ]);
+
+        $fields = array_intersect_key($validated, array_flip(['pic_name', 'pic_position', 'pic_phone', 'company_phone', 'company_email', 'company_address', 'is_active']));
+
+        if ($request->hasFile('logo')) {
+            if ($tenant->logo_path) {
+                \Storage::disk('public')->delete($tenant->logo_path);
+            }
+            $fields['logo_path'] = $request->file('logo')->store('tenant-logos', 'public');
+        }
+
+        // Field non-PIC yang ikut terkirim dari form diabaikan — whitelist
+        // di atas adalah satu-satunya sumber field yang boleh ditulis.
+        $tenant->fill($fields)->save();
+        $this->syncContacts($tenant, $request->input('contacts', []));
+
+        return back()->with('success', 'Data PIC tenant berhasil diperbarui.');
+    }
+
     public function destroy($id, Request $request)
     {
         $tenant = Tenant::findOrFail($id);
         $this->authorizeAccess($tenant, $request);
+
+        if ($tenant->isLooBacked()) {
+            return back()->withErrors(['tenant' => 'Tenant hasil LOO tidak bisa dihapus. Nonaktifkan saja.']);
+        }
 
         if ($tenant->tenancies()->exists() || $tenant->inspections()->exists()) {
             return back()->withErrors(['tenant' => 'Tenant tidak bisa dihapus karena masih punya riwayat kontrak/sidak. Nonaktifkan saja tenant ini.']);
@@ -157,7 +139,7 @@ class TenantController extends Controller
 
     private function validateTenant(Request $request): array
     {
-        $validated = $request->validate([
+        return $request->validate([
             'name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
             'legal_entity_name' => 'nullable|string|max:255',
@@ -165,24 +147,7 @@ class TenantController extends Controller
             'npwp_number' => 'nullable|string|max:50',
             'siup_number' => 'nullable|string|max:50',
             'nib' => 'nullable|string|max:50',
-            'tdp' => 'nullable|string|max:50',
-            'sk_pendirian' => 'nullable|string|max:100',
-            'tgl_sk_pendirian' => 'nullable|date',
-            'notaris_pendirian' => 'nullable|string|max:100',
-            'akta_perubahan_terakhir' => 'nullable|string|max:100',
-            'tgl_akta_terakhir' => 'nullable|date',
-            'notaris_terakhir' => 'nullable|string|max:100',
-            'pic_legal_name' => 'nullable|string|max:100',
-            'pic_legal_phone' => 'nullable|string|max:30',
-            'pic_legal_email' => 'nullable|email|max:100',
-            'authorized_signatory_name' => 'nullable|string|max:100',
-            'authorized_signatory_jabatan' => 'nullable|string|max:100',
-            'authorized_signatory_ktp' => 'nullable|string|max:50',
-            'map_id' => 'nullable|string|max:100',
-            'map_x' => 'nullable|numeric|between:-180,180',
-            'map_y' => 'nullable|numeric|between:-90,90',
-            'denah_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'bapur_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'tdp_number' => 'nullable|string|max:50',
             'company_phone' => 'nullable|string|max:30',
             'company_email' => 'nullable|email|max:255',
             'company_address' => 'nullable|string',
@@ -201,10 +166,19 @@ class TenantController extends Controller
             'contacts.*.email' => 'nullable|email|max:255',
             'contacts.*.type' => 'nullable|string|max:50',
         ]);
+    }
 
-        unset($validated['denah_file'], $validated['bapur_file']);
+    private function storeTenantFiles(Request $request, Tenant $tenant): array
+    {
+        if (! $request->hasFile('logo')) {
+            return [];
+        }
 
-        return $validated;
+        if ($tenant->logo_path) {
+            \Storage::disk('public')->delete($tenant->logo_path);
+        }
+
+        return ['logo_path' => $request->file('logo')->store('tenant-logos', 'public')];
     }
 
     private function syncContacts(Tenant $tenant, array $contacts): void
