@@ -25,6 +25,9 @@ class BreadcrumbService
             'units.index' => [$webHome, self::item('Master Unit', '/units')],
             'units.qr', 'units.qr.bulk' => [$webHome, self::item('Master Unit', '/units'), self::item('QR Unit')],
             'tenancies.index' => [$webHome, self::item('Master Tenancy', '/tenancies')],
+            'loos.index' => [$webHome, self::item('LOO', '/loos')],
+            'loos.create' => [$webHome, self::item('LOO', '/loos'), self::item('Tambah')],
+            'loos.show' => [$webHome, self::item('LOO', '/loos'), self::item(self::looLabel($request))],
             'categories.index' => [$webHome, self::item('Kategori', '/categories')],
             'sessions.index' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions')],
             'sessions.current' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item('Sesi Berjalan')],
@@ -60,6 +63,13 @@ class BreadcrumbService
         $permit = $request->route()?->parameter($param);
 
         return is_object($permit) ? ($permit->permit_number ?? 'Detail') : 'Detail';
+    }
+
+    private static function looLabel(Request $request): string
+    {
+        $loo = $request->route()?->parameter('loo');
+
+        return is_object($loo) ? ($loo->loo_number ?? 'Detail LOO') : 'Detail LOO';
     }
 
     private static function sessionLabel(Request $request): string

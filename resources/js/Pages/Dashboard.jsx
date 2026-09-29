@@ -3,12 +3,12 @@ import { usePage, Link, router } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import {
-    IconBuilding, IconGrid, IconDocument, IconClipboard,
+    IconBuilding, IconGrid, IconDocument, IconClipboard, IconContract,
     IconArrowRight, IconRefresh,
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
 
-const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak' };
+const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak', loo: 'LOO' };
 
 const statusLabel = {
     pending: 'Antre', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan', draft: 'Draft',
@@ -51,6 +51,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
 
     const canSidak = auth.user?.permissions?.includes('sidak.create') || auth.user?.roles?.includes('super_admin');
     const canPermits = auth.user?.permissions?.includes('permits.view') || auth.user?.roles?.includes('super_admin');
+    const canLoo = auth.user?.permissions?.includes('loos.view') || auth.user?.roles?.includes('super_admin');
 
     return (
         <AppLayout>
@@ -114,6 +115,17 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         hint="Sedang berjalan"
                         href="/inspection-sessions"
                     />
+                    {canLoo && (
+                        <StatCard
+                            icon={<IconContract className="w-5 h-5" aria-hidden="true" />}
+                            tint="bg-amber-50 text-amber-700"
+                            label="LOO Diproses"
+                            value={stats?.pending_loos ?? 0}
+                            hint={`${stats?.total_loos ?? 0} total LOO`}
+                            href="/loos"
+                            alert={(stats?.pending_loos ?? 0) > 0}
+                        />
+                    )}
                 </div>
 
                 <section aria-label="Okupansi unit" className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] p-5 sm:p-6">
@@ -214,7 +226,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-sm font-semibold text-gray-900">Aktivitas Terbaru</h2>
-                                <p className="text-xs text-gray-400 mt-0.5">Izin · Sidak · Kontrak</p>
+                                <p className="text-xs text-gray-400 mt-0.5">Izin · Sidak · Kontrak · LOO</p>
                             </div>
                             <Link href="/permit-requests" className="text-xs font-medium text-[#0F1E36] hover:underline rounded focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
                                 Semua
@@ -257,6 +269,7 @@ function typeTint(type) {
         permit: 'bg-blue-50 text-blue-700',
         inspection: 'bg-emerald-50 text-emerald-700',
         tenancy: 'bg-purple-50 text-purple-700',
+        loo: 'bg-amber-50 text-amber-700',
     }[type] ?? 'bg-gray-100 text-gray-500';
 }
 

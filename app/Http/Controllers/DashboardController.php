@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Approval;
 use App\Models\Inspection;
 use App\Models\InspectionSession;
+use App\Models\Loo;
 use App\Models\PermitRequest;
 use App\Models\Tenancy;
 use App\Models\Tenant;
@@ -17,6 +18,12 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    /** Status LOO yang masih berjalan di pipeline — dipakai kartu dashboard. */
+    private const LOO_IN_PROGRESS = [
+        'legal_review', 'accounting_review', 'tenant_mgmt_review',
+        'measurement', 'ba_handover', 'fitout', 'pre_handover',
+    ];
+
     public function __construct(private BranchScopeService $branchScope) {}
 
     public function index(Request $request)
@@ -37,10 +44,13 @@ class DashboardController extends Controller
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
             $activeSessions = InspectionSession::where('status', 'in_progress')
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            $looBase = fn () => Loo::when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id));
+            $totalLoos = $looBase()->count();
+            $pendingLoos = $looBase()->whereIn('status', self::LOO_IN_PROGRESS)->count();
 
-            return compact('totalTenants', 'totalUnits', 'occupiedUnits', 'pendingPermits', 'activeSessions');
+            return compact('totalTenants', 'totalUnits', 'occupiedUnits', 'pendingPermits', 'activeSessions', 'totalLoos', 'pendingLoos');
         });
-        ['totalTenants' => $totalTenants, 'totalUnits' => $totalUnits, 'occupiedUnits' => $occupiedUnits, 'pendingPermits' => $pendingPermits, 'activeSessions' => $activeSessions] = $cached;
+        ['totalTenants' => $totalTenants, 'totalUnits' => $totalUnits, 'occupiedUnits' => $occupiedUnits, 'pendingPermits' => $pendingPermits, 'activeSessions' => $activeSessions, 'totalLoos' => $totalLoos, 'pendingLoos' => $pendingLoos] = $cached;
 
         $actionNeeded = collect();
         if ($user->department_id) {
@@ -119,9 +129,21 @@ class DashboardController extends Controller
                 'url' => '/tenancies',
             ]);
 
+        $recentLoos = Loo::select(['id', 'loo_number', 'prospective_tenant_name', 'status', 'created_at'])
+            ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+            ->latest()->take(5)->get()
+            ->map(fn ($l) => [
+                'type' => 'loo',
+                'title' => "LOO {$l->loo_number} — ".($l->prospective_tenant_name ?? 'Tenant prospektif'),
+                'status' => $l->status,
+                'time' => $l->created_at,
+                'url' => "/loos/{$l->id}",
+            ]);
+
         $recentActivity = $recentPermits
             ->concat($recentInspections)
             ->concat($recentTenancies)
+            ->concat($recentLoos)
             ->sortByDesc('time')
             ->take(8)
             ->values();
@@ -133,6 +155,8 @@ class DashboardController extends Controller
                 'vacant_units' => $totalUnits - $occupiedUnits,
                 'pending_permits' => $pendingPermits,
                 'active_sessions' => $activeSessions,
+                'total_loos' => $totalLoos,
+                'pending_loos' => $pendingLoos,
             ],
             'actionNeeded' => $actionNeeded,
             'recentActivity' => $recentActivity,
