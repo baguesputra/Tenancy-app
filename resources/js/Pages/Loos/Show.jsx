@@ -132,7 +132,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem] items-start">
                     <aside
-                        className="order-first lg:order-2 lg:sticky lg:top-6 bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5"
+                        className="order-first lg:order-2 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5"
                         aria-label="Progress per divisi"
                     >
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Progress Per Divisi</p>
