@@ -4,15 +4,16 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\User;
-use App\Services\TenantSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LooTenantSyncTest extends TestCase
@@ -28,7 +29,7 @@ class LooTenantSyncTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         Storage::fake('public');
 
         $this->branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
@@ -37,11 +38,11 @@ class LooTenantSyncTest extends TestCase
             'unit_number' => '01', 'unit_code' => 'GF-01', 'is_active' => true,
         ]);
 
-        foreach (['loos.view', 'loos.transition'] as $p) {
+        foreach (['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete'] as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
         Role::firstOrCreate(['name' => 'tenant_mgmt_staff', 'guard_name' => 'web'])
-            ->syncPermissions(['loos.view', 'loos.transition']);
+            ->syncPermissions(['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete']);
 
         $this->actor = User::create([
             'name' => 'Aktor', 'email' => 'aktor-'.uniqid().'@t.id',
@@ -95,7 +96,7 @@ class LooTenantSyncTest extends TestCase
         $this->fillSection($loo, 'manajemen_tenant', [
             'brand_name' => 'Kopi Senja',
             'trade_name' => 'Senja Coffee',
-            'product_categories' => [\App\Models\ProductCategory::firstOrCreate(['name' => 'F&B'])->id],
+            'product_categories' => [ProductCategory::firstOrCreate(['name' => 'F&B'])->id],
             'floor_preference' => 'GF',
             'zone_preference' => 'Zona A',
             'contact_person_name' => 'Budi Customer',
@@ -211,7 +212,7 @@ class LooTenantSyncTest extends TestCase
         $previous = Tenant::create([
             'name' => 'Tenant Lama', 'branch_id' => $this->branch->id,
             'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
-            'product_category_id' => \App\Models\ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
             'is_active' => true,
         ]);
         $old = $previous->tenancies()->create([
@@ -282,7 +283,7 @@ class LooTenantSyncTest extends TestCase
         $legacy = Tenant::create([
             'name' => 'Legacy', 'branch_id' => $this->branch->id,
             'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
-            'product_category_id' => \App\Models\ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
             'is_active' => true,
         ]);
 
