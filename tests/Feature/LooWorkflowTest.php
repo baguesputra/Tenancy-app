@@ -193,6 +193,25 @@ class LooWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_user_cannot_fill_section_outside_current_stage(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+
+        // Punya permission accounting_edit, tapi stage LOO masih legal.
+        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_edit']);
+
+        $this->actingAs($accounting)
+            ->post("/loos/{$loo->id}/sections/biaya_termin", ['monthly_rent' => '5000000', 'submit' => '1'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('loo_sections', [
+            'loo_id' => $loo->id,
+            'section_key' => 'biaya_termin',
+        ]);
+        $this->assertSame('legal_review', $loo->fresh()->status);
+    }
+
     public function test_save_draft_does_not_advance_stage(): void
     {
         $loo = $this->makeLoo();
