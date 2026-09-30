@@ -7,6 +7,7 @@ use App\Models\LooHistory;
 use App\Models\LooSection;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LooStateService
@@ -45,8 +46,9 @@ class LooStateService
 
             // LOO selesai = materialize ke master Tenant + Tenancy.
             if ($to === 'completed') {
-                $this->tenantSync->sync($loo);
-                $this->log($loo, $actor, 'handover_completed');
+                $password = Str::random(12);
+                $this->tenantSync->sync($loo, $password);
+                $this->log($loo, $actor, 'handover_completed', [], ['portal_password' => $password]);
             }
 
             return $loo->fresh();

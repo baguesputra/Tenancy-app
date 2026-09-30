@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\Loo;
-use App\Models\Tenant;
+use App\Models\ProductCategory;
 use App\Models\Tenancy;
+use App\Models\Tenant;
 use App\Models\TenantUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -28,7 +29,7 @@ class TenantSyncService
         });
     }
 
-    private function syncTenant(Loo $loo): Tenant
+    private function syncTenant(Loo $loo, ?string $portalPassword = null): Tenant
     {
         $sections = $this->sections($loo);
         $legal = $sections['legalitas'] ?? [];
@@ -146,7 +147,7 @@ class TenantSyncService
 
     private function fallbackProductCategory(int $branchId): ?int
     {
-        return \App\Models\ProductCategory::query()->orderBy('id')->value('id');
+        return ProductCategory::query()->orderBy('id')->value('id');
     }
 
     private function depositValue(array $acct): ?float
