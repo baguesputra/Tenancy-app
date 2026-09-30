@@ -40,15 +40,41 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
+function StateIcon({ state }) {
+    if (state === 'submitted') {
+        return (
+            <svg className="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z" clipRule="evenodd" />
+            </svg>
+        );
+    }
+    if (state === 'draft') {
+        return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 mx-[3px]" aria-hidden="true" />;
+    }
+    return <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 shrink-0 mx-[3px]" aria-hidden="true" />;
+}
+
 export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [openKey, setOpenKey] = useState(null);
+
+    const terminal = ['completed', 'cancelled'].includes(loo.status);
 
     const sectionRows = Object.entries(sectionConfigs).map(([key, cfg]) => {
         const row = (loo.sections ?? []).find((s) => s.section_key === key);
         const state = row ? (row.is_submitted ? 'submitted' : 'draft') : 'none';
         return { key, cfg, row, state, editable: canEditSections.includes(key) };
     });
+
+    const submittedCount = sectionRows.filter((r) => r.state === 'submitted').length;
+
+    const jumpTo = (key, editable) => {
+        if (editable) setOpenKey(key);
+        const el = document.getElementById(`section-${key}`);
+        if (!el) return;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    };
 
     const submitSection = ({ data, files }, submit) => {
         setSubmitting(true);
@@ -93,159 +119,197 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-4xl w-full mx-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900">{loo.loo_number}</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-6xl w-full mx-auto">
+                <div className="flex items-center justify-between gap-3 mb-5">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-semibold text-gray-900 truncate">{loo.loo_number}</h1>
+                        <p className="text-sm text-gray-500 mt-0.5 truncate">
                             {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'}
                         </p>
                     </div>
                     <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="md">{STATUS_LABELS[loo.status] ?? loo.status}</Badge>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <div className="flex items-center justify-between mb-3">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem] items-start">
+                    <aside
+                        className="order-first lg:order-2 lg:sticky lg:top-6 bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5"
+                        aria-label="Progress per divisi"
+                    >
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Progress Per Divisi</p>
-                        {!['completed', 'cancelled'].includes(loo.status) && (
-                            <span className="text-xs text-gray-500">Review saat ini: <span className="font-medium text-[#0F1E36]">{STATUS_LABELS[loo.status] ?? loo.status}</span></span>
+                        {!terminal && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Review saat ini: <span className="font-medium text-[#0F1E36]">{STATUS_LABELS[loo.status] ?? loo.status}</span>
+                            </p>
                         )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        {sectionRows.map(({ key, cfg, state }) => {
-                            const isActive = cfg.stage === loo.current_stage && !['completed', 'cancelled'].includes(loo.status);
-                            const badge = SECTION_BADGE[state];
-                            return (
-                                <div key={key} className={`rounded-xl border p-3 ${isActive ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA]'}`}>
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{cfg.label}</p>
-                                            <p className="text-xs text-gray-400">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</p>
-                                        </div>
-                                        <Badge color={badge.color} size="sm">{badge.label}</Badge>
-                                    </div>
-                                    {isActive && <p className="text-[10px] text-[#0F1E36] font-semibold uppercase mt-2">Review saat ini</p>}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Informasi LOO</p>
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                        <div><dt className="text-gray-500">Tgl Terima LOO</dt><dd className="text-gray-900 font-medium">{loo.loo_received_date ?? '—'}</dd></div>
-                        <div><dt className="text-gray-500">Pendistribusi</dt><dd className="text-gray-900 font-medium">{loo.loo_distributor ?? '—'}</dd></div>
-                        <div><dt className="text-gray-500">Dibuat oleh</dt><dd className="text-gray-900 font-medium">{loo.marketing?.name ?? '—'}</dd></div>
-                        <div><dt className="text-gray-500">Kategori</dt><dd className="text-gray-900 font-medium">{loo.tenantCategory?.name ?? '—'}</dd></div>
-                    </dl>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">File LOO</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {loo.cover_file_path && (
-                            <a href={`/storage/${loo.cover_file_path}`} target="_blank" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <span className="text-sm font-medium text-[#0F1E36]">Cover LOO</span>
-                                <span className="text-xs text-gray-400">↗</span>
-                            </a>
-                        )}
-                        {loo.isi_file_path && (
-                            <a href={`/storage/${loo.isi_file_path}`} target="_blank" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <span className="text-sm font-medium text-[#0F1E36]">Isi LOO</span>
-                                <span className="text-xs text-gray-400">↗</span>
-                            </a>
-                        )}
-                        {loo.loo_letter_file_path && (
-                            <a href={`/storage/${loo.loo_letter_file_path}`} target="_blank" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <span className="text-sm font-medium text-[#0F1E36]">Surat LOO</span>
-                                <span className="text-xs text-gray-400">↗</span>
-                            </a>
-                        )}
-                        {loo.loo_proposal_file_path && (
-                            <a href={`/storage/${loo.loo_proposal_file_path}`} target="_blank" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <span className="text-sm font-medium text-[#0F1E36]">Penawaran LOO</span>
-                                <span className="text-xs text-gray-400">↗</span>
-                            </a>
-                        )}
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Section</p>
-                    <div className="space-y-2">
-                        {sectionRows.map(({ key, cfg, row, state, editable }) => {
-                            const isOpen = openKey === key;
-                            const badge = SECTION_BADGE[state];
-                            return (
-                                <div key={key} className="border border-[#E2E5EA] rounded-xl">
-                                    <div className="flex items-center justify-between gap-2 px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-sm font-medium text-gray-800">{cfg.label}</span>
-                                            <span className="text-xs text-gray-400">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</span>
-                                            <Badge color={badge.color} size="sm">{badge.label}</Badge>
-                                        </div>
-                                        {editable && (
-                                            <Button variant="secondary" onClick={() => setOpenKey(isOpen ? null : key)}>
-                                                {isOpen ? 'Tutup' : row ? 'Lihat / Ubah' : 'Isi'}
-                                            </Button>
-                                        )}
-                                    </div>
-                                    {isOpen && editable && (
-                                        <div className="px-4 pb-4 border-t border-gray-100 pt-4">
-                                            <LooSectionForm
-                                                looId={loo.id}
-                                                sectionKey={key}
-                                                config={cfg}
-                                                section={row}
-                                                options={options}
-                                                submitting={submitting}
-                                                onSubmit={submitSection}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Riwayat ({loo.history?.length ?? 0})</p>
-                    <div className="space-y-3">
-                        {(loo.history ?? []).map((h) => (
-                            <div key={h.id} className="flex items-start gap-3 text-sm">
-                                <div className="w-2 h-2 rounded-full bg-[#0F1E36] mt-1.5 shrink-0" />
-                                <div>
-                                    <p className="text-gray-900 font-medium">{ACTION_LABELS[h.action] ?? h.action}</p>
-                                    {h.to_status && <p className="text-xs text-gray-500">{h.from_status} → {h.to_status}</p>}
-                                    <p className="text-xs text-gray-400">{new Date(h.created_at).toLocaleString('id-ID')}{h.user ? ` · ${h.user.name}` : ''}</p>
-                                </div>
+                        <div className="mt-3 mb-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                                <span>Section selesai</span>
+                                <span className="font-medium text-gray-800">{submittedCount}/{sectionRows.length} disubmit</span>
                             </div>
-                        ))}
-                        {(loo.history?.length ?? 0) === 0 && <p className="text-sm text-gray-400">Belum ada riwayat.</p>}
-                    </div>
-                </div>
+                            <div
+                                className="h-1.5 rounded-full bg-gray-100"
+                                role="progressbar"
+                                aria-valuenow={submittedCount}
+                                aria-valuemin={0}
+                                aria-valuemax={sectionRows.length}
+                                aria-label="Bagian selesai"
+                            >
+                                    <div
+                                    className="h-1.5 rounded-full bg-[#0F1E36] transition-all duration-300"
+                                    style={{ width: `${sectionRows.length ? (submittedCount / sectionRows.length) * 100 : 0}%` }}
+                                />
+                            </div>
+                        </div>
 
-                <div className="flex gap-2 flex-wrap">
-                    {canEditLoo && loo.status === 'draft' && (
-                        <Link href={`/loos/${loo.id}/edit`}>
-                            <Button variant="secondary">Edit</Button>
-                        </Link>
-                    )}
-                    {transitions.map((t) => (
-                        <Button key={t.value} onClick={() => changeStatus(t.value)} loading={submitting}>
-                            {t.label}
-                        </Button>
-                    ))}
-                    {canCancel && loo.status !== 'cancelled' && loo.status !== 'completed' && (
-                        <Button variant="danger" onClick={() => changeStatus('cancelled')} loading={submitting}>
-                            Batalkan
-                        </Button>
-                    )}
-                    <Link href="/loos">
-                        <Button variant="secondary">← Kembali</Button>
-                    </Link>
+                        <ul className="mt-3 space-y-1">
+                            {sectionRows.map(({ key, cfg, state, editable }) => {
+                                const isActive = cfg.stage === loo.current_stage && !terminal;
+                                const badge = SECTION_BADGE[state];
+                                return (
+                                    <li key={key}>
+                                        <button
+                                            type="button"
+                                            onClick={() => jumpTo(key, editable)}
+                                            className={`w-full flex items-center gap-2.5 min-h-11 px-2 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${isActive ? 'bg-gray-50 ring-1 ring-[#0F1E36]' : ''}`}
+                                            aria-label={`${cfg.label}, ${badge.label}${isActive ? ', review saat ini' : ''}`}
+                                        >
+                                            <StateIcon state={state} />
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-sm font-medium text-gray-900 truncate">{cfg.label}</span>
+                                                {isActive && <span className="block text-[10px] text-[#0F1E36] font-semibold uppercase">Review saat ini</span>}
+                                            </span>
+                                            <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </aside>
+
+                    <div className="lg:order-1 min-w-0 space-y-4">
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Informasi LOO</p>
+                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                <div><dt className="text-gray-500">Tgl Terima LOO</dt><dd className="text-gray-900 font-medium">{loo.loo_received_date ?? '—'}</dd></div>
+                                <div><dt className="text-gray-500">Pendistribusi</dt><dd className="text-gray-900 font-medium">{loo.loo_distributor ?? '—'}</dd></div>
+                                <div><dt className="text-gray-500">Dibuat oleh</dt><dd className="text-gray-900 font-medium">{loo.marketing?.name ?? '—'}</dd></div>
+                                <div><dt className="text-gray-500">Kategori</dt><dd className="text-gray-900 font-medium">{loo.tenantCategory?.name ?? '—'}</dd></div>
+                            </dl>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">File LOO</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {loo.cover_file_path && (
+                                    <a href={`/storage/${loo.cover_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
+                                        <span className="text-sm font-medium text-[#0F1E36]">Cover LOO</span>
+                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
+                                    </a>
+                                )}
+                                {loo.isi_file_path && (
+                                    <a href={`/storage/${loo.isi_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
+                                        <span className="text-sm font-medium text-[#0F1E36]">Isi LOO</span>
+                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
+                                    </a>
+                                )}
+                                {loo.loo_letter_file_path && (
+                                    <a href={`/storage/${loo.loo_letter_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
+                                        <span className="text-sm font-medium text-[#0F1E36]">Surat LOO</span>
+                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
+                                    </a>
+                                )}
+                                {loo.loo_proposal_file_path && (
+                                    <a href={`/storage/${loo.loo_proposal_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
+                                        <span className="text-sm font-medium text-[#0F1E36]">Penawaran LOO</span>
+                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Section</p>
+                            <div className="space-y-2">
+                                {sectionRows.map(({ key, cfg, row, state, editable }) => {
+                                    const isOpen = openKey === key;
+                                    const badge = SECTION_BADGE[state];
+                                    return (
+                                        <div key={key} id={`section-${key}`} className="scroll-mt-24 border border-[#E2E5EA] rounded-xl">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <StateIcon state={state} />
+                                                    <span className="text-sm font-medium text-gray-800 truncate">{cfg.label}</span>
+                                                    <span className="text-xs text-gray-400 hidden sm:inline">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</span>
+                                                    <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                                </div>
+                                                {editable && (
+                                                    <Button variant="secondary" onClick={() => setOpenKey(isOpen ? null : key)}>
+                                                        {isOpen ? 'Tutup' : row ? 'Lihat / Ubah' : 'Isi'}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            {isOpen && editable && (
+                                                <div className="px-4 pb-4 border-t border-gray-100 pt-4">
+                                                    <LooSectionForm
+                                                        looId={loo.id}
+                                                        sectionKey={key}
+                                                        config={cfg}
+                                                        section={row}
+                                                        options={options}
+                                                        submitting={submitting}
+                                                        onSubmit={submitSection}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Riwayat ({loo.history?.length ?? 0})</p>
+                            <div className="space-y-3">
+                                {(loo.history ?? []).map((h) => (
+                                    <div key={h.id} className="flex items-start gap-3 text-sm">
+                                        <div className="w-2 h-2 rounded-full bg-[#0F1E36] mt-1.5 shrink-0" aria-hidden="true" />
+                                        <div>
+                                            <p className="text-gray-900 font-medium">{ACTION_LABELS[h.action] ?? h.action}</p>
+                                            {h.to_status && <p className="text-xs text-gray-500">{h.from_status} → {h.to_status}</p>}
+                                            <p className="text-xs text-gray-400">{new Date(h.created_at).toLocaleString('id-ID')}{h.user ? ` · ${h.user.name}` : ''}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(loo.history?.length ?? 0) === 0 && <p className="text-sm text-gray-400">Belum ada riwayat.</p>}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                            {canEditLoo && loo.status === 'draft' && (
+                                <Link href={`/loos/${loo.id}/edit`}>
+                                    <Button variant="secondary">Edit</Button>
+                                </Link>
+                            )}
+                            {transitions.map((t) => t.direction === 'back' ? (
+                                <Button key={t.value} variant="secondary" onClick={() => changeStatus(t.value)} loading={submitting}>
+                                    Kembalikan ke {t.label}
+                                </Button>
+                            ) : (
+                                <Button key={t.value} onClick={() => changeStatus(t.value)} loading={submitting}>
+                                    {t.label}
+                                </Button>
+                            ))}
+                            {canCancel && !terminal && (
+                                <Button variant="danger" onClick={() => changeStatus('cancelled')} loading={submitting}>
+                                    Batalkan
+                                </Button>
+                            )}
+                            <Link href="/loos">
+                                <Button variant="secondary">← Kembali</Button>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </AppLayout>

@@ -324,7 +324,11 @@ class LooController extends Controller
         return collect(config("loo.transitions.{$loo->status}") ?? [])
             ->reject(fn ($to) => $to === 'cancelled')
             ->filter(fn ($to) => $to !== $forward || $this->stageSectionsSubmitted($loo))
-            ->map(fn ($to) => ['value' => $to, 'label' => self::STATUSES[$to]])
+            ->map(fn ($to) => [
+                'value' => $to,
+                'label' => self::STATUSES[$to],
+                'direction' => $to === $forward ? 'forward' : 'back',
+            ])
             ->values()
             ->all();
     }
