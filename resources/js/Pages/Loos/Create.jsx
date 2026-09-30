@@ -8,12 +8,11 @@ import DateInput from '@/Components/Form/DateInput';
 import Button from '@/Components/Form/Button';
 import FileInput from '@/Components/Form/FileInput';
 
-export default function Create({ loo = null, branches, tenantCategories, marketings, tenants }) {
+export default function Create({ loo = null, branches, tenantCategories, tenants }) {
     const isEdit = !!loo;
 
     const { data, setData, post, processing, errors } = useForm({
         branch_id: loo?.branch_id ?? '',
-        marketing_id: loo?.marketing_id ?? '',
         tenant_id: loo?.tenant_id ?? '',
         tenant_category_id: loo?.tenant_category_id ?? '',
         prospective_tenant_name: loo?.prospective_tenant_name ?? '',
@@ -63,15 +62,6 @@ export default function Create({ loo = null, branches, tenantCategories, marketi
                                     {branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
                                 </SelectInput>
                             </FormField>
-                            <FormField label="Marketing" error={errors.marketing_id} required>
-                                <SelectInput value={data.marketing_id} onChange={(e) => setData('marketing_id', e.target.value)}>
-                                    <option value="">Pilih...</option>
-                                    {marketings.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                </SelectInput>
-                            </FormField>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                             <FormField label="Tenant Existing (opsional)" error={errors.tenant_id}>
                                 <SelectInput value={data.tenant_id} onChange={(e) => setData('tenant_id', e.target.value)}>
                                     <option value="">— Pilih tenant existing —</option>

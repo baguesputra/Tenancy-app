@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
@@ -37,6 +37,10 @@ const STATUS_LABELS = {
 export default function Index({ loos, summary = {}, filters = {}, statusOptions = [], stageOptions = [] }) {
     const [search, setSearch] = useState(filters.search ?? '');
 
+    const { auth } = usePage().props;
+    const canCreate = auth.user?.roles?.includes('super_admin')
+        || (auth.user?.permissions ?? []).includes('loos.create');
+
     const updateFilter = (key, value) => {
         const next = { ...filters, [key]: value || undefined };
         router.get('/loos', next, { preserveState: true, preserveScroll: true, replace: true });
@@ -58,9 +62,11 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">LOO</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{summary.total ?? 0} LOO terdaftar</p>
                     </div>
-                    <Link href="/loos/create">
-                        <Button>+ Buat LOO</Button>
-                    </Link>
+                    {canCreate && (
+                        <Link href="/loos/create">
+                            <Button>+ Buat LOO</Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">

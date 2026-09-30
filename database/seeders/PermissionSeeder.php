@@ -117,7 +117,7 @@ class PermissionSeeder extends Seeder
             'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
         ]);
         $this->assignRolePermissions('accounting_manager', [
-            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
+            'loos.view', 'loos.create', 'loos.accounting_edit', 'loos.accounting_submit',
             'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
         ]);
 

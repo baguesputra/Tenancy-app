@@ -84,7 +84,6 @@ class LooController extends Controller
         return Inertia::render('Loos/Create', [
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-            'marketings' => $this->marketings(),
             'tenants' => $this->activeTenants($request->user()),
         ]);
     }
@@ -97,6 +96,7 @@ class LooController extends Controller
         $loo = Loo::create([
             ...$data,
             ...$this->storeFiles($request, []),
+            'marketing_id' => $request->user()->id,
             'loo_number' => Loo::generateLooNumber($branch->code, now()->year),
             'status' => 'draft',
             'current_stage' => 'marketing',
@@ -131,7 +131,6 @@ class LooController extends Controller
             'loo' => $loo,
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
             'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-            'marketings' => $this->marketings(),
             'tenants' => Tenant::where('branch_id', $loo->branch_id)->where('is_active', true)->get(['id', 'name']),
         ]);
     }
@@ -221,7 +220,6 @@ class LooController extends Controller
     {
         $data = $request->validate([
             'branch_id' => 'required|exists:branches,id',
-            'marketing_id' => 'required|exists:users,id',
             'tenant_id' => 'nullable|exists:tenants,id',
             'tenant_category_id' => 'nullable|exists:tenant_categories,id',
             'prospective_tenant_name' => 'nullable|string|max:255',
@@ -335,14 +333,6 @@ class LooController extends Controller
     private function options(array $map): array
     {
         return collect($map)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all();
-    }
-
-    private function marketings(): array
-    {
-        return User::whereHas('roles', fn ($q) => $q->whereIn('name', ['marketing_loo_input', 'marketing_manager']))
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->all();
     }
 
     private function activeTenants(User $user)

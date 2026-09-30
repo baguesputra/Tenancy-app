@@ -270,9 +270,19 @@ class LooWorkflowTest extends TestCase
         $this->actingAs($user)
             ->post('/loos/store', [
                 'branch_id' => $user->branch_id,
-                'marketing_id' => $user->id,
                 'tenant_id' => $otherTenant->id,
             ])
             ->assertSessionHasErrors('tenant_id');
+    }
+
+    public function test_marketing_id_is_logged_in_user_on_store(): void
+    {
+        $user = $this->userWithRole('marketing_loo_input');
+
+        $this->actingAs($user)
+            ->post('/loos/store', ['branch_id' => $user->branch_id])
+            ->assertRedirect();
+
+        $this->assertSame($user->id, Loo::latest('id')->first()->marketing_id);
     }
 }
