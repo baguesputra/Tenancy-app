@@ -295,7 +295,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:loos.transition')->prefix('loos')->name('loos.')->group(function () {
         Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
-        Route::post('/{loo}/sections/{key}', [LooController::class, 'section'])->middleware('loo.stage')->name('section');
+        Route::post('/{loo}/sections/{key}', [LooController::class, 'section'])->name('section');
     });
 
     Route::middleware('can:loos.delete')->post('/loos/{loo}/destroy', [LooController::class, 'destroy'])->name('loos.destroy');

@@ -38,11 +38,11 @@ class LooTenantSyncTest extends TestCase
             'unit_number' => '01', 'unit_code' => 'GF-01', 'is_active' => true,
         ]);
 
-        foreach (['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete'] as $p) {
+        foreach (['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete', 'loos.fitout_approve', 'loos.accounting_submit'] as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
         Role::firstOrCreate(['name' => 'tenant_mgmt_staff', 'guard_name' => 'web'])
-            ->syncPermissions(['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete']);
+            ->syncPermissions(['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete', 'loos.fitout_approve', 'loos.accounting_submit']);
 
         $this->actor = User::create([
             'name' => 'Aktor', 'email' => 'aktor-'.uniqid().'@t.id',
@@ -114,6 +114,10 @@ class LooTenantSyncTest extends TestCase
 
         $this->fillSection($loo, 'ba_handover', [
             'handover_date' => '2026-09-28',
+        ]);
+
+        $this->fillSection($loo, 'pre_handover', [
+            'final_inspection_date' => '2026-09-29',
         ]);
 
         return $loo;

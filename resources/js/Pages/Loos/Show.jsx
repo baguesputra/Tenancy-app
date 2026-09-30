@@ -18,15 +18,16 @@ const STATUS_LABELS = {
     completed: 'Completed', cancelled: 'Cancelled',
 };
 
-const STAGE_FLOW = [
-    'marketing', 'legal', 'accounting', 'tenant_mgmt',
-    'measurement', 'ba_handover', 'fitout', 'pre_handover',
-];
-
 const STAGE_LABELS = {
     marketing: 'Marketing', legal: 'Legal', accounting: 'Accounting',
     tenant_mgmt: 'Tenant Mgmt', measurement: 'Measurement',
     ba_handover: 'BA Handover', fitout: 'Fitout', pre_handover: 'Pre-Handover',
+};
+
+const SECTION_BADGE = {
+    none: { color: 'gray', label: 'Belum diisi' },
+    draft: { color: 'yellow', label: 'Draft' },
+    submitted: { color: 'green', label: 'Disubmit' },
 };
 
 const ACTION_LABELS = {
@@ -39,11 +40,15 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
-export default function Show({ loo, canEdit = false, sectionKey = null, sectionConfig = null, transitions = [], options = {} }) {
-    const currentIdx = STAGE_FLOW.indexOf(loo.current_stage);
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
+    const [openKey, setOpenKey] = useState(null);
 
-    const currentSection = (loo.sections ?? []).find((s) => s.section_key === sectionKey);
+    const sectionRows = Object.entries(sectionConfigs).map(([key, cfg]) => {
+        const row = (loo.sections ?? []).find((s) => s.section_key === key);
+        const state = row ? (row.is_submitted ? 'submitted' : 'draft') : 'none';
+        return { key, cfg, row, state, editable: canEditSections.includes(key) };
+    });
 
     const submitSection = ({ data, files }, submit) => {
         setSubmitting(true);
@@ -58,7 +63,7 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
             else fd.append(k, v);
         });
         fd.append('submit', submit ? '1' : '0');
-        router.post(`/loos/${loo.id}/sections/${sectionKey}`, fd, {
+        router.post(`/loos/${loo.id}/sections/${openKey}`, fd, {
             forceFormData: true,
             preserveScroll: true,
             onFinish: () => setSubmitting(false),
@@ -66,6 +71,18 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
     };
 
     const changeStatus = (status) => {
+        if (status === 'cancelled') {
+            const reason = window.prompt('Alasan pembatalan:');
+            if (!reason) return;
+            const fd = new FormData();
+            fd.append('status', status);
+            fd.append('cancel_reason', reason);
+            router.post(`/loos/${loo.id}/transition`, fd, {
+                preserveScroll: true,
+                onFinish: () => setSubmitting(false),
+            });
+            return;
+        }
         const fd = new FormData();
         fd.append('status', status);
         router.post(`/loos/${loo.id}/transition`, fd, {
@@ -88,20 +105,29 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
                 </div>
 
                 <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Progress</p>
-                    <div className="flex items-center gap-1 flex-wrap">
-                        {STAGE_FLOW.map((stage, i) => (
-                            <div key={stage} className="flex items-center gap-1">
-                                <div className={`px-2.5 py-1.5 rounded-full text-xs font-medium ${
-                                    i < currentIdx ? 'bg-emerald-100 text-emerald-700' :
-                                    i === currentIdx ? 'bg-[#0F1E36] text-white' :
-                                    'bg-gray-100 text-gray-400'
-                                }`}>
-                                    {STAGE_LABELS[stage]}
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Progress Per Divisi</p>
+                        {!['completed', 'cancelled'].includes(loo.status) && (
+                            <span className="text-xs text-gray-500">Review saat ini: <span className="font-medium text-[#0F1E36]">{STATUS_LABELS[loo.status] ?? loo.status}</span></span>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {sectionRows.map(({ key, cfg, state }) => {
+                            const isActive = cfg.stage === loo.current_stage && !['completed', 'cancelled'].includes(loo.status);
+                            const badge = SECTION_BADGE[state];
+                            return (
+                                <div key={key} className={`rounded-xl border p-3 ${isActive ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA]'}`}>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{cfg.label}</p>
+                                            <p className="text-xs text-gray-400">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</p>
+                                        </div>
+                                        <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                    </div>
+                                    {isActive && <p className="text-[10px] text-[#0F1E36] font-semibold uppercase mt-2">Review saat ini</p>}
                                 </div>
-                                {i < STAGE_FLOW.length - 1 && <span className="text-gray-300">→</span>}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -145,47 +171,44 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
                     </div>
                 </div>
 
-                {sectionConfig && (
-                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                        <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-[#E2E5EA]">
-                            <h2 className="text-base font-semibold text-[#0F1E36]">{sectionConfig.label}</h2>
-                            {currentSection?.is_submitted && (
-                                <Badge color="green" size="sm">Sudah disubmit</Badge>
-                            )}
-                        </div>
-                        {canEdit ? (
-                            <LooSectionForm
-                                looId={loo.id}
-                                sectionKey={sectionKey}
-                                config={sectionConfig}
-                                section={currentSection}
-                                options={options}
-                                submitting={submitting}
-                                onSubmit={submitSection}
-                            />
-                        ) : (
-                            <p className="text-sm text-gray-500">
-                                Section ini menunggu pengisian oleh divisi terkait.
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {(loo.sections ?? []).filter((s) => s.section_key !== sectionKey).length > 0 && (
-                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Section Terisi</p>
-                        <div className="space-y-2">
-                            {(loo.sections ?? []).filter((s) => s.section_key !== sectionKey).map((s) => (
-                                <div key={s.id} className="flex items-center justify-between gap-2 text-sm">
-                                    <span className="text-gray-700">{s.section_label}</span>
-                                    {s.is_submitted
-                                        ? <Badge color="green" size="sm">Submit</Badge>
-                                        : <Badge color="gray" size="sm">Draft</Badge>}
+                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Section</p>
+                    <div className="space-y-2">
+                        {sectionRows.map(({ key, cfg, row, state, editable }) => {
+                            const isOpen = openKey === key;
+                            const badge = SECTION_BADGE[state];
+                            return (
+                                <div key={key} className="border border-[#E2E5EA] rounded-xl">
+                                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-medium text-gray-800">{cfg.label}</span>
+                                            <span className="text-xs text-gray-400">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</span>
+                                            <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                        </div>
+                                        {editable && (
+                                            <Button variant="secondary" onClick={() => setOpenKey(isOpen ? null : key)}>
+                                                {isOpen ? 'Tutup' : row ? 'Lihat / Ubah' : 'Isi'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                    {isOpen && editable && (
+                                        <div className="px-4 pb-4 border-t border-gray-100 pt-4">
+                                            <LooSectionForm
+                                                looId={loo.id}
+                                                sectionKey={key}
+                                                config={cfg}
+                                                section={row}
+                                                options={options}
+                                                submitting={submitting}
+                                                onSubmit={submitSection}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
-                )}
+                </div>
 
                 <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5 mb-4">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Riwayat ({loo.history?.length ?? 0})</p>
@@ -205,7 +228,7 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
-                    {loo.status === 'draft' && (
+                    {canEditLoo && loo.status === 'draft' && (
                         <Link href={`/loos/${loo.id}/edit`}>
                             <Button variant="secondary">Edit</Button>
                         </Link>
@@ -215,7 +238,7 @@ export default function Show({ loo, canEdit = false, sectionKey = null, sectionC
                             {t.label}
                         </Button>
                     ))}
-                    {loo.status !== 'cancelled' && loo.status !== 'completed' && (
+                    {canCancel && loo.status !== 'cancelled' && loo.status !== 'completed' && (
                         <Button variant="danger" onClick={() => changeStatus('cancelled')} loading={submitting}>
                             Batalkan
                         </Button>

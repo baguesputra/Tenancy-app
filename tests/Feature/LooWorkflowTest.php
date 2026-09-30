@@ -158,7 +158,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit', 'loos.legal_submit']);
 
         $this->actingAs($legal)->post("/loos/{$loo->id}/sections/legalitas", [
             'entity_name' => 'PT Contoh Sengkala',
@@ -193,23 +193,37 @@ class LooWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_fill_section_outside_current_stage(): void
+    public function test_section_can_be_filled_early_without_advancing_status(): void
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
 
-        // Punya permission accounting_edit, tapi stage LOO masih legal.
+        // Paralel: accounting boleh isi section-nya duluan walau stage masih legal.
         $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_edit']);
 
         $this->actingAs($accounting)
             ->post("/loos/{$loo->id}/sections/biaya_termin", ['monthly_rent' => '5000000', 'submit' => '1'])
-            ->assertForbidden();
+            ->assertRedirect();
 
-        $this->assertDatabaseMissing('loo_sections', [
+        $this->assertDatabaseHas('loo_sections', [
             'loo_id' => $loo->id,
             'section_key' => 'biaya_termin',
+            'is_submitted' => true,
         ]);
+        // Submit duluan tidak melompatkan status.
         $this->assertSame('legal_review', $loo->fresh()->status);
+    }
+
+    public function test_cannot_fill_section_when_loo_terminal(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'cancelled', 'current_stage' => 'legal']);
+
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/legalitas", ['entity_name' => 'PT X', 'submit' => '1'])
+            ->assertStatus(422);
     }
 
     public function test_save_draft_does_not_advance_stage(): void
@@ -241,21 +255,6 @@ class LooWorkflowTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_current_section_key_follows_stage(): void
-    {
-        $loo = $this->makeLoo();
-        $this->assertNull($loo->currentSectionKey()); // draft/marketing = no section
-
-        $loo->update(['current_stage' => 'legal']);
-        $this->assertSame('legalitas', $loo->fresh()->currentSectionKey());
-
-        $loo->update(['current_stage' => 'accounting']);
-        $this->assertSame('biaya_termin', $loo->fresh()->currentSectionKey());
-
-        $loo->update(['current_stage' => 'tenant_mgmt']);
-        $this->assertSame('manajemen_tenant', $loo->fresh()->currentSectionKey());
-    }
-
     public function test_tenant_from_other_branch_rejected_on_store(): void
     {
         $user = $this->userWithRole('marketing_loo_input');
@@ -284,5 +283,121 @@ class LooWorkflowTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame($user->id, Loo::latest('id')->first()->marketing_id);
+    }
+
+    public function test_other_division_cannot_advance_legal_review(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
+
+        $this->actingAs($accounting)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'accounting_review'])
+            ->assertForbidden();
+
+        $this->assertSame('legal_review', $loo->fresh()->status);
+    }
+
+    public function test_forward_blocked_until_section_submitted(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_submit']);
+
+        // section legalitas belum diisi/disubmit sama sekali
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'accounting_review'])
+            ->assertStatus(422);
+
+        $this->assertSame('legal_review', $loo->fresh()->status);
+    }
+
+    public function test_forward_blocked_until_all_stage_sections_submitted(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'tenant_mgmt_review', 'current_stage' => 'tenant_mgmt']);
+        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_submit']);
+
+        // baru manajemen_tenant disubmit, pre_fitout belum
+        $loo->sections()->create([
+            'section_key' => 'manajemen_tenant',
+            'section_label' => 'Manajemen Tenant',
+            'data' => [],
+            'is_submitted' => true,
+            'submitted_at' => now(),
+            'filled_by' => $tm->id,
+            'filled_at' => now(),
+        ]);
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'measurement'])
+            ->assertStatus(422);
+
+        $loo->sections()->create([
+            'section_key' => 'pre_fitout',
+            'section_label' => 'Pre-Fitout',
+            'data' => [],
+            'is_submitted' => true,
+            'submitted_at' => now(),
+            'filled_by' => $tm->id,
+            'filled_at' => now(),
+        ]);
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'measurement'])
+            ->assertRedirect();
+
+        $this->assertSame('measurement', $loo->fresh()->status);
+    }
+
+    public function test_cancel_only_by_uploader_or_admin(): void
+    {
+        $loo = $this->makeLoo();
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition']);
+
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'cancelled', 'cancel_reason' => 'salah'])
+            ->assertForbidden();
+
+        $this->assertSame('draft', $loo->fresh()->status);
+
+        $this->actingAs($loo->marketing)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'cancelled', 'cancel_reason' => 'dibatalkan marketing'])
+            ->assertRedirect();
+
+        $this->assertSame('cancelled', $loo->fresh()->status);
+    }
+
+    public function test_show_transitions_only_for_own_division(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+
+        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_submit']);
+
+        $this->actingAs($accounting)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('transitions', []));
+
+        // section legalitas belum disubmit → hanya mundur (draft) yang tampil
+        $this->actingAs($legal)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('transitions', 1)
+                ->where('transitions.0.value', 'draft'));
+
+        $loo->sections()->create([
+            'section_key' => 'legalitas',
+            'section_label' => 'Legalitas',
+            'data' => [],
+            'is_submitted' => true,
+            'submitted_at' => now(),
+            'filled_by' => $legal->id,
+            'filled_at' => now(),
+        ]);
+
+        $this->actingAs($legal)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('transitions', 2));
     }
 }

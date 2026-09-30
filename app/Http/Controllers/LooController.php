@@ -114,9 +114,10 @@ class LooController extends Controller
 
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
-            'canEdit' => $this->canEditSection($loo, $request->user()),
-            'sectionKey' => $loo->currentSectionKey(),
-            'sectionConfig' => $this->sectionConfig($loo->currentSectionKey()),
+            'sectionConfigs' => config('loo_sections'),
+            'canEditSections' => $this->editableSectionKeys($loo, $request->user()),
+            'canEditLoo' => $request->user()->can('loos.create'),
+            'canCancel' => $this->canCancel($loo, $request->user()),
             'transitions' => $this->allowedTransitions($loo),
             'options' => ['productCategories' => ProductCategory::orderBy('name')->get(['id', 'name'])],
         ]);
@@ -152,6 +153,8 @@ class LooController extends Controller
     {
         $this->authorizeAccess($loo, $request);
 
+        abort_unless(! in_array($loo->status, ['completed', 'cancelled'], true), 422, 'LOO sudah selesai atau dibatalkan.');
+
         $config = config("loo_sections.{$key}");
         abort_unless($config, 404);
         abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
@@ -169,7 +172,7 @@ class LooController extends Controller
         );
 
         if ($request->boolean('submit')) {
-            $next = $this->nextStatusFor($loo);
+            $next = $this->nextStatusIfStageComplete($loo, $config, $request->user());
             if ($next) {
                 $this->state->transition($loo, $next, $request->user());
             }
@@ -191,6 +194,9 @@ class LooController extends Controller
 
         if ($data['status'] === 'cancelled') {
             $request->validate(['cancel_reason' => 'required|string|max:1000']);
+            abort_unless($this->canCancel($loo, $request->user()), 403, 'Hanya pembuat LOO atau admin yang bisa membatalkan.');
+        } else {
+            $this->assertCanTransition($loo, $data['status'], $request->user());
         }
 
         $this->state->transition($loo, $data['status'], $request->user(), array_filter([
@@ -291,30 +297,84 @@ class LooController extends Controller
         return $paths;
     }
 
-    private function sectionConfig(?string $key): ?array
+    private function editableSectionKeys(Loo $loo, User $user): array
     {
-        return $key ? config("loo_sections.{$key}") : null;
-    }
+        if (in_array($loo->status, ['completed', 'cancelled'], true)) {
+            return [];
+        }
 
-    private function canEditSection(Loo $loo, User $user): bool
-    {
-        $key = $loo->currentSectionKey();
-        $permission = $key ? config("loo_sections.{$key}.permission") : null;
-
-        return $permission && $user->can($permission);
+        return collect(config('loo_sections'))
+            ->filter(fn ($cfg) => $user->can($cfg['permission']))
+            ->keys()
+            ->values()
+            ->all();
     }
 
     private function allowedTransitions(Loo $loo): array
     {
-        $targets = config("loo.transitions.{$loo->status}") ?? [];
         $user = request()->user();
+        $required = config("loo.transition_permission.{$loo->status}");
 
-        return collect($targets)
+        if (! $required || ! $user->can($required)) {
+            return [];
+        }
+
+        $forward = $this->nextStatusFor($loo);
+
+        return collect(config("loo.transitions.{$loo->status}") ?? [])
             ->reject(fn ($to) => $to === 'cancelled')
-            ->filter(fn ($to) => $user->can('loos.transition'))
+            ->filter(fn ($to) => $to !== $forward || $this->stageSectionsSubmitted($loo))
             ->map(fn ($to) => ['value' => $to, 'label' => self::STATUSES[$to]])
             ->values()
             ->all();
+    }
+
+    /**
+     * Server-side guard: transisi hanya oleh divisi pemegang status saat ini.
+     * Forward wajib SEMUA section stage aktif sudah disubmit — legal harus
+     * selesai sebelum accounting bisa maju, walau accounting isi duluan.
+     */
+    private function assertCanTransition(Loo $loo, string $to, User $user): void
+    {
+        $required = config("loo.transition_permission.{$loo->status}");
+
+        if ($required) {
+            abort_unless($user->can($required), 403, 'Bukan wewenang divisi Anda untuk stage ini.');
+        }
+
+        if ($to === $this->nextStatusFor($loo)) {
+            abort_unless($this->stageSectionsSubmitted($loo), 422, 'Section stage ini belum disubmit semua.');
+        }
+    }
+
+    /**
+     * Auto-forward setelah submit section: hanya jika section memang milik
+     * stage aktif, semua section stage sudah disubmit, dan actor pemegang
+     * otoritas stage — paralel mengisi tidak pernah melompatkan status.
+     */
+    private function nextStatusIfStageComplete(Loo $loo, array $config, User $user): ?string
+    {
+        $required = config("loo.transition_permission.{$loo->status}");
+
+        if ($config['stage'] !== $loo->current_stage || ! $required || ! $user->can($required)) {
+            return null;
+        }
+
+        return $this->stageSectionsSubmitted($loo) ? $this->nextStatusFor($loo) : null;
+    }
+
+    private function stageSectionsSubmitted(Loo $loo): bool
+    {
+        $keys = collect(config('loo_sections'))
+            ->filter(fn ($cfg) => $cfg['stage'] === $loo->current_stage)
+            ->keys();
+
+        return $keys->every(fn ($key) => (bool) $loo->sections()->where('section_key', $key)->value('is_submitted'));
+    }
+
+    private function canCancel(Loo $loo, User $user): bool
+    {
+        return $loo->marketing_id === $user->id || $user->hasAnyRole(['admin', 'super_admin']);
     }
 
     /**

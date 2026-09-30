@@ -73,17 +73,6 @@ class Loo extends Model
         return $this->hasMany(LooSection::class);
     }
 
-    /**
-     * Section milik stage saat ini — dipakai gate UI: hanya section ini yang boleh diedit.
-     */
-    public function currentSectionKey(): ?string
-    {
-        return collect(config('loo_sections'))
-            ->first(fn ($cfg) => $cfg['stage'] === $this->current_stage)
-            ? array_key_first(array_filter(config('loo_sections'), fn ($c) => $c['stage'] === $this->current_stage))
-            : null;
-    }
-
     public function updateStatus(string $status): bool
     {
         $oldStatus = $this->status;

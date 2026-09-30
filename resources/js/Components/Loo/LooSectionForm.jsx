@@ -194,7 +194,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                     Simpan Draft
                 </Button>
                 <Button type="button" variant="success" onClick={() => onSubmit({ data, files }, true)} loading={submitting}>
-                    Submit & Lanjut
+                    Submit Section
                 </Button>
             </div>
         </div>
