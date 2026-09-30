@@ -146,6 +146,11 @@ class SsoCallbackTest extends TestCase
         config()->set('services.perusahaan.metadata', 'https://gate.appdutamall.com/saml/metadata');
 
         $user = $this->existingUser(['sso_id' => 'budi@dutamall.com']);
+
+        Socialite::shouldReceive('driver->logoutRequest->getTargetUrl')
+            ->once()
+            ->andReturn('https://gate.appdutamall.com/saml/slo?SAMLRequest=abc');
+
         $response = $this->actingAs($user)->post('/logout', [], ['X-Inertia' => 'true']);
 
         $this->assertAuthenticatedAs($user);
