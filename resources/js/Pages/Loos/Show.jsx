@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
+import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 
 const STATUS_COLORS = {
     draft: 'gray', legal_review: 'blue', accounting_review: 'yellow',
@@ -57,6 +58,7 @@ function StateIcon({ state }) {
 export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [openKey, setOpenKey] = useState(null);
+    const [preview, setPreview] = useState(null);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
 
@@ -201,30 +203,28 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">File LOO</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {loo.cover_file_path && (
-                                    <a href={`/storage/${loo.cover_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
-                                        <span className="text-sm font-medium text-[#0F1E36]">Cover LOO</span>
-                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
-                                    </a>
-                                )}
-                                {loo.isi_file_path && (
-                                    <a href={`/storage/${loo.isi_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
-                                        <span className="text-sm font-medium text-[#0F1E36]">Isi LOO</span>
-                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
-                                    </a>
-                                )}
-                                {loo.loo_letter_file_path && (
-                                    <a href={`/storage/${loo.loo_letter_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
-                                        <span className="text-sm font-medium text-[#0F1E36]">Surat LOO</span>
-                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
-                                    </a>
-                                )}
-                                {loo.loo_proposal_file_path && (
-                                    <a href={`/storage/${loo.loo_proposal_file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11">
-                                        <span className="text-sm font-medium text-[#0F1E36]">Penawaran LOO</span>
-                                        <span className="text-xs text-gray-400" aria-hidden="true">↗</span>
-                                    </a>
-                                )}
+                                {[
+                                    { path: loo.cover_file_path, label: 'Cover LOO' },
+                                    { path: loo.isi_file_path, label: 'Isi LOO' },
+                                    { path: loo.loo_letter_file_path, label: 'Surat LOO' },
+                                    { path: loo.loo_proposal_file_path, label: 'Penawaran LOO' },
+                                ].filter((f) => f.path).map((f) => (
+                                    <button
+                                        key={f.path}
+                                        type="button"
+                                        onClick={() => setPreview({ url: `/storage/${f.path}`, label: f.label })}
+                                        className="flex items-center justify-between gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                                    >
+                                        <span className="text-sm font-medium text-[#0F1E36] truncate">{f.label}</span>
+                                        <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                                            Preview
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
@@ -311,6 +311,13 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                         </div>
                     </div>
                 </div>
+
+                <FilePreviewModal
+                    open={!!preview}
+                    onClose={() => setPreview(null)}
+                    label={preview?.label ?? ''}
+                    url={preview?.url ?? ''}
+                />
             </div>
         </AppLayout>
     );
