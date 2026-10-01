@@ -188,6 +188,7 @@ Route::get('/auth/sso/gagal', function () {
 })->middleware('guest')->name('sso.gagal');
 
 use App\Http\Controllers\LooController;
+use App\Http\Controllers\LooFitoutController;
 
 Route::middleware('auth')->group(function () {
 
@@ -297,7 +298,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:loos.transition')->prefix('loos')->name('loos.')->group(function () {
         Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
         Route::post('/{loo}/sections/{key}', [LooController::class, 'section'])->name('section');
+        Route::post('/{loo}/fitout/approve', [LooFitoutController::class, 'acknowledgeGm'])->name('fitout.approve');
     });
+
+    Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
+        Route::get('/{loo}/fitout', [LooFitoutController::class, 'show'])->name('fitout');
+    });
+
+    Route::middleware('can:loos.view')->get('/fitout-checklists', [LooFitoutController::class, 'index'])->name('fitout-checklists.index');
+
 
     Route::middleware('can:loos.delete')->post('/loos/{loo}/destroy', [LooController::class, 'destroy'])->name('loos.destroy');
 

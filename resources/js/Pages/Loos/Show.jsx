@@ -25,6 +25,14 @@ const STAGE_LABELS = {
     ba_handover: 'BA Handover', fitout: 'Fitout', pre_handover: 'Pre-Handover',
 };
 
+// Tab form per divisi. Section fitout (pre/post, pre_handover) tidak tampil
+// di sini — dikerjakan lewat halaman khusus Checklist Fit Out.
+const DIVISION_TABS = [
+    { key: 'legalitas', label: 'Legal' },
+    { key: 'biaya_termin', label: 'Accounting' },
+    { key: 'manajemen_tenant', label: 'Tenant Mgmt' },
+];
+
 const SECTION_BADGE = {
     none: { color: 'gray', label: 'Belum diisi' },
     draft: { color: 'yellow', label: 'Draft' },
@@ -57,7 +65,6 @@ function StateIcon({ state }) {
 
 export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, files = [], transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
-    const [openKey, setOpenKey] = useState(null);
     const [preview, setPreview] = useState(null);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
@@ -68,27 +75,32 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
         return stageOrder.indexOf(loo.current_stage) >= stageOrder.indexOf(cfg.min_stage);
     };
 
-    const sectionRows = Object.entries(sectionConfigs)
-        .filter(([, cfg]) => stageReached(cfg))
-        .map(([key, cfg]) => {
+    const tabRows = DIVISION_TABS
+        .map(({ key, label }) => {
+            const cfg = sectionConfigs[key];
+            if (!cfg || !stageReached(cfg)) return null;
             const row = (loo.sections ?? []).find((s) => s.section_key === key);
             const state = row ? (row.is_submitted ? 'submitted' : 'draft') : 'none';
-            return { key, cfg, row, state, editable: canEditSections.includes(key) };
-        });
+            return { key, label, cfg, row, state, editable: canEditSections.includes(key) };
+        })
+        .filter(Boolean);
 
-    const activeChecklist = sectionRows.find((r) => r.cfg.stage === loo.current_stage && r.cfg.min_stage);
-
-    const submittedCount = sectionRows.filter((r) => r.state === 'submitted').length;
-
-    const jumpTo = (key, editable) => {
-        if (editable) setOpenKey(key);
-        const el = document.getElementById(`section-${key}`);
-        if (!el) return;
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    const defaultTab = () => {
+        const active = tabRows.find((t) => t.cfg.stage === loo.current_stage && t.editable);
+        if (active) return active.key;
+        const editable = tabRows.find((t) => t.editable);
+        return (editable ?? tabRows[0])?.key ?? DIVISION_TABS[0].key;
     };
 
-    const submitSection = ({ data, files }, submit) => {
+    const [activeTab, setActiveTab] = useState(defaultTab);
+    const current = tabRows.find((t) => t.key === activeTab) ?? tabRows[0];
+
+    const fitoutVisible = ['ba_handover', 'fitout', 'pre_handover', 'completed'].includes(loo.current_stage) || terminal
+        || ['fitout_checklist_pre', 'fitout_checklist_post'].some((k) => canEditSections.includes(k));
+
+    const submittedCount = tabRows.filter((r) => r.state === 'submitted').length;
+
+    const submitSection = (key) => ({ data, files }, submit) => {
         setSubmitting(true);
         const fd = new FormData();
         Object.entries(data).forEach(([k, v]) => {
@@ -101,7 +113,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
             else fd.append(k, v);
         });
         fd.append('submit', submit ? '1' : '0');
-        router.post(`/loos/${loo.id}/sections/${openKey}`, fd, {
+        router.post(`/loos/${loo.id}/sections/${key}`, fd, {
             forceFormData: true,
             preserveScroll: true,
             onFinish: () => setSubmitting(false),
@@ -154,59 +166,55 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                             </p>
                         )}
 
-                        {activeChecklist && (
-                            <div className="mt-3 rounded-xl border border-[#0F1E36] bg-[#0F1E36]/[0.04] p-3" id={`shortcut-${activeChecklist.key}`}>
-                                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0F1E36]">Checklist Aktif</p>
-                                <div className="mt-1.5 flex items-center justify-between gap-2">
-                                    <span className="text-sm font-medium text-gray-900 truncate">{activeChecklist.cfg.label}</span>
-                                    <Badge color={SECTION_BADGE[activeChecklist.state].color} size="sm">{SECTION_BADGE[activeChecklist.state].label}</Badge>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => jumpTo(activeChecklist.key, activeChecklist.editable)}
-                                    className="mt-2 w-full min-h-9 rounded-lg bg-[#0F1E36] text-white text-xs font-semibold hover:bg-[#1a2f52] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                        {fitoutVisible && !terminal && (
+                            <div className="mt-3 rounded-xl border border-[#0F1E36] bg-[#0F1E36]/[0.04] p-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0F1E36]">Checklist Fit Out</p>
+                                <p className="text-xs text-gray-500 mt-1">Sebelum / sesudah fitout & pre-handover dikerjakan di halaman khusus.</p>
+                                <Link
+                                    href={`/loos/${loo.id}/fitout`}
+                                    className="mt-2 w-full min-h-9 rounded-lg bg-[#0F1E36] text-white text-xs font-semibold hover:bg-[#1a2f52] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
                                 >
-                                    {activeChecklist.editable ? 'Isi / Lihat Checklist' : 'Lihat Checklist'}
-                                </button>
+                                    Buka Halaman Checklist
+                                </Link>
                             </div>
                         )}
 
                         <div className="mt-3 mb-2">
                             <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
                                 <span>Section selesai</span>
-                                <span className="font-medium text-gray-800">{submittedCount}/{sectionRows.length} disubmit</span>
+                                <span className="font-medium text-gray-800">{submittedCount}/{tabRows.length} disubmit</span>
                             </div>
                             <div
                                 className="h-1.5 rounded-full bg-gray-100"
                                 role="progressbar"
                                 aria-valuenow={submittedCount}
                                 aria-valuemin={0}
-                                aria-valuemax={sectionRows.length}
+                                aria-valuemax={tabRows.length}
                                 aria-label="Bagian selesai"
                             >
                                     <div
                                     className="h-1.5 rounded-full bg-[#0F1E36] transition-all duration-300"
-                                    style={{ width: `${sectionRows.length ? (submittedCount / sectionRows.length) * 100 : 0}%` }}
+                                    style={{ width: `${tabRows.length ? (submittedCount / tabRows.length) * 100 : 0}%` }}
                                 />
                             </div>
                         </div>
 
                         <ul className="mt-3 space-y-1">
-                            {sectionRows.map(({ key, cfg, state, editable }) => {
-                                const isActive = cfg.stage === loo.current_stage && !terminal;
+                            {tabRows.map(({ key, label, state }) => {
                                 const badge = SECTION_BADGE[state];
+                                const isActive = key === current?.key;
                                 return (
                                     <li key={key}>
                                         <button
                                             type="button"
-                                            onClick={() => jumpTo(key, editable)}
+                                            onClick={() => setActiveTab(key)}
+                                            aria-current={isActive ? 'true' : undefined}
                                             className={`w-full flex items-center gap-2.5 min-h-11 px-2 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${isActive ? 'bg-gray-50 ring-1 ring-[#0F1E36]' : ''}`}
-                                            aria-label={`${cfg.label}, ${badge.label}${isActive ? ', review saat ini' : ''}`}
+                                            aria-label={`${label}, ${badge.label}`}
                                         >
                                             <StateIcon state={state} />
                                             <span className="flex-1 min-w-0">
-                                                <span className="block text-sm font-medium text-gray-900 truncate">{cfg.label}</span>
-                                                {isActive && <span className="block text-[10px] text-[#0F1E36] font-semibold uppercase">Review saat ini</span>}
+                                                <span className="block text-sm font-medium text-gray-900 truncate">{label}</span>
                                             </span>
                                             <Badge color={badge.color} size="sm">{badge.label}</Badge>
                                         </button>
@@ -252,43 +260,55 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                         </div>
 
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Section</p>
-                            <div className="space-y-2">
-                                {sectionRows.map(({ key, cfg, row, state, editable }) => {
-                                    const isOpen = openKey === key;
+                            <div className="flex gap-1 border-b border-gray-200 mb-4 overflow-x-auto" role="tablist" aria-label="Form per divisi">
+                                {tabRows.map(({ key, label, state }) => {
                                     const badge = SECTION_BADGE[state];
+                                    const selected = key === current?.key;
                                     return (
-                                        <div key={key} id={`section-${key}`} className="scroll-mt-24 border border-[#E2E5EA] rounded-xl">
-                                            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <StateIcon state={state} />
-                                                    <span className="text-sm font-medium text-gray-800 truncate">{cfg.label}</span>
-                                                    <span className="text-xs text-gray-400 hidden sm:inline">{STAGE_LABELS[cfg.stage] ?? cfg.stage}</span>
-                                                    <Badge color={badge.color} size="sm">{badge.label}</Badge>
-                                                </div>
-                                                {editable && (
-                                                    <Button variant="secondary" onClick={() => setOpenKey(isOpen ? null : key)}>
-                                                        {isOpen ? 'Tutup' : row ? 'Lihat / Ubah' : 'Isi'}
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            {isOpen && editable && (
-                                                <div className="px-4 pb-4 border-t border-gray-100 pt-4">
-                                                    <LooSectionForm
-                                                        looId={loo.id}
-                                                        sectionKey={key}
-                                                        config={cfg}
-                                                        section={row}
-                                                        options={options}
-                                                        submitting={submitting}
-                                                        onSubmit={submitSection}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={selected}
+                                            onClick={() => setActiveTab(key)}
+                                            className={`flex items-center gap-2 px-4 min-h-11 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${
+                                                selected
+                                                    ? 'border-[#0F1E36] text-[#0F1E36]'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {label}
+                                            <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                        </button>
                                     );
                                 })}
                             </div>
+
+                            {current && (
+                                <div role="tabpanel" aria-label={`Form ${current.label}`}>
+                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                        <p className="text-sm font-medium text-gray-800">{current.cfg.label}</p>
+                                        <span className="text-xs text-gray-400">{STAGE_LABELS[current.cfg.stage] ?? current.cfg.stage}</span>
+                                    </div>
+                                    {current.editable && !terminal ? (
+                                        <LooSectionForm
+                                            looId={loo.id}
+                                            sectionKey={current.key}
+                                            config={current.cfg}
+                                            section={current.row}
+                                            options={options}
+                                            submitting={submitting}
+                                            onSubmit={submitSection(current.key)}
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-gray-500 py-4 text-center">
+                                            {terminal
+                                                ? 'LOO sudah selesai atau dibatalkan.'
+                                                : 'Anda tidak memiliki izin mengisi form divisi ini.'}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
@@ -312,6 +332,11 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                             {canEditLoo && loo.status === 'draft' && (
                                 <Link href={`/loos/${loo.id}/edit`}>
                                     <Button variant="secondary">Edit</Button>
+                                </Link>
+                            )}
+                            {fitoutVisible && (
+                                <Link href={`/loos/${loo.id}/fitout`}>
+                                    <Button variant="primary">Buka Checklist Fitout</Button>
                                 </Link>
                             )}
                             {transitions.map((t) => t.direction === 'back' ? (

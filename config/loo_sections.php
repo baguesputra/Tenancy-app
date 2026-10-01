@@ -127,64 +127,6 @@ return [
             ['name' => 'tenant_mgmt_notes', 'type' => 'textarea', 'label' => 'Catatan Tenant Mgmt'],
         ],
     ],
-    'pre_fitout' => [
-        'label' => 'Pre-Fitout',
-        'stage' => 'tenant_mgmt',
-        'permission' => 'loos.tenant_mgmt_edit',
-        'fields' => [
-            ['name' => 'contractor_name', 'type' => 'text', 'label' => 'Nama Kontraktor'],
-            ['name' => 'contractor_license', 'type' => 'text', 'label' => 'SIUJK / Izin Kontraktor'],
-            ['name' => 'contractor_pic_name', 'type' => 'text', 'label' => 'PIC Kontraktor Nama'],
-            ['name' => 'contractor_pic_phone', 'type' => 'text', 'label' => 'PIC Kontraktor Telp'],
-            ['name' => 'design_drawing_path', 'type' => 'file', 'label' => 'Gambar Desain', 'accept' => '.pdf,.dwg'],
-            ['name' => 'structure_calc_path', 'type' => 'file', 'label' => 'Perhitungan Struktur', 'accept' => '.pdf'],
-            ['name' => 'mep_drawing_path', 'type' => 'file', 'label' => 'Gambar MEP', 'accept' => '.pdf,.dwg'],
-            ['name' => 'fire_safety_drawing_path', 'type' => 'file', 'label' => 'Gambar Keamanan Kebakaran', 'accept' => '.pdf,.dwg'],
-            ['name' => 'schedule_start', 'type' => 'date', 'label' => 'Jadwal Mulai'],
-            ['name' => 'schedule_end', 'type' => 'date', 'label' => 'Jadwal Selesai'],
-            ['name' => 'working_hours_start', 'type' => 'time', 'label' => 'Jam Kerja Mulai'],
-            ['name' => 'working_hours_end', 'type' => 'time', 'label' => 'Jam Kerja Selesai'],
-            ['name' => 'access_route', 'type' => 'textarea', 'label' => 'Akses Bongkar Muat'],
-            ['name' => 'waste_management_plan', 'type' => 'textarea', 'label' => 'Rencana Pengelolaan Limbah'],
-            ['name' => 'noise_control_plan', 'type' => 'textarea', 'label' => 'Rencana Pengendalian Kebisingan'],
-            ['name' => 'pre_fitout_notes', 'type' => 'textarea', 'label' => 'Catatan Pre-Fitout'],
-        ],
-    ],
-    'measurement' => [
-        'label' => 'Measurement',
-        'stage' => 'measurement',
-        'permission' => 'loos.measurement_edit',
-        'fields' => [
-            ['name' => 'unit_id', 'type' => 'unit', 'label' => 'Unit', 'required' => true],
-            ['name' => 'measured_area_sqm', 'type' => 'number', 'label' => 'Luas Terukur (m²)', 'step' => 0.01],
-            ['name' => 'measurement_date', 'type' => 'date', 'label' => 'Tanggal Pengukuran'],
-            ['name' => 'measurement_notes', 'type' => 'textarea', 'label' => 'Catatan Measurement'],
-        ],
-    ],
-    'ba_handover' => [
-        'label' => 'BA Serah Terima',
-        'stage' => 'ba_handover',
-        'permission' => 'loos.tenant_mgmt_edit',
-        'fields' => [
-            ['name' => 'handover_date', 'type' => 'date', 'label' => 'Tgl Serah Terima'],
-            ['name' => 'unit_condition', 'type' => 'select', 'label' => 'Kondisi Unit', 'options' => ['excellent', 'good', 'fair', 'needs_repair']],
-            ['name' => 'defects_noted', 'type' => 'textarea', 'label' => 'Kecacatan yang Dicatat'],
-            ['name' => 'meter_readings', 'type' => 'group', 'label' => 'Meter Reading', 'fields' => [
-                ['name' => 'electricity', 'type' => 'text', 'label' => 'Listrik'],
-                ['name' => 'water', 'type' => 'text', 'label' => 'Air'],
-                ['name' => 'gas', 'type' => 'text', 'label' => 'Gas'],
-            ]],
-            ['name' => 'keys_handover', 'type' => 'checkbox', 'label' => 'Kunci Diserahkan'],
-            ['name' => 'access_cards_handover', 'type' => 'checkbox', 'label' => 'Kartu Akses Diserahkan'],
-            ['name' => 'documents_received', 'type' => 'textarea', 'label' => 'Dokumen yang Diterima'],
-            ['name' => 'tenant_rep_name', 'type' => 'text', 'label' => 'Nama Rep Tenant'],
-            ['name' => 'tenant_rep_signature_path', 'type' => 'file', 'label' => 'TTD Rep Tenant', 'accept' => '.png,.jpg,.jpeg'],
-            ['name' => 'mall_rep_name', 'type' => 'text', 'label' => 'Nama Rep Mall'],
-            ['name' => 'mall_rep_signature_path', 'type' => 'file', 'label' => 'TTD Rep Mall', 'accept' => '.png,.jpg,.jpeg'],
-            ['name' => 'photos', 'type' => 'file_multiple', 'label' => 'Foto', 'accept' => '.png,.jpg,.jpeg'],
-            ['name' => 'ba_notes', 'type' => 'textarea', 'label' => 'Catatan BA'],
-        ],
-    ],
     'fitout_checklist_pre' => [
         'label' => 'Checklist Sebelum Fitout',
         'stage' => 'ba_handover',
@@ -217,3 +159,6 @@ return [
         ],
     ],
 ];
+
+// Section deprecated (tidak tampil di form LOO, digantikan hub checklist):
+// pre_fitout, measurement, ba_handover.
