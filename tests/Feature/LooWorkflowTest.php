@@ -320,24 +320,15 @@ class LooWorkflowTest extends TestCase
         $loo->update(['status' => 'tenant_mgmt_review', 'current_stage' => 'tenant_mgmt']);
         $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_submit']);
 
-        // baru manajemen_tenant disubmit, pre_fitout belum
-        $loo->sections()->create([
-            'section_key' => 'manajemen_tenant',
-            'section_label' => 'Manajemen Tenant',
-            'data' => [],
-            'is_submitted' => true,
-            'submitted_at' => now(),
-            'filled_by' => $tm->id,
-            'filled_at' => now(),
-        ]);
-
+        // stage tenant_mgmt hanya punya satu section (manajemen_tenant):
+        // belum disubmit → forward ditolak
         $this->actingAs($tm)
             ->post("/loos/{$loo->id}/transition", ['status' => 'measurement'])
             ->assertStatus(422);
 
         $loo->sections()->create([
-            'section_key' => 'pre_fitout',
-            'section_label' => 'Pre-Fitout',
+            'section_key' => 'manajemen_tenant',
+            'section_label' => 'Manajemen Tenant',
             'data' => [],
             'is_submitted' => true,
             'submitted_at' => now(),
@@ -543,25 +534,8 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
         $this->assertStringStartsWith('loos/', $section->data['signature_legal']);
 
-        // section ba_handover belum disubmit → tetap ditolak
-        $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/transition", ['status' => 'fitout'])
-            ->assertStatus(422);
-
-        $loo->sections()->create([
-            'section_key' => 'ba_handover',
-            'section_label' => 'BA Serah Terima',
-            'data' => [],
-            'is_submitted' => true,
-            'submitted_at' => now(),
-            'filled_by' => $tm->id,
-            'filled_at' => now(),
-        ]);
-
-        $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/transition", ['status' => 'fitout'])
-            ->assertRedirect();
-
+        // gate stage ba_handover = fitout_checklist_pre sudah disubmit →
+        // submit section auto-majukan LOO ke fitout
         $this->assertSame('fitout', $loo->fresh()->status);
     }
 
@@ -588,6 +562,37 @@ class LooWorkflowTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('pre_handover', $loo->fresh()->status);
+    }
+
+    public function test_fitout_checklist_hub_index_and_gm_approve(): void
+    {
+        $loo = $this->makeLoo();
+        $user = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.fitout_approve', 'loos.transition']);
+
+        $this->actingAs($user)
+            ->get('/fitout-checklists')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Loos/Fitout/Index')
+                ->has('loos.data', 1)
+                ->where('loos.data.0.loo_number', $loo->loo_number)
+            );
+
+        $this->actingAs($user)
+            ->get("/loos/{$loo->id}/fitout")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Loos/FitoutChecklist')
+                ->where('loo.id', $loo->id)
+            );
+
+        $this->actingAs($user)
+            ->post("/loos/{$loo->id}/fitout/approve")
+            ->assertRedirect();
+
+        $postSection = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
+        $this->assertTrue($postSection->data['footer']['gm_approved']);
+        $this->assertSame($user->name, $postSection->data['footer']['gm_name']);
     }
 
     private function userOnBranch(string $roleName, int $branchId, array $permissions): User
