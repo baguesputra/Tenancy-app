@@ -55,7 +55,7 @@ function StateIcon({ state }) {
     return <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 shrink-0 mx-[3px]" aria-hidden="true" />;
 }
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, transitions = [], options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, files = [], transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [openKey, setOpenKey] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -203,16 +203,11 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">File LOO</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {[
-                                    { path: loo.cover_file_path, label: 'Cover LOO' },
-                                    { path: loo.isi_file_path, label: 'Isi LOO' },
-                                    { path: loo.loo_letter_file_path, label: 'Surat LOO' },
-                                    { path: loo.loo_proposal_file_path, label: 'Penawaran LOO' },
-                                ].filter((f) => f.path).map((f) => (
+                                {files.map((f) => (
                                     <button
-                                        key={f.path}
+                                        key={f.key}
                                         type="button"
-                                        onClick={() => setPreview({ url: `/storage/${f.path}`, label: f.label })}
+                                        onClick={() => setPreview({ url: f.url, label: f.label })}
                                         className="flex items-center justify-between gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
                                     >
                                         <span className="text-sm font-medium text-[#0F1E36] truncate">{f.label}</span>
@@ -225,6 +220,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                                         </span>
                                     </button>
                                 ))}
+                                {files.length === 0 && <p className="text-sm text-gray-400">Belum ada file.</p>}
                             </div>
                         </div>
 

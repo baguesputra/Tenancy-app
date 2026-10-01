@@ -9,6 +9,8 @@ use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -399,5 +401,39 @@ class LooWorkflowTest extends TestCase
         $this->actingAs($legal)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page->has('transitions', 2));
+    }
+
+    public function test_file_access_cover_only_roles_and_full_access(): void
+    {
+        Storage::fake('local');
+
+        $loo = $this->makeLoo();
+        $cover = UploadedFile::fake()->create('cover.pdf', 5, 'application/pdf')->store('loos/cover', 'local');
+        $isi = UploadedFile::fake()->create('isi.pdf', 5, 'application/pdf')->store('loos/isi', 'local');
+        $loo->update(['cover_file_path' => $cover, 'isi_file_path' => $isi]);
+
+        $tenancy = $this->userWithRole('tenancy_staff');
+        $tenantMgmt = $this->userWithRole('tenant_mgmt_staff');
+        $legal = $this->userWithRole('legal_staff');
+        $marketing = $this->userWithRole('marketing_loo_input');
+
+        // cover terbuka untuk semua pemilik loos.view
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}/files/cover_file")->assertOk();
+
+        // isi ditutup untuk tenancy + tenant_mgmt
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}/files/isi_file")->assertForbidden();
+        $this->actingAs($tenantMgmt)->get("/loos/{$loo->id}/files/isi_file")->assertForbidden();
+
+        // isi terbuka untuk legal + marketing
+        $this->actingAs($legal)->get("/loos/{$loo->id}/files/isi_file")->assertOk();
+        $this->actingAs($marketing)->get("/loos/{$loo->id}/files/isi_file")->assertOk();
+
+        // key tidak dikenal → 404
+        $this->actingAs($legal)->get("/loos/{$loo->id}/files/tidak_ada")->assertNotFound();
+
+        // props files: tenancy hanya menerima cover
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('files', 1)->where('files.0.key', 'cover_file'));
     }
 }

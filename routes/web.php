@@ -290,6 +290,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
         Route::get('/', [LooController::class, 'index'])->name('index');
         Route::get('/{loo}', [LooController::class, 'show'])->name('show');
+        Route::get('/{loo}/files/{key}', [LooController::class, 'file'])->name('file');
         Route::get('/{loo}/edit', [LooController::class, 'edit'])->name('edit');
     });
 

@@ -101,7 +101,7 @@ export default function Create({ loo = null, branches, tenantCategories, tenants
                                 <FormField key={f.input} label={f.label} error={errors[f.input]}>
                                     {isEdit && loo[f.column] && (
                                         <a
-                                            href={`/storage/${loo[f.column]}`}
+                                            href={`/loos/${loo.id}/files/${f.input}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="block text-xs text-[#0F1E36] underline mb-1.5"
@@ -121,7 +121,7 @@ export default function Create({ loo = null, branches, tenantCategories, tenants
                                 <FormField key={f.input} label={f.label} error={errors[f.input]}>
                                     {isEdit && loo[f.column] && (
                                         <a
-                                            href={`/storage/${loo[f.column]}`}
+                                            href={`/loos/${loo.id}/files/${f.input}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="block text-xs text-[#0F1E36] underline mb-1.5"

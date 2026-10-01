@@ -13,6 +13,7 @@ use App\Services\LooSectionService;
 use App\Services\LooStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -47,6 +48,16 @@ class LooController extends Controller
         'fitout' => 'Fitout',
         'pre_handover' => 'Pre-Handover',
     ];
+
+    private const FILE_LABELS = [
+        'cover_file' => 'Cover LOO',
+        'isi_file' => 'Isi LOO',
+        'loo_letter_file' => 'Surat LOO',
+        'loo_proposal_file' => 'Penawaran LOO',
+    ];
+
+    // Role ini hanya boleh membuka file Cover LOO.
+    private const COVER_ONLY_ROLES = ['tenancy_staff', 'tenant_mgmt_staff', 'tenant_mgmt_manager'];
 
     public function index(Request $request)
     {
@@ -118,8 +129,41 @@ class LooController extends Controller
             'canEditSections' => $this->editableSectionKeys($loo, $request->user()),
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
+            'files' => $this->accessibleFiles($loo, $request->user()),
             'transitions' => $this->allowedTransitions($loo),
             'options' => ['productCategories' => ProductCategory::orderBy('name')->get(['id', 'name'])],
+        ]);
+    }
+
+    /**
+     * Servis file LOO ter-auth (storage private). Cover terbuka untuk semua
+     * pemilik loos.view; file lain hanya untuk role di luar COVER_ONLY_ROLES.
+     */
+    public function file(Request $request, Loo $loo, string $key)
+    {
+        $this->authorizeAccess($loo, $request);
+
+        $column = $this->fileColumns()[$key] ?? null;
+        abort_unless($column, 404);
+
+        $coverOnly = $key !== 'cover_file'
+            && $request->user()->hasAnyRole(self::COVER_ONLY_ROLES);
+        abort_if($coverOnly, 403, 'Anda hanya dapat membuka file Cover LOO.');
+
+        $path = $loo->{$column};
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        $mime = match (strtolower(Str::afterLast($path, '.'))) {
+            'pdf' => 'application/pdf',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            default => 'application/octet-stream',
+        };
+
+        return response(Storage::disk('local')->get($path), 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.basename($path).'"',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
@@ -213,7 +257,7 @@ class LooController extends Controller
 
         foreach ($this->fileColumns() as $column) {
             if ($loo->{$column}) {
-                Storage::disk('public')->delete($loo->{$column});
+                Storage::disk('local')->delete($loo->{$column});
             }
         }
 
@@ -287,14 +331,29 @@ class LooController extends Controller
             }
 
             if ($current[$column] ?? null) {
-                Storage::disk('public')->delete($current[$column]);
+                Storage::disk('local')->delete($current[$column]);
             }
 
             $dir = str_replace('_file', '', $input);
-            $paths[$column] = $request->file($input)->store("loos/{$dir}", 'public');
+            $paths[$column] = $request->file($input)->store("loos/{$dir}", 'local');
         }
 
         return $paths;
+    }
+
+    private function accessibleFiles(Loo $loo, User $user): array
+    {
+        $coverOnly = $user->hasAnyRole(self::COVER_ONLY_ROLES);
+
+        return collect($this->fileColumns())
+            ->map(fn ($column, $key) => [
+                'key' => $key,
+                'label' => self::FILE_LABELS[$key],
+                'url' => $loo->{$column} ? route('loos.file', [$loo, $key]) : null,
+            ])
+            ->filter(fn ($file) => $file['url'] && (! $coverOnly || $file['key'] === 'cover_file'))
+            ->values()
+            ->all();
     }
 
     private function editableSectionKeys(Loo $loo, User $user): array
