@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\BranchScopeService;
 use App\Services\LooSectionService;
 use App\Services\LooStateService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -23,6 +24,7 @@ class LooController extends Controller
         private BranchScopeService $branchScope,
         private LooStateService $state,
         private LooSectionService $sections,
+        private NotificationService $notifications,
     ) {}
 
     private const STATUSES = [
@@ -114,6 +116,7 @@ class LooController extends Controller
         ]);
 
         $this->state->log($loo, $request->user(), 'created');
+        $this->notifyLooViewers($loo, $request->user());
 
         return redirect()->route('loos.show', $loo->id)->with('success', 'LOO berhasil dibuat.');
     }
@@ -264,6 +267,31 @@ class LooController extends Controller
         $loo->delete();
 
         return redirect()->route('loos.index')->with('success', 'LOO berhasil dihapus.');
+    }
+
+    private function notifyLooViewers(Loo $loo, User $creator): void
+    {
+        $allBranchRoles = ['manager', 'admin', 'super_admin'];
+
+        $recipients = User::query()
+            ->where('id', '!=', $creator->id)
+            ->where(fn ($q) => $q
+                ->whereHas('roles', fn ($r) => $r->whereHas('permissions', fn ($p) => $p->where('name', 'loos.view')))
+                ->orWhereHas('permissions', fn ($p) => $p->where('name', 'loos.view'))
+                ->orWhereHas('roles', fn ($r) => $r->where('name', 'super_admin')))
+            ->where(fn ($q) => $q
+                ->where('branch_id', $loo->branch_id)
+                ->orWhereHas('roles', fn ($r) => $r->whereIn('name', $allBranchRoles)))
+            ->get();
+
+        foreach ($recipients as $user) {
+            $this->notifications->notify(
+                $user,
+                'LOO Baru: '.$loo->loo_number,
+                ($loo->prospective_tenant_name ?: 'Calon tenant').' — menunggu ditindaklanjuti divisi Anda.',
+                "/loos/{$loo->id}",
+            );
+        }
     }
 
     private function validated(Request $request): array

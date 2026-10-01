@@ -439,4 +439,49 @@ class LooWorkflowTest extends TestCase
                 ->where('files.0.type', 'pdf')
                 ->where('files.0.url', "/loos/{$loo->id}/files/cover_file"));
     }
+
+    public function test_creating_loo_notifies_viewers_same_branch_and_all_branch_roles(): void
+    {
+        Permission::firstOrCreate(['name' => 'loos.view', 'guard_name' => 'web']);
+
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $otherBranch = Branch::firstOrCreate(['code' => 'OTH'], ['name' => 'Cabang Lain']);
+
+        $creator = $this->userWithRole('marketing_loo_input');
+        $legalSame = $this->userWithRole('legal_staff', ['loos.view']);
+        $legalOther = $this->userOnBranch('legal_staff', $otherBranch->id, ['loos.view']);
+        $managerOther = $this->userOnBranch('manager', $otherBranch->id, ['loos.view']);
+        $superOther = $this->userOnBranch('super_admin', $otherBranch->id, []);
+
+        $this->actingAs($creator)->post('/loos/store', [
+            'branch_id' => $branch->id,
+            'prospective_tenant_name' => 'Toko Baru',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $legalSame->id, 'notifiable_type' => User::class]);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $managerOther->id, 'notifiable_type' => User::class]);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $superOther->id, 'notifiable_type' => User::class]);
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $legalOther->id]);
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $creator->id]);
+    }
+
+    private function userOnBranch(string $roleName, int $branchId, array $permissions): User
+    {
+        foreach ($permissions as $p) {
+            Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
+        }
+        $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+        $role->syncPermissions($permissions);
+
+        $user = User::create([
+            'name' => 'Test '.$roleName.' other',
+            'email' => $roleName.'-'.uniqid().'@t.id',
+            'employee_number' => 'T-'.uniqid(),
+            'branch_id' => $branchId,
+            'password' => bcrypt('x'),
+        ]);
+        $user->assignRole($roleName);
+
+        return $user;
+    }
 }
