@@ -346,11 +346,18 @@ class LooController extends Controller
         $coverOnly = $user->hasAnyRole(self::COVER_ONLY_ROLES);
 
         return collect($this->fileColumns())
-            ->map(fn ($column, $key) => [
-                'key' => $key,
-                'label' => self::FILE_LABELS[$key],
-                'url' => $loo->{$column} ? route('loos.file', [$loo, $key]) : null,
-            ])
+            ->map(function ($column, $key) use ($loo) {
+                $path = $loo->{$column};
+
+                return [
+                    'key' => $key,
+                    'label' => self::FILE_LABELS[$key],
+                    'type' => $path && Str::endsWith(strtolower($path), '.pdf') ? 'pdf' : 'image',
+                    // Path relatif: URL absolut dari route() mengikuti APP_URL
+                    // (port salah saat dev) dan bikin preview blank.
+                    'url' => $path ? "/loos/{$loo->id}/files/{$key}" : null,
+                ];
+            })
             ->filter(fn ($file) => $file['url'] && (! $coverOnly || $file['key'] === 'cover_file'))
             ->values()
             ->all();

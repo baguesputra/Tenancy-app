@@ -431,9 +431,12 @@ class LooWorkflowTest extends TestCase
         // key tidak dikenal → 404
         $this->actingAs($legal)->get("/loos/{$loo->id}/files/tidak_ada")->assertNotFound();
 
-        // props files: tenancy hanya menerima cover
+        // props files: tenancy hanya menerima cover, URL relatif (bukan APP_URL absolut)
         $this->actingAs($tenancy)->get("/loos/{$loo->id}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('files', 1)->where('files.0.key', 'cover_file'));
+            ->assertInertia(fn ($page) => $page->has('files', 1)
+                ->where('files.0.key', 'cover_file')
+                ->where('files.0.type', 'pdf')
+                ->where('files.0.url', "/loos/{$loo->id}/files/cover_file"));
     }
 }

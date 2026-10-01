@@ -207,7 +207,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                                     <button
                                         key={f.key}
                                         type="button"
-                                        onClick={() => setPreview({ url: f.url, label: f.label })}
+                                        onClick={() => setPreview({ url: f.url, label: f.label, type: f.type })}
                                         className="flex items-center justify-between gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
                                     >
                                         <span className="text-sm font-medium text-[#0F1E36] truncate">{f.label}</span>
@@ -313,6 +313,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                     onClose={() => setPreview(null)}
                     label={preview?.label ?? ''}
                     url={preview?.url ?? ''}
+                    type={preview?.type ?? 'image'}
                 />
             </div>
         </AppLayout>

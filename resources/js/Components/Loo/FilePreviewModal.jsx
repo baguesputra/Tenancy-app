@@ -1,7 +1,7 @@
 import Modal from '@/Components/Modal';
 
-export default function FilePreviewModal({ open, onClose, label = '', url = '' }) {
-    const isPdf = url.toLowerCase().endsWith('.pdf');
+export default function FilePreviewModal({ open, onClose, label = '', url = '', type = 'image' }) {
+    const isPdf = type === 'pdf';
 
     return (
         <Modal open={open} onClose={onClose} title={label} maxWidth="max-w-3xl">
