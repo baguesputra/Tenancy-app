@@ -61,12 +61,22 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
     const [preview, setPreview] = useState(null);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
+    const stageOrder = Object.keys(STAGE_LABELS);
 
-    const sectionRows = Object.entries(sectionConfigs).map(([key, cfg]) => {
-        const row = (loo.sections ?? []).find((s) => s.section_key === key);
-        const state = row ? (row.is_submitted ? 'submitted' : 'draft') : 'none';
-        return { key, cfg, row, state, editable: canEditSections.includes(key) };
-    });
+    const stageReached = (cfg) => {
+        if (!cfg.min_stage || terminal) return true;
+        return stageOrder.indexOf(loo.current_stage) >= stageOrder.indexOf(cfg.min_stage);
+    };
+
+    const sectionRows = Object.entries(sectionConfigs)
+        .filter(([, cfg]) => stageReached(cfg))
+        .map(([key, cfg]) => {
+            const row = (loo.sections ?? []).find((s) => s.section_key === key);
+            const state = row ? (row.is_submitted ? 'submitted' : 'draft') : 'none';
+            return { key, cfg, row, state, editable: canEditSections.includes(key) };
+        });
+
+    const activeChecklist = sectionRows.find((r) => r.cfg.stage === loo.current_stage && r.cfg.min_stage);
 
     const submittedCount = sectionRows.filter((r) => r.state === 'submitted').length;
 
@@ -142,6 +152,23 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
                             <p className="text-xs text-gray-500 mt-1">
                                 Review saat ini: <span className="font-medium text-[#0F1E36]">{STATUS_LABELS[loo.status] ?? loo.status}</span>
                             </p>
+                        )}
+
+                        {activeChecklist && (
+                            <div className="mt-3 rounded-xl border border-[#0F1E36] bg-[#0F1E36]/[0.04] p-3" id={`shortcut-${activeChecklist.key}`}>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0F1E36]">Checklist Aktif</p>
+                                <div className="mt-1.5 flex items-center justify-between gap-2">
+                                    <span className="text-sm font-medium text-gray-900 truncate">{activeChecklist.cfg.label}</span>
+                                    <Badge color={SECTION_BADGE[activeChecklist.state].color} size="sm">{SECTION_BADGE[activeChecklist.state].label}</Badge>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => jumpTo(activeChecklist.key, activeChecklist.editable)}
+                                    className="mt-2 w-full min-h-9 rounded-lg bg-[#0F1E36] text-white text-xs font-semibold hover:bg-[#1a2f52] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                                >
+                                    {activeChecklist.editable ? 'Isi / Lihat Checklist' : 'Lihat Checklist'}
+                                </button>
+                            </div>
                         )}
 
                         <div className="mt-3 mb-2">

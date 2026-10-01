@@ -25,16 +25,72 @@ class LooSectionService
                 $data[$name] = $this->storeOne($input, $name, $loo, $existing[$name] ?? null);
             } elseif ($type === 'file_multiple') {
                 $data[$name] = $this->storeMany($input, $name, $loo, $existing[$name] ?? []);
-            } elseif ($type === 'group') {
-                $data[$name] = $this->collect($input[$name] ?? [], ['fields' => $field['fields']], $loo, $existing[$name] ?? []);
-            } elseif ($type === 'repeater') {
-                $data[$name] = $this->collectRepeater($input[$name] ?? [], $field['fields'], $loo, $existing[$name] ?? []);
+            } elseif ($type === 'group' || $type === 'repeater') {
+                $raw = $this->decode($input[$name] ?? []);
+                $data[$name] = $type === 'group'
+                    ? $this->collect($raw, ['fields' => $field['fields']], $loo, $existing[$name] ?? [])
+                    : $this->collectRepeater($raw, $field['fields'], $loo, $existing[$name] ?? []);
+            } elseif ($type === 'checklist_table') {
+                $data[$name] = $this->collectChecklist($this->decode($input[$name] ?? []), $field);
             } else {
                 $data[$name] = $input[$name] ?? null;
             }
         }
 
         return $data;
+    }
+
+    /**
+     * Objek/array dari frontend melewati FormData sebagai string JSON.
+     */
+    private function decode($raw): array
+    {
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+
+        return is_array($raw) ? $raw : [];
+    }
+
+    /**
+     * Item dikunci dari config; kunci tak dikenal dibuang, status hanya Ok/Tidak.
+     */
+    private function collectChecklist(array $input, array $field): array
+    {
+        $out = [];
+
+        foreach ($field['departments'] as $dept) {
+            $key = $dept['key'];
+            $items = [];
+
+            foreach (array_keys($dept['items']) as $itemKey) {
+                $posted = $input[$key]['items'][$itemKey] ?? [];
+                $status = $posted['status'] ?? null;
+                $items[$itemKey] = [
+                    'status' => in_array($status, ['Ok', 'Tidak'], true) ? $status : null,
+                    'keterangan' => isset($posted['keterangan']) ? (string) $posted['keterangan'] : null,
+                ];
+            }
+
+            $signoff = $input[$key]['signoff'] ?? [];
+            $out[$key] = [
+                'items' => $items,
+                'signoff' => [
+                    'day' => $signoff['day'] ?? null,
+                    'date' => $signoff['date'] ?? null,
+                    'name' => $signoff['name'] ?? null,
+                ],
+            ];
+        }
+
+        $footer = $input['footer'] ?? [];
+        $out['footer'] = [
+            'date' => $footer['date'] ?? null,
+            'tenant_name' => $footer['tenant_name'] ?? null,
+            'gm_name' => $footer['gm_name'] ?? null,
+        ];
+
+        return $out;
     }
 
     private function storeOne(array $input, string $name, Loo $loo, ?string $current): ?string

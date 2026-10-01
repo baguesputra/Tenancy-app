@@ -205,6 +205,7 @@ class LooController extends Controller
         $config = config("loo_sections.{$key}");
         abort_unless($config, 404);
         abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
+        abort_unless($this->minStageReached($loo, $config), 422, 'Section ini belum tersedia untuk tahap LOO saat ini.');
 
         $current = $loo->sections()->where('section_key', $key)->first();
         $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
@@ -398,10 +399,27 @@ class LooController extends Controller
         }
 
         return collect(config('loo_sections'))
-            ->filter(fn ($cfg) => $user->can($cfg['permission']))
+            ->filter(fn ($cfg) => $user->can($cfg['permission']) && $this->minStageReached($loo, $cfg))
             ->keys()
             ->values()
             ->all();
+    }
+
+    /**
+     * `min_stage` = checklist muncul progresif: tampil begitu LOO mencapai
+     * stage itu dan tetap tampil sesudahnya (terminal = selalu tampil).
+     */
+    private function minStageReached(Loo $loo, array $config): bool
+    {
+        $min = $config['min_stage'] ?? null;
+
+        if (! $min || in_array($loo->status, ['completed', 'cancelled'], true)) {
+            return true;
+        }
+
+        $order = array_keys(self::STAGES);
+
+        return array_search($loo->current_stage, $order, true) >= array_search($min, $order, true);
     }
 
     private function allowedTransitions(Loo $loo): array

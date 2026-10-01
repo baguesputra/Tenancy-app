@@ -1,5 +1,62 @@
 <?php
 
+// Item dikunci dari form resmi "Ceklist Toko Setelah Selesai Fit Out".
+$fitoutChecklistDepartments = [
+    ['key' => 'legal', 'label' => 'Legal', 'items' => [
+        'psm' => 'PSM',
+    ]],
+    ['key' => 'finance', 'label' => 'Finance & Accounting', 'items' => [
+        'dp_1' => 'DP 1',
+        'dp_2' => 'DP 2',
+        'dp_3' => 'DP 3',
+        'deposit_sewa' => 'Deposit Sewa',
+        'deposit_service_charge' => 'Deposit Service Charge',
+        'promotion_levy' => 'Promotion Levy / Opening Promo',
+        'deposit_fitout' => 'Deposit Fit Out',
+        'penambahan_daya' => 'Penambahan Daya',
+        'relokasi_sprinkler' => 'Relokasi/Instalasi Sprinkler',
+        'biaya_hoarding' => 'Biaya Hoarding, Listrik, Air, Megger',
+        'lainnya' => 'Lainnya',
+    ]],
+    ['key' => 'tenancy', 'label' => 'Tenancy', 'items' => [
+        'lantai' => 'Pengerjaan Lantai',
+        'plafond' => 'Pengerjaan Plafond',
+        'dinding' => 'Pengerjaan Dinding',
+        'furniture_display' => 'Pengerjaan Furniture & Display',
+        'interior' => 'Pengerjaan Interior',
+        'shopfront' => 'Pengerjaan Shopfront',
+    ]],
+    ['key' => 'engineering', 'label' => 'Engineering', 'items' => [
+        'megger' => 'Test Megger',
+        'diffuser' => 'Pengecekkan Diffuser',
+        'sprinkler' => 'Pengecekkan Sprinkler',
+        'listrik' => 'Pengecekkan Listrik',
+        'telepon' => 'Pengecekkan Telepon & Internet',
+        'lampu_standby' => 'Pengadaan Lampu Stand By',
+        'lampu_emergency' => 'Pengadaan Lampu Emergency',
+        'apar' => 'Pengadaan Apar',
+    ]],
+    ['key' => 'kontraktor', 'label' => 'Kontraktor/Penanggung Jawab', 'items' => [
+        'checklist_pekerjaan' => 'Checklist Pekerjaan',
+        'serah_terima' => 'Serah Terima Penyelesaian Fit Out',
+    ]],
+];
+
+$fitoutChecklistFields = array_merge(
+    [
+        ['name' => 'checklist', 'type' => 'checklist_table', 'label' => 'Checklist Toko', 'departments' => $fitoutChecklistDepartments],
+    ],
+    array_map(
+        fn (array $d) => ['name' => 'signature_'.$d['key'], 'type' => 'file', 'label' => 'TTD '.$d['label'], 'accept' => '.png,.jpg,.jpeg'],
+        $fitoutChecklistDepartments
+    ),
+    [
+        ['name' => 'signature_tenant', 'type' => 'file', 'label' => 'TTD Pihak Penyewa', 'accept' => '.png,.jpg,.jpeg'],
+        ['name' => 'signature_gm', 'type' => 'file', 'label' => 'TTD Deputy General Manager', 'accept' => '.png,.jpg,.jpeg'],
+        ['name' => 'notes', 'type' => 'textarea', 'label' => 'Catatan'],
+    ]
+);
+
 return [
     'legalitas' => [
         'label' => 'Legalitas',
@@ -128,25 +185,19 @@ return [
             ['name' => 'ba_notes', 'type' => 'textarea', 'label' => 'Catatan BA'],
         ],
     ],
-    'fitout_checklist' => [
-        'label' => 'Checklist Fitout',
-        'stage' => 'fitout',
+    'fitout_checklist_pre' => [
+        'label' => 'Checklist Sebelum Fitout',
+        'stage' => 'ba_handover',
+        'min_stage' => 'ba_handover',
         'permission' => 'loos.tenant_mgmt_edit',
-        'fields' => [
-            ['name' => 'dp_verified', 'type' => 'checkbox', 'label' => 'DP Terverifikasi'],
-            ['name' => 'checklist_items', 'type' => 'repeater', 'label' => 'Item Checklist', 'fields' => [
-                ['name' => 'category', 'type' => 'select', 'label' => 'Kategori', 'options' => ['mechanical', 'electrical', 'plumbing', 'fire_safety', 'structural', 'architectural', 'hvac', 'other']],
-                ['name' => 'item_name', 'type' => 'text', 'label' => 'Nama Item'],
-                ['name' => 'description', 'type' => 'textarea', 'label' => 'Deskripsi'],
-                ['name' => 'is_mandatory', 'type' => 'checkbox', 'label' => 'Wajib'],
-                ['name' => 'status', 'type' => 'select', 'label' => 'Status', 'options' => ['pending', 'passed', 'failed', 'na']],
-                ['name' => 'notes', 'type' => 'textarea', 'label' => 'Catatan'],
-                ['name' => 'photo_path', 'type' => 'file', 'label' => 'Foto', 'accept' => '.png,.jpg,.jpeg'],
-            ]],
-            ['name' => 'gm_approval', 'type' => 'checkbox', 'label' => 'Approval GM'],
-            ['name' => 'gm_notes', 'type' => 'textarea', 'label' => 'Catatan GM'],
-            ['name' => 'full_payment_verified', 'type' => 'checkbox', 'label' => 'Full Payment Terverifikasi'],
-        ],
+        'fields' => $fitoutChecklistFields,
+    ],
+    'fitout_checklist_post' => [
+        'label' => 'Checklist Setelah Fitout',
+        'stage' => 'fitout',
+        'min_stage' => 'fitout',
+        'permission' => 'loos.tenant_mgmt_edit',
+        'fields' => $fitoutChecklistFields,
     ],
     'pre_handover' => [
         'label' => 'Pre-Handover',

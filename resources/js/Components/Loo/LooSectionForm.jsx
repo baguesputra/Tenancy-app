@@ -67,6 +67,8 @@ function Field({ field, value, error, onChange, options }) {
             );
         case 'repeater':
             return <Repeater field={field} rows={value ?? []} onChange={onChange} />;
+        case 'checklist_table':
+            return <ChecklistTable field={field} value={value} onChange={onChange} />;
         case 'file':
             return <FileField field={field} value={value} onChange={onChange} />;
         case 'file_multiple':
@@ -155,6 +157,116 @@ function Repeater({ field, rows, onChange }) {
     );
 }
 
+function ChecklistTable({ field, value, onChange }) {
+    const v = value ?? {};
+
+    const updateItem = (deptKey, itemKey, patch) => {
+        const dept = v[deptKey] ?? {};
+        const items = dept.items ?? {};
+        onChange({
+            ...v,
+            [deptKey]: { ...dept, items: { ...items, [itemKey]: { ...(items[itemKey] ?? {}), ...patch } } },
+        });
+    };
+
+    const updateSignoff = (deptKey, patch) => {
+        const dept = v[deptKey] ?? {};
+        onChange({ ...v, [deptKey]: { ...dept, signoff: { ...(dept.signoff ?? {}), ...patch } } });
+    };
+
+    const updateFooter = (patch) => onChange({ ...v, footer: { ...(v.footer ?? {}), ...patch } });
+
+    return (
+        <div className="space-y-4">
+            {(field.departments ?? []).map((dept) => {
+                const data = v[dept.key] ?? {};
+                const signoff = data.signoff ?? {};
+                return (
+                    <div key={dept.key} className="border border-[#E2E5EA] rounded-xl overflow-hidden">
+                        <p className="px-3 py-2 bg-gray-50 text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">{dept.label}</p>
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+                                    <th className="px-3 py-2 font-medium">Uraian</th>
+                                    <th className="px-2 py-2 font-medium text-center w-14">Ok</th>
+                                    <th className="px-2 py-2 font-medium text-center w-16">Tidak</th>
+                                    <th className="px-3 py-2 font-medium">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(dept.items ?? {}).map(([itemKey, label]) => {
+                                    const item = data.items?.[itemKey] ?? {};
+                                    const radio = `${field.name}-${dept.key}-${itemKey}`;
+                                    return (
+                                        <tr key={itemKey} className="border-b border-gray-100 last:border-0">
+                                            <td className="px-3 py-2 text-gray-800">{label}</td>
+                                            <td className="px-2 py-2 text-center">
+                                                <input
+                                                    type="radio"
+                                                    name={radio}
+                                                    checked={item.status === 'Ok'}
+                                                    onChange={() => updateItem(dept.key, itemKey, { status: 'Ok' })}
+                                                    className="h-4 w-4 accent-[#0F1E36]"
+                                                    aria-label={`${label} Ok`}
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 text-center">
+                                                <input
+                                                    type="radio"
+                                                    name={radio}
+                                                    checked={item.status === 'Tidak'}
+                                                    onChange={() => updateItem(dept.key, itemKey, { status: 'Tidak' })}
+                                                    className="h-4 w-4 accent-red-500"
+                                                    aria-label={`${label} Tidak`}
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                <TextInput
+                                                    value={item.keterangan ?? ''}
+                                                    onChange={(e) => updateItem(dept.key, itemKey, { keterangan: e.target.value })}
+                                                    placeholder="Keterangan"
+                                                />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        <div className="px-3 py-2.5 bg-gray-50/50 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-gray-100">
+                            <TextInput value={signoff.day ?? ''} onChange={(e) => updateSignoff(dept.key, { day: e.target.value })} placeholder="Hari" aria-label={`Diterima oleh hari ${dept.label}`} />
+                            <DateInput value={signoff.date ?? ''} onChange={(e) => updateSignoff(dept.key, { date: e.target.value })} aria-label={`Diterima oleh tanggal ${dept.label}`} />
+                            <TextInput value={signoff.name ?? ''} onChange={(e) => updateSignoff(dept.key, { name: e.target.value })} placeholder="Nama" aria-label={`Diterima oleh nama ${dept.label}`} />
+                        </div>
+                    </div>
+                );
+            })}
+
+            <div className="border border-[#E2E5EA] rounded-xl p-3 space-y-3">
+                <p className="text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">Mengetahui</p>
+                <DateInput
+                    value={v.footer?.date ?? ''}
+                    onChange={(e) => updateFooter({ date: e.target.value })}
+                    aria-label="Tanggal Mengetahui"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <TextInput
+                        value={v.footer?.tenant_name ?? ''}
+                        onChange={(e) => updateFooter({ tenant_name: e.target.value })}
+                        placeholder="Pihak Penyewa"
+                        aria-label="Nama Pihak Penyewa"
+                    />
+                    <TextInput
+                        value={v.footer?.gm_name ?? ''}
+                        onChange={(e) => updateFooter({ gm_name: e.target.value })}
+                        placeholder="Deputy General Manager"
+                        aria-label="Nama Deputy General Manager"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit }) {
     const initial = section?.data ?? {};
     const [data, setData] = useState(initial);
@@ -182,7 +294,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                         label={field.label}
                         error={missingRequired.includes(field) ? 'Wajib diisi.' : null}
                         required={field.required}
-                        className={field.type === 'textarea' || field.type === 'repeater' || field.type === 'group' || field.type.startsWith('file') ? 'sm:col-span-2' : ''}
+                        className={field.type === 'textarea' || field.type === 'repeater' || field.type === 'group' || field.type === 'checklist_table' || field.type.startsWith('file') ? 'sm:col-span-2' : ''}
                     >
                         <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} />
                     </FormField>

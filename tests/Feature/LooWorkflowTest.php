@@ -465,6 +465,131 @@ class LooWorkflowTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['notifiable_id' => $creator->id]);
     }
 
+    public function test_checklist_gated_by_min_stage(): void
+    {
+        $loo = $this->makeLoo();
+        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.transition']);
+
+        // stage measurement: kedua checklist belum tampil & belum bisa diisi
+        $loo->update(['status' => 'measurement', 'current_stage' => 'measurement']);
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['checklist' => ['footer' => ['date' => '2026-10-01']]])
+            ->assertStatus(422);
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", ['checklist' => []])
+            ->assertStatus(422);
+
+        $this->actingAs($tm)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('canEditSections', fn ($s) => ! $s->contains('fitout_checklist_pre')
+                && ! $s->contains('fitout_checklist_post')));
+
+        // stage ba_handover: pre muncul, post masih tersembunyi
+        $loo->update(['status' => 'ba_handover', 'current_stage' => 'ba_handover']);
+
+        $this->actingAs($tm)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('canEditSections', fn ($s) => $s->contains('fitout_checklist_pre')
+                && ! $s->contains('fitout_checklist_post')));
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['checklist' => ['footer' => ['date' => '2026-10-01']]])
+            ->assertRedirect();
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", ['checklist' => []])
+            ->assertStatus(422);
+    }
+
+    public function test_checklist_pre_saves_items_signature_and_gates_transition(): void
+    {
+        Storage::fake('public');
+
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'ba_handover', 'current_stage' => 'ba_handover']);
+        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
+
+        // checklist pre belum disubmit → forward ditolak
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", [
+                'checklist' => json_encode([
+                    'legal' => [
+                        'items' => [
+                            'psm' => ['status' => 'Ok', 'keterangan' => 'diterima'],
+                        ],
+                        'signoff' => ['day' => 'Senin', 'date' => '2026-10-01', 'name' => 'Legal Satu'],
+                    ],
+                    'finance' => [
+                        'items' => [
+                            'dp_1' => ['status' => 'Pending', 'keterangan' => ''],
+                        ],
+                    ],
+                    'footer' => ['date' => '2026-10-01', 'tenant_name' => 'Penyewa A', 'gm_name' => 'Deputy GM'],
+                    'hantu' => ['items' => ['rahasia' => ['status' => 'Ok']]],
+                ]),
+                'signature_legal' => UploadedFile::fake()->create('ttd.png', 5, 'image/png'),
+                'submit' => '1',
+            ])
+            ->assertRedirect();
+
+        $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
+        $this->assertTrue($section->is_submitted);
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+        $this->assertNull($section->data['checklist']['finance']['items']['dp_1']['status']);
+        $this->assertArrayNotHasKey('hantu', $section->data['checklist']);
+        $this->assertArrayNotHasKey('rahasia', $section->data['checklist']['legal']['items']);
+        $this->assertSame('Senin', $section->data['checklist']['legal']['signoff']['day']);
+        $this->assertArrayHasKey('dp_1', $section->data['checklist']['finance']['items']);
+        $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
+        $this->assertStringStartsWith('loos/', $section->data['signature_legal']);
+
+        // section ba_handover belum disubmit → tetap ditolak
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'fitout'])
+            ->assertStatus(422);
+
+        $loo->sections()->create([
+            'section_key' => 'ba_handover',
+            'section_label' => 'BA Serah Terima',
+            'data' => [],
+            'is_submitted' => true,
+            'submitted_at' => now(),
+            'filled_by' => $tm->id,
+            'filled_at' => now(),
+        ]);
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'fitout'])
+            ->assertRedirect();
+
+        $this->assertSame('fitout', $loo->fresh()->status);
+    }
+
+    public function test_checklist_post_required_before_pre_handover(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
+        $gm = $this->userWithRole('gm_approval', ['loos.view', 'loos.transition', 'loos.fitout_approve']);
+        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
+
+        $this->actingAs($gm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'pre_handover'])
+            ->assertStatus(422);
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode(['footer' => ['date' => '2026-10-02']]),
+                'submit' => '1',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($gm)
+            ->post("/loos/{$loo->id}/transition", ['status' => 'pre_handover'])
+            ->assertRedirect();
+
+        $this->assertSame('pre_handover', $loo->fresh()->status);
+    }
+
     private function userOnBranch(string $roleName, int $branchId, array $permissions): User
     {
         foreach ($permissions as $p) {
