@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Loo;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,6 +13,20 @@ use Illuminate\Support\Facades\Storage;
 class LooSectionService
 {
     public const FILE_FIELDS = ['file', 'file_multiple'];
+
+    public const FITOUT_CHECKLIST_KEYS = ['fitout_checklist_pre', 'fitout_checklist_post'];
+
+    /**
+     * Departemen checklist toko → permission pengisi.
+     * Kontraktor dikoordinasi tim tenant management.
+     */
+    public const FITOUT_DEPARTMENT_PERMISSIONS = [
+        'legal' => 'loos.legal_edit',
+        'finance' => 'loos.accounting_edit',
+        'tenancy' => 'loos.tenant_mgmt_edit',
+        'engineering' => 'loos.engineering_edit',
+        'kontraktor' => 'loos.tenant_mgmt_edit',
+    ];
 
     public function collect(array $input, array $config, Loo $loo, array $existing): array
     {
@@ -38,6 +53,152 @@ class LooSectionService
         }
 
         return $data;
+    }
+
+    /**
+     * Daftar departemen checklist yang boleh diisi user.
+     * Semua role bisa MELIHAT (route `loos.view`); mengisi dibatasi per dept.
+     */
+    public function editableFitoutDepartments(User $user): array
+    {
+        if ($user->hasAnyRole(['admin', 'super_admin', 'manager']) || $user->can('loos.dashboard')) {
+            return array_keys(self::FITOUT_DEPARTMENT_PERMISSIONS);
+        }
+
+        $editable = [];
+        foreach (self::FITOUT_DEPARTMENT_PERMISSIONS as $dept => $permission) {
+            if ($user->can($permission)) {
+                $editable[] = $dept;
+            }
+        }
+
+        return $editable;
+    }
+
+    /**
+     * Guard dept-level: upload TTD departemen atau isi dept di luar wewenang
+     * yang berbeda dari data tersimpan → 403. Post ulang tak berubah lolos
+     * (frontend selalu kirim seluruh state).
+     */
+    public function assertFitoutDepartmentsAllowed(array $input, array $config, array $current, array $editable): void
+    {
+        foreach (self::FITOUT_DEPARTMENT_PERMISSIONS as $dept => $permission) {
+            if (in_array($dept, $editable, true)) {
+                continue;
+            }
+
+            if (($input["signature_{$dept}"] ?? null) instanceof UploadedFile) {
+                abort(403, 'Tidak berwenang mengisi bagian '.ucfirst($dept).'.');
+            }
+        }
+
+        $field = collect($config['fields'])->firstWhere('type', 'checklist_table');
+        if (! $field) {
+            return;
+        }
+
+        $posted = $this->decode($input['checklist'] ?? []);
+        $stored = $current['checklist'] ?? [];
+
+        foreach ($field['departments'] as $dept) {
+            $key = $dept['key'];
+            if (in_array($key, $editable, true)) {
+                continue;
+            }
+
+            $postedDept = $this->sanitizeFitoutDept($posted[$key] ?? [], $dept);
+            if ($this->fitoutDeptIsEmpty($postedDept)) {
+                continue;
+            }
+
+            if ($postedDept != ($stored[$key] ?? null)) {
+                abort(403, 'Tidak berwenang mengisi bagian '.$dept['label'].'.');
+            }
+        }
+    }
+
+    /**
+     * Gabungkan hasil collect: dept + TTD di luar wewenang dikembalikan ke
+     * data tersimpan; field bersama (footer/notes) yang kosong ikut
+     * dikembalikan agar partial-save satu dept tidak menghapus milik lain.
+     * Flag approval GM hanya diubah via alur approve, tidak via save biasa.
+     */
+    public function mergeFitoutDepartments(array $data, array $current, array $editable): array
+    {
+        foreach (self::FITOUT_DEPARTMENT_PERMISSIONS as $dept => $permission) {
+            if (in_array($dept, $editable, true)) {
+                continue;
+            }
+
+            if (isset($current['checklist'][$dept])) {
+                $data['checklist'][$dept] = $current['checklist'][$dept];
+            }
+
+            if (isset($current["signature_{$dept}"])) {
+                $data["signature_{$dept}"] = $current["signature_{$dept}"];
+            }
+        }
+
+        foreach (['date', 'tenant_name', 'gm_name'] as $key) {
+            if (empty($data['checklist']['footer'][$key]) && ! empty($current['checklist']['footer'][$key])) {
+                $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+            }
+        }
+
+        foreach (['gm_approved', 'gm_approved_at', 'gm_approved_by'] as $key) {
+            if (isset($current['checklist']['footer'][$key])) {
+                $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+            }
+        }
+
+        foreach (['notes', 'signature_tenant', 'signature_gm'] as $key) {
+            if (empty($data[$key]) && ! empty($current[$key])) {
+                $data[$key] = $current[$key];
+            }
+        }
+
+        return $data;
+    }
+
+    private function sanitizeFitoutDept(array $raw, array $dept): array
+    {
+        $items = [];
+        foreach (array_keys($dept['items']) as $itemKey) {
+            $posted = $raw['items'][$itemKey] ?? [];
+            $status = $posted['status'] ?? null;
+            $items[$itemKey] = [
+                'status' => in_array($status, ['Ok', 'Tidak'], true) ? $status : null,
+                'keterangan' => isset($posted['keterangan']) ? (string) $posted['keterangan'] : null,
+            ];
+        }
+
+        $signoff = $raw['signoff'] ?? [];
+
+        return [
+            'items' => $items,
+            'signoff' => [
+                'day' => $signoff['day'] ?? null,
+                'date' => $signoff['date'] ?? null,
+                'name' => $signoff['name'] ?? null,
+            ],
+        ];
+    }
+
+    private function fitoutDeptIsEmpty(array $dept): bool
+    {
+        foreach ($dept['items'] ?? [] as $item) {
+            if (! empty($item['status']) || ! empty($item['keterangan'])) {
+                return false;
+            }
+        }
+
+        foreach ($dept['signoff'] ?? [] as $value) {
+            if (! empty($value)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

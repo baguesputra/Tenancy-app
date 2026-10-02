@@ -37,6 +37,7 @@ export default function FitoutChecklist({
     canEditPre = false,
     canEditPost = false,
     canEditPreHandover = false,
+    editableDepartments = [],
     canGmAcknowledge = false,
 }) {
     const [submitting, setSubmitting] = useState(false);
@@ -95,13 +96,13 @@ export default function FitoutChecklist({
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             <Link href="/fitout-checklists" className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                                ← Hub Checklist Fit Out
+                                ← Hub Checklist Operasional
                             </Link>
                             <span className="text-gray-300">/</span>
                             <span className="text-xs font-medium text-gray-500 truncate">{loo.loo_number}</span>
                         </div>
                         <h1 className="text-xl font-bold text-gray-900 truncate">
-                            Proses Checklist Operasional Fit Out
+                            Checklist Operasional
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5 truncate">
                             {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'} · Unit: {loo.unit?.unit_code ?? '—'}
@@ -185,21 +186,28 @@ export default function FitoutChecklist({
                             </Badge>
                         </div>
 
-                        {canEditPre && !terminal && preConfig ? (
-                            <LooSectionForm
-                                looId={loo.id}
-                                sectionKey="fitout_checklist_pre"
-                                config={preConfig}
-                                section={preSection}
-                                options={{}}
-                                submitting={submitting}
-                                onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_pre')}
-                            />
+                        {preConfig ? (
+                            <>
+                                {(terminal || !canEditPre) && (
+                                    <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
+                                        Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
+                                    </p>
+                                )}
+                                <LooSectionForm
+                                    looId={loo.id}
+                                    sectionKey="fitout_checklist_pre"
+                                    config={preConfig}
+                                    section={preSection}
+                                    options={{}}
+                                    submitting={submitting}
+                                    readOnly={terminal || !canEditPre}
+                                    editableDepartments={editableDepartments}
+                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_pre')}
+                                />
+                            </>
                         ) : (
                             <div className="py-8 text-center text-sm text-gray-500">
-                                {!canEditPre 
-                                    ? 'Anda tidak memiliki hak akses untuk mengedit Checklist Sebelum Fitout.' 
-                                    : 'Checklist ini belum dapat diisi untuk stage saat ini.'}
+                                Checklist ini belum dapat diisi untuk stage saat ini.
                             </div>
                         )}
                     </div>
@@ -224,21 +232,28 @@ export default function FitoutChecklist({
                             </div>
                         </div>
 
-                        {canEditPost && !terminal && postConfig ? (
-                            <LooSectionForm
-                                looId={loo.id}
-                                sectionKey="fitout_checklist_post"
-                                config={postConfig}
-                                section={postSection}
-                                options={{}}
-                                submitting={submitting}
-                                onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_post')}
-                            />
+                        {postConfig ? (
+                            <>
+                                {(terminal || !canEditPost) && (
+                                    <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
+                                        Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
+                                    </p>
+                                )}
+                                <LooSectionForm
+                                    looId={loo.id}
+                                    sectionKey="fitout_checklist_post"
+                                    config={postConfig}
+                                    section={postSection}
+                                    options={{}}
+                                    submitting={submitting}
+                                    readOnly={terminal || !canEditPost}
+                                    editableDepartments={editableDepartments}
+                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_post')}
+                                />
+                            </>
                         ) : (
                             <div className="py-8 text-center text-sm text-gray-500">
-                                {!canEditPost 
-                                    ? 'Anda tidak memiliki hak akses untuk mengedit Checklist Setelah Fitout.' 
-                                    : 'Checklist ini belum dapat diisi (LOO belum mencapai stage Fitout).'}
+                                Checklist ini belum dapat diisi (LOO belum mencapai stage Fitout).
                             </div>
                         )}
 
@@ -281,21 +296,28 @@ export default function FitoutChecklist({
                             </Badge>
                         </div>
 
-                        {canEditPreHandover && !terminal && preHandoverConfig ? (
-                            <LooSectionForm
-                                looId={loo.id}
-                                sectionKey="pre_handover"
-                                config={preHandoverConfig}
-                                section={preHandoverSection}
-                                options={{}}
-                                submitting={submitting}
-                                onSubmit={(args) => submitSection(args, args.submit ?? false, 'pre_handover')}
-                            />
+                        {preHandoverConfig ? (
+                            <>
+                                {(terminal || !canEditPreHandover) && (
+                                    <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
+                                        Mode lihat saja — section ini hanya bisa diisi oleh tim Tenant Management.
+                                    </p>
+                                )}
+                                <LooSectionForm
+                                    looId={loo.id}
+                                    sectionKey="pre_handover"
+                                    config={preHandoverConfig}
+                                    section={preHandoverSection}
+                                    options={{}}
+                                    submitting={submitting}
+                                    readOnly={terminal || !canEditPreHandover}
+                                    editableDepartments={editableDepartments}
+                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'pre_handover')}
+                                />
+                            </>
                         ) : (
                             <div className="py-8 text-center text-sm text-gray-500">
-                                {!canEditPreHandover 
-                                    ? 'Anda tidak memiliki hak akses untuk mengedit Section Pre-Handover.' 
-                                    : 'Section ini baru dapat diisi saat LOO mencapai stage Pre-Handover.'}
+                                Section ini baru dapat diisi saat LOO mencapai stage Pre-Handover.
                             </div>
                         )}
                     </div>

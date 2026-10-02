@@ -26,6 +26,7 @@ class PermissionSeeder extends Seeder
             'loos.accounting_edit', 'loos.accounting_submit',
             'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
             'loos.measurement_edit', 'loos.termin_manage',
+            'loos.engineering_edit',
             'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ];
 
@@ -48,6 +49,7 @@ class PermissionSeeder extends Seeder
             'loos.accounting_edit', 'loos.accounting_submit',
             'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
             'loos.measurement_edit', 'loos.termin_manage',
+            'loos.engineering_edit',
             'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ]);
 
@@ -84,6 +86,7 @@ class PermissionSeeder extends Seeder
 
         $this->assignRolePermissions('engineering_staff', [
             'permits.view',
+            'loos.view', 'loos.engineering_edit',
         ]);
 
         $this->assignRolePermissions('marketing_staff', [

@@ -107,6 +107,9 @@ class LooFitoutController extends Controller
         $postConfig = config('loo_sections.fitout_checklist_post');
         $preHandoverConfig = config('loo_sections.pre_handover');
 
+        // Semua pemegang `loos.view` bisa melihat; mengisi dibatasi per departemen.
+        $editableDepartments = $this->sections->editableFitoutDepartments($request->user());
+
         return Inertia::render('Loos/FitoutChecklist', [
             'loo' => $loo,
             'preSection' => $preSection,
@@ -115,9 +118,10 @@ class LooFitoutController extends Controller
             'preConfig' => $preConfig,
             'postConfig' => $postConfig,
             'preHandoverConfig' => $preHandoverConfig,
-            'canEditPre' => $request->user()->can('loos.tenant_mgmt_edit') && $this->stageReached($loo, 'ba_handover'),
-            'canEditPost' => $request->user()->can('loos.tenant_mgmt_edit') && $this->stageReached($loo, 'fitout'),
+            'canEditPre' => $editableDepartments !== [] && $this->stageReached($loo, 'ba_handover'),
+            'canEditPost' => $editableDepartments !== [] && $this->stageReached($loo, 'fitout'),
             'canEditPreHandover' => $request->user()->can('loos.tenant_mgmt_edit') && $this->stageReached($loo, 'pre_handover'),
+            'editableDepartments' => $editableDepartments,
             'canGmAcknowledge' => $request->user()->can('loos.fitout_approve'),
         ]);
     }

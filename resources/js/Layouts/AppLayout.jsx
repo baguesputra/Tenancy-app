@@ -221,7 +221,7 @@ export default function AppLayout({ children }) {
                     )}
                     {can('loos.view') && (
                         <NavLink href="/fitout-checklists" currentUrl={currentUrl} icon={menuIcons.checklist} collapsed={collapsed}>
-                            Checklist Fit Out
+                            Checklist Operasional
                         </NavLink>
                     )}
                     {can('tenants.view') && (

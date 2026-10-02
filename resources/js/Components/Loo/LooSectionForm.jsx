@@ -157,8 +157,10 @@ function Repeater({ field, rows, onChange }) {
     );
 }
 
-function ChecklistTable({ field, value, onChange }) {
+function ChecklistTable({ field, value, onChange, editableDepartments = null }) {
     const v = value ?? {};
+
+    const isDeptEditable = (deptKey) => !editableDepartments || editableDepartments.includes(deptKey);
 
     const updateItem = (deptKey, itemKey, patch) => {
         const dept = v[deptKey] ?? {};
@@ -181,9 +183,13 @@ function ChecklistTable({ field, value, onChange }) {
             {(field.departments ?? []).map((dept) => {
                 const data = v[dept.key] ?? {};
                 const signoff = data.signoff ?? {};
+                const deptEditable = isDeptEditable(dept.key);
                 return (
-                    <div key={dept.key} className="border border-[#E2E5EA] rounded-xl overflow-hidden">
-                        <p className="px-3 py-2 bg-gray-50 text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">{dept.label}</p>
+                    <div key={dept.key} inert={!deptEditable} className={`border border-[#E2E5EA] rounded-xl overflow-hidden ${deptEditable ? '' : 'opacity-70'}`}>
+                        <p className="px-3 py-2 bg-gray-50 text-xs font-semibold text-[#0F1E36] uppercase tracking-wide flex items-center justify-between gap-2">
+                            <span>{dept.label}</span>
+                            {!deptEditable && <span className="normal-case font-medium text-gray-400">🔒 Lihat saja</span>}
+                        </p>
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
@@ -241,7 +247,7 @@ function ChecklistTable({ field, value, onChange }) {
                 );
             })}
 
-            <div className="border border-[#E2E5EA] rounded-xl p-3 space-y-3">
+            <div inert={editableDepartments && editableDepartments.length === 0} className={`border border-[#E2E5EA] rounded-xl p-3 space-y-3 ${editableDepartments && editableDepartments.length === 0 ? 'opacity-70' : ''}`}>
                 <p className="text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">Mengetahui</p>
                 <DateInput
                     value={v.footer?.date ?? ''}
@@ -267,12 +273,25 @@ function ChecklistTable({ field, value, onChange }) {
     );
 }
 
-export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit }) {
+export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null }) {
     const initial = section?.data ?? {};
     const [data, setData] = useState(initial);
     const [files, setFiles] = useState({});
 
     useEffect(() => setData(section?.data ?? {}), [section?.id]);
+
+    // Kunci per field: TTD `signature_{dept}` hanya milik dept-nya;
+    // field bersama ikut terkunci kalau user tak pegang dept manapun.
+    const isFieldLocked = (field) => {
+        if (readOnly) return true;
+        if (!editableDepartments) return false;
+        const m = field.name.match(/^signature_(legal|finance|tenancy|engineering|kontraktor)$/);
+        if (m) return !editableDepartments.includes(m[1]);
+        return editableDepartments.length === 0;
+    };
+
+    const wideTypes = ['textarea', 'repeater', 'group', 'checklist_table'];
+    const spanClass = (field) => (wideTypes.includes(field.type) || field.type.startsWith('file') ? 'sm:col-span-2' : '');
 
     const setValue = (name, value) => {
         setData((prev) => ({ ...prev, [name]: value }));
@@ -288,27 +307,41 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(config.fields ?? []).map((field) => (
-                    <FormField
-                        key={field.name}
-                        label={field.label}
-                        error={missingRequired.includes(field) ? 'Wajib diisi.' : null}
-                        required={field.required}
-                        className={field.type === 'textarea' || field.type === 'repeater' || field.type === 'group' || field.type === 'checklist_table' || field.type.startsWith('file') ? 'sm:col-span-2' : ''}
-                    >
-                        <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} />
-                    </FormField>
-                ))}
+                {(config.fields ?? []).map((field) => {
+                    const locked = isFieldLocked(field);
+                    return (
+                        <div key={field.name} inert={locked} className={`${spanClass(field)} ${locked ? 'opacity-70' : ''}`}>
+                            <FormField
+                                label={field.label}
+                                error={missingRequired.includes(field) ? 'Wajib diisi.' : null}
+                                required={field.required}
+                            >
+                                {field.type === 'checklist_table' ? (
+                                    <ChecklistTable
+                                        field={field}
+                                        value={data[field.name]}
+                                        onChange={(v) => setValue(field.name, v)}
+                                        editableDepartments={locked ? [] : editableDepartments}
+                                    />
+                                ) : (
+                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} />
+                                )}
+                            </FormField>
+                        </div>
+                    );
+                })}
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-gray-100">
-                <Button type="button" onClick={() => onSubmit({ data, files }, false)} loading={submitting}>
-                    Simpan Draft
-                </Button>
-                <Button type="button" variant="success" onClick={() => onSubmit({ data, files }, true)} loading={submitting}>
-                    Submit Section
-                </Button>
-            </div>
+            {!readOnly && (
+                <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    <Button type="button" onClick={() => onSubmit({ data, files }, false)} loading={submitting}>
+                        Simpan Draft
+                    </Button>
+                    <Button type="button" variant="success" onClick={() => onSubmit({ data, files }, true)} loading={submitting}>
+                        Submit Section
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

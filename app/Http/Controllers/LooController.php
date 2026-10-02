@@ -205,11 +205,28 @@ class LooController extends Controller
 
         $config = config("loo_sections.{$key}");
         abort_unless($config, 404);
-        abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
-        abort_unless($this->minStageReached($loo, $config), 422, 'Section ini belum tersedia untuk tahap LOO saat ini.');
 
         $current = $loo->sections()->where('section_key', $key)->first();
+
+        // Checklist toko: semua bisa lihat, isi dibatasi per departemen.
+        $editableDepts = in_array($key, LooSectionService::FITOUT_CHECKLIST_KEYS, true)
+            ? $this->sections->editableFitoutDepartments($request->user())
+            : null;
+
+        if ($editableDepts !== null) {
+            abort_unless($editableDepts !== [], 403, 'Tidak berwenang mengisi checklist ini.');
+            $this->sections->assertFitoutDepartmentsAllowed($request->all(), $config, $current?->data ?? [], $editableDepts);
+        } else {
+            abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
+        }
+
+        abort_unless($this->minStageReached($loo, $config), 422, 'Section ini belum tersedia untuk tahap LOO saat ini.');
+
         $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
+
+        if ($editableDepts !== null) {
+            $data = $this->sections->mergeFitoutDepartments($data, $current?->data ?? [], $editableDepts);
+        }
 
         $section = $this->state->fillSection(
             $loo,

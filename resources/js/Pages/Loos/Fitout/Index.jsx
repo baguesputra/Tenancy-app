@@ -58,7 +58,7 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hub Checklist Fit Out</h1>
+                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hub Checklist Operasional</h1>
                         <p className="text-sm text-gray-500 mt-0.5">
                             Pusat pengelolaan & monitoring checklist operasional tenant (Sebelum/Sesudah Fit Out & Handover)
                         </p>
