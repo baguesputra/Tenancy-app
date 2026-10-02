@@ -564,6 +564,31 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('pre_handover', $loo->fresh()->status);
     }
 
+    public function test_tab_visibility_restricted_per_division(): void
+    {
+        $loo = $this->makeLoo();
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.legal_submit']);
+        $tenantMgmt = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit']);
+        $admin = $this->userWithRole('admin', ['loos.view']);
+
+        $this->actingAs($legal)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visibleSectionKeys', ['legalitas'])
+                ->where('canEditSections', fn ($s) => $s->contains('legalitas') && ! $s->contains('biaya_termin')));
+
+        $this->actingAs($tenantMgmt)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visibleSectionKeys', ['manajemen_tenant'])
+                ->where('canEditSections', fn ($s) => $s->contains('manajemen_tenant') && ! $s->contains('legalitas')));
+
+        $this->actingAs($admin)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant']));
+    }
+
     public function test_fitout_checklist_hub_index_and_gm_approve(): void
     {
         $loo = $this->makeLoo();
