@@ -498,10 +498,12 @@ class LooWorkflowTest extends TestCase
 
         $loo = $this->makeLoo();
         $loo->update(['status' => 'ba_handover', 'current_stage' => 'ba_handover']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $finance = $this->userWithRole('accounting_staff', ['loos.view', 'loos.accounting_edit', 'loos.transition']);
         $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
 
-        // checklist pre belum disubmit → forward ditolak
-        $this->actingAs($tm)
+        // legal isi dept-nya + TTD legal (draft)
+        $this->actingAs($legal)
             ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", [
                 'checklist' => json_encode([
                     'legal' => [
@@ -519,12 +521,11 @@ class LooWorkflowTest extends TestCase
                     'hantu' => ['items' => ['rahasia' => ['status' => 'Ok']]],
                 ]),
                 'signature_legal' => UploadedFile::fake()->create('ttd.png', 5, 'image/png'),
-                'submit' => '1',
             ])
             ->assertRedirect();
 
         $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
-        $this->assertTrue($section->is_submitted);
+        $this->assertFalse($section->is_submitted);
         $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
         $this->assertNull($section->data['checklist']['finance']['items']['dp_1']['status']);
         $this->assertArrayNotHasKey('hantu', $section->data['checklist']);
@@ -533,6 +534,29 @@ class LooWorkflowTest extends TestCase
         $this->assertArrayHasKey('dp_1', $section->data['checklist']['finance']['items']);
         $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
         $this->assertStringStartsWith('loos/', $section->data['signature_legal']);
+
+        // finance isi dept-nya; data legal wajib utuh (merge, bukan timpa)
+        $this->actingAs($finance)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", [
+                'checklist' => json_encode([
+                    'finance' => [
+                        'items' => ['dp_1' => ['status' => 'Ok', 'keterangan' => 'lunas']],
+                    ],
+                ]),
+            ])
+            ->assertRedirect();
+
+        $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
+        $this->assertSame('Ok', $section->data['checklist']['finance']['items']['dp_1']['status']);
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+        $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
+
+        // tm submit (koordinator) → auto-maju ke fitout
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['submit' => '1'])
+            ->assertRedirect();
+
+        $this->assertTrue($loo->sections()->where('section_key', 'fitout_checklist_pre')->first()->is_submitted);
 
         // gate stage ba_handover = fitout_checklist_pre sudah disubmit →
         // submit section auto-majukan LOO ke fitout
@@ -587,6 +611,83 @@ class LooWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant']));
+    }
+
+    public function test_fitout_department_edit_restricted_per_role(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $eng = $this->userWithRole('engineering_staff', ['loos.view', 'loos.engineering_edit', 'loos.transition']);
+
+        // legal isi dept sendiri → ok
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode([
+                    'legal' => ['items' => ['psm' => ['status' => 'Ok', 'keterangan' => 'ok']]],
+                ]),
+            ])
+            ->assertRedirect();
+
+        $section = $loo->sections()->where('section_key', 'fitout_checklist_post')->first();
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+
+        // legal ubah dept finance → 403
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode([
+                    'finance' => ['items' => ['dp_1' => ['status' => 'Ok']]],
+                ]),
+            ])
+            ->assertForbidden();
+
+        // engineering isi dept sendiri → ok, data legal tetap utuh
+        $this->actingAs($eng)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode([
+                    'engineering' => ['items' => ['megger' => ['status' => 'Ok']]],
+                ]),
+            ])
+            ->assertRedirect();
+
+        $section = $loo->sections()->where('section_key', 'fitout_checklist_post')->first();
+        $this->assertSame('Ok', $section->data['checklist']['engineering']['items']['megger']['status']);
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+
+        // engineering ubah dept legal → 403
+        $this->actingAs($eng)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode([
+                    'legal' => ['items' => ['psm' => ['status' => 'Tidak']]],
+                ]),
+            ])
+            ->assertForbidden();
+
+        // engineering bisa buka hub (punya loos.view)
+        $this->actingAs($eng)->get('/fitout-checklists')->assertOk();
+    }
+
+    public function test_fitout_page_exposes_editable_departments_per_role(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
+        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $viewer = $this->userWithRole('viewer_only', ['loos.view']);
+
+        // semua bisa melihat halaman checklist
+        $this->actingAs($legal)->get("/loos/{$loo->id}/fitout")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Loos/FitoutChecklist')
+                ->where('editableDepartments', ['legal'])
+                ->where('canEditPost', true));
+
+        $this->actingAs($viewer)->get("/loos/{$loo->id}/fitout")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('editableDepartments', [])
+                ->where('canEditPost', false)
+                ->where('canEditPre', false));
     }
 
     public function test_fitout_checklist_hub_index_and_gm_approve(): void
