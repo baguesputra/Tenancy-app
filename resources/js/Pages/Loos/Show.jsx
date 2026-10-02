@@ -63,7 +63,7 @@ function StateIcon({ state }) {
     return <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 shrink-0 mx-[3px]" aria-hidden="true" />;
 }
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], canEditLoo = false, canCancel = false, files = [], transitions = [], options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, files = [], transitions = [], options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
 
@@ -75,7 +75,10 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], c
         return stageOrder.indexOf(loo.current_stage) >= stageOrder.indexOf(cfg.min_stage);
     };
 
+    const allowedKeys = Array.isArray(visibleSectionKeys) ? visibleSectionKeys : DIVISION_TABS.map((t) => t.key);
+
     const tabRows = DIVISION_TABS
+        .filter(({ key }) => allowedKeys.includes(key))
         .map(({ key, label }) => {
             const cfg = sectionConfigs[key];
             if (!cfg || !stageReached(cfg)) return null;

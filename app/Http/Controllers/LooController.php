@@ -130,6 +130,7 @@ class LooController extends Controller
             'loo' => $loo,
             'sectionConfigs' => config('loo_sections'),
             'canEditSections' => $this->editableSectionKeys($loo, $request->user()),
+            'visibleSectionKeys' => $this->visibleSectionKeys($loo, $request->user()),
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
             'files' => $this->accessibleFiles($loo, $request->user()),
@@ -403,6 +404,28 @@ class LooController extends Controller
             ->keys()
             ->values()
             ->all();
+    }
+
+    /**
+     * Tab divisi yang boleh dibuka user: hanya tab milik divisinya.
+     * Viewer khusus (admin/manager/GM monitoring) boleh buka semua tab.
+     * Role tanpa edit section sama sekali (mis. marketing) tetap boleh
+     * lihat semua tab read-only agar halaman tidak kosong.
+     */
+    private function visibleSectionKeys(Loo $loo, User $user): array
+    {
+        $divisionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant'];
+
+        if ($user->hasAnyRole(['admin', 'super_admin', 'manager']) || $user->can('loos.dashboard')) {
+            return $divisionKeys;
+        }
+
+        $editable = array_values(array_intersect(
+            $this->editableSectionKeys($loo, $user),
+            $divisionKeys
+        ));
+
+        return $editable !== [] ? $editable : $divisionKeys;
     }
 
     /**
