@@ -5,26 +5,33 @@ import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
 
-const STATUS_LABELS = {
-    draft: 'Draft',
-    legal_review: 'Legal Review',
-    accounting_review: 'Accounting Review',
-    tenant_mgmt_review: 'Tenant Mgmt Review',
-    measurement: 'Measurement',
-    ba_handover: 'BA Handover',
-    fitout: 'Fitout',
-    pre_handover: 'Pre-Handover',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-};
-
-const STAGE_COLORS = {
-    ba_handover: 'cyan',
-    fitout: 'green',
-    pre_handover: 'indigo',
-    completed: 'green',
-    cancelled: 'red',
-};
+// Baris ringkas progress per dept: "Legal 3/5 · Finance 0/8". Dept milik
+// user ditandai titik emerald agar terpantau tanpa scroll.
+function DeptProgressRow({ rows = [], editableDepartments = [] }) {
+    if (rows.length === 0) return null;
+    return (
+        <div className="mb-4 flex flex-wrap gap-1.5" aria-label="Progress per departemen">
+            {rows.map((r) => {
+                const mine = (editableDepartments ?? []).includes(r.key);
+                const done = r.total > 0 && r.filled >= r.total;
+                return (
+                    <span
+                        key={r.key}
+                        className={`inline-flex items-center gap-1.5 px-2.5 min-h-7 rounded-full text-xs border tabular-nums ${
+                            done
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}
+                    >
+                        {mine && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />}
+                        <span className="font-medium">{r.label}</span>
+                        <span>{r.filled}/{r.total}</span>
+                    </span>
+                );
+            })}
+        </div>
+    );
+}
 
 export default function FitoutChecklist({
     loo,
@@ -47,6 +54,7 @@ export default function FitoutChecklist({
         ? 'pre_handover' 
         : (loo.current_stage === 'fitout' ? 'post' : 'pre');
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [focusMine, setFocusMine] = useState(false);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
 
@@ -88,9 +96,37 @@ export default function FitoutChecklist({
         return val === null || val === undefined || val === false || val === '';
     }
 
+    // Lompat ke blok dept + fokuskan kontrol pertama di dalamnya.
+    const jumpToDept = (e, sectionKey, dept) => {
+        e.preventDefault();
+        const el = document.getElementById(`${sectionKey}-${dept}`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(() => {
+            el.querySelector('input, textarea, select')?.focus({ preventScroll: true });
+        }, 450);
+    };
+    // Label departemen untuk chip lompat (diambil dari config).
+    const deptLabel = (key) => preConfig?.fields
+        ?.find((f) => f.type === 'checklist_table')
+        ?.departments?.find((d) => d.key === key)?.label ?? key;
+
+    // Ringkasan progress per dept (terisi/total item) dari data tersimpan.
+    const deptProgress = (config, sectionData) => (config?.fields
+        ?.find((f) => f.type === 'checklist_table')
+        ?.departments ?? []).map((d) => {
+        const items = d.items ?? {};
+        const total = Object.keys(items).length;
+        const saved = sectionData?.checklist?.[d.key]?.items ?? {};
+        const filled = Object.keys(items).filter(
+            (k) => saved[k]?.status === 'Ok' || saved[k]?.status === 'Tidak'
+        ).length;
+        return { key: d.key, label: d.label, filled, total };
+    });
+
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto scroll-smooth">
                 {/* Header Navigation */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-5">
                     <div className="min-w-0">
@@ -114,9 +150,6 @@ export default function FitoutChecklist({
                                 Detail LOO
                             </Button>
                         </Link>
-                        <Badge color={STAGE_COLORS[loo.status] ?? 'blue'} size="md">
-                            {STATUS_LABELS[loo.status] ?? loo.status}
-                        </Badge>
                     </div>
                 </div>
 
@@ -169,6 +202,21 @@ export default function FitoutChecklist({
                             {preHandoverState === 'submitted' ? 'Disubmit' : preHandoverState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
                     </button>
+                    {(editableDepartments ?? []).length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setFocusMine((v) => !v)}
+                            aria-pressed={focusMine}
+                            title="Redupkan ekstra bagian di luar wewenang Anda"
+                            className={`ml-auto mb-2 px-3 min-h-9 rounded-full text-xs font-medium border whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${
+                                focusMine
+                                    ? 'bg-[#0F1E36] text-white border-[#0F1E36]'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            Fokus bagian saya{focusMine ? ' ✓' : ''}
+                        </button>
+                    )}
                 </div>
 
                 {/* Tab Content */}
@@ -193,6 +241,26 @@ export default function FitoutChecklist({
                                         Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
                                     </p>
                                 )}
+                                {!terminal && canEditPre && (editableDepartments ?? []).length > 0 && (
+                                    <div className="mb-4 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+                                        <p className="text-xs text-blue-800 mb-2">
+                                            Anda dapat mengisi bagian di bawah ini. Bagian lain hanya tampil untuk dilihat.
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {(editableDepartments ?? []).map((dept) => (
+                                                <a
+                                                    key={dept}
+                                                    href={`#fitout_checklist_pre-${dept}`}
+                                                    onClick={(e) => jumpToDept(e, 'fitout_checklist_pre', dept)}
+                                                    className="px-3 min-h-8 inline-flex items-center rounded-full bg-[#0F1E36] text-white text-xs font-medium hover:bg-[#1a2f52] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                                                >
+                                                    Isi: {deptLabel(dept)}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <DeptProgressRow rows={deptProgress(preConfig, preSection?.data)} editableDepartments={editableDepartments} />
                                 <LooSectionForm
                                     looId={loo.id}
                                     sectionKey="fitout_checklist_pre"
@@ -202,6 +270,7 @@ export default function FitoutChecklist({
                                     submitting={submitting}
                                     readOnly={terminal || !canEditPre}
                                     editableDepartments={editableDepartments}
+                                    focusMode={focusMine}
                                     onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_pre')}
                                 />
                             </>
@@ -239,6 +308,26 @@ export default function FitoutChecklist({
                                         Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
                                     </p>
                                 )}
+                                {!terminal && canEditPost && (editableDepartments ?? []).length > 0 && (
+                                    <div className="mb-4 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+                                        <p className="text-xs text-blue-800 mb-2">
+                                            Anda dapat mengisi bagian di bawah ini. Bagian lain hanya tampil untuk dilihat.
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {(editableDepartments ?? []).map((dept) => (
+                                                <a
+                                                    key={dept}
+                                                    href={`#fitout_checklist_post-${dept}`}
+                                                    onClick={(e) => jumpToDept(e, 'fitout_checklist_post', dept)}
+                                                    className="px-3 min-h-8 inline-flex items-center rounded-full bg-[#0F1E36] text-white text-xs font-medium hover:bg-[#1a2f52] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                                                >
+                                                    Isi: {deptLabel(dept)}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <DeptProgressRow rows={deptProgress(postConfig, postSection?.data)} editableDepartments={editableDepartments} />
                                 <LooSectionForm
                                     looId={loo.id}
                                     sectionKey="fitout_checklist_post"
@@ -248,6 +337,7 @@ export default function FitoutChecklist({
                                     submitting={submitting}
                                     readOnly={terminal || !canEditPost}
                                     editableDepartments={editableDepartments}
+                                    focusMode={focusMine}
                                     onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_post')}
                                 />
                             </>

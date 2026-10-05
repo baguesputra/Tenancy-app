@@ -37,6 +37,13 @@ class LooStateService
 
             $loo->updateStatus($to);
 
+            // Link tracking publik: mulai hitung 1 bulan sejak terminal
+            // (kecuali sudah diperpanjang lebih lama secara manual).
+            if (in_array($to, ['completed', 'cancelled'], true)
+                && ($loo->track_expires_at === null || $loo->track_expires_at->lt(now()->addMonth()))) {
+                $loo->forceFill(['track_expires_at' => now()->addMonth()])->save();
+            }
+
             $this->log($loo, $actor, 'status_changed', [
                 'from_status' => $from,
                 'to_status' => $to,

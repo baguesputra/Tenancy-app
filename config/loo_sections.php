@@ -130,14 +130,12 @@ return [
     'fitout_checklist_pre' => [
         'label' => 'Checklist Sebelum Fitout',
         'stage' => 'ba_handover',
-        'min_stage' => 'ba_handover',
         'permission' => 'loos.tenant_mgmt_edit',
         'fields' => $fitoutChecklistFields,
     ],
     'fitout_checklist_post' => [
         'label' => 'Checklist Setelah Fitout',
         'stage' => 'fitout',
-        'min_stage' => 'fitout',
         'permission' => 'loos.tenant_mgmt_edit',
         'fields' => $fitoutChecklistFields,
     ],

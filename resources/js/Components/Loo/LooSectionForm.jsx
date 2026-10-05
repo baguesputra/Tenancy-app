@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Badge from '@/Components/Badge';
 import FormField from '@/Components/Form/FormField';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
@@ -157,7 +158,7 @@ function Repeater({ field, rows, onChange }) {
     );
 }
 
-function ChecklistTable({ field, value, onChange, editableDepartments = null }) {
+function ChecklistTable({ field, value, onChange, editableDepartments = null, signatures = {}, signatureValues = {}, onSignatureChange = null, idPrefix = '', focusMode = false }) {
     const v = value ?? {};
 
     const isDeptEditable = (deptKey) => !editableDepartments || editableDepartments.includes(deptKey);
@@ -184,12 +185,53 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null }) 
                 const data = v[dept.key] ?? {};
                 const signoff = data.signoff ?? {};
                 const deptEditable = isDeptEditable(dept.key);
+                const sig = signatures[dept.key];
+                const sigValue = signatureValues[dept.key];
+                const blockId = idPrefix !== '' ? `${idPrefix}-${dept.key}` : null;
+                const focusFirstControl = () => {
+                    if (!blockId) return;
+                    const el = document.getElementById(blockId);
+                    if (!el) return;
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    window.setTimeout(() => {
+                        el.querySelector('input, textarea, select')?.focus({ preventScroll: true });
+                    }, 450);
+                };
                 return (
-                    <div key={dept.key} inert={!deptEditable} className={`border border-[#E2E5EA] rounded-xl overflow-hidden ${deptEditable ? '' : 'opacity-70'}`}>
-                        <p className="px-3 py-2 bg-gray-50 text-xs font-semibold text-[#0F1E36] uppercase tracking-wide flex items-center justify-between gap-2">
+                    <div
+                        key={dept.key}
+                        id={blockId ?? undefined}
+                        inert={!deptEditable}
+                        className={`border border-[#E2E5EA] rounded-xl overflow-hidden scroll-mt-24 ${deptEditable
+                            ? ''
+                            : `opacity-70 grayscale cursor-not-allowed${focusMode ? ' opacity-40' : ''}`}`}
+                    >
+                        <p className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide flex items-center justify-between gap-2 border-b ${deptEditable ? 'bg-emerald-50 text-emerald-900 border-emerald-100' : 'bg-gray-50 text-[#0F1E36] border-gray-100'}`}>
                             <span>{dept.label}</span>
-                            {!deptEditable && <span className="normal-case font-medium text-gray-400">🔒 Lihat saja</span>}
+                            {deptEditable
+                                ? (
+                                    <span className="flex items-center gap-2">
+                                        <Badge color="green" size="sm">Dapat diisi</Badge>
+                                        <button
+                                            type="button"
+                                            onClick={focusFirstControl}
+                                            className="normal-case font-medium text-xs text-emerald-700 hover:text-emerald-900 underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+                                        >
+                                            Isi sekarang ↓
+                                        </button>
+                                    </span>
+                                )
+                                : (
+                                    <span className="flex items-center gap-1.5">
+                                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                        <Badge color="gray" size="sm">Lihat saja</Badge>
+                                    </span>
+                                )}
                         </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_230px]">
+                            <div className="min-w-0">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
@@ -243,6 +285,30 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null }) 
                             <DateInput value={signoff.date ?? ''} onChange={(e) => updateSignoff(dept.key, { date: e.target.value })} aria-label={`Diterima oleh tanggal ${dept.label}`} />
                             <TextInput value={signoff.name ?? ''} onChange={(e) => updateSignoff(dept.key, { name: e.target.value })} placeholder="Nama" aria-label={`Diterima oleh nama ${dept.label}`} />
                         </div>
+                            </div>
+                            {sig && onSignatureChange && (
+                                <div className="border-t lg:border-t-0 lg:border-l border-gray-100 p-3 bg-gray-50/50 space-y-2">
+                                    <p className="text-[11px] font-semibold text-[#0F1E36] uppercase tracking-wide">Tanda tangan</p>
+                                    {typeof sigValue === 'string' && sigValue !== '' && (
+                                        <a href={`/storage/${sigValue}`} target="_blank" rel="noreferrer" className="block text-xs text-[#0F1E36] underline truncate">
+                                            Lihat file saat ini
+                                        </a>
+                                    )}
+                                    <label className="block cursor-pointer">
+                                        <input
+                                            type="file"
+                                            className="sr-only"
+                                            accept={sig.accept}
+                                            onChange={(e) => onSignatureChange(dept.key, e.target.files?.[0] ?? null)}
+                                        />
+                                        <span className="flex items-center justify-center gap-1.5 px-3 min-h-9 rounded-lg border border-dashed border-gray-300 bg-white text-xs font-medium text-gray-600 hover:border-[#0F1E36] hover:text-[#0F1E36] transition-colors">
+                                            {sigValue ? 'Ganti file' : 'Upload file'}
+                                        </span>
+                                    </label>
+                                    <p className="text-[11px] text-gray-400">PNG/JPG</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 );
             })}
@@ -273,7 +339,7 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null }) 
     );
 }
 
-export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null }) {
+export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null, focusMode = false }) {
     const initial = section?.data ?? {};
     const [data, setData] = useState(initial);
     const [files, setFiles] = useState({});
@@ -304,10 +370,22 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
         (f) => f.required && !f.type.match(/file|checkbox|repeater/) && !data[f.name]
     );
 
+    // TTD per departemen dirender di dalam blok dept masing-masing
+    // (panel kanan), bukan sebagai field terpisah di bawah.
+    const DEPT_SIG_RE = /^signature_(legal|finance|tenancy|engineering|kontraktor)$/;
+    const hasChecklistTable = (config.fields ?? []).some((f) => f.type === 'checklist_table');
+    const deptSignatures = {};
+    (config.fields ?? []).forEach((f) => {
+        if (hasChecklistTable && DEPT_SIG_RE.test(f.name)) {
+            deptSignatures[f.name.replace('signature_', '')] = f;
+        }
+    });
+
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(config.fields ?? []).map((field) => {
+                    if (hasChecklistTable && DEPT_SIG_RE.test(field.name)) return null;
                     const locked = isFieldLocked(field);
                     return (
                         <div key={field.name} inert={locked} className={`${spanClass(field)} ${locked ? 'opacity-70' : ''}`}>
@@ -322,6 +400,13 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                                         value={data[field.name]}
                                         onChange={(v) => setValue(field.name, v)}
                                         editableDepartments={locked ? [] : editableDepartments}
+                                        signatures={deptSignatures}
+                                        signatureValues={Object.fromEntries(
+                                            Object.keys(deptSignatures).map((k) => [k, data[`signature_${k}`]])
+                                        )}
+                                        onSignatureChange={(deptKey, file) => setValue(`signature_${deptKey}`, file)}
+                                        idPrefix={sectionKey}
+                                        focusMode={focusMode}
                                     />
                                 ) : (
                                     <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} />

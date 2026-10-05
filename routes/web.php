@@ -189,6 +189,7 @@ Route::get('/auth/sso/gagal', function () {
 
 use App\Http\Controllers\LooController;
 use App\Http\Controllers\LooFitoutController;
+use App\Http\Controllers\LooTrackController;
 
 Route::middleware('auth')->group(function () {
 
@@ -303,6 +304,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
         Route::get('/{loo}/fitout', [LooFitoutController::class, 'show'])->name('fitout');
+        Route::get('/{loo}/track-qr', [LooTrackController::class, 'qr'])->name('track.qr');
+        Route::post('/{loo}/track-regenerate', [LooTrackController::class, 'regenerate'])->name('track.regenerate');
+        Route::post('/{loo}/track-extend', [LooTrackController::class, 'extend'])->name('track.extend');
     });
 
     Route::middleware('can:loos.view')->get('/fitout-checklists', [LooFitoutController::class, 'index'])->name('fitout-checklists.index');
@@ -321,6 +325,9 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)->name('scan.resolve');
+
+// Tracking publik LOO untuk calon tenant (tanpa login, rate-limited).
+Route::middleware('throttle:30,1')->get('/lacak-loo/{token}', [LooTrackController::class, 'show'])->name('track.show');
 
 // Portal (staff toko)
 Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {

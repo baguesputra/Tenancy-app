@@ -15,6 +15,16 @@ const menuIcons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
         </svg>
     ),
+    leasing: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+    ),
+    building: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-18v18M6 9h.01M6 12h.01M6 15h.01M12 9h.01M12 12h.01M12 15h.01M18 9h.01M18 12h.01M18 15h.01" />
+        </svg>
+    ),
     sidak: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -58,11 +68,38 @@ const menuIcons = {
     ),
 };
 
-const masterMenuItems = [
-    { label: 'LOO', href: '/loos', permission: 'loos.view' },
-    { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
-    { label: 'Unit', href: '/units', permission: 'units.view' },
-    { label: 'Kategori', href: '/categories', permission: 'categories.view' },
+// Grup navigasi data-driven: tambah menu baru = tambah satu entri di sini.
+// Menu berupa daftar panjang (bukan domain baru) wajib memakai pola halaman
+// hub/index, bukan entri sidebar baru — sidebar hanya berisi pintu domain.
+const menuGroups = [
+    {
+        key: 'leasing',
+        label: 'Leasing',
+        icon: 'leasing',
+        items: [
+            { label: 'LOO', href: '/loos', permission: 'loos.view' },
+            { label: 'Checklist Operasional', href: '/fitout-checklists', permission: 'loos.view' },
+        ],
+    },
+    {
+        key: 'ops',
+        label: 'Operasional',
+        icon: 'building',
+        items: [
+            { label: 'Sesi Sidak', href: '/inspection-sessions', permission: 'sidak.view' },
+            { label: 'Surat Izin', href: '/permit-requests', permission: 'permits.view' },
+        ],
+    },
+    {
+        key: 'master',
+        label: 'Master Data',
+        icon: 'master',
+        items: [
+            { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
+            { label: 'Unit', href: '/units', permission: 'units.view' },
+            { label: 'Kategori', href: '/categories', permission: 'categories.view' },
+        ],
+    },
 ];
 
 export default function AppLayout({ children }) {
@@ -73,9 +110,23 @@ export default function AppLayout({ children }) {
     const permissions = auth.user?.permissions ?? [];
     const can = (perm) => isSuperAdmin || permissions.includes(perm);
 
-    const visibleMasterMenuItems = masterMenuItems.filter((item) => can(item.permission));
-    const isMasterActive = visibleMasterMenuItems.some((item) => currentUrl.startsWith(item.href));
-    const [masterOpen, setMasterOpen] = useState(isMasterActive);
+    const visibleMasterMenuItems = menuGroups
+        .map((group) => ({
+            ...group,
+            visibleItems: group.items.filter((item) => can(item.permission)),
+        }))
+        .filter((group) => group.visibleItems.length > 0);
+    const isGroupActive = (group) => group.visibleItems.some((item) => currentUrl.startsWith(item.href));
+    const [openGroups, setOpenGroups] = useState(() =>
+        Object.fromEntries(menuGroups.map((group) => [group.key, group.items.some((item) => currentUrl.startsWith(item.href))]))
+    );
+    const toggleGroup = (key) => {
+        if (collapsed) {
+            setCollapsed(false);
+            return;
+        }
+        setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
     const settingsMenuItems = [
         { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users },
         { label: 'Akun Portal Tenant', href: '/settings/tenant-accounts', icon: menuIcons.portal },
@@ -108,7 +159,7 @@ export default function AppLayout({ children }) {
 
     useEffect(() => {
         if (collapsed) {
-            setMasterOpen(false);
+            setOpenGroups({});
             setSettingsOpen(false);
         }
     }, [collapsed]);
@@ -184,61 +235,49 @@ export default function AppLayout({ children }) {
                     <NavLink href="/dashboard" currentUrl={currentUrl} icon={menuIcons.dashboard} collapsed={collapsed}>
                         Dashboard
                     </NavLink>
-
-                    {visibleMasterMenuItems.length > 0 && (
-                        <div className="pt-1">
-                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Master Data</p>}
-                            <button
-                                onClick={() => collapsed ? setCollapsed(false) : setMasterOpen(!masterOpen)}
-                                title="Master Data"
-                                aria-label="Master Data"
-                                aria-expanded={masterOpen && !collapsed}
-                                className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
-                                    ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
-                                    ${isMasterActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                            >
-                                <span className="flex items-center gap-3">
-                                    <span className="shrink-0" aria-hidden="true">{menuIcons.master}</span>
-                                    {!collapsed && <span>Master Data</span>}
-                                </span>
-                                {!collapsed && (
-                                    <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${masterOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                )}
-                            </button>
-
-                            {masterOpen && !collapsed && (
-                                <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
-                                    {visibleMasterMenuItems.map((item) => (
-                                        <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
-                                            {item.label}
-                                        </NavLink>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    {can('loos.view') && (
-                        <NavLink href="/fitout-checklists" currentUrl={currentUrl} icon={menuIcons.checklist} collapsed={collapsed}>
-                            Checklist Operasional
-                        </NavLink>
-                    )}
                     {can('tenants.view') && (
                         <NavLink href="/tenant-profiles" currentUrl={currentUrl} icon={menuIcons.users} collapsed={collapsed}>
                             Profile Tenant
                         </NavLink>
                     )}
-                    {can('sidak.view') && (
-                        <NavLink href="/inspection-sessions" currentUrl={currentUrl} icon={menuIcons.sidak} collapsed={collapsed}>
-                            Sesi Sidak
-                        </NavLink>
-                    )}
-                    {can('permits.view') && (
-                        <NavLink href="/permit-requests" currentUrl={currentUrl} icon={menuIcons.permit} collapsed={collapsed}>
-                            Surat Izin
-                        </NavLink>
-                    )}
+
+                    {visibleMasterMenuItems.map((group) => {
+                        const active = isGroupActive(group);
+                        const open = !!openGroups[group.key];
+                        return (
+                            <div key={group.key} className="pt-1">
+                                <button
+                                    onClick={() => toggleGroup(group.key)}
+                                    title={group.label}
+                                    aria-label={group.label}
+                                    aria-expanded={open && !collapsed}
+                                    className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
+                                        ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
+                                        ${active ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <span className="flex items-center gap-3">
+                                        <span className="shrink-0" aria-hidden="true">{menuIcons[group.icon]}</span>
+                                        {!collapsed && <span>{group.label}</span>}
+                                    </span>
+                                    {!collapsed && (
+                                        <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    )}
+                                </button>
+
+                                {open && !collapsed && (
+                                    <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
+                                        {group.visibleItems.map((item) => (
+                                            <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
+                                                {item.label}
+                                            </NavLink>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                     {isSuperAdmin && (
                         <div className="pt-1">
                             {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Pengaturan</p>}

@@ -1,0 +1,16 @@
+export default function Expired({ loo_number, expires_label }) {
+    return (
+        <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-6">
+            <div className="w-full max-w-md bg-white border border-[#E2E5EA] rounded-2xl p-6 sm:p-8 text-center">
+                <img src="/images/logo.png" alt="Duta Mall" className="h-10 w-auto mx-auto" />
+                <p className="mt-4 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Kedaluwarsa</p>
+                <h1 className="mt-2 font-mono text-lg font-bold text-gray-900">{loo_number}</h1>
+                <p className="mt-3 text-sm text-gray-600">
+                    Link pemantauan ini sudah tidak berlaku sejak<br />
+                    <span className="font-semibold text-gray-900">{expires_label ?? '—'}</span>
+                </p>
+                <p className="mt-2 text-xs text-gray-400">Hubungi tim marketing kami untuk meminta link terbaru.</p>
+            </div>
+        </div>
+    );
+}

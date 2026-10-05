@@ -11,8 +11,8 @@ import TextInput from '@/Components/Form/TextInput';
 const STATUS_COLORS = {
     draft: 'gray',
     legal_review: 'blue',
-    accounting_review: 'yellow',
-    tenant_mgmt_review: 'orange',
+    accounting_review: 'blue',
+    tenant_mgmt_review: 'blue',
     measurement: 'purple',
     ba_handover: 'cyan',
     fitout: 'green',
@@ -21,17 +21,37 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
+// Tahap review tiga divisi tampil sebagai satu fase "Pengisian Divisi"
+// (pengisian paralel, bukan antrean berjenjang).
 const STATUS_LABELS = {
     draft: 'Draft',
-    legal_review: 'Legal Review',
-    accounting_review: 'Accounting Review',
-    tenant_mgmt_review: 'Tenant Mgmt Review',
+    legal_review: 'Pengisian Divisi',
+    accounting_review: 'Pengisian Divisi',
+    tenant_mgmt_review: 'Pengisian Divisi',
     measurement: 'Measurement',
     ba_handover: 'BA Handover',
     fitout: 'Fitout',
     pre_handover: 'Pre-Handover',
     completed: 'Completed',
     cancelled: 'Cancelled',
+};
+
+const STAGE_LABELS = {
+    marketing: 'Marketing',
+    legal: 'Legal',
+    accounting: 'Accounting',
+    tenant_mgmt: 'Tenant Mgmt',
+    measurement: 'Measurement',
+    ba_handover: 'BA Handover',
+    fitout: 'Fitout',
+    pre_handover: 'Pre-Handover',
+};
+
+// Label singkat untuk opsi filter status review.
+const REVIEW_SHORT = {
+    legal_review: 'Legal',
+    accounting_review: 'Accounting',
+    tenant_mgmt_review: 'Tenant Mgmt',
 };
 
 export default function Index({ loos, summary = {}, filters = {}, statusOptions = [], stageOptions = [] }) {
@@ -45,6 +65,20 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
         const next = { ...filters, [key]: value || undefined };
         router.get('/loos', next, { preserveState: true, preserveScroll: true, replace: true });
     };
+
+    // Kartu ringkasan: tiga status review digabung jadi satu fase pengisian.
+    const num = (v) => Number(v ?? 0);
+    const pengisianCount = num(summary.legal_review) + num(summary.accounting_review) + num(summary.tenant_mgmt_review);
+    const summaryCards = [
+        { key: 'draft', label: 'Draft', count: num(summary.draft), filterValue: 'draft' },
+        { key: 'pengisian', label: 'Pengisian Divisi', count: pengisianCount, filterValue: '' },
+        { key: 'measurement', label: 'Measurement', count: num(summary.measurement), filterValue: 'measurement' },
+        { key: 'fitout', label: 'Fitout', count: num(summary.fitout), filterValue: 'fitout' },
+        { key: 'completed', label: 'Completed', count: num(summary.completed), filterValue: 'completed' },
+        { key: 'cancelled', label: 'Dibatalkan', count: num(summary.cancelled), filterValue: 'cancelled' },
+    ];
+
+    const statusOptionLabel = (s) => REVIEW_SHORT[s.value] ? `Pengisian – ${REVIEW_SHORT[s.value]}` : s.label;
 
     const columns = [
         { key: 'loo_number', label: 'No. LOO' },
@@ -70,21 +104,23 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-                    {[
-                        { key: 'draft', label: 'Draft' },
-                        { key: 'legal_review', label: 'Legal' },
-                        { key: 'accounting_review', label: 'Accounting' },
-                        { key: 'measurement', label: 'Measurement' },
-                        { key: 'fitout', label: 'Fitout' },
-                        { key: 'completed', label: 'Completed' },
-                    ].map((s) => (
-                        <button
+                    {summaryCards.map((s) => s.filterValue === '' ? (
+                        <div
                             key={s.key}
-                            onClick={() => updateFilter('status', filters.status === s.key ? '' : s.key)}
-                            className={`text-left bg-white rounded-xl border px-4 py-3 transition-all ${(filters.status ?? '') === s.key ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300'}`}
+                            className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3"
+                            title="Gabungan Legal, Accounting, Tenant Mgmt"
                         >
                             <span className="text-xs text-gray-500">{s.label}</span>
-                            <span className="block text-lg font-semibold text-gray-900 mt-0.5 tabular-nums">{summary[s.key] ?? 0}</span>
+                            <span className="block text-lg font-semibold text-gray-900 mt-0.5 tabular-nums">{s.count}</span>
+                        </div>
+                    ) : (
+                        <button
+                            key={s.key}
+                            onClick={() => updateFilter('status', filters.status === s.filterValue ? '' : s.filterValue)}
+                            className={`text-left bg-white rounded-xl border px-4 py-3 transition-all ${(filters.status ?? '') === s.filterValue ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300'}`}
+                        >
+                            <span className="text-xs text-gray-500">{s.label}</span>
+                            <span className="block text-lg font-semibold text-gray-900 mt-0.5 tabular-nums">{s.count}</span>
                         </button>
                     ))}
                 </div>
@@ -105,7 +141,7 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                     </div>
                     <SelectInput value={filters.status ?? ''} onChange={(e) => updateFilter('status', e.target.value)} className="lg:w-48" aria-label="Filter status">
                         <option value="">Semua Status</option>
-                        {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        {statusOptions.map((s) => <option key={s.value} value={s.value}>{statusOptionLabel(s)}</option>)}
                     </SelectInput>
                     <SelectInput value={filters.current_stage ?? ''} onChange={(e) => updateFilter('current_stage', e.target.value)} className="lg:w-48" aria-label="Filter stage">
                         <option value="">Semua Stage</option>
@@ -126,7 +162,7 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                                 <td className="px-5 py-3.5">
                                     <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="sm">{STATUS_LABELS[loo.status] ?? loo.status}</Badge>
                                 </td>
-                                <td className="px-5 py-3.5 text-gray-500 text-sm">{loo.current_stage}</td>
+                                <td className="px-5 py-3.5 text-gray-500 text-sm">{STAGE_LABELS[loo.current_stage] ?? loo.current_stage}</td>
                                 <td className="px-5 py-3.5 text-gray-500">{loo.branch?.name ?? '—'}</td>
                             </tr>
                         ))}

@@ -77,9 +77,11 @@ class LooController extends Controller
             ->selectRaw('sum(status = "draft") as draft')
             ->selectRaw('sum(status = "legal_review") as legal_review')
             ->selectRaw('sum(status = "accounting_review") as accounting_review')
+            ->selectRaw('sum(status = "tenant_mgmt_review") as tenant_mgmt_review')
             ->selectRaw('sum(status = "measurement") as measurement')
             ->selectRaw('sum(status = "fitout") as fitout')
             ->selectRaw('sum(status = "completed") as completed')
+            ->selectRaw('sum(status = "cancelled") as cancelled')
             ->first()
             ->only(array_keys(self::STATUSES));
 
@@ -113,6 +115,7 @@ class LooController extends Controller
             'loo_number' => Loo::generateLooNumber($branch->code, now()->year),
             'status' => 'draft',
             'current_stage' => 'marketing',
+            'track_token' => Str::random(40),
         ]);
 
         $this->state->log($loo, $request->user(), 'created');
@@ -124,7 +127,9 @@ class LooController extends Controller
     public function show(Loo $loo, Request $request)
     {
         $this->authorizeAccess($loo, $request);
-        $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'sections.filler', 'history.user']);
+        $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'unit', 'sections.filler', 'history.user']);
+
+        $track = app(LooTrackController::class)->trackShare($loo);
 
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
@@ -133,6 +138,8 @@ class LooController extends Controller
             'visibleSectionKeys' => $this->visibleSectionKeys($loo, $request->user()),
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
+            'canManageTrack' => $this->canManageTrack($loo, $request->user()),
+            'track' => $track,
             'files' => $this->accessibleFiles($loo, $request->user()),
             'transitions' => $this->allowedTransitions($loo),
             'options' => ['productCategories' => ProductCategory::orderBy('name')->get(['id', 'name'])],
@@ -209,6 +216,7 @@ class LooController extends Controller
         $current = $loo->sections()->where('section_key', $key)->first();
 
         // Checklist toko: semua bisa lihat, isi dibatasi per departemen.
+        // Pengisian tanpa gate stage (paralel sejak awal).
         $editableDepts = in_array($key, LooSectionService::FITOUT_CHECKLIST_KEYS, true)
             ? $this->sections->editableFitoutDepartments($request->user())
             : null;
@@ -219,8 +227,6 @@ class LooController extends Controller
         } else {
             abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
         }
-
-        abort_unless($this->minStageReached($loo, $config), 422, 'Section ini belum tersedia untuk tahap LOO saat ini.');
 
         $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
 
@@ -416,50 +422,24 @@ class LooController extends Controller
             return [];
         }
 
+        // Tanpa gate stage: tiap section bisa diisi pemilik permission-nya
+        // kapan pun (paralel sejak awal).
         return collect(config('loo_sections'))
-            ->filter(fn ($cfg) => $user->can($cfg['permission']) && $this->minStageReached($loo, $cfg))
+            ->filter(fn ($cfg) => $user->can($cfg['permission']))
             ->keys()
             ->values()
             ->all();
     }
 
     /**
-     * Tab divisi yang boleh dibuka user: hanya tab milik divisinya.
-     * Viewer khusus (admin/manager/GM monitoring) boleh buka semua tab.
-     * Role tanpa edit section sama sekali (mis. marketing) tetap boleh
-     * lihat semua tab read-only agar halaman tidak kosong.
+     * Semua tab divisi selalu terlihat semua role (Legal, Accounting,
+     * Tenant Mgmt) agar progress pengisian terpantau — termasuk role
+     * tenant/divisi tunggal. Yang dibatasi hanya kemampuan mengisi
+     * (canEditSections); tab di luar wewenang tampil read-only.
      */
     private function visibleSectionKeys(Loo $loo, User $user): array
     {
-        $divisionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant'];
-
-        if ($user->hasAnyRole(['admin', 'super_admin', 'manager']) || $user->can('loos.dashboard')) {
-            return $divisionKeys;
-        }
-
-        $editable = array_values(array_intersect(
-            $this->editableSectionKeys($loo, $user),
-            $divisionKeys
-        ));
-
-        return $editable !== [] ? $editable : $divisionKeys;
-    }
-
-    /**
-     * `min_stage` = checklist muncul progresif: tampil begitu LOO mencapai
-     * stage itu dan tetap tampil sesudahnya (terminal = selalu tampil).
-     */
-    private function minStageReached(Loo $loo, array $config): bool
-    {
-        $min = $config['min_stage'] ?? null;
-
-        if (! $min || in_array($loo->status, ['completed', 'cancelled'], true)) {
-            return true;
-        }
-
-        $order = array_keys(self::STAGES);
-
-        return array_search($loo->current_stage, $order, true) >= array_search($min, $order, true);
+        return ['legalitas', 'biaya_termin', 'manajemen_tenant'];
     }
 
     private function allowedTransitions(Loo $loo): array
@@ -531,6 +511,11 @@ class LooController extends Controller
     private function canCancel(Loo $loo, User $user): bool
     {
         return $loo->marketing_id === $user->id || $user->hasAnyRole(['admin', 'super_admin']);
+    }
+
+    private function canManageTrack(Loo $loo, User $user): bool
+    {
+        return $this->canCancel($loo, $user);
     }
 
     /**

@@ -373,11 +373,10 @@ class LooWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('transitions', []));
 
-        // section legalitas belum disubmit → hanya mundur (draft) yang tampil
+        // Tanpa alur mundur: sebelum submit, tak ada tombol transisi sama sekali.
         $this->actingAs($legal)->get("/loos/{$loo->id}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('transitions', 1)
-                ->where('transitions.0.value', 'draft'));
+            ->assertInertia(fn ($page) => $page->where('transitions', []));
 
         $loo->sections()->create([
             'section_key' => 'legalitas',
@@ -391,7 +390,9 @@ class LooWorkflowTest extends TestCase
 
         $this->actingAs($legal)->get("/loos/{$loo->id}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('transitions', 2));
+            ->assertInertia(fn ($page) => $page->has('transitions', 1)
+                ->where('transitions.0.value', 'accounting_review')
+                ->where('transitions.0.direction', 'forward'));
     }
 
     public function test_file_access_cover_only_roles_and_full_access(): void
@@ -456,40 +457,28 @@ class LooWorkflowTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['notifiable_id' => $creator->id]);
     }
 
-    public function test_checklist_gated_by_min_stage(): void
+    public function test_checklist_fillable_without_stage_gate(): void
     {
         $loo = $this->makeLoo();
         $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.transition']);
 
-        // stage measurement: kedua checklist belum tampil & belum bisa diisi
+        // Tanpa gate stage: pre & post bisa diisi sejak stage awal.
         $loo->update(['status' => 'measurement', 'current_stage' => 'measurement']);
-
-        $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['checklist' => ['footer' => ['date' => '2026-10-01']]])
-            ->assertStatus(422);
-        $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", ['checklist' => []])
-            ->assertStatus(422);
-
-        $this->actingAs($tm)->get("/loos/{$loo->id}")
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('canEditSections', fn ($s) => ! $s->contains('fitout_checklist_pre')
-                && ! $s->contains('fitout_checklist_post')));
-
-        // stage ba_handover: pre muncul, post masih tersembunyi
-        $loo->update(['status' => 'ba_handover', 'current_stage' => 'ba_handover']);
 
         $this->actingAs($tm)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('canEditSections', fn ($s) => $s->contains('fitout_checklist_pre')
-                && ! $s->contains('fitout_checklist_post')));
+                && $s->contains('fitout_checklist_post')));
 
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['checklist' => ['footer' => ['date' => '2026-10-01']]])
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", ['checklist' => ['footer' => ['date' => '2026-10-01']], 'submit' => '1'])
             ->assertRedirect();
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", ['checklist' => []])
-            ->assertStatus(422);
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", ['checklist' => [], 'submit' => '1'])
+            ->assertRedirect();
+
+        // Isi duluan tidak melompatkan status.
+        $this->assertSame('measurement', $loo->fresh()->status);
     }
 
     public function test_checklist_pre_saves_items_signature_and_gates_transition(): void
@@ -588,23 +577,25 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('pre_handover', $loo->fresh()->status);
     }
 
-    public function test_tab_visibility_restricted_per_division(): void
+    public function test_tab_visibility_shows_all_divisions(): void
     {
         $loo = $this->makeLoo();
         $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.legal_submit']);
         $tenantMgmt = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit']);
         $admin = $this->userWithRole('admin', ['loos.view']);
 
+        // Semua role melihat ketiga tab divisi (progress terpantau),
+        // tapi hanya bisa mengisi divisinya sendiri.
         $this->actingAs($legal)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('visibleSectionKeys', ['legalitas'])
+                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant'])
                 ->where('canEditSections', fn ($s) => $s->contains('legalitas') && ! $s->contains('biaya_termin')));
 
         $this->actingAs($tenantMgmt)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('visibleSectionKeys', ['manajemen_tenant'])
+                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant'])
                 ->where('canEditSections', fn ($s) => $s->contains('manajemen_tenant') && ! $s->contains('legalitas')));
 
         $this->actingAs($admin)->get("/loos/{$loo->id}")
@@ -688,6 +679,35 @@ class LooWorkflowTest extends TestCase
                 ->where('editableDepartments', [])
                 ->where('canEditPost', false)
                 ->where('canEditPre', false));
+    }
+
+    public function test_tenancy_and_engineering_staff_can_save_own_dept(): void
+    {
+        // tenancy_staff: isi dept tenancy pada checklist Pre sejak stage awal.
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $tenancy = $this->userWithRole('tenancy_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
+
+        $this->actingAs($tenancy)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", [
+                'checklist' => json_encode(['tenancy' => ['items' => ['lantai' => ['status' => 'Ok']]]]),
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Ok', $loo->sections()->where('section_key', 'fitout_checklist_pre')->first()
+            ->data['checklist']['tenancy']['items']['lantai']['status']);
+
+        // engineering_staff: isi dept engineering pada checklist Post sejak stage awal.
+        $eng = $this->userWithRole('engineering_staff', ['loos.view', 'loos.engineering_edit', 'loos.transition']);
+
+        $this->actingAs($eng)
+            ->post("/loos/{$loo->id}/sections/fitout_checklist_post", [
+                'checklist' => json_encode(['engineering' => ['items' => ['megger' => ['status' => 'Ok']]]]),
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Ok', $loo->sections()->where('section_key', 'fitout_checklist_post')->first()
+            ->data['checklist']['engineering']['items']['megger']['status']);
     }
 
     public function test_fitout_checklist_hub_index_and_gm_approve(): void

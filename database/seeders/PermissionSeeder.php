@@ -61,7 +61,6 @@ class PermissionSeeder extends Seeder
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
             'loos.view', 'loos.dashboard', 'loos.transition',
-            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
             'loos.fitout_approve',
         ]);
 
@@ -72,7 +71,7 @@ class PermissionSeeder extends Seeder
             'categories.view',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.approve',
-            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('bs_staff', [
@@ -86,7 +85,7 @@ class PermissionSeeder extends Seeder
 
         $this->assignRolePermissions('engineering_staff', [
             'permits.view',
-            'loos.view', 'loos.engineering_edit',
+            'loos.view', 'loos.engineering_edit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('marketing_staff', [
@@ -141,6 +140,10 @@ class PermissionSeeder extends Seeder
 
         // super_admin tidak perlu permission satu-satu — bypass total via Gate::before
         Role::firstOrCreate(['name' => 'super_admin']);
+
+        // Reset cache permission Spatie agar perubahan langsung berlaku
+        // (default cache 24 jam, tanpa ini permission baru tertunda).
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function assignRolePermissions(string $roleName, array $permissions): void

@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
@@ -9,10 +9,10 @@ import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
 
 const STAGE_LABELS = {
-    marketing: 'Marketing',
-    legal: 'Legal',
-    accounting: 'Accounting',
-    tenant_mgmt: 'Tenant Mgmt',
+    marketing: 'Pengisian Divisi',
+    legal: 'Pengisian Divisi',
+    accounting: 'Pengisian Divisi',
+    tenant_mgmt: 'Pengisian Divisi',
     measurement: 'Measurement',
     ba_handover: 'BA Handover',
     fitout: 'Fitout',
@@ -20,10 +20,10 @@ const STAGE_LABELS = {
 };
 
 const STAGE_COLORS = {
-    marketing: 'gray',
+    marketing: 'blue',
     legal: 'blue',
-    accounting: 'yellow',
-    tenant_mgmt: 'orange',
+    accounting: 'blue',
+    tenant_mgmt: 'blue',
     measurement: 'purple',
     ba_handover: 'cyan',
     fitout: 'green',
@@ -50,7 +50,6 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
         { key: 'pre_fitout', label: 'Sebelum Fitout' },
         { key: 'post_fitout', label: 'Setelah Fitout' },
         { key: 'pre_handover', label: 'Pre-Handover' },
-        { key: 'action', label: 'Aksi' },
     ];
 
     return (
@@ -122,11 +121,15 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                 {/* Data Table */}
                 <DataTable columns={columns}>
                     {(loos.data ?? []).map((row) => (
-                        <tr key={row.id} className="hover:bg-gray-50/80 transition-colors border-b border-gray-100">
+                        <tr
+                            key={row.id}
+                            onClick={() => router.visit(`/loos/${row.id}/fitout`)}
+                            className="cursor-pointer hover:bg-gray-50/80 transition-colors border-b border-gray-100"
+                        >
                             <td className="px-4 py-3 min-w-[200px]">
-                                <Link href={`/loos/${row.id}`} className="font-semibold text-[#0F1E36] hover:underline block truncate">
+                                <span className="font-semibold text-[#0F1E36] block truncate">
                                     {row.loo_number}
-                                </Link>
+                                </span>
                                 <span className="text-xs text-gray-500 block truncate mt-0.5">{row.tenant_name}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
@@ -137,7 +140,6 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 <Badge color={STAGE_COLORS[row.current_stage] ?? 'gray'} size="sm">
                                     {STAGE_LABELS[row.current_stage] ?? row.current_stage}
                                 </Badge>
-                                <span className="text-[10px] text-gray-400 block mt-0.5">{row.status}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                                 {row.checklist_pre.is_submitted ? (
@@ -170,13 +172,6 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 ) : (
                                     <Badge color="gray" size="sm">Belum diisi</Badge>
                                 )}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right">
-                                <Link href={`/loos/${row.id}/fitout`}>
-                                    <Button variant="secondary" size="sm">
-                                        Proses Checklist →
-                                    </Button>
-                                </Link>
                             </td>
                         </tr>
                     ))}

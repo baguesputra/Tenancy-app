@@ -107,7 +107,9 @@ class LooFitoutController extends Controller
         $postConfig = config('loo_sections.fitout_checklist_post');
         $preHandoverConfig = config('loo_sections.pre_handover');
 
-        // Semua pemegang `loos.view` bisa melihat; mengisi dibatasi per departemen.
+        // Semua pemegang `loos.view` bisa melihat; mengisi dibatasi per
+        // departemen, tanpa gate stage (paralel sejak awal).
+        $terminal = in_array($loo->status, ['completed', 'cancelled'], true);
         $editableDepartments = $this->sections->editableFitoutDepartments($request->user());
 
         return Inertia::render('Loos/FitoutChecklist', [
@@ -118,9 +120,9 @@ class LooFitoutController extends Controller
             'preConfig' => $preConfig,
             'postConfig' => $postConfig,
             'preHandoverConfig' => $preHandoverConfig,
-            'canEditPre' => $editableDepartments !== [] && $this->stageReached($loo, 'ba_handover'),
-            'canEditPost' => $editableDepartments !== [] && $this->stageReached($loo, 'fitout'),
-            'canEditPreHandover' => $request->user()->can('loos.tenant_mgmt_edit') && $this->stageReached($loo, 'pre_handover'),
+            'canEditPre' => ! $terminal && $editableDepartments !== [],
+            'canEditPost' => ! $terminal && $editableDepartments !== [],
+            'canEditPreHandover' => ! $terminal && $request->user()->can('loos.tenant_mgmt_edit'),
             'editableDepartments' => $editableDepartments,
             'canGmAcknowledge' => $request->user()->can('loos.fitout_approve'),
         ]);
@@ -160,15 +162,5 @@ class LooFitoutController extends Controller
     {
         $user = $request->user();
         abort_unless($loo->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-    }
-
-    private function stageReached(Loo $loo, string $minStage): bool
-    {
-        if (in_array($loo->status, ['completed', 'cancelled'], true)) {
-            return true;
-        }
-
-        $stages = ['marketing', 'legal', 'accounting', 'tenant_mgmt', 'measurement', 'ba_handover', 'fitout', 'pre_handover'];
-        return array_search($loo->current_stage, $stages, true) >= array_search($minStage, $stages, true);
     }
 }
