@@ -35,9 +35,9 @@ class Loo extends Model
 
     protected $casts = [
         'loo_received_date' => 'date',
-        'submitted_at' => 'timestamp',
-        'completed_at' => 'timestamp',
-        'cancelled_at' => 'timestamp',
+        'submitted_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'track_expires_at' => 'datetime',
     ];
 

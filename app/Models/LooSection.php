@@ -19,8 +19,8 @@ class LooSection extends Model
 
     protected $casts = [
         'data' => 'array',
-        'filled_at' => 'timestamp',
-        'submitted_at' => 'timestamp',
+        'filled_at' => 'datetime',
+        'submitted_at' => 'datetime',
         'is_submitted' => 'boolean',
     ];
 
