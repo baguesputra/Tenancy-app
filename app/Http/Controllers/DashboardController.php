@@ -6,6 +6,7 @@ use App\Models\Approval;
 use App\Models\Inspection;
 use App\Models\InspectionSession;
 use App\Models\Loo;
+use App\Models\LooSection;
 use App\Models\PermitRequest;
 use App\Models\Tenancy;
 use App\Models\Tenant;
@@ -169,6 +170,7 @@ class DashboardController extends Controller
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
         $isMarketing = $user->hasRole('marketing_staff');
+        $canViewLoo = $user->can('loos.view');
 
         try {
             $month = Carbon::createFromFormat('Y-m', (string) $request->input('cal_month', now()->format('Y-m')))->startOfMonth();
@@ -252,6 +254,130 @@ class DashboardController extends Controller
                         'end' => $s->started_at?->toDateString(),
                         'status' => $s->status,
                         'url' => "/inspection-sessions/{$s->id}",
+                    ]);
+                }
+            }
+        }
+
+        // LOO events
+        if ($canViewLoo) {
+            $looQuery = Loo::query()
+                ->select(['id', 'loo_number', 'prospective_tenant_name', 'status', 'loo_received_date', 'submitted_at', 'completed_at', 'cancelled_at', 'track_expires_at', 'branch_id'])
+                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('loo_received_date', [$start->toDateString(), $end->toDateString()])
+                        ->orWhereBetween('submitted_at', [$start->toDateString(), $end->toDateString()])
+                        ->orWhereBetween('completed_at', [$start->toDateString(), $end->toDateString()])
+                        ->orWhereBetween('cancelled_at', [$start->toDateString(), $end->toDateString()])
+                        ->orWhereBetween('track_expires_at', [$start->toDateString(), $end->toDateString()]);
+                })
+                ->limit(200)
+                ->get();
+
+            foreach ($looQuery as $loo) {
+                $tenantName = $loo->prospective_tenant_name ?? 'Tenant prospektif';
+                $baseUrl = "/loos/{$loo->id}";
+
+                if ($loo->loo_received_date) {
+                    $events->push([
+                        'id' => "loo-received-{$loo->id}",
+                        'type' => 'loo_received',
+                        'title' => "LOO {$loo->loo_number} diterima — {$tenantName}",
+                        'start' => $loo->loo_received_date?->toDateString(),
+                        'end' => $loo->loo_received_date?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+                if ($loo->submitted_at) {
+                    $events->push([
+                        'id' => "loo-submitted-{$loo->id}",
+                        'type' => 'loo_submitted',
+                        'title' => "LOO {$loo->loo_number} disubmit — {$tenantName}",
+                        'start' => $loo->submitted_at?->toDateString(),
+                        'end' => $loo->submitted_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+                if ($loo->completed_at) {
+                    $events->push([
+                        'id' => "loo-completed-{$loo->id}",
+                        'type' => 'loo_completed',
+                        'title' => "LOO {$loo->loo_number} selesai — {$tenantName}",
+                        'start' => $loo->completed_at?->toDateString(),
+                        'end' => $loo->completed_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+                if ($loo->cancelled_at) {
+                    $events->push([
+                        'id' => "loo-cancelled-{$loo->id}",
+                        'type' => 'loo_cancelled',
+                        'title' => "LOO {$loo->loo_number} dibatalkan — {$tenantName}",
+                        'start' => $loo->cancelled_at?->toDateString(),
+                        'end' => $loo->cancelled_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+                if ($loo->track_expires_at) {
+                    $events->push([
+                        'id' => "loo-track-expired-{$loo->id}",
+                        'type' => 'loo_track_expired',
+                        'title' => "Tracking LOO {$loo->loo_number} expired — {$tenantName}",
+                        'start' => $loo->track_expires_at?->toDateString(),
+                        'end' => $loo->track_expires_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+            }
+
+            // LooSection events (milestone per divisi)
+            $sectionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant', 'pre_fitout', 'ba_handover', 'fitout_checklist', 'pre_handover'];
+            $sections = LooSection::whereIn('section_key', $sectionKeys)
+                ->whereHas('loo', function ($q) use ($branchScoped, $user, $start, $end) {
+                    $q->when($branchScoped, fn ($qq) => $qq->where('branch_id', $user->branch_id))
+                        ->where(function ($qq) use ($start, $end) {
+                            $qq->whereBetween('loo_sections.filled_at', [$start->toDateString(), $end->toDateString()])
+                                ->orWhereBetween('loo_sections.submitted_at', [$start->toDateString(), $end->toDateString()]);
+                        });
+                })
+                ->with(['loo:id,loo_number,prospective_tenant_name,status'])
+                ->limit(300)
+                ->get();
+
+            foreach ($sections as $section) {
+                $loo = $section->loo;
+                if (! $loo) {
+                    continue;
+                }
+                $tenantName = $loo->prospective_tenant_name ?? 'Tenant prospektif';
+                $baseUrl = "/loos/{$loo->id}";
+                $label = $section->section_label ?? $section->section_key;
+
+                if ($section->filled_at) {
+                    $events->push([
+                        'id' => "loo-section-filled-{$section->id}",
+                        'type' => 'section_filled',
+                        'title' => "{$label} diisi — LOO {$loo->loo_number} ({$tenantName})",
+                        'start' => $section->filled_at?->toDateString(),
+                        'end' => $section->filled_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+                }
+                if ($section->submitted_at) {
+                    $events->push([
+                        'id' => "loo-section-submitted-{$section->id}",
+                        'type' => 'section_submitted',
+                        'title' => "{$label} disubmit — LOO {$loo->loo_number} ({$tenantName})",
+                        'start' => $section->submitted_at?->toDateString(),
+                        'end' => $section->submitted_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
                     ]);
                 }
             }
