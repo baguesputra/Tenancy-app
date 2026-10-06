@@ -55,6 +55,7 @@ class AccessControlController extends Controller
 
     public function update(Role $role, Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         if ($role->name === 'super_admin') {
             abort(403, 'Role super_admin tidak bisa diubah.');
         }
@@ -84,6 +85,7 @@ class AccessControlController extends Controller
 
     public function updateScopes(Role $role, Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         if ($role->name === 'super_admin') {
             abort(403, 'Role super_admin tidak bisa diubah.');
         }

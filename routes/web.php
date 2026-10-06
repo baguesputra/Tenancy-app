@@ -294,6 +294,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [LooController::class, 'index'])->name('index');
         Route::get('/{loo}', [LooController::class, 'show'])->name('show');
         Route::get('/{loo}/files/{key}', [LooController::class, 'file'])->name('file');
+    });
+
+    Route::middleware('can:loos.edit')->prefix('loos')->name('loos.')->group(function () {
         Route::get('/{loo}/edit', [LooController::class, 'edit'])->name('edit');
     });
 
@@ -301,13 +304,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/{loo}/transition', [LooController::class, 'transition'])->name('transition');
         Route::post('/{loo}/sections/{key}', [LooController::class, 'section'])->name('section');
         Route::post('/{loo}/fitout/approve', [LooFitoutController::class, 'acknowledgeGm'])->name('fitout.approve');
+        Route::post('/{loo}/track-regenerate', [LooTrackController::class, 'regenerate'])->name('track.regenerate');
+        Route::post('/{loo}/track-extend', [LooTrackController::class, 'extend'])->name('track.extend');
     });
 
     Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
         Route::get('/{loo}/fitout', [LooFitoutController::class, 'show'])->name('fitout');
         Route::get('/{loo}/track-qr', [LooTrackController::class, 'qr'])->name('track.qr');
-        Route::post('/{loo}/track-regenerate', [LooTrackController::class, 'regenerate'])->name('track.regenerate');
-        Route::post('/{loo}/track-extend', [LooTrackController::class, 'extend'])->name('track.extend');
     });
 
     Route::middleware('can:loos.view')->get('/fitout-checklists', [LooFitoutController::class, 'index'])->name('fitout-checklists.index');

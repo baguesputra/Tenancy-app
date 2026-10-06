@@ -17,6 +17,7 @@ class UserManagementController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         $users = User::with(['branch:id,name', 'department:id,name', 'division:id,name', 'position:id,name', 'roles'])
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$request->search}%")
@@ -44,6 +45,7 @@ class UserManagementController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         $validated = $this->validateUser($request, null, true);
 
         $user = User::create([
@@ -64,6 +66,7 @@ class UserManagementController extends Controller
 
     public function update($id, Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         $user = User::findOrFail($id);
 
         // ponytail: user Gate readonly kecuali role — org/password ikut Gate
@@ -98,6 +101,7 @@ class UserManagementController extends Controller
 
     public function destroy($id, Request $request)
     {
+        abort_unless($request->user()->can('users.manage'), 403);
         if ((int) $id === $request->user()->id) {
             return back()->withErrors(['user' => 'Tidak bisa menghapus akun sendiri.']);
         }

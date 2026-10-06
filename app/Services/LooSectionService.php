@@ -61,7 +61,7 @@ class LooSectionService
      */
     public function editableFitoutDepartments(User $user): array
     {
-        if ($user->hasAnyRole(['admin', 'super_admin', 'manager']) || $user->can('loos.dashboard')) {
+        if ($user->can('loos.dashboard')) {
             return array_keys(self::FITOUT_DEPARTMENT_PERMISSIONS);
         }
 
