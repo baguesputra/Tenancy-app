@@ -33,14 +33,14 @@
         .sig .name { display: inline-block; border-bottom: 1px solid #111827; padding: 0 12px; font-weight: bold; }
         .sig .date { font-size: 9.5px; color: #4b5563; margin-top: 2px; }
         .sig .dots { color: #9ca3af; letter-spacing: 2px; }
-        .secbox { width: 100%; border: 1.5px solid #0F1E36; border-radius: 6px; border-collapse: collapse; margin-bottom: 4px; }
-        .secbox td { vertical-align: middle; padding: 8px 10px; }
-        .secbox .st-ok { font-size: 13px; font-weight: bold; }
-        .secbox .st-no { font-size: 13px; font-weight: bold; }
-        .secbox .prog { font-size: 10.5px; color: #374151; margin-top: 3px; }
-        .secbox .qr { text-align: center; width: 150px; }
-        .secbox .qr img { width: 130px; height: 130px; border: 1px solid #d1d5db; }
-        .secbox .qr .cap { font-size: 9px; color: #4b5563; margin-top: 3px; }
+        .secbox { width: 100%; border: 1px solid #9ca3af; border-radius: 4px; border-collapse: collapse; margin-bottom: 4px; }
+        .secbox td { vertical-align: middle; padding: 6px 8px; }
+        .secbox .st-ok { font-size: 12px; font-weight: bold; }
+        .secbox .st-no { font-size: 12px; font-weight: bold; }
+        .secbox .prog { font-size: 10px; color: #374151; margin-top: 2px; }
+        .secbox .qr { text-align: center; width: 118px; }
+        .secbox .qr img { width: 100px; height: 100px; border: 1px solid #d1d5db; }
+        .secbox .qr .cap { font-size: 8.5px; color: #4b5563; margin-top: 2px; }
         .foot { margin-top: 14px; border-top: 1px solid #d1d5db; padding-top: 6px; font-size: 9px; color: #6b7280; text-align: right; }
     </style>
 </head>
@@ -136,7 +136,32 @@
         </table>
     @endif
 
-    <h3 class="sec">Pengesahan</h3>
+    <h3 class="sec">Pemeriksaan Security</h3>
+    <table class="secbox">
+        <tr>
+            <td>
+                @if (($securityStep->status ?? null) === 'approved')
+                    <div class="st-ok">SUDAH DICEK FISIK</div>
+                    <div class="prog">
+                        Dicek oleh {{ $securityStep->approvedBy?->name ?? '—' }}, {{ $securityStep->approved_at?->locale('id')->translatedFormat('d F Y, H:i') }}<br>
+                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
+                    </div>
+                @else
+                    <div class="st-no">BELUM DICEK FISIK</div>
+                    <div class="prog">
+                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
+                    </div>
+                @endif
+            </td>
+            <td class="qr">
+                @if ($scanUrl)
+                    <img src="data:image/svg+xml;base64,{{ base64_encode((string) QrCode::size(180)->generate($scanUrl)) }}" alt="QR verifikasi">
+                @endif
+                <div class="cap">Pindai untuk verifikasi di pintu</div>
+            </td>
+        </tr>
+    </table>
+
     <table class="sig">
         <tr>
             @foreach ([$leftSigner, $rightSigner] as $s)
@@ -162,32 +187,6 @@
                     @endif
                 </td>
             @endforeach
-        </tr>
-    </table>
-
-    <h3 class="sec">Pemeriksaan Security</h3>
-    <table class="secbox">
-        <tr>
-            <td>
-                @if (($securityStep->status ?? null) === 'approved')
-                    <div class="st-ok">SUDAH DICEK FISIK</div>
-                    <div class="prog">
-                        Dicek oleh {{ $securityStep->approvedBy?->name ?? '—' }}, {{ $securityStep->approved_at?->locale('id')->translatedFormat('d F Y, H:i') }}<br>
-                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
-                    </div>
-                @else
-                    <div class="st-no">BELUM DICEK FISIK</div>
-                    <div class="prog">
-                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
-                    </div>
-                @endif
-            </td>
-            <td class="qr">
-                @if ($scanUrl)
-                    <img src="data:image/svg+xml;base64,{{ base64_encode((string) QrCode::size(220)->generate($scanUrl)) }}" alt="QR verifikasi">
-                @endif
-                <div class="cap">Pindai untuk verifikasi di pintu</div>
-            </td>
         </tr>
     </table>
 
