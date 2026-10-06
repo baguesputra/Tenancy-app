@@ -269,6 +269,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/permit-requests/{permitRequest}/cancel', [PermitRequestController::class, 'cancel'])->name('permit-requests.cancel');
     });
 
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/pdf', [PermitRequestController::class, 'pdf'])->name('permit-requests.pdf');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
     Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
 

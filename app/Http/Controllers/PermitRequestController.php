@@ -10,7 +10,10 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermitRequestService;
 use App\Services\TenantScopeService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -223,6 +226,76 @@ class PermitRequestController extends Controller
                 && str_contains($permitRequest->requested_by_type ?? '', 'User')
                 && $this->canManageForm($user, $permitRequest),
         ]);
+    }
+
+    public function pdf(PermitRequest $permitRequest, Request $request)
+    {
+        $user = $request->user();
+        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+
+        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
+
+        $requestedBy = $permitRequest->requestedBy;
+        $requestedByLabel = $requestedBy instanceof User
+            ? $requestedBy->name
+            : ($permitRequest->tenant->name ?? $requestedBy?->username ?? '—');
+
+        $activityLabels = collect($permitRequest->activity_types ?? [])
+            ->map(fn ($v) => collect(self::ACTIVITY_TYPES)->firstWhere('value', $v)['label'] ?? $v)
+            ->values();
+
+        $location = collect([$permitRequest->floor_snapshot, $permitRequest->block_snapshot, $permitRequest->unit_number_snapshot])
+            ->filter()->join(' / ') ?: '—';
+
+        $time = ($permitRequest->work_start_time?->format('H:i') ?? '').($permitRequest->work_end_time ? '–'.$permitRequest->work_end_time->format('H:i') : '');
+        $schedule = ($permitRequest->work_start_date?->translatedFormat('d F Y') ?? '—').($permitRequest->work_end_date && $permitRequest->work_end_date->ne($permitRequest->work_start_date) ? ' s/d '.$permitRequest->work_end_date->translatedFormat('d F Y') : '');
+
+        $goodsPhotos = [];
+        foreach ($permitRequest->goods as $good) {
+            $goodsPhotos[$good->id] = $this->photoDataUri($good->photo_path);
+        }
+
+        $statusLabels = [
+            'pending' => 'Menunggu Persetujuan',
+            'completed' => 'Selesai',
+            'approved' => 'Disetujui',
+            'rejected' => 'Ditolak',
+            'cancelled' => 'Dibatalkan',
+        ];
+
+        $pdf = Pdf::loadView('pdf.permit-letter', [
+            'permit' => $permitRequest,
+            'requestedByLabel' => $requestedByLabel,
+            'activityLabels' => $activityLabels,
+            'location' => $location,
+            'schedule' => $schedule,
+            'time' => $time !== '' ? str_replace(':', '.', $time).' WITA' : '—',
+            'requestDate' => $permitRequest->request_date?->translatedFormat('d F Y') ?? '—',
+            'goodsPhotos' => $goodsPhotos,
+            'statusLabel' => $statusLabels[$permitRequest->status] ?? $permitRequest->status,
+            'printedAt' => now()->translatedFormat('d F Y, H:i').' WITA',
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Surat-Izin-{$safeNumber}.pdf");
+    }
+
+    private function photoDataUri(?string $path): ?string
+    {
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => 'image/jpeg',
+        };
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
     }
 
     public function revise(PermitRequest $permitRequest, RevisePermitRequestRequest $request)

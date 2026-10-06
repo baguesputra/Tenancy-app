@@ -31,9 +31,11 @@ export default function Show({ permit, can_revise, can_cancel }) {
     };
 
     const [verifyingGoodId, setVerifyingGoodId] = useState(null);
+    const [expandedGoodId, setExpandedGoodId] = useState(null);
     const [workers, setWorkers] = useState(permit.workers);
     const [goods, setGoods] = useState(permit.goods);
     const [pendingWorkers, setPendingWorkers] = useState([]);
+    const expandedGood = goods.find((g) => g.id === expandedGoodId) ?? null;
 
     useEffect(() => { setWorkers(permit.workers); }, [permit.workers]);
     useEffect(() => {
@@ -73,7 +75,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
-            onSuccess: () => scrollToId(`good-${goodId}`),
+            onSuccess: () => { setExpandedGoodId(null); scrollToId(`good-${goodId}`); },
             onError: () => {
                 URL.revokeObjectURL(previewUrl);
                 setGoods((list) => list.map((g) => g.id === goodId ? prev : g));
@@ -135,7 +137,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
 
     return (
         <AppLayout>
-            <div className="sticky top-14 z-10 bg-[#F7F8FA]/95 backdrop-blur border-b border-[#E2E5EA] px-6 sm:px-8 py-3">
+            <div className="sticky top-14 z-10 bg-[#F7F8FA]/95 backdrop-blur border-b border-[#E2E5EA] px-6 sm:px-8 py-3 print:hidden">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -149,18 +151,30 @@ export default function Show({ permit, can_revise, can_cancel }) {
                             {locationTitle} — {permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
                         </p>
                     </div>
-                    {canCompleteSecurityCheck && (
-                        <div className="w-36 shrink-0">
-                            <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                                <span>Progress</span><span>{pct}%</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                        {canCompleteSecurityCheck && (
+                            <div className="w-36">
+                                <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                                    <span>Progress</span><span>{pct}%</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[#0F1E36] transition-all" style={{ width: `${pct}%` }} />
+                                </div>
                             </div>
-                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-[#0F1E36] transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                        </div>
-                    )}
+                        )}
+                        <a
+                            href={`/permit-requests/${permit.id}/pdf`}
+                            aria-label="Unduh surat izin sebagai PDF"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                            </svg>
+                            <span className="hidden sm:inline">Unduh PDF</span>
+                        </a>
+                    </div>
                 </div>
-                <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto" aria-label="Lompat section">
+                <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto print:hidden" aria-label="Lompat section">
                     {[
                         ['#detail', 'Detail'],
                         ['#pekerja', `Pekerja ${workersDone}/${workers.length}`],
@@ -177,126 +191,190 @@ export default function Show({ permit, can_revise, can_cancel }) {
             <div className="px-6 sm:px-8 py-6 flex-1 pb-28 lg:pb-6">
                 {permit.is_flagged && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm p-3.5 rounded-lg mb-4 flex items-center gap-2">
-                        <span>⚠</span> Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
+                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        Ada ketidaksesuaian yang tercatat saat pemeriksaan fisik.
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+                <div className="permit-print-grid grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
                     <div>
                         <div id="detail" className="scroll-mt-40">
-                            <FormSection title="Detail Permohonan" description={`${category.label} — ${locationTitle}`}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                    <InfoItem label="Kategori" value={<Badge color={category.color}>{category.label}</Badge>} />
-                                    <InfoItem label="Nomor Surat" value={permit.permit_number} />
-                                    <InfoItem label="Diajukan Oleh" value={permit.requested_by_label} />
-                                    <InfoItem label="Tanggal Pengajuan" value={formatDateID(permit.request_date)} />
-                                    <InfoItem label="Lokasi" value={`${permit.store_name_snapshot} — ${location}`} />
-                                    <InfoItem label="Penanggung Jawab" value={`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`} />
-                                    <InfoItem
-                                        label="Jenis Kegiatan"
-                                        value={
-                                            <div className="flex flex-wrap gap-1.5 mt-0.5">
-                                                {activityLabels.map((label) => (
-                                                    <Badge key={label} color="blue">{label}</Badge>
-                                                ))}
-                                            </div>
-                                        }
-                                        className="sm:col-span-2"
-                                    />
-                                    <InfoItem label="Jenis Pekerjaan" value={permit.job_type || '—'} className="sm:col-span-2" />
-                                    <InfoItem label="Tanggal Pelaksanaan" value={formatDateRange(permit.work_start_date, permit.work_end_date)} />
-                                    <InfoItem label="Jam Pelaksanaan" value={formatTimeRange(permit.work_start_time, permit.work_end_time)} />
-                                    <InfoItem label="Akses Masuk/Keluar" value={permit.access_route || '—'} className="sm:col-span-2" />
-                                    {permit.notes && (
-                                        <InfoItem label="Keterangan" value={permit.notes} className="sm:col-span-2" />
-                                    )}
+                            <article className="permit-doc bg-white rounded-2xl border border-[#E2E5EA] shadow-sm px-6 py-8 sm:px-10 mb-6">
+                                <div className="permit-doc-kop text-center border-b-2 border-[#0F1E36] pb-5">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Surat Izin Kegiatan</h2>
+                                    <p className="text-sm text-gray-600 mt-1.5">
+                                        Nomor: <span className="font-semibold text-gray-900">{permit.permit_number}</span>
+                                    </p>
+                                    <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                                        <Badge color={category.color}>{category.label}</Badge>
+                                        <Badge color={statusColor[permit.status] ?? 'gray'}>{statusLabel[permit.status] ?? permit.status}</Badge>
+                                        {permit.is_flagged && <Badge color="amber">Perlu perhatian</Badge>}
+                                    </div>
                                 </div>
 
+                                <DocSection numeral="I" title="Data Pemohon">
+                                    <DocRow label="Kategori"><Badge color={category.color}>{category.label}</Badge></DocRow>
+                                    <DocRow label="Diajukan Oleh">{permit.requested_by_label}</DocRow>
+                                    <DocRow label="Tanggal Pengajuan">{formatDateID(permit.request_date)}</DocRow>
+                                    <DocRow label="Penanggung Jawab">{`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`}</DocRow>
+                                </DocSection>
+
+                                <DocSection numeral="II" title="Pelaksanaan Kegiatan">
+                                    <DocRow label="Lokasi">{`${permit.store_name_snapshot} — ${location}`}</DocRow>
+                                    <DocRow label="Jenis Kegiatan">
+                                        <span className="flex flex-wrap gap-1.5">
+                                            {activityLabels.map((label) => (
+                                                <Badge key={label} color="blue">{label}</Badge>
+                                            ))}
+                                        </span>
+                                    </DocRow>
+                                    <DocRow label="Jenis Pekerjaan">{permit.job_type || '—'}</DocRow>
+                                    <DocRow label="Tanggal Pelaksanaan">{formatDateRange(permit.work_start_date, permit.work_end_date)}</DocRow>
+                                    <DocRow label="Jam Pelaksanaan">{formatTimeRange(permit.work_start_time, permit.work_end_time)}</DocRow>
+                                    <DocRow label="Akses Masuk / Keluar">{permit.access_route || '—'}</DocRow>
+                                    {permit.notes && <DocRow label="Keterangan">{permit.notes}</DocRow>}
+                                </DocSection>
+
                                 {(permit.is_external || permit.contractor_company) && (
-                                    <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                            {category.key === 'vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}
-                                        </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                                            <InfoItem label="Perusahaan" value={permit.contractor_company || '—'} />
-                                            <InfoItem label="Penanggung Jawab" value={permit.contractor_pic || '—'} />
-                                            <InfoItem label="Telp/HP/Fax" value={permit.contractor_phone || '—'} />
-                                            <InfoItem label="Alamat" value={permit.contractor_address || '—'} />
-                                        </div>
-                                    </div>
+                                    <DocSection numeral="III" title={category.key === 'vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}>
+                                        <DocRow label="Perusahaan">{permit.contractor_company || '—'}</DocRow>
+                                        <DocRow label="Penanggung Jawab">{permit.contractor_pic || '—'}</DocRow>
+                                        <DocRow label="Telp / HP / Fax">{permit.contractor_phone || '—'}</DocRow>
+                                        <DocRow label="Alamat">{permit.contractor_address || '—'}</DocRow>
+                                    </DocSection>
                                 )}
 
                                 {permit.accompanying_departments?.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <p className="text-xs text-gray-500 mb-1.5">Departemen Pendampingan</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {permit.accompanying_departments.map((d) => (
-                                                <Badge key={d.id} color="gray">{d.name}</Badge>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <DocSection numeral={(permit.is_external || permit.contractor_company) ? 'IV' : 'III'} title="Departemen Pendampingan">
+                                        <DocRow label="Departemen">
+                                            <span className="flex flex-wrap gap-1.5">
+                                                {permit.accompanying_departments.map((d) => (
+                                                    <Badge key={d.id} color="gray">{d.name}</Badge>
+                                                ))}
+                                            </span>
+                                        </DocRow>
+                                    </DocSection>
                                 )}
-                            </FormSection>
+                            </article>
                         </div>
 
                         <FormSection title="Pemeriksaan Fisik" description={canCompleteSecurityCheck ? `${doneTasks}/${totalTasks} selesai — ketuk untuk cek` : 'Hasil cek fisik'}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div id="pekerja" className="scroll-mt-40">
+                                <div id="pekerja" className="scroll-mt-40 overflow-x-auto">
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
                                         Daftar Pekerja <span className="text-gray-400">({workersDone}/{workers.length})</span>
                                     </h3>
-                                    <div className="space-y-1">
-                                        {workers.map((w) => (
-                                            <div key={w.id} id={`worker-${w.id}`} className="flex justify-between items-center gap-2 py-2 scroll-mt-40 min-h-[44px]">
-                                                <span className="text-sm text-gray-700">{w.name}</span>
-                                                {canCompleteSecurityCheck ? (
-                                                    <button
-                                                        onClick={() => toggleWorker(w.id)}
-                                                        disabled={pendingWorkers.includes(w.id)}
-                                                        className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors disabled:opacity-60 min-h-[32px]
-                                                            ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                                    >
-                                                        {pendingWorkers.includes(w.id) ? '…' : w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
-                                                    </button>
-                                                ) : (
-                                                    <Badge color={w.is_present ? 'green' : 'gray'}>
-                                                        {w.is_present ? '✓ Hadir' : 'Belum dicek'}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                                        <thead>
+                                            <tr className="bg-[#0F1E36] text-white text-left">
+                                                <th scope="col" className="w-10 px-3 py-2.5 font-semibold">No</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold">Nama Pekerja</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold text-right">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {workers.map((w, i) => (
+                                                <tr key={w.id} id={`worker-${w.id}`} className="odd:bg-white even:bg-gray-50 scroll-mt-40">
+                                                    <td className="px-3 py-2.5 text-gray-500">{i + 1}</td>
+                                                    <td className="px-3 py-2.5 text-gray-900">{w.name}</td>
+                                                    <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                                                        {canCompleteSecurityCheck ? (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => toggleWorker(w.id)}
+                                                                    disabled={pendingWorkers.includes(w.id)}
+                                                                    className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors disabled:opacity-60 min-h-[32px] print:hidden
+                                                                        ${w.is_present ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                                                >
+                                                                    {pendingWorkers.includes(w.id) ? '…' : w.is_present ? '✓ Hadir' : 'Tandai Hadir'}
+                                                                </button>
+                                                                <span className="hidden print:inline">
+                                                                    <Badge color={w.is_present ? 'green' : 'gray'}>
+                                                                        {w.is_present ? '✓ Hadir' : 'Belum dicek'}
+                                                                    </Badge>
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <Badge color={w.is_present ? 'green' : 'gray'}>
+                                                                {w.is_present ? '✓ Hadir' : 'Belum dicek'}
+                                                            </Badge>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
 
-                                <div id="barang" className="scroll-mt-40">
+                                <div id="barang" className="scroll-mt-40 overflow-x-auto">
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
                                         Daftar Barang <span className="text-gray-400">({goodsDone}/{goods.length})</span>
                                     </h3>
-                                    <div className="space-y-4">
-                                        {goods.map((g) => (
-                                            <div key={g.id} id={`good-${g.id}`} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 scroll-mt-40 min-h-[120px]">
-                                                <div className="flex justify-between items-center gap-2 mb-2">
-                                                    <span className="text-sm text-gray-700">{g.description} ({g.quantity_note})</span>
-                                                    <Badge color={g.is_verified ? 'green' : 'gray'}>
-                                                        {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
-                                                    </Badge>
-                                                </div>
-                                                {canCompleteSecurityCheck ? (
-                                                    <GoodPhotoCapture
-                                                        good={g}
-                                                        canEdit={canCompleteSecurityCheck}
-                                                        onSubmit={verifyGood}
-                                                        onNoteUpdate={setGoodNote}
-                                                        submitting={verifyingGoodId === g.id}
-                                                    />
-                                                ) : (
-                                                    g.photo_url && (
-                                                        <img src={g.photo_url} alt={`Foto ${g.description}`} loading="lazy" className="w-20 h-20 object-cover rounded-lg border border-gray-200 mt-2" />
-                                                    )
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                                        <thead>
+                                            <tr className="bg-[#0F1E36] text-white text-left">
+                                                <th scope="col" className="w-10 px-3 py-2.5 font-semibold">No</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold">Barang</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold">Jumlah</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold">Foto</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold text-right">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {goods.map((g, i) => (
+                                                <tr key={g.id} id={`good-${g.id}`} className="odd:bg-white even:bg-gray-50 scroll-mt-40">
+                                                    <td className="px-3 py-2.5 text-gray-500 align-top">{i + 1}</td>
+                                                    <td className="px-3 py-2.5 text-gray-900 align-top">
+                                                        {g.description}
+                                                        {g.mismatch_note && (
+                                                            <p className="text-xs text-amber-700 mt-0.5">Catatan: {g.mismatch_note}</p>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap align-top">{g.quantity_note}</td>
+                                                    <td className="px-3 py-2.5 align-top">
+                                                        {g.photo_url ? (
+                                                            <img src={g.photo_url} alt={`Foto ${g.description}`} loading="lazy" className="w-12 h-12 object-cover rounded-md border border-gray-200" />
+                                                        ) : (
+                                                            <span className="text-gray-400">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right whitespace-nowrap align-top">
+                                                        <Badge color={g.is_verified ? 'green' : 'gray'}>
+                                                            {g.is_verified ? '✓ Terverifikasi' : 'Belum dicek'}
+                                                        </Badge>
+                                                        {canCompleteSecurityCheck && !g.is_verified && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setExpandedGoodId(expandedGoodId === g.id ? null : g.id);
+                                                                    setTimeout(() => document.getElementById('good-verify')?.scrollIntoView({ block: 'nearest' }), 60);
+                                                                }}
+                                                                className="print:hidden ml-2 text-xs font-medium px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors min-h-[32px]"
+                                                            >
+                                                                {expandedGoodId === g.id ? 'Tutup' : 'Verifikasi'}
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {canCompleteSecurityCheck && expandedGood && !expandedGood.is_verified && (
+                                        <div id="good-verify" className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-3 print:hidden scroll-mt-40">
+                                            <p className="text-xs font-medium text-gray-700 mb-2">
+                                                Verifikasi: {expandedGood.description} ({expandedGood.quantity_note})
+                                            </p>
+                                            <GoodPhotoCapture
+                                                good={expandedGood}
+                                                canEdit={canCompleteSecurityCheck}
+                                                onSubmit={verifyGood}
+                                                onNoteUpdate={setGoodNote}
+                                                submitting={verifyingGoodId === expandedGood.id}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </FormSection>
@@ -304,12 +382,12 @@ export default function Show({ permit, can_revise, can_cancel }) {
 
                     <div id="approval" className="lg:sticky lg:top-[168px] space-y-4 scroll-mt-40">
                         {can_revise && (
-                            <Button variant="secondary" onClick={() => setReviseOpen(true)} className="w-full justify-center">
+                            <Button variant="secondary" onClick={() => setReviseOpen(true)} className="w-full justify-center print:hidden">
                                 Ajukan Revisi
                             </Button>
                         )}
                         {can_cancel && (
-                            <Button variant="danger" onClick={cancelPermit} className="w-full justify-center">
+                            <Button variant="danger" onClick={cancelPermit} className="w-full justify-center print:hidden">
                                 Batalkan Pengajuan
                             </Button>
                         )}
@@ -349,7 +427,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
                                         )}
 
                                         {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (
-                                            <div className="mt-2.5 flex gap-2">
+                                            <div className="mt-2.5 flex gap-2 print:hidden">
                                                 <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                                     Approve
                                                 </Button>
@@ -360,7 +438,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
                                         )}
 
                                         {rejectingId === a.id && (
-                                            <div className="mt-2.5">
+                                            <div className="mt-2.5 print:hidden">
                                                 <Textarea
                                                     value={reason}
                                                     onChange={(e) => setReason(e.target.value)}
@@ -379,7 +457,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
                         </FormSection>
 
                         {canCompleteSecurityCheck && (
-                            <Button variant="primary" onClick={completeSecurityCheck} disabled={!allChecked} className="w-full !py-3 hidden lg:inline-flex">
+                            <Button variant="primary" onClick={completeSecurityCheck} disabled={!allChecked} className="w-full !py-3 hidden lg:inline-flex print:hidden">
                                 Selesaikan Pengecekan ({doneTasks}/{totalTasks})
                             </Button>
                         )}
@@ -388,7 +466,7 @@ export default function Show({ permit, can_revise, can_cancel }) {
             </div>
 
             {canCompleteSecurityCheck && (
-                <div className="lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3">
+                <div className="lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3 print:hidden">
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-700">{doneTasks}/{totalTasks} dicek</p>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1">
@@ -410,11 +488,22 @@ export default function Show({ permit, can_revise, can_cancel }) {
     );
 }
 
-function InfoItem({ label, value, className = '' }) {
+function DocSection({ numeral, title, children }) {
     return (
-        <div className={className}>
-            <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-            <div className="text-sm text-gray-800">{value}</div>
+        <section className="permit-doc-section mt-7">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-[#0F1E36] border-b border-gray-200 pb-2">
+                {numeral}. {title}
+            </h3>
+            <dl className="divide-y divide-gray-100">{children}</dl>
+        </section>
+    );
+}
+
+function DocRow({ label, children }) {
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-0.5 sm:gap-4 py-2.5">
+            <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 sm:pt-0.5">{label}</dt>
+            <dd className="text-sm text-gray-900 leading-relaxed">{children}</dd>
         </div>
     );
 }
