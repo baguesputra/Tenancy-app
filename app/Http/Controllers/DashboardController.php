@@ -169,7 +169,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
-        $isMarketing = $user->hasRole('marketing_staff');
+        $isMarketing = $user->hasRole('marketing');
         $canViewLoo = $user->can('loos.view');
 
         try {

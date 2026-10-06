@@ -59,7 +59,7 @@ class LooController extends Controller
     ];
 
     // Role ini hanya boleh membuka file Cover LOO.
-    private const COVER_ONLY_ROLES = ['tenancy_staff', 'tenant_mgmt_staff', 'tenant_mgmt_manager'];
+    private const COVER_ONLY_ROLES = ['tenancy_staff', 'tenant_mgmt'];
 
     public function index(Request $request)
     {

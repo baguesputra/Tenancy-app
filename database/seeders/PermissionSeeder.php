@@ -11,9 +11,9 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            'tenants.view', 'tenants.create', 'tenants.edit', 'tenants.delete',
+            'tenants.view', 'tenants.edit', 'tenants.delete',
             'units.view', 'units.create', 'units.edit', 'units.delete',
-            'tenancies.view', 'tenancies.create', 'tenancies.edit', 'tenancies.delete',
+            'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view', 'categories.manage',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
@@ -34,10 +34,13 @@ class PermissionSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
+        // Cabut permission mati (tanpa route): tenants.create, tenancies.create.
+        Permission::whereIn('name', ['tenants.create', 'tenancies.create'])->delete();
+
         $this->assignRolePermissions('admin', [
-            'tenants.view', 'tenants.create', 'tenants.edit', 'tenants.delete',
+            'tenants.view', 'tenants.edit', 'tenants.delete',
             'units.view', 'units.create', 'units.edit', 'units.delete',
-            'tenancies.view', 'tenancies.create', 'tenancies.edit', 'tenancies.delete',
+            'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view', 'categories.manage',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
@@ -54,9 +57,9 @@ class PermissionSeeder extends Seeder
         ]);
 
         $this->assignRolePermissions('manager', [
-            'tenants.view', 'tenants.create', 'tenants.edit', 'tenants.delete',
+            'tenants.view', 'tenants.edit', 'tenants.delete',
             'units.view', 'units.create', 'units.edit', 'units.delete',
-            'tenancies.view', 'tenancies.create', 'tenancies.edit', 'tenancies.delete',
+            'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
@@ -65,12 +68,12 @@ class PermissionSeeder extends Seeder
         ]);
 
         $this->assignRolePermissions('tenancy_staff', [
-            'tenants.view', 'tenants.create', 'tenants.edit',
+            'tenants.view', 'tenants.edit',
             'units.view', 'units.create', 'units.edit',
-            'tenancies.view', 'tenancies.create', 'tenancies.edit',
+            'tenancies.view', 'tenancies.edit',
             'categories.view',
             'sidak.view', 'sidak.create',
-            'permits.view', 'permits.approve',
+            'permits.view', 'permits.create', 'permits.approve',
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 
@@ -88,9 +91,11 @@ class PermissionSeeder extends Seeder
             'loos.view', 'loos.engineering_edit', 'loos.transition',
         ]);
 
-        $this->assignRolePermissions('marketing_staff', [
-            'tenants.view', 'tenants.create', 'tenants.edit',
+        // Marketing: gabungan marketing_staff (permits+tenants) + marketing_loo_input (loos).
+        $this->assignRolePermissions('marketing', [
+            'tenants.view', 'tenants.edit',
             'permits.view', 'permits.create', 'permits.approve',
+            'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('finance_staff', [
@@ -99,39 +104,23 @@ class PermissionSeeder extends Seeder
             'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
         ]);
 
-        // LOO — Marketing: input LOO baru (cover + isi), submit ke legal
-        $this->assignRolePermissions('marketing_loo_input', [
-            'tenants.view',
-            'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
-        ]);
-
-        // LOO — Legal: isi section legalitas, review isi LOO
-        $this->assignRolePermissions('legal_staff', [
-            'loos.view', 'loos.legal_edit', 'loos.legal_submit', 'loos.transition',
-        ]);
-        $this->assignRolePermissions('legal_manager', [
+        // Legal: gabungan legal_staff + legal_manager (dulu identik).
+        $this->assignRolePermissions('legal', [
             'loos.view', 'loos.legal_edit', 'loos.legal_submit', 'loos.transition',
         ]);
 
-        // LOO — Accounting: isi biaya/termin, measurement, hitung ulang luas
-        $this->assignRolePermissions('accounting_staff', [
-            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
-            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
-        ]);
-        $this->assignRolePermissions('accounting_manager', [
+        // Accounting: gabungan accounting_staff + accounting_manager.
+        $this->assignRolePermissions('accounting', [
             'loos.view', 'loos.create', 'loos.accounting_edit', 'loos.accounting_submit',
             'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
         ]);
 
-        // LOO — Tenant Management: section manajemen tenant, pre-fitout, BA, fitout
-        $this->assignRolePermissions('tenant_mgmt_staff', [
-            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
-        ]);
-        $this->assignRolePermissions('tenant_mgmt_manager', [
+        // Tenant Management: gabungan tenant_mgmt_staff + tenant_mgmt_manager (dulu identik).
+        $this->assignRolePermissions('tenant_mgmt', [
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 
-        // LOO — GM: approval fitout + monitoring dashboard
+        // GM: approval fitout + monitoring dashboard
         $this->assignRolePermissions('gm_approval', [
             'loos.view', 'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
         ]);

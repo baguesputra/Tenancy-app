@@ -14,7 +14,7 @@ class StorePermitRequestRequest extends FormRequest
     public function rules(): array
     {
         $isPortal = $this->routeIs('tenant-portal.*');
-        $isRoleMarketing = ! $isPortal && $this->user('web')?->hasRole('marketing_staff');
+        $isRoleMarketing = ! $isPortal && $this->user('web')?->hasRole('marketing');
         // ponytail: mode ikut form, bukan cuma role — marketing paksa pameran, staff bebas pilih
         $isExhibition = ! $isPortal && ($isRoleMarketing || $this->input('form_mode') === 'pameran');
 

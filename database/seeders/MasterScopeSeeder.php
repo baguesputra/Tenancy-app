@@ -11,7 +11,7 @@ class MasterScopeSeeder extends Seeder
 {
     public function run(): void
     {
-        $marketing = Role::firstOrCreate(['name' => 'marketing_staff']);
+        $marketing = Role::firstOrCreate(['name' => 'marketing']);
         $tenancy = Role::firstOrCreate(['name' => 'tenancy_staff']);
         $oc = TenantCategory::where('name', 'Open Counter')->first();
         if (! $oc) {

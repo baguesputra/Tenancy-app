@@ -54,7 +54,7 @@ class UserSeeder extends Seeder
             ['employee_number' => 'TOP-000006'],
             ['name' => 'Staff Marketing', 'branch_id' => $branchA->id, 'department_id' => $marketingDept->id, 'password' => bcrypt('password'), 'must_change_password' => false]
         );
-        $marketingStaff->syncRoles(['marketing_staff']);
+        $marketingStaff->syncRoles(['marketing']);
 
         $financeStaff = User::firstOrCreate(
             ['employee_number' => 'TOP-000007'],

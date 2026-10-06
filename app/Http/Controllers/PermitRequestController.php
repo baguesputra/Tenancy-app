@@ -36,7 +36,7 @@ class PermitRequestController extends Controller
         }
 
         return $this->isPameranForm($permit)
-            ? $user->hasRole('marketing_staff')
+            ? $user->hasRole('marketing')
             : $user->hasRole('tenancy_staff');
     }
 
@@ -51,7 +51,7 @@ class PermitRequestController extends Controller
 
     public function index(Request $request)
     {
-        $isMarketing = $request->user()->hasRole('marketing_staff');
+        $isMarketing = $request->user()->hasRole('marketing');
 
         $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
@@ -85,7 +85,7 @@ class PermitRequestController extends Controller
         $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 
         $userDepartmentId = $request->user()->department_id;
-        $marketingIds = Role::where('name', 'marketing_staff')->first()?->users()->pluck('users.id')->all() ?? [];
+        $marketingIds = Role::where('name', 'marketing')->first()?->users()->pluck('users.id')->all() ?? [];
 
         $permits->getCollection()->transform(function (PermitRequest $permit) use ($userDepartmentId, $marketingIds) {
             $currentStep = $permit->approvals->firstWhere('status', 'pending');
@@ -152,7 +152,7 @@ class PermitRequestController extends Controller
     public function create(Request $request)
     {
         // ponytail: marketing paksa pameran; non-marketing bebas ?mode=umum|pameran
-        $isRoleMarketing = $request->user()->hasRole('marketing_staff');
+        $isRoleMarketing = $request->user()->hasRole('marketing');
         $mode = $isRoleMarketing ? 'pameran' : ($request->query('mode') === 'pameran' ? 'pameran' : 'umum');
         $isExhibition = $mode === 'pameran';
 
@@ -176,7 +176,7 @@ class PermitRequestController extends Controller
 
     public function store(StorePermitRequestRequest $request)
     {
-        $isRoleMarketing = $request->user()->hasRole('marketing_staff');
+        $isRoleMarketing = $request->user()->hasRole('marketing');
         $isExhibition = $isRoleMarketing || $request->input('form_mode') === 'pameran';
 
         if ($isExhibition) {
@@ -206,7 +206,7 @@ class PermitRequestController extends Controller
     {
         $user = $request->user();
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-        abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
@@ -233,7 +233,7 @@ class PermitRequestController extends Controller
     {
         $user = $request->user();
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-        abort_if($user->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
@@ -324,9 +324,9 @@ class PermitRequestController extends Controller
     {
         abort_unless($permitRequest->status === 'pending', 422, 'Hanya izin pending yang bisa direvisi.');
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
-        abort_if($request->user()->hasRole('marketing_staff') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_if($request->user()->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
-            $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing_staff.' : 'Revisi form tenant hanya oleh tenancy_staff.');
+            $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing.' : 'Revisi form tenant hanya oleh tenancy_staff.');
 
         $validated = $request->validated();
 
@@ -343,7 +343,7 @@ class PermitRequestController extends Controller
         }
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
-            $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing_staff.' : 'Pembatalan form tenant hanya oleh tenancy_staff.');
+            $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing.' : 'Pembatalan form tenant hanya oleh tenancy_staff.');
 
         $this->service->cancel($permitRequest);
 
