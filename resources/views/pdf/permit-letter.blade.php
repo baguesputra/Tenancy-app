@@ -25,6 +25,22 @@
         .sign { margin-top: 16px; }
         .sign table { width: 100%; border-collapse: collapse; }
         .sign td { vertical-align: top; padding: 3px 4px; font-size: 10.5px; }
+        table.sig { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        table.sig td { width: 50%; text-align: center; vertical-align: top; padding: 6px 10px; }
+        .sig .role { font-size: 11px; font-weight: bold; }
+        .sig .verdict { font-size: 11px; font-weight: bold; margin-top: 4px; }
+        .sig .space { height: 52px; }
+        .sig .name { display: inline-block; border-bottom: 1px solid #111827; padding: 0 12px; font-weight: bold; }
+        .sig .date { font-size: 9.5px; color: #4b5563; margin-top: 2px; }
+        .sig .dots { color: #9ca3af; letter-spacing: 2px; }
+        .secbox { width: 100%; border: 1.5px solid #0F1E36; border-radius: 6px; border-collapse: collapse; margin-bottom: 4px; }
+        .secbox td { vertical-align: middle; padding: 8px 10px; }
+        .secbox .st-ok { font-size: 13px; font-weight: bold; }
+        .secbox .st-no { font-size: 13px; font-weight: bold; }
+        .secbox .prog { font-size: 10.5px; color: #374151; margin-top: 3px; }
+        .secbox .qr { text-align: center; width: 150px; }
+        .secbox .qr img { width: 130px; height: 130px; border: 1px solid #d1d5db; }
+        .secbox .qr .cap { font-size: 9px; color: #4b5563; margin-top: 3px; }
         .foot { margin-top: 14px; border-top: 1px solid #d1d5db; padding-top: 6px; font-size: 9px; color: #6b7280; text-align: right; }
     </style>
 </head>
@@ -121,27 +137,59 @@
     @endif
 
     <h3 class="sec">Pengesahan</h3>
-    <div class="sign">
-        <table>
-            @foreach ($permit->approvals as $a)
-                <tr>
-                    <td style="width:170px">{{ $a->label }}</td>
-                    <td>
-                        @if ($a->status === 'approved')
-                            Disetujui oleh {{ $a->approvedBy?->name ?? '—' }}, {{ $a->approved_at?->translatedFormat('d F Y, H:i') }}
-                        @elseif ($a->status === 'rejected')
-                            Ditolak oleh {{ $a->approvedBy?->name ?? '—' }}, {{ $a->approved_at?->translatedFormat('d F Y, H:i') }}
-                            @if ($a->notes)
-                                <div class="note">Alasan: {{ $a->notes }}</div>
-                            @endif
-                        @else
-                            Menunggu{{ $a->department?->name ? ' — '.$a->department->name : '' }}
+    <table class="sig">
+        <tr>
+            @foreach ([$leftSigner, $rightSigner] as $s)
+                <td>
+                    <div class="role">{{ $s['role'] }}</div>
+                    @if (($s['approval']->status ?? null) === 'approved')
+                        <div class="verdict">Disetujui,</div>
+                        <div class="space">&nbsp;</div>
+                        <div><span class="name">{{ $s['approval']->approvedBy?->name ?? '—' }}</span></div>
+                        <div class="date">{{ $s['approval']->approved_at?->locale('id')->translatedFormat('d F Y, H:i') }}</div>
+                    @elseif (($s['approval']->status ?? null) === 'rejected')
+                        <div class="verdict">Ditolak,</div>
+                        <div class="space">&nbsp;</div>
+                        <div><span class="name">{{ $s['approval']->approvedBy?->name ?? '—' }}</span></div>
+                        <div class="date">{{ $s['approval']->approved_at?->locale('id')->translatedFormat('d F Y, H:i') }}</div>
+                        @if ($s['approval']->notes)
+                            <div class="note">Alasan: {{ $s['approval']->notes }}</div>
                         @endif
-                    </td>
-                </tr>
+                    @else
+                        <div class="verdict">&nbsp;</div>
+                        <div class="space dots">. . . . . . . . . .</div>
+                        <div>( Menunggu )</div>
+                    @endif
+                </td>
             @endforeach
-        </table>
-    </div>
+        </tr>
+    </table>
+
+    <h3 class="sec">Pemeriksaan Security</h3>
+    <table class="secbox">
+        <tr>
+            <td>
+                @if (($securityStep->status ?? null) === 'approved')
+                    <div class="st-ok">SUDAH DICEK FISIK</div>
+                    <div class="prog">
+                        Dicek oleh {{ $securityStep->approvedBy?->name ?? '—' }}, {{ $securityStep->approved_at?->locale('id')->translatedFormat('d F Y, H:i') }}<br>
+                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
+                    </div>
+                @else
+                    <div class="st-no">BELUM DICEK FISIK</div>
+                    <div class="prog">
+                        Pekerja hadir {{ $workersPresent }}/{{ $workersTotal }} • Barang terverifikasi {{ $goodsVerified }}/{{ $goodsTotal }}
+                    </div>
+                @endif
+            </td>
+            <td class="qr">
+                @if ($scanUrl)
+                    <img src="data:image/svg+xml;base64,{{ base64_encode((string) QrCode::size(220)->generate($scanUrl)) }}" alt="QR verifikasi">
+                @endif
+                <div class="cap">Pindai untuk verifikasi di pintu</div>
+            </td>
+        </tr>
+    </table>
 
     <div class="foot">Dicetak dari sistem pada {{ $printedAt }}</div>
 </body>

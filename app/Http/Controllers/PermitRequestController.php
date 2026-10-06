@@ -6,6 +6,7 @@ use App\Http\Requests\RevisePermitRequestRequest;
 use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
 use App\Models\PermitRequest;
+use App\Models\ScannableCode;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermitRequestService;
@@ -249,7 +250,7 @@ class PermitRequestController extends Controller
             ->filter()->join(' / ') ?: '—';
 
         $time = ($permitRequest->work_start_time?->format('H:i') ?? '').($permitRequest->work_end_time ? '–'.$permitRequest->work_end_time->format('H:i') : '');
-        $schedule = ($permitRequest->work_start_date?->translatedFormat('d F Y') ?? '—').($permitRequest->work_end_date && $permitRequest->work_end_date->ne($permitRequest->work_start_date) ? ' s/d '.$permitRequest->work_end_date->translatedFormat('d F Y') : '');
+        $schedule = ($permitRequest->work_start_date?->locale('id')->translatedFormat('d F Y') ?? '—').($permitRequest->work_end_date && $permitRequest->work_end_date->ne($permitRequest->work_start_date) ? ' s/d '.$permitRequest->work_end_date->locale('id')->translatedFormat('d F Y') : '');
 
         $goodsPhotos = [];
         foreach ($permitRequest->goods as $good) {
@@ -264,6 +265,19 @@ class PermitRequestController extends Controller
             'cancelled' => 'Dibatalkan',
         ];
 
+        $approvals = $permitRequest->approvals;
+        $tenancyStep = $approvals->firstWhere('step_key', 'tenancy') ?? $approvals->first();
+        $bsStep = $approvals->firstWhere('step_key', 'bs');
+        $securityStep = $approvals->firstWhere('step_key', 'security');
+
+        if (! $permitRequest->scannableCode) {
+            $permitRequest->setRelation('scannableCode', ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => PermitRequest::class,
+                'scannable_id' => $permitRequest->id,
+            ]));
+        }
+
         $pdf = Pdf::loadView('pdf.permit-letter', [
             'permit' => $permitRequest,
             'requestedByLabel' => $requestedByLabel,
@@ -271,10 +285,18 @@ class PermitRequestController extends Controller
             'location' => $location,
             'schedule' => $schedule,
             'time' => $time !== '' ? str_replace(':', '.', $time).' WITA' : '—',
-            'requestDate' => $permitRequest->request_date?->translatedFormat('d F Y') ?? '—',
+            'requestDate' => $permitRequest->request_date?->locale('id')->translatedFormat('d F Y') ?? '—',
             'goodsPhotos' => $goodsPhotos,
             'statusLabel' => $statusLabels[$permitRequest->status] ?? $permitRequest->status,
-            'printedAt' => now()->translatedFormat('d F Y, H:i').' WITA',
+            'printedAt' => now()->locale('id')->translatedFormat('d F Y, H:i').' WITA',
+            'leftSigner' => ['role' => $tenancyStep?->label ?? 'Tenancy', 'approval' => $tenancyStep],
+            'rightSigner' => ['role' => $bsStep?->label ?? 'Building Service', 'approval' => $bsStep],
+            'securityStep' => $securityStep,
+            'workersPresent' => $permitRequest->workers->where('is_present', true)->count(),
+            'workersTotal' => $permitRequest->workers->count(),
+            'goodsVerified' => $permitRequest->goods->where('is_verified', true)->count(),
+            'goodsTotal' => $permitRequest->goods->count(),
+            'scanUrl' => $permitRequest->scanUrl,
         ])->setPaper('a4');
 
         $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
