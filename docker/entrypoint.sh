@@ -21,5 +21,6 @@ if [ -f ".env" ] && ! grep -q "^APP_KEY=base64" .env; then
     php artisan key:generate
 fi
 
-echo ">> Menjalankan php artisan serve di 0.0.0.0:8000"
-php artisan serve --host=0.0.0.0 --port=8000
+echo ">> Menjalankan php artisan serve di 0.0.0.0:8001"
+# php artisan serve --host=0.0.0.0 --port=8000
+php artisan serve --host=0.0.0.0 --port=8001

@@ -33,6 +33,7 @@ WORKDIR /var/www/html
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 8000 5173
+# EXPOSE 8000 5173
+EXPOSE 8001 5173
 
 ENTRYPOINT ["entrypoint.sh"]
