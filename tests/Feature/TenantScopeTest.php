@@ -23,17 +23,17 @@ class TenantScopeTest extends TestCase
 
     private function marketing(): User
     {
-        foreach (['tenants.view', 'tenants.create', 'tenants.edit'] as $p) {
+        foreach (['tenants.view', 'tenants.edit'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
-        $role = Role::firstOrCreate(['name' => 'marketing_staff']);
-        $role->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit']);
+        $role = Role::firstOrCreate(['name' => 'marketing']);
+        $role->syncPermissions(['tenants.view', 'tenants.edit']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
         $staff = User::create([
             'name' => 'Mkt', 'employee_number' => 'MKT-1',
             'branch_id' => $branch->id, 'password' => bcrypt('x'),
         ]);
-        $staff->assignRole('marketing_staff');
+        $staff->assignRole('marketing');
 
         $oc = TenantCategory::firstOrCreate(['name' => 'Open Counter']);
         MasterScope::create([
@@ -100,11 +100,11 @@ class TenantScopeTest extends TestCase
 
     private function tenancy(): User
     {
-        foreach (['tenants.view', 'tenants.create', 'tenants.edit'] as $p) {
+        foreach (['tenants.view', 'tenants.edit'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'tenancy_staff']);
-        $role->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit']);
+        $role->syncPermissions(['tenants.view', 'tenants.edit']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
         $staff = User::create([
             'name' => 'Tnc', 'employee_number' => 'TNC-1',
@@ -147,7 +147,7 @@ class TenantScopeTest extends TestCase
         foreach (['permits.view', 'permits.create'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
-        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['tenants.view', 'tenants.create', 'tenants.edit', 'permits.view', 'permits.create']);
+        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['tenants.view', 'tenants.edit', 'permits.view', 'permits.create']);
 
         $service = app(PermitRequestService::class);
         $oc = $this->tenant('Open Counter');

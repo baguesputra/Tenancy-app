@@ -41,7 +41,7 @@ class LooTenantSyncTest extends TestCase
         foreach (['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete', 'loos.fitout_approve', 'loos.accounting_submit'] as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
-        Role::firstOrCreate(['name' => 'tenant_mgmt_staff', 'guard_name' => 'web'])
+        Role::firstOrCreate(['name' => 'tenant_mgmt', 'guard_name' => 'web'])
             ->syncPermissions(['loos.view', 'loos.transition', 'tenants.view', 'tenants.edit', 'tenants.delete', 'loos.fitout_approve', 'loos.accounting_submit']);
 
         $this->actor = User::create([
@@ -49,7 +49,7 @@ class LooTenantSyncTest extends TestCase
             'employee_number' => 'A-'.uniqid(),
             'branch_id' => $this->branch->id, 'password' => bcrypt('x'),
         ]);
-        $this->actor->assignRole('tenant_mgmt_staff');
+        $this->actor->assignRole('tenant_mgmt');
     }
 
     private function makeLoo(string $status = 'pre_handover'): Loo

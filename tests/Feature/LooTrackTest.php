@@ -43,7 +43,7 @@ class LooTrackTest extends TestCase
         return Loo::create(array_merge([
             'loo_number' => Loo::generateLooNumber($branch->code, 2026),
             'branch_id' => $branch->id,
-            'marketing_id' => $this->userWithRole('marketing_loo_input', ['loos.view', 'loos.create', 'loos.transition'])->id,
+            'marketing_id' => $this->userWithRole('marketing', ['loos.view', 'loos.create', 'loos.transition'])->id,
             'tenant_category_id' => $cat->id,
             'prospective_tenant_name' => 'Toko Baru',
             'status' => 'draft',
@@ -54,7 +54,7 @@ class LooTrackTest extends TestCase
 
     public function test_store_generates_track_token(): void
     {
-        $marketing = $this->userWithRole('marketing_loo_input', ['loos.view', 'loos.create', 'loos.transition']);
+        $marketing = $this->userWithRole('marketing', ['loos.view', 'loos.create', 'loos.transition']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
 
         $this->actingAs($marketing)
@@ -186,7 +186,7 @@ class LooTrackTest extends TestCase
     public function test_show_page_exposes_track_share(): void
     {
         $loo = $this->makeLoo();
-        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit']);
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
 
         $this->actingAs($tm)->get("/loos/{$loo->id}")
             ->assertOk()

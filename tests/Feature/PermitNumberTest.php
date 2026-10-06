@@ -70,14 +70,14 @@ class PermitNumberTest extends TestCase
         foreach (['permits.view', 'permits.create'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
-        $role = Role::firstOrCreate(['name' => 'marketing_staff']);
+        $role = Role::firstOrCreate(['name' => 'marketing']);
         $role->syncPermissions(['permits.view', 'permits.create']);
         $staff = User::create([
             'name' => 'Mkt', 'email' => 'mkt@t.id',
             'employee_number' => 'MKT-1', 'branch_id' => null,
             'password' => bcrypt('x'),
         ]);
-        $staff->assignRole('marketing_staff');
+        $staff->assignRole('marketing');
 
         return $staff;
     }

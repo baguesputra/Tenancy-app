@@ -1,0 +1,118 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Branch;
+use App\Models\Loo;
+use App\Models\TenantCategory;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
+
+class AccessMatrixTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function makeUser(string $roleName, array $permissions): User
+    {
+        foreach ($permissions as $p) {
+            Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
+        }
+        $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+        $role->syncPermissions($permissions);
+
+        $user = User::create([
+            'name' => 'Test '.$roleName,
+            'employee_number' => 'AM-'.uniqid(),
+            'branch_id' => Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test'])->id,
+            'password' => bcrypt('x'),
+        ]);
+        $user->assignRole($roleName);
+
+        return $user;
+    }
+
+    private function makeLoo(User $marketing): Loo
+    {
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+
+        return Loo::create([
+            'loo_number' => Loo::generateLooNumber($branch->code, 2026),
+            'branch_id' => $branch->id,
+            'marketing_id' => $marketing->id,
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
+            'prospective_tenant_name' => 'Toko Baru',
+            'status' => 'draft',
+            'current_stage' => 'marketing',
+        ]);
+    }
+
+    public function test_guest_dialihkan_ke_login(): void
+    {
+        $this->get('/permit-requests')->assertRedirect('/login');
+        $this->get('/loos')->assertRedirect('/login');
+    }
+
+    public function test_staff_tanpa_permission_ditolak(): void
+    {
+        $staff = $this->makeUser('staff', []);
+
+        $this->actingAs($staff)->get('/permit-requests')->assertForbidden();
+        $this->actingAs($staff)->get('/loos')->assertForbidden();
+        $this->actingAs($staff)->get('/settings/users')->assertForbidden();
+    }
+
+    public function test_matriks_permit_requests(): void
+    {
+        $tenancy = $this->makeUser('tenancy_staff', [
+            'tenants.view', 'tenancies.view', 'sidak.view', 'sidak.create',
+            'permits.view', 'permits.create', 'permits.approve',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+        ]);
+        $marketing = $this->makeUser('marketing', [
+            'tenants.view', 'permits.view', 'permits.create', 'permits.approve',
+            'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
+        ]);
+        $bs = $this->makeUser('bs_staff', ['permits.view', 'permits.approve']);
+
+        $this->actingAs($tenancy)->get('/permit-requests')->assertOk();
+        $this->actingAs($tenancy)->get('/permit-requests/create')->assertOk();
+        $this->actingAs($marketing)->get('/permit-requests')->assertOk();
+        $this->actingAs($marketing)->get('/permit-requests/create')->assertOk();
+        $this->actingAs($bs)->get('/permit-requests')->assertOk();
+        $this->actingAs($bs)->get('/permit-requests/create')->assertForbidden();
+    }
+
+    public function test_matriks_loos(): void
+    {
+        $marketing = $this->makeUser('marketing', [
+            'permits.view', 'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
+        ]);
+        $viewer = $this->makeUser('viewer_only', ['loos.view']);
+        $bs = $this->makeUser('bs_staff', ['permits.view', 'permits.approve']);
+        $loo = $this->makeLoo($marketing);
+
+        $this->actingAs($marketing)->get('/loos')->assertOk();
+        $this->actingAs($marketing)->get('/loos/create')->assertOk();
+        $this->actingAs($marketing)->get("/loos/{$loo->id}/edit")->assertOk();
+        $this->actingAs($viewer)->get('/loos')->assertOk();
+        $this->actingAs($viewer)->get('/loos/create')->assertForbidden();
+        $this->actingAs($viewer)->get("/loos/{$loo->id}/edit")->assertForbidden();
+        $this->actingAs($viewer)->post("/loos/{$loo->id}/track-extend")->assertForbidden();
+        $this->actingAs($bs)->get('/loos')->assertForbidden();
+    }
+
+    public function test_users_manage_wajib_untuk_kelola_user(): void
+    {
+        $settingsOnly = $this->makeUser('settings_only', ['settings.access']);
+        $userAdmin = $this->makeUser('user_admin', ['settings.access', 'users.manage']);
+        $roleId = Role::where('name', 'user_admin')->firstOrFail()->id;
+
+        $this->actingAs($settingsOnly)->get('/settings/users')->assertForbidden();
+        $this->actingAs($settingsOnly)->put("/settings/access-control/{$roleId}", ['permissions' => []])->assertForbidden();
+        $this->actingAs($userAdmin)->get('/settings/users')->assertOk();
+        $this->actingAs($userAdmin)->put("/settings/access-control/{$roleId}", ['permissions' => ['settings.access', 'users.manage']])->assertRedirect();
+    }
+}

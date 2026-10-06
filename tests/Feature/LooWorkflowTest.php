@@ -47,7 +47,7 @@ class LooWorkflowTest extends TestCase
         return Loo::create([
             'loo_number' => Loo::generateLooNumber($branch->code, 2026),
             'branch_id' => $branch->id,
-            'marketing_id' => $this->userWithRole('marketing_loo_input')->id,
+            'marketing_id' => $this->userWithRole('marketing')->id,
             'tenant_category_id' => $cat->id,
             'prospective_tenant_name' => 'Toko Baru',
             'status' => 'draft',
@@ -101,7 +101,7 @@ class LooWorkflowTest extends TestCase
 
     public function test_marketing_sees_index_and_can_create(): void
     {
-        $marketing = $this->userWithRole('marketing_loo_input');
+        $marketing = $this->userWithRole('marketing');
 
         $this->actingAs($marketing)->get('/loos')->assertOk();
         $this->actingAs($marketing)->get('/loos/create')->assertOk();
@@ -120,7 +120,7 @@ class LooWorkflowTest extends TestCase
             'branch_id' => Branch::create(['code' => 'OTH', 'name' => 'Cabang Lain'])->id,
             'password' => bcrypt('x'),
         ]);
-        $other->assignRole('marketing_loo_input');
+        $other->assignRole('marketing');
 
         $this->actingAs($other)->get("/loos/{$loo->id}")->assertForbidden();
     }
@@ -128,7 +128,7 @@ class LooWorkflowTest extends TestCase
     public function test_transition_rejects_skipping_stages(): void
     {
         $loo = $this->makeLoo();
-        $user = $this->userWithRole('marketing_loo_input');
+        $user = $this->userWithRole('marketing');
 
         // draft -> pre_handover lompat 5 stage
         $this->actingAs($user)
@@ -142,7 +142,7 @@ class LooWorkflowTest extends TestCase
     public function test_transition_logs_history(): void
     {
         $loo = $this->makeLoo();
-        $user = $this->userWithRole('marketing_loo_input');
+        $user = $this->userWithRole('marketing');
 
         $this->actingAs($user)->post("/loos/{$loo->id}/transition", ['status' => 'legal_review']);
 
@@ -160,7 +160,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit', 'loos.legal_submit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_edit', 'loos.legal_submit']);
 
         $this->actingAs($legal)->post("/loos/{$loo->id}/sections/legalitas", [
             'entity_name' => 'PT Contoh Sengkala',
@@ -182,7 +182,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_edit']);
 
         // marketing punya loos.transition tapi TIDAK punya loos.legal_edit
         $this->actingAs($legal)
@@ -201,7 +201,7 @@ class LooWorkflowTest extends TestCase
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
 
         // Paralel: accounting boleh isi section-nya duluan walau stage masih legal.
-        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_edit']);
+        $accounting = $this->userWithRole('accounting', ['loos.view', 'loos.transition', 'loos.accounting_edit']);
 
         $this->actingAs($accounting)
             ->post("/loos/{$loo->id}/sections/biaya_termin", ['monthly_rent' => '5000000', 'submit' => '1'])
@@ -221,7 +221,7 @@ class LooWorkflowTest extends TestCase
         $loo = $this->makeLoo();
         $loo->update(['status' => 'cancelled', 'current_stage' => 'legal']);
 
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_edit']);
 
         $this->actingAs($legal)
             ->post("/loos/{$loo->id}/sections/legalitas", ['entity_name' => 'PT X', 'submit' => '1'])
@@ -232,7 +232,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_edit']);
 
         $this->actingAs($legal)->post("/loos/{$loo->id}/sections/legalitas", [
             'entity_name' => 'PT Draft Saja',
@@ -250,7 +250,7 @@ class LooWorkflowTest extends TestCase
     public function test_unknown_section_key_returns_404(): void
     {
         $loo = $this->makeLoo();
-        $user = $this->userWithRole('marketing_loo_input');
+        $user = $this->userWithRole('marketing');
 
         $this->actingAs($user)
             ->post("/loos/{$loo->id}/sections/tidak_ada", ['x' => 'y'])
@@ -259,7 +259,7 @@ class LooWorkflowTest extends TestCase
 
     public function test_tenant_from_other_branch_rejected_on_store(): void
     {
-        $user = $this->userWithRole('marketing_loo_input');
+        $user = $this->userWithRole('marketing');
         $otherTenant = Tenant::create([
             'name' => 'Tenant Cabang Lain',
             'branch_id' => Branch::create(['code' => 'OTH', 'name' => 'Lain'])->id,
@@ -278,7 +278,7 @@ class LooWorkflowTest extends TestCase
 
     public function test_marketing_id_is_logged_in_user_on_store(): void
     {
-        $user = $this->userWithRole('marketing_loo_input');
+        $user = $this->userWithRole('marketing');
 
         $this->actingAs($user)
             ->post('/loos/store', ['branch_id' => $user->branch_id])
@@ -291,7 +291,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
+        $accounting = $this->userWithRole('accounting', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
 
         $this->actingAs($accounting)
             ->post("/loos/{$loo->id}/transition", ['status' => 'accounting_review'])
@@ -304,7 +304,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_submit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_submit']);
 
         // section legalitas belum diisi/disubmit sama sekali
         $this->actingAs($legal)
@@ -318,7 +318,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'tenant_mgmt_review', 'current_stage' => 'tenant_mgmt']);
-        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_submit']);
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_submit']);
 
         // stage tenant_mgmt hanya punya satu section (manajemen_tenant):
         // belum disubmit → forward ditolak
@@ -346,7 +346,7 @@ class LooWorkflowTest extends TestCase
     public function test_cancel_only_by_uploader_or_admin(): void
     {
         $loo = $this->makeLoo();
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition']);
 
         $this->actingAs($legal)
             ->post("/loos/{$loo->id}/transition", ['status' => 'cancelled', 'cancel_reason' => 'salah'])
@@ -366,8 +366,8 @@ class LooWorkflowTest extends TestCase
         $loo = $this->makeLoo();
         $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
 
-        $accounting = $this->userWithRole('accounting_staff', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.transition', 'loos.legal_submit']);
+        $accounting = $this->userWithRole('accounting', ['loos.view', 'loos.transition', 'loos.accounting_submit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_submit']);
 
         $this->actingAs($accounting)->get("/loos/{$loo->id}")
             ->assertOk()
@@ -405,9 +405,9 @@ class LooWorkflowTest extends TestCase
         $loo->update(['cover_file_path' => $cover, 'isi_file_path' => $isi]);
 
         $tenancy = $this->userWithRole('tenancy_staff');
-        $tenantMgmt = $this->userWithRole('tenant_mgmt_staff');
-        $legal = $this->userWithRole('legal_staff');
-        $marketing = $this->userWithRole('marketing_loo_input');
+        $tenantMgmt = $this->userWithRole('tenant_mgmt');
+        $legal = $this->userWithRole('legal');
+        $marketing = $this->userWithRole('marketing');
 
         // cover terbuka untuk semua pemilik loos.view
         $this->actingAs($tenancy)->get("/loos/{$loo->id}/files/cover_file")->assertOk();
@@ -439,9 +439,9 @@ class LooWorkflowTest extends TestCase
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
         $otherBranch = Branch::firstOrCreate(['code' => 'OTH'], ['name' => 'Cabang Lain']);
 
-        $creator = $this->userWithRole('marketing_loo_input');
-        $legalSame = $this->userWithRole('legal_staff', ['loos.view']);
-        $legalOther = $this->userOnBranch('legal_staff', $otherBranch->id, ['loos.view']);
+        $creator = $this->userWithRole('marketing');
+        $legalSame = $this->userWithRole('legal', ['loos.view']);
+        $legalOther = $this->userOnBranch('legal', $otherBranch->id, ['loos.view']);
         $managerOther = $this->userOnBranch('manager', $otherBranch->id, ['loos.view']);
         $superOther = $this->userOnBranch('super_admin', $otherBranch->id, []);
 
@@ -460,7 +460,7 @@ class LooWorkflowTest extends TestCase
     public function test_checklist_fillable_without_stage_gate(): void
     {
         $loo = $this->makeLoo();
-        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.transition']);
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.transition']);
 
         // Tanpa gate stage: pre & post bisa diisi sejak stage awal.
         $loo->update(['status' => 'measurement', 'current_stage' => 'measurement']);
@@ -487,9 +487,9 @@ class LooWorkflowTest extends TestCase
 
         $loo = $this->makeLoo();
         $loo->update(['status' => 'ba_handover', 'current_stage' => 'ba_handover']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
-        $finance = $this->userWithRole('accounting_staff', ['loos.view', 'loos.accounting_edit', 'loos.transition']);
-        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $finance = $this->userWithRole('accounting', ['loos.view', 'loos.accounting_edit', 'loos.transition']);
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
 
         // legal isi dept-nya + TTD legal (draft)
         $this->actingAs($legal)
@@ -557,7 +557,7 @@ class LooWorkflowTest extends TestCase
         $loo = $this->makeLoo();
         $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
         $gm = $this->userWithRole('gm_approval', ['loos.view', 'loos.transition', 'loos.fitout_approve']);
-        $tm = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition']);
 
         $this->actingAs($gm)
             ->post("/loos/{$loo->id}/transition", ['status' => 'pre_handover'])
@@ -580,8 +580,8 @@ class LooWorkflowTest extends TestCase
     public function test_tab_visibility_shows_all_divisions(): void
     {
         $loo = $this->makeLoo();
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.legal_submit']);
-        $tenantMgmt = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit', 'loos.legal_submit']);
+        $tenantMgmt = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit']);
         $admin = $this->userWithRole('admin', ['loos.view']);
 
         // Semua role melihat ketiga tab divisi (progress terpantau),
@@ -608,7 +608,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit', 'loos.transition']);
         $eng = $this->userWithRole('engineering_staff', ['loos.view', 'loos.engineering_edit', 'loos.transition']);
 
         // legal isi dept sendiri → ok
@@ -662,7 +662,7 @@ class LooWorkflowTest extends TestCase
     {
         $loo = $this->makeLoo();
         $loo->update(['status' => 'fitout', 'current_stage' => 'fitout']);
-        $legal = $this->userWithRole('legal_staff', ['loos.view', 'loos.legal_edit', 'loos.transition']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit', 'loos.transition']);
         $viewer = $this->userWithRole('viewer_only', ['loos.view']);
 
         // semua bisa melihat halaman checklist
@@ -713,7 +713,7 @@ class LooWorkflowTest extends TestCase
     public function test_fitout_checklist_hub_index_and_gm_approve(): void
     {
         $loo = $this->makeLoo();
-        $user = $this->userWithRole('tenant_mgmt_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.fitout_approve', 'loos.transition']);
+        $user = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.fitout_approve', 'loos.transition']);
 
         $this->actingAs($user)
             ->get('/fitout-checklists')

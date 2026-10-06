@@ -19,8 +19,9 @@ class UserManagementTest extends TestCase
     private function admin(): User
     {
         Permission::firstOrCreate(['name' => 'settings.access']);
+        Permission::firstOrCreate(['name' => 'users.manage']);
         $role = Role::firstOrCreate(['name' => 'admin']);
-        $role->syncPermissions(['settings.access']);
+        $role->syncPermissions(['settings.access', 'users.manage']);
         $user = User::firstOrCreate(
             ['employee_number' => 'ADM-1'],
             [
