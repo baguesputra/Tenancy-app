@@ -24,6 +24,8 @@ class User extends Authenticatable
         'auth_provider',
         'sso_id',
         'gate_id',
+        'gate_synced_at',
+        'gate_miss_count',
         'is_active',
         'password',
         'must_change_password',
@@ -39,6 +41,7 @@ class User extends Authenticatable
         return [
             'must_change_password' => 'boolean',
             'is_active' => 'boolean',
+            'gate_synced_at' => 'datetime',
         ];
     }
 

@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureLocalLoginAllowed;
 use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Http\Middleware\EnsurePermitTimeLock;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\PacuSinkronGate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             EnsurePasswordIsChanged::class,
+            PacuSinkronGate::class,
         ]);
         $middleware->alias([
             'sso.local-guard' => EnsureLocalLoginAllowed::class,

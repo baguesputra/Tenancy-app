@@ -72,6 +72,7 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
         Route::post('/gate/sync', [GateSyncController::class, 'syncSemua'])->name('gate.sync');
         Route::post('/gate/sync-master', [GateSyncController::class, 'syncMaster'])->name('gate.sync-master');
         Route::post('/gate/sync-karyawan', [GateSyncController::class, 'syncKaryawan'])->name('gate.sync-karyawan');
+        Route::post('/gate/jadwal', [GateSyncController::class, 'simpanJadwal'])->name('gate.jadwal');
     });
 });
 
@@ -314,7 +315,6 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:loos.view')->get('/fitout-checklists', [LooFitoutController::class, 'index'])->name('fitout-checklists.index');
-
 
     Route::middleware('can:loos.delete')->post('/loos/{loo}/destroy', [LooController::class, 'destroy'])->name('loos.destroy');
 

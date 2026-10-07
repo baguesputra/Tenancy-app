@@ -14,14 +14,14 @@ class SinkronisasiKaryawanService
 {
     public function __construct(private GateClient $gate) {}
 
-    public function sinkron(array $filter = [], bool $kering = false, ?int $batas = null): array
+    public function sinkron(array $filter = [], bool $kering = false, ?int $batas = null, int $grace = 2): array
     {
         $daftar = $this->gate->ambilKaryawan($filter);
         if ($batas) {
             $daftar = array_slice($daftar, 0, $batas);
         }
 
-        $hasil = ['baru' => [], 'diperbarui' => [], 'gagal' => [], 'dilewati' => 0];
+        $hasil = ['baru' => [], 'diperbarui' => [], 'gagal' => [], 'dilewati' => 0, 'nonaktif' => 0];
 
         foreach ($daftar as $baris) {
             $nik = trim((string) ($baris['nik'] ?? ''));
@@ -49,7 +49,43 @@ class SinkronisasiKaryawanService
             }
         }
 
+        if (! $kering && empty($filter['email'])) {
+            $hasil['nonaktif'] = $this->tandaiHilang($daftar, $grace);
+        }
+
         return $hasil;
+    }
+
+    private function tandaiHilang(array $daftar, int $grace): int
+    {
+        $adaGateId = collect($daftar)->map(fn ($b) => $b['id'] ?? null)->filter()->all();
+        $adaNik = collect($daftar)->map(fn ($b) => trim((string) ($b['nik'] ?? '')))->filter()->all();
+
+        $query = User::whereNotNull('gate_id');
+        if ($adaGateId) {
+            $query->whereNotIn('gate_id', $adaGateId);
+        }
+        if ($adaNik) {
+            $query->whereNotIn('employee_number', $adaNik);
+        }
+
+        $count = 0;
+        $query->chunkById(200, function ($users) use ($grace, &$count) {
+            foreach ($users as $user) {
+                $miss = ((int) $user->getRawOriginal('gate_miss_count', 0)) + 1;
+                $nonaktif = $miss >= $grace;
+                $user->update([
+                    'gate_miss_count' => $miss,
+                    'gate_synced_at' => now(),
+                    'is_active' => $nonaktif ? false : $user->is_active,
+                ]);
+                if ($nonaktif) {
+                    $count++;
+                }
+            }
+        });
+
+        return $count;
     }
 
     public function sinkronSatu(array $baris): string
@@ -91,6 +127,8 @@ class SinkronisasiKaryawanService
                 'auth_provider' => $user?->auth_provider ?? 'sso',
                 'is_active' => (bool) ($baris['is_active'] ?? true),
                 'must_change_password' => false,
+                'gate_synced_at' => now(),
+                'gate_miss_count' => 0,
             ];
 
             if (! $user) {

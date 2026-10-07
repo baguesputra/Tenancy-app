@@ -10,9 +10,9 @@ use RuntimeException;
 
 class GateClient
 {
-    public function ambilKaryawan(array $filter = []): array
+    public function ambilKaryawan(array $filter = [], ?float $timeout = null): array
     {
-        return $this->ambil('/api/users', $filter, 'karyawan');
+        return $this->ambil('/api/users', $filter, 'karyawan', $timeout);
     }
 
     public function ambilPerusahaan(): array
@@ -60,10 +60,10 @@ class GateClient
         return is_array($data) ? $data : [];
     }
 
-    public function cariKaryawanByEmail(string $email): ?array
+    public function cariKaryawanByEmail(string $email, ?float $timeout = null): ?array
     {
         try {
-            $daftar = $this->ambilKaryawan(['email' => $email, 'limit' => 5]);
+            $daftar = $this->ambilKaryawan(['email' => $email, 'limit' => 5], $timeout);
         } catch (\Throwable $e) {
             report($e);
 
@@ -79,7 +79,7 @@ class GateClient
         return count($daftar) === 1 && is_array($daftar[0]) ? $daftar[0] : null;
     }
 
-    private function ambil(string $path, array $query, string $jenis): array
+    private function ambil(string $path, array $query, string $jenis, ?float $timeout = null): array
     {
         $token = config('services.gate.token');
         $baseUrl = rtrim(config('services.gate.base_url'), '/');
@@ -91,7 +91,7 @@ class GateClient
         $query = array_filter($query);
 
         try {
-            $respon = $this->get($baseUrl, $token, $path, $query)->throw()->json();
+            $respon = $this->get($baseUrl, $token, $path, $query, $timeout)->throw()->json();
         } catch (ConnectionException|RequestException $e) {
             Log::warning('GATE gagal', ['jenis' => $jenis, 'path' => $path, 'error' => $e->getMessage()]);
             throw new RuntimeException("Gagal mengambil data {$jenis} dari GATE: ".$e->getMessage(), 0, $e);
@@ -106,11 +106,11 @@ class GateClient
         return is_array($data) ? $data : [];
     }
 
-    private function get(string $baseUrl, string $token, string $path, array $query)
+    private function get(string $baseUrl, string $token, string $path, array $query, ?float $timeout = null)
     {
         return Http::baseUrl($baseUrl)
             ->withToken($token)
-            ->timeout(config('services.gate.timeout'))
+            ->timeout($timeout ?? config('services.gate.timeout'))
             ->acceptJson()
             ->get($path, $query);
     }

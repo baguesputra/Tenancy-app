@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\GateSyncLog;
+use App\Models\GateSyncSetting;
 use App\Models\Position;
 use App\Models\User;
 use App\Services\Gate\GateClient;
@@ -50,11 +51,29 @@ class GateSyncController extends Controller
             ])->values(),
             'branches' => $branches,
             'filters' => $request->only(['company_id']),
+            'setting' => GateSyncSetting::current(),
             'history' => GateSyncLog::with('user:id,name')->latest()->take(10)->get([
-                'id', 'kind', 'is_dry_run', 'count_baru', 'count_diperbarui', 'count_gagal',
+                'id', 'kind', 'source', 'is_dry_run', 'count_baru', 'count_diperbarui', 'count_gagal',
                 'count_dilewati', 'count_departemen', 'count_divisi', 'count_jabatan', 'user_id', 'created_at',
             ]),
         ]);
+    }
+
+    public function simpanJadwal(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_enabled' => 'nullable|boolean',
+            'karyawan_interval_minutes' => 'required|integer|min:5|max:1440',
+            'master_daily_at' => 'required|date_format:H:i',
+            'jit_enabled' => 'nullable|boolean',
+            'grace_miss_count' => 'required|integer|min:1|max:10',
+        ]);
+        $validated['schedule_enabled'] = (bool) ($validated['schedule_enabled'] ?? false);
+        $validated['jit_enabled'] = (bool) ($validated['jit_enabled'] ?? false);
+
+        GateSyncSetting::simpan($validated);
+
+        return back()->with('success', 'Jadwal sinkron otomatis disimpan.');
     }
 
     public function syncMaster(Request $request, SinkronisasiMasterService $sinkron)
@@ -74,7 +93,7 @@ class GateSyncController extends Controller
 
         if (! ($validated['dry_run'] ?? false)) {
             GateSyncLog::create([
-                'kind' => 'master', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'kind' => 'master', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
                 'count_departemen' => $hasil['departemen'], 'count_divisi' => $hasil['divisi'],
                 'count_jabatan' => $hasil['jabatan'], 'count_gagal' => count($hasil['gagal']),
             ]);
@@ -99,7 +118,8 @@ class GateSyncController extends Controller
             $hasil = $sinkron->sinkron(
                 ['company_id' => $validated['company_id'] ?? null, 'department_id' => $validated['department_id'] ?? null],
                 (bool) ($validated['dry_run'] ?? false),
-                $validated['limit'] ?? null
+                $validated['limit'] ?? null,
+                GateSyncSetting::current()->grace_miss_count ?? 2
             );
         } catch (\Throwable $e) {
             report($e);
@@ -109,7 +129,7 @@ class GateSyncController extends Controller
 
         if (! ($validated['dry_run'] ?? false)) {
             GateSyncLog::create([
-                'kind' => 'karyawan', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'kind' => 'karyawan', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
                 'count_baru' => count($hasil['baru']), 'count_diperbarui' => count($hasil['diperbarui']),
                 'count_gagal' => count($hasil['gagal']), 'count_dilewati' => $hasil['dilewati'],
             ]);
@@ -135,7 +155,8 @@ class GateSyncController extends Controller
             $k = $karyawan->sinkron(
                 ['company_id' => $validated['company_id'] ?? null],
                 $dry,
-                $validated['limit'] ?? null
+                $validated['limit'] ?? null,
+                GateSyncSetting::current()->grace_miss_count ?? 2
             );
         } catch (\Throwable $e) {
             report($e);
@@ -145,7 +166,7 @@ class GateSyncController extends Controller
 
         if (! $dry) {
             GateSyncLog::create([
-                'kind' => 'semua', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'kind' => 'semua', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
                 'count_baru' => count($k['baru']), 'count_diperbarui' => count($k['diperbarui']),
                 'count_gagal' => count($k['gagal']), 'count_dilewati' => $k['dilewati'],
                 'count_departemen' => $m['departemen'], 'count_divisi' => $m['divisi'], 'count_jabatan' => $m['jabatan'],

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SinkronKaryawanJit;
+use App\Models\GateSyncSetting;
 use App\Models\User;
 use App\Services\Gate\GateClient;
 use App\Services\Gate\SinkronisasiKaryawanService;
@@ -89,8 +91,8 @@ class SsoController extends Controller
                 ]);
 
                 try {
-                    if ($baris = $gate->cariKaryawanByEmail($email)) {
-                        $sinkron->enrichDariGate($user->fresh(), $baris);
+                    if (GateSyncSetting::current()->jit_enabled ?? true) {
+                        SinkronKaryawanJit::dispatch($user->id, $email)->afterCommit();
                     }
                 } catch (\Throwable $e) {
                     report($e);

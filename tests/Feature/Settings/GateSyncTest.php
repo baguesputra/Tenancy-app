@@ -2,14 +2,19 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Jobs\SinkronKaryawanJit;
 use App\Models\Branch;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\GateSyncLog;
+use App\Models\GateSyncSetting;
 use App\Models\Position;
 use App\Models\User;
+use App\Services\Gate\GateClient;
+use App\Services\Gate\SinkronisasiKaryawanService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -166,5 +171,62 @@ class GateSyncTest extends TestCase
         $this->actingAs($user)
             ->post(route('settings.gate.sync-karyawan'))
             ->assertForbidden();
+    }
+
+    public function test_simpan_jadwal_validasi_dan_simpan(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('settings.gate.jadwal'), [
+                'schedule_enabled' => true,
+                'karyawan_interval_minutes' => 30,
+                'master_daily_at' => '03:15',
+                'jit_enabled' => true,
+                'grace_miss_count' => 3,
+            ])->assertRedirect();
+
+        $set = GateSyncSetting::current();
+        $this->assertSame(30, (int) $set->karyawan_interval_minutes);
+        $this->assertSame('03:15', $set->master_daily_at);
+
+        $this->actingAs($this->admin())
+            ->post(route('settings.gate.jadwal'), ['karyawan_interval_minutes' => 1, 'master_daily_at' => 'xx', 'grace_miss_count' => 0])
+            ->assertSessionHasErrors(['karyawan_interval_minutes', 'master_daily_at', 'grace_miss_count']);
+    }
+
+    public function test_hilang_dua_kali_jadi_nonaktif(): void
+    {
+        Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+        Branch::firstOrCreate(['code' => 'BJM'], ['name' => 'Banjarmasin', 'gate_id' => 'comp-1']);
+        GateSyncSetting::simpan(['grace_miss_count' => 2]);
+        $this->fakeGate([$this->karyawan()], [['id' => 'comp-1', 'name' => 'PT A']]);
+        $this->actingAs($this->admin())->post(route('settings.gate.sync'));
+        $this->assertTrue(User::where('employee_number', 'NIK-1')->firstOrFail()->is_active);
+
+        $this->mock(GateClient::class, fn ($mock) => $mock->shouldReceive('ambilKaryawan')->andReturn([]));
+
+        $this->actingAs($this->admin())->post(route('settings.gate.sync-karyawan'));
+        $this->assertSame(1, (int) User::where('employee_number', 'NIK-1')->firstOrFail()->gate_miss_count);
+        $this->assertTrue(User::where('employee_number', 'NIK-1')->firstOrFail()->is_active);
+
+        $this->actingAs($this->admin())->post(route('settings.gate.sync-karyawan'));
+        $this->assertFalse(User::where('employee_number', 'NIK-1')->firstOrFail()->is_active);
+    }
+
+    public function test_jit_job_update_pindah_divisi(): void
+    {
+        Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+        $this->fakeGate([$this->karyawan()], [['id' => 'comp-1', 'name' => 'PT A']]);
+        $this->actingAs($this->admin())->post(route('settings.gate.sync'));
+
+        Queue::fake();
+        SinkronKaryawanJit::dispatch(User::where('employee_number', 'NIK-1')->firstOrFail()->id, 'budi@dutamall.com');
+        Queue::assertPushed(SinkronKaryawanJit::class);
+
+        User::where('employee_number', 'NIK-1')->update(['gate_synced_at' => now()->subMinutes(30)]);
+        $baris = $this->karyawan(['position_id' => null, 'department_id' => 'dept-1']);
+        $this->mock(GateClient::class, fn ($mock) => $mock->shouldReceive('cariKaryawanByEmail')->andReturn($baris));
+        (new SinkronKaryawanJit(User::where('employee_number', 'NIK-1')->firstOrFail()->id, 'budi@dutamall.com'))
+            ->handle(app(GateClient::class), app(SinkronisasiKaryawanService::class));
+        $this->assertTrue(User::where('employee_number', 'NIK-1')->firstOrFail()->gate_synced_at->gt(now()->subMinutes(5)));
     }
 }
