@@ -53,7 +53,7 @@ class PermitRequestController extends Controller
     {
         $isMarketing = $request->user()->hasRole('marketing');
 
-        $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order')])
+        $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->activity_type, fn ($q) => $q->where('activity_types', 'like', "%{$request->activity_type}%"))
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
@@ -70,17 +70,31 @@ class PermitRequestController extends Controller
             $base->where('branch_id', $request->user()->branch_id);
         }
 
-        $summary = [
-            'total' => (clone $base)->count(),
-            'counts' => $isMarketing ? ['pameran' => (clone $base)->count()]
-                : [
-                    'pameran' => (clone $base)->where('activity_types', 'like', '%pameran%')->count(),
-                    'tenant' => $this->applyCategory(clone $base, 'tenant')->count(),
-                    'vendor' => $this->applyCategory(clone $base, 'vendor')->count(),
-                    'area' => $this->applyCategory(clone $base, 'area')->count(),
+        if ($isMarketing) {
+            $total = (clone $base)->count();
+            $summary = [
+                'total' => $total,
+                'counts' => ['pameran' => $total],
+            ];
+        } else {
+            $agg = (clone $base)->toBase()->selectRaw("
+                count(*) as total,
+                sum(activity_types like '%pameran%') as pameran,
+                sum(tenant_id is not null and activity_types not like '%pameran%') as tenant,
+                sum(activity_types not like '%pameran%' and (is_external = 1 or contractor_company is not null)) as vendor,
+                sum(tenant_id is null and activity_types not like '%pameran%' and (is_external = 0 or is_external is null) and contractor_company is null) as area
+            ")->first();
+
+            $summary = [
+                'total' => (int) ($agg->total ?? 0),
+                'counts' => [
+                    'pameran' => (int) ($agg->pameran ?? 0),
+                    'tenant' => (int) ($agg->tenant ?? 0),
+                    'vendor' => (int) ($agg->vendor ?? 0),
+                    'area' => (int) ($agg->area ?? 0),
                 ],
-        ];
-        // ponytail: 5 count di atas cukup untuk skala kini, gabung selectRaw CASE saat >50k row
+            ];
+        }
 
         $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 

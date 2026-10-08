@@ -39,7 +39,14 @@ class UnitController extends Controller
             ->whereNotNull('unit_number')->where('unit_number', '!=', '')
             ->distinct()->orderBy('unit_number')->pluck('unit_number');
 
-        $agg = (clone $filterBase)->toBase()->selectRaw("count(*) as total, sum(is_active = 0) as inactive, sum((select count(*) from tenancies where tenancies.unit_id = units.id and tenancies.status = 'active') > 0) as occupied")->first();
+        $agg = (clone $filterBase)
+            ->leftJoin('tenancies', function ($j) {
+                $j->on('tenancies.unit_id', '=', 'units.id')
+                    ->where('tenancies.status', '=', 'active');
+            })
+            ->toBase()
+            ->selectRaw('count(distinct units.id) as total, count(distinct case when units.is_active = 0 then units.id end) as inactive, count(distinct tenancies.id) as occupied')
+            ->first();
         $total = (int) ($agg->total ?? 0);
         $inactive = (int) ($agg->inactive ?? 0);
         $occupied = (int) ($agg->occupied ?? 0);
