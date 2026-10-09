@@ -46,6 +46,15 @@ class LocalLoginController extends Controller
         }
 
         RateLimiter::clear($key);
+
+        if (! Auth::user()->is_active) {
+            Auth::logout();
+
+            return back()->withErrors([
+                'employee_number' => 'Akun tidak aktif. Hubungi administrator.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         if ($token = session()->pull('scan_redirect_token')) {

@@ -47,6 +47,7 @@ class UserManagementController extends Controller
     {
         abort_unless($request->user()->can('users.manage'), 403);
         $validated = $this->validateUser($request, null, true);
+        $this->validasiRoleAman($request, $validated['role'], null);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -74,12 +75,14 @@ class UserManagementController extends Controller
             $validated = $request->validate([
                 'role' => 'required|exists:roles,name',
             ]);
+            $this->validasiRoleAman($request, $validated['role'], $user->id);
             $user->syncRoles([$validated['role']]);
 
             return back()->with('success', 'Role user diperbarui. Data lain ikut Gate.');
         }
 
         $validated = $this->validateUser($request, $user->id);
+        $this->validasiRoleAman($request, $validated['role'], $user->id);
 
         $user->update([
             'name' => $validated['name'],
@@ -126,5 +129,18 @@ class UserManagementController extends Controller
             'role' => 'required|exists:roles,name',
             'password' => $requirePassword ? 'required|string|min:8' : 'nullable|string|min:8',
         ]);
+    }
+
+    private function validasiRoleAman(Request $request, string $role, ?int $targetUserId): void
+    {
+        $actor = $request->user();
+
+        if ($targetUserId !== null && $targetUserId === $actor->id) {
+            abort(403, 'Tidak bisa mengubah role akun sendiri.');
+        }
+
+        if ($role === 'super_admin' && ! $actor->hasRole('super_admin')) {
+            abort(403, 'Hanya super_admin yang boleh menetapkan role super_admin.');
+        }
     }
 }

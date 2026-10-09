@@ -11,6 +11,13 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // Akun test dengan password default "password" — hanya boleh ada di local.
+        if (! app()->isLocal()) {
+            $this->command?->warn('UserSeeder dilewati (bukan environment local).');
+
+            return;
+        }
+
         $branchA = Branch::where('code', 'BJM')->first();
         $branchB = Branch::where('code', 'SMD')->first();
 

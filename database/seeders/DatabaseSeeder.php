@@ -11,6 +11,17 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Production: cukup role & permission — jangan jalankan seed destruktif
+        // (menghapus data tenant/unit/tenancy) dan akun test berpassword default.
+        if (! app()->isLocal()) {
+            $this->call([
+                RoleSeeder::class,
+                PermissionSeeder::class,
+            ]);
+
+            return;
+        }
+
         // Clear existing data to allow fresh seeding
         Tenancy::query()->delete();
         Tenant::query()->delete();

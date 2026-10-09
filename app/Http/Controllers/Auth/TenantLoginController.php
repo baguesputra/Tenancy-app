@@ -35,6 +35,13 @@ class TenantLoginController extends Controller
         }
 
         RateLimiter::clear($key);
+
+        if (! Auth::guard('tenant')->user()->is_active) {
+            Auth::guard('tenant')->logout();
+
+            return back()->withErrors(['username' => 'Akun tidak aktif. Hubungi pengelola tenant.']);
+        }
+
         $request->session()->regenerate();
 
         if ($token = session()->pull('scan_redirect_token')) {
