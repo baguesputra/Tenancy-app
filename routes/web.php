@@ -21,16 +21,13 @@ use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantPortal\DashboardController as PortalDashboardController;
 use App\Http\Controllers\TenantPortal\InspectionController as PortalInspectionController;
 use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
 use App\Http\Controllers\TenantProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitQrController;
-use App\Models\Inspection;
-use App\Models\PermitRequest;
-use App\Models\Tenant;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -61,11 +58,14 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
     Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
     Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
 
-    Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('tenant-accounts.index');
-    Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate']);
-    Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store']);
-    Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword']);
-    Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive']);
+    Route::middleware('can:users.manage')->name('tenant-accounts.')->group(function () {
+        Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('index');
+        Route::get('/tenant-accounts/credential/{token}', [TenantAccountController::class, 'credential'])->name('credential');
+        Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate'])->name('bulk-create');
+        Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store'])->name('store');
+        Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword'])->name('reset-password');
+        Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive'])->name('toggle-active');
+    });
 
     Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
     Route::middleware('can:gate.sync')->group(function () {
@@ -91,81 +91,7 @@ Route::prefix('portal')->name('tenant-portal.')->group(function () {
     Route::middleware('auth:tenant')->group(function () {
         Route::post('/logout', [TenantLoginController::class, 'destroy'])->name('logout');
 
-        Route::get('/dashboard', function (Request $request) {
-            $tenantUser = $request->user('tenant');
-            $tenant = Tenant::select(['id', 'name', 'logo_path', 'branch_id'])
-                ->with(['activeTenancy:id,tenant_id,unit_id,end_date', 'activeTenancy.unit:id,unit_code', 'branch:id,name'])
-                ->findOrFail($tenantUser->tenant_id);
-
-            $base = PermitRequest::select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])
-                ->with(['approvals' => fn ($q) => $q->select(['id', 'approvable_id', 'status', 'label', 'order'])->orderBy('order')])
-                ->where('tenant_id', $tenant->id);
-
-            $stats = Cache::remember('portal.stats.'.$tenant->id, 60, fn () => [
-                'pending' => (clone $base)->where('status', 'pending')->count(),
-                'completed' => (clone $base)->where('status', 'completed')->count(),
-                'rejected' => (clone $base)->where('status', 'rejected')->count(),
-            ]);
-            $stats['total'] = array_sum($stats);
-
-            $mapPermit = function ($permit) {
-                $current = $permit->approvals->firstWhere('status', 'pending');
-
-                return [
-                    'id' => $permit->id,
-                    'permit_number' => $permit->permit_number,
-                    'status' => $permit->status,
-                    'job_type' => $permit->job_type,
-                    'request_date' => $permit->request_date,
-                    'current_step_label' => $current?->label,
-                    'step_progress' => $permit->approvals->map(fn ($a) => [
-                        'status' => $a->status,
-                        'label' => $a->label,
-                    ])->values(),
-                ];
-            };
-
-            $activePermit = (clone $base)->where('status', 'pending')->latest()->first();
-            $recent = (clone $base)->latest()->take(5)->get()->map($mapPermit)->values();
-            $tenancy = $tenant->activeTenancy;
-
-            $sidakBase = Inspection::select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])
-                ->with('session:id,status,started_at')->where('tenant_id', $tenant->id);
-            $sidakActive = (clone $sidakBase)->whereHas('session', fn ($s) => $s->where('status', 'in_progress'))->exists();
-            $sidakRecent = (clone $sidakBase)
-                ->where(function ($q) {
-                    $q->where('status', 'completed')
-                        ->orWhereHas('session', fn ($s) => $s->where('status', 'completed'));
-                })
-                ->latest()
-                ->take(3)
-                ->get()
-                ->map(fn ($i) => [
-                    'id' => $i->id,
-                    'template_name' => $i->checklist_snapshot['template_name'] ?? '—',
-                    'status' => $i->status,
-                    'is_flagged' => $i->is_flagged,
-                    'session_status' => $i->session->status,
-                    'session_started_at' => $i->session->started_at?->toDateTimeString(),
-                ])
-                ->values();
-
-            return Inertia::render('TenantPortal/Dashboard', [
-                'store' => [
-                    'name' => $tenant->name,
-                    'logo_url' => $tenant->logo_url,
-                    'unit_code' => $tenancy?->unit?->unit_code,
-                    'branch' => $tenant->branch?->name,
-                    'tenancy_end' => $tenancy?->end_date?->toDateString(),
-                    'is_active' => (bool) $tenancy,
-                ],
-                'stats' => $stats,
-                'activePermit' => $activePermit ? $mapPermit($activePermit) : null,
-                'recent' => $recent,
-                'sidak_active' => $sidakActive,
-                'sidak_recent' => $sidakRecent,
-            ]);
-        })->name('dashboard');
+        Route::get('/dashboard', PortalDashboardController::class)->name('dashboard');
     });
 });
 
@@ -197,8 +123,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::post('/logout', [LocalLoginController::class, 'destroy'])->name('logout');
-    Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
-    Route::put('/password/change', [PasswordChangeController::class, 'update'])->name('password.change.update');
+Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
+Route::put('/password/change', [PasswordChangeController::class, 'update'])->middleware('throttle:password-change')->name('password.change.update');
 
     Route::middleware('can:tenants.view')->get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
     Route::middleware('can:tenants.view')->get('/tenant-profiles', [TenantProfileController::class, 'index'])->name('tenant-profiles.index');
@@ -339,5 +265,6 @@ Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->grou
     Route::get('inspections/{inspection}', [PortalInspectionController::class, 'show'])->name('inspections.show');
     Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
     Route::post('permits/{permit}/cancel', [PortalPermitRequestController::class, 'cancel'])->name('permits.cancel');
-    Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy']);
+    Route::post('permits', [PortalPermitRequestController::class, 'store'])->middleware('permit.time-lock')->name('permits.store');
+    Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy', 'store']);
 });
