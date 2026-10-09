@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +18,7 @@ class EnsurePermitTimeLock
         }
 
         $user = $request->user();
-        if ($user && $user->hasAnyRole(config('permit.excluded_roles'))) {
+        if ($user instanceof User && $user->hasAnyRole(config('permit.excluded_roles'))) {
             return $next($request);
         }
 

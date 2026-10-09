@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\TenantUser;
 use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
@@ -208,5 +209,49 @@ class PermitTimeLockTest extends TestCase
 
         $response->assertSessionHas('error');
         $this->assertDatabaseMissing('permit_requests', ['tenant_id' => $payload['tenant_id']]);
+    }
+
+    private function makeTenantUser(): TenantUser
+    {
+        $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
+        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $tenant = Tenant::create([
+            'name' => 'Portal Tenant '.uniqid(),
+            'tenant_category_id' => $cat->id,
+            'product_category_id' => $pc->id,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+
+        return TenantUser::create([
+            'tenant_id' => $tenant->id,
+            'username' => 'portal'.uniqid(),
+            'password' => bcrypt('password'),
+        ]);
+    }
+
+    public function test_portal_store_dikunci_di_luar_jam_kerja(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 9, 29, 23, 0, 0, 'Asia/Makassar')); // 23:00 (locked)
+
+        $tenantUser = $this->makeTenantUser();
+
+        $this->actingAs($tenantUser, 'tenant')
+            ->from('/portal/permits/create')
+            ->post('/portal/permits', [])
+            ->assertSessionHas('error');
+    }
+
+    public function test_portal_store_boleh_di_jam_kerja(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 9, 29, 10, 0, 0, 'Asia/Makassar')); // 10:00
+
+        $tenantUser = $this->makeTenantUser();
+
+        $this->actingAs($tenantUser, 'tenant')
+            ->from('/portal/permits/create')
+            ->post('/portal/permits', [])
+            ->assertSessionMissing('error');
     }
 }

@@ -41,6 +41,12 @@ class AppServiceProvider extends ServiceProvider
             });
         });
 
+        RateLimiter::for('password-change', function (Request $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: 'ip:'.$request->ip())->response(function () {
+                return back()->withErrors(['current_password' => 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.']);
+            });
+        });
+
         PreventRequestForgery::except([
             '/auth/sso/callback',
             '/auth/sso/slo',
