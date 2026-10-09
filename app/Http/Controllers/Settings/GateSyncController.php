@@ -53,8 +53,8 @@ class GateSyncController extends Controller
             'filters' => $request->only(['company_id']),
             'setting' => GateSyncSetting::current(),
             'history' => GateSyncLog::with('user:id,name')->latest()->take(10)->get([
-                'id', 'kind', 'source', 'is_dry_run', 'count_baru', 'count_diperbarui', 'count_gagal',
-                'count_dilewati', 'count_departemen', 'count_divisi', 'count_jabatan', 'user_id', 'created_at',
+                'id', 'kind', 'source', 'scope', 'is_dry_run', 'count_baru', 'count_diperbarui', 'count_gagal',
+                'count_dilewati', 'count_nonaktif', 'count_departemen', 'count_divisi', 'count_jabatan', 'user_id', 'created_at',
             ]),
         ]);
     }
@@ -94,6 +94,7 @@ class GateSyncController extends Controller
         if (! ($validated['dry_run'] ?? false)) {
             GateSyncLog::create([
                 'kind' => 'master', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'scope' => GateSyncLog::buatScope(['company' => $validated['company_id'] ?? null]),
                 'count_departemen' => $hasil['departemen'], 'count_divisi' => $hasil['divisi'],
                 'count_jabatan' => $hasil['jabatan'], 'count_gagal' => count($hasil['gagal']),
             ]);
@@ -130,14 +131,20 @@ class GateSyncController extends Controller
         if (! ($validated['dry_run'] ?? false)) {
             GateSyncLog::create([
                 'kind' => 'karyawan', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'scope' => GateSyncLog::buatScope([
+                    'company' => $validated['company_id'] ?? null,
+                    'department' => $validated['department_id'] ?? null,
+                    'limit' => $validated['limit'] ?? null,
+                ]),
                 'count_baru' => count($hasil['baru']), 'count_diperbarui' => count($hasil['diperbarui']),
                 'count_gagal' => count($hasil['gagal']), 'count_dilewati' => $hasil['dilewati'],
+                'count_nonaktif' => $hasil['nonaktif'],
             ]);
         }
 
         $prefix = ($validated['dry_run'] ?? false) ? 'Pratinjau: ' : '';
 
-        return back()->with('success', $prefix.'Sinkron selesai: '.count($hasil['baru']).' baru, '.count($hasil['diperbarui']).' diperbarui, '.count($hasil['gagal']).' gagal, '.$hasil['dilewati'].' dilewati.'
+        return back()->with('success', $prefix.'Sinkron selesai: '.count($hasil['baru']).' baru, '.count($hasil['diperbarui']).' diperbarui, '.count($hasil['gagal']).' gagal, '.$hasil['dilewati'].' dilewati, '.$hasil['nonaktif'].' nonaktif.'
             .($hasil['gagal'] ? ' '.implode(' ', array_slice($hasil['gagal'], 0, 3)) : ''));
     }
 
@@ -167,14 +174,19 @@ class GateSyncController extends Controller
         if (! $dry) {
             GateSyncLog::create([
                 'kind' => 'semua', 'source' => 'manual', 'is_dry_run' => false, 'user_id' => $request->user()?->id,
+                'scope' => GateSyncLog::buatScope([
+                    'company' => $validated['company_id'] ?? null,
+                    'limit' => $validated['limit'] ?? null,
+                ]),
                 'count_baru' => count($k['baru']), 'count_diperbarui' => count($k['diperbarui']),
                 'count_gagal' => count($k['gagal']), 'count_dilewati' => $k['dilewati'],
+                'count_nonaktif' => $k['nonaktif'],
                 'count_departemen' => $m['departemen'], 'count_divisi' => $m['divisi'], 'count_jabatan' => $m['jabatan'],
             ]);
         }
 
         $prefix = $dry ? 'Pratinjau: ' : '';
 
-        return back()->with('success', $prefix.'Selesai: '.$m['departemen'].' dept, '.$m['divisi'].' divisi, '.$m['jabatan'].' jabatan; '.count($k['baru']).' user baru, '.count($k['diperbarui']).' diperbarui, '.count($k['gagal']).' gagal.');
+        return back()->with('success', $prefix.'Selesai: '.$m['departemen'].' dept, '.$m['divisi'].' divisi, '.$m['jabatan'].' jabatan; '.count($k['baru']).' user baru, '.count($k['diperbarui']).' diperbarui, '.count($k['gagal']).' gagal, '.$k['nonaktif'].' nonaktif.');
     }
 }

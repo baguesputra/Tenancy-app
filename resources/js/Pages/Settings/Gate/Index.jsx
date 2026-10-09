@@ -15,8 +15,8 @@ function StatusGate({ status }) {
 
 function ringkas(log) {
     if (log.kind === 'master') return `${log.count_departemen} dept · ${log.count_divisi} divisi · ${log.count_jabatan} jabatan`;
-    if (log.kind === 'karyawan') return `${log.count_baru} baru · ${log.count_diperbarui} update · ${log.count_gagal} gagal`;
-    return `${log.count_baru} baru · ${log.count_diperbarui} update · ${log.count_departemen} dept`;
+    if (log.kind === 'karyawan') return `${log.count_baru} baru · ${log.count_diperbarui} update · ${log.count_gagal} gagal${log.count_nonaktif ? ` · ${log.count_nonaktif} nonaktif` : ''}`;
+    return `${log.count_baru} baru · ${log.count_diperbarui} update · ${log.count_departemen} dept${log.count_nonaktif ? ` · ${log.count_nonaktif} nonaktif` : ''}`;
 }
 
 function sumber(log) {
@@ -154,7 +154,7 @@ export default function Index({ gateStatus, summary = {}, companies = [], branch
                                         <p className="text-xs font-semibold text-gray-900 capitalize">
                                             {h.kind === 'semua' ? 'Master + Karyawan' : h.kind}{h.is_dry_run ? ' · pratinjau' : ''}{sumber(h)}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-0.5 tabular-nums">{ringkas(h)}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5 tabular-nums">{ringkas(h)}{h.scope ? ` · ${h.scope}` : ''}</p>
                                         <p className="text-[11px] text-gray-400 mt-0.5">{h.user?.name ?? '—'} · {h.created_at ? formatDateID(h.created_at) : '—'}</p>
                                     </div>
                                     <Badge color={h.count_gagal > 0 ? 'yellow' : 'green'} size="sm">{h.count_gagal > 0 ? `${h.count_gagal} gagal` : 'OK'}</Badge>
