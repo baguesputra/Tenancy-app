@@ -169,11 +169,27 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
+        $monthInput = (string) $request->input('cal_month', now()->format('Y-m'));
+        $key = implode('|', [
+            'dashboard.calendar',
+            $branchScoped ? 'b'.$user->branch_id : 'all',
+            $user->hasRole('marketing') ? 'mkt' : 'std',
+            $user->can('loos.view') ? 'loo' : 'noloo',
+            $monthInput,
+        ]);
+
+        return Cache::remember($key, 60, fn () => $this->buildCalendarEvents($request, $monthInput));
+    }
+
+    private function buildCalendarEvents(Request $request, string $monthInput): array
+    {
+        $user = $request->user();
+        $branchScoped = ! $user->canViewAllBranches();
         $isMarketing = $user->hasRole('marketing');
         $canViewLoo = $user->can('loos.view');
 
         try {
-            $month = Carbon::createFromFormat('Y-m', (string) $request->input('cal_month', now()->format('Y-m')))->startOfMonth();
+            $month = Carbon::createFromFormat('Y-m', $monthInput)->startOfMonth();
         } catch (\Throwable $e) {
             $month = now()->startOfMonth();
         }

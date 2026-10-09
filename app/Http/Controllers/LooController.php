@@ -505,7 +505,12 @@ class LooController extends Controller
             ->filter(fn ($cfg) => $cfg['stage'] === $loo->current_stage)
             ->keys();
 
-        return $keys->every(fn ($key) => (bool) $loo->sections()->where('section_key', $key)->value('is_submitted'));
+        $terkirim = $loo->sections()
+            ->whereIn('section_key', $keys->all())
+            ->where('is_submitted', true)
+            ->pluck('section_key');
+
+        return $keys->diff($terkirim)->isEmpty();
     }
 
     private function canCancel(Loo $loo, User $user): bool
