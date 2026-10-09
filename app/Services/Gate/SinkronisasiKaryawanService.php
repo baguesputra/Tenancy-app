@@ -7,7 +7,10 @@ use App\Models\Department;
 use App\Models\Division;
 use App\Models\Position;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class SinkronisasiKaryawanService
@@ -15,6 +18,18 @@ class SinkronisasiKaryawanService
     public function __construct(private GateClient $gate) {}
 
     public function sinkron(array $filter = [], bool $kering = false, ?int $batas = null, int $grace = 2): array
+    {
+        try {
+            return Cache::lock('gate-sync', 300)->block(
+                10,
+                fn () => $this->sinkronTerbatas($filter, $kering, $batas, $grace)
+            );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException('Sinkronisasi Gate sedang berjalan di proses lain. Coba lagi sebentar lagi.');
+        }
+    }
+
+    private function sinkronTerbatas(array $filter, bool $kering, ?int $batas, int $grace): array
     {
         $daftar = $this->gate->ambilKaryawan($filter);
         if ($batas) {
@@ -49,7 +64,12 @@ class SinkronisasiKaryawanService
             }
         }
 
-        if (! $kering && empty($filter['email'])) {
+        // tandaiHilang hanya pada sinkron full-scope (tanpa filter/limit) dengan
+        // daftar non-kosong — subset/daftar kosong tidak boleh disimpulkan sebagai "hilang".
+        $filterAktif = array_filter($filter, fn ($v) => $v !== null && $v !== '' && $v !== false);
+        $skalaPenuh = $filterAktif === [] && ! $batas;
+
+        if (! $kering && $skalaPenuh && $daftar !== []) {
             $hasil['nonaktif'] = $this->tandaiHilang($daftar, $grace);
         }
 
@@ -59,23 +79,35 @@ class SinkronisasiKaryawanService
     private function tandaiHilang(array $daftar, int $grace): int
     {
         $adaGateId = collect($daftar)->map(fn ($b) => $b['id'] ?? null)->filter()->all();
+        if (! $adaGateId) {
+            return 0;
+        }
         $adaNik = collect($daftar)->map(fn ($b) => trim((string) ($b['nik'] ?? '')))->filter()->all();
 
-        $query = User::whereNotNull('gate_id');
-        if ($adaGateId) {
-            $query->whereNotIn('gate_id', $adaGateId);
-        }
+        $query = User::whereNotNull('gate_id')->whereNotIn('gate_id', $adaGateId);
         if ($adaNik) {
             $query->whereNotIn('employee_number', $adaNik);
         }
 
+        // Jaring pengaman: maksimal 20% user nonaktif per run agar kegagalan
+        // Gate yang mengembalikan data separuh tidak langsung mematikan massal.
+        $totalGate = User::whereNotNull('gate_id')->count();
+        $maxNonaktif = max(1, (int) ceil($totalGate * 0.2));
+
         $count = 0;
-        $query->chunkById(200, function ($users) use ($grace, &$count) {
+        $melebihiBatas = false;
+        $query->chunkById(200, function ($users) use ($grace, $maxNonaktif, &$count, &$melebihiBatas) {
             foreach ($users as $user) {
-                $miss = ((int) $user->getRawOriginal('gate_miss_count', 0)) + 1;
-                $nonaktif = $miss >= $grace;
+                $user->increment('gate_miss_count');
+                $nonaktif = ((int) $user->gate_miss_count) >= $grace;
+
+                if ($nonaktif && $count >= $maxNonaktif) {
+                    $melebihiBatas = true;
+
+                    continue;
+                }
+
                 $user->update([
-                    'gate_miss_count' => $miss,
                     'gate_synced_at' => now(),
                     'is_active' => $nonaktif ? false : $user->is_active,
                 ]);
@@ -84,6 +116,13 @@ class SinkronisasiKaryawanService
                 }
             }
         });
+
+        if ($melebihiBatas) {
+            Log::warning('GATE tandaiHilang melebihi batas aman per run, deaktivasi ditahan', [
+                'dideaktifkan' => $count,
+                'batas' => $maxNonaktif,
+            ]);
+        }
 
         return $count;
     }
@@ -100,20 +139,25 @@ class SinkronisasiKaryawanService
                 throw new RuntimeException('Data Gate tidak lengkap (nik/nama/id).');
             }
 
-            if ($email) {
-                $pemilikEmail = User::where('email', $email)->first();
-                if ($pemilikEmail && $pemilikEmail->employee_number !== $nik && ! $pemilikEmail->gate_id) {
+            $user = User::where('gate_id', $gateId)->first()
+                ?? User::where('employee_number', $nik)->first();
+
+            if ($email && $user?->email !== $email) {
+                $pemilikEmail = User::where('email', $email)
+                    ->when($user, fn ($q) => $q->whereKeyNot($user->getKey()))
+                    ->first();
+
+                if ($pemilikEmail && ! $pemilikEmail->gate_id) {
                     $pemilikEmail->update(['email' => null]);
-                } elseif ($pemilikEmail && $pemilikEmail->employee_number !== $nik && $pemilikEmail->gate_id) {
+                } elseif ($pemilikEmail) {
                     throw new RuntimeException("Email {$email} sudah dipakai akun lain.");
                 }
             }
 
-            $user = User::where('gate_id', $gateId)->first()
-                ?? User::where('employee_number', $nik)->first();
-
             $org = $this->resolveOrg($baris);
             $fotoUrl = $this->normalisasiFoto($baris['photo_url'] ?? $baris['photo'] ?? null);
+
+            $aktif = array_key_exists('is_active', $baris) ? (bool) $baris['is_active'] : null;
 
             $attrs = [
                 'name' => $nama,
@@ -125,14 +169,19 @@ class SinkronisasiKaryawanService
                 'division_id' => $org['division_id'] ?? $user?->division_id,
                 'position_id' => $org['position_id'] ?? $user?->position_id,
                 'auth_provider' => $user?->auth_provider ?? 'sso',
-                'is_active' => (bool) ($baris['is_active'] ?? true),
-                'must_change_password' => false,
                 'gate_synced_at' => now(),
                 'gate_miss_count' => 0,
             ];
+            if ($aktif !== null) {
+                $attrs['is_active'] = $aktif;
+            }
 
             if (! $user) {
-                $user = User::create($attrs + ['employee_number' => $nik]);
+                $user = User::create($attrs + [
+                    'employee_number' => $nik,
+                    'is_active' => $aktif ?? true,
+                    'must_change_password' => false,
+                ]);
                 // ponytail: role selalu staff — jabatan Gate tidak dipetakan ke role
                 $user->assignRole('staff');
 

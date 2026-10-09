@@ -76,7 +76,7 @@ class GateClient
             }
         }
 
-        return count($daftar) === 1 && is_array($daftar[0]) ? $daftar[0] : null;
+        return null;
     }
 
     private function ambil(string $path, array $query, string $jenis, ?float $timeout = null): array
@@ -85,25 +85,69 @@ class GateClient
         $baseUrl = rtrim(config('services.gate.base_url'), '/');
 
         if (! $token) {
+            Log::warning('GATE gagal', ['jenis' => $jenis, 'path' => $path, 'error' => 'GATE_TOKEN kosong']);
             throw new RuntimeException('Token GATE belum dikonfigurasi (GATE_TOKEN).');
         }
 
-        $query = array_filter($query);
+        $query = array_filter($query, fn ($v) => $v !== null && $v !== '');
 
         try {
-            $respon = $this->get($baseUrl, $token, $path, $query, $timeout)->throw()->json();
+            $halaman = 1;
+            $kumpul = [];
+            $lanjut = true;
+
+            while ($lanjut && $halaman <= 200) {
+                $respon = $this->get($baseUrl, $token, $path, $halaman > 1 ? $query + ['page' => $halaman] : $query, $timeout)->throw()->json();
+
+                if (! is_array($respon)) {
+                    Log::warning('GATE gagal', ['jenis' => $jenis, 'path' => $path, 'error' => 'respons bukan JSON valid']);
+                    throw new RuntimeException("Respons {$jenis} GATE bukan JSON valid.");
+                }
+                if (($respon['success'] ?? true) === false) {
+                    Log::warning('GATE gagal', ['jenis' => $jenis, 'path' => $path, 'error' => $respon['message'] ?? 'success=false']);
+                    throw new RuntimeException('GATE melaporkan gagal: '.($respon['message'] ?? '-'));
+                }
+
+                [$baris, $lanjut] = $this->pecahHalaman($respon, $halaman);
+                foreach ($baris as $b) {
+                    $kumpul[] = $b;
+                }
+                $halaman++;
+            }
+
+            return $kumpul;
         } catch (ConnectionException|RequestException $e) {
             Log::warning('GATE gagal', ['jenis' => $jenis, 'path' => $path, 'error' => $e->getMessage()]);
             throw new RuntimeException("Gagal mengambil data {$jenis} dari GATE: ".$e->getMessage(), 0, $e);
         }
+    }
 
-        $data = $respon['data'] ?? [];
+    /**
+     * @return array{0: array, 1: bool} baris + flag lanjut halaman berikutnya
+     */
+    private function pecahHalaman(array $respon, int $halaman): array
+    {
+        $payload = $respon['data'] ?? null;
 
-        if (isset($data['data']) && is_array($data['data'])) {
-            return $data['data'];
+        if (is_array($payload) && isset($payload['data']) && is_array($payload['data'])) {
+            $baris = $payload['data'];
+            $meta = $payload;
+        } elseif (is_array($payload)) {
+            $baris = $payload;
+            $meta = $respon['meta'] ?? [];
+        } else {
+            return [[], false];
         }
 
-        return is_array($data) ? $data : [];
+        if (isset($meta['last_page'])) {
+            return [$baris, $halaman < (int) $meta['last_page']];
+        }
+
+        if (! empty($meta['next_page_url'])) {
+            return [$baris, true];
+        }
+
+        return [$baris, false];
     }
 
     private function get(string $baseUrl, string $token, string $path, array $query, ?float $timeout = null)

@@ -5,11 +5,12 @@ namespace App\Jobs;
 use App\Models\User;
 use App\Services\Gate\GateClient;
 use App\Services\Gate\SinkronisasiKaryawanService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class SinkronKaryawanJit implements ShouldQueue
+class SinkronKaryawanJit implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
@@ -17,7 +18,14 @@ class SinkronKaryawanJit implements ShouldQueue
 
     public $timeout = 20;
 
+    public $uniqueFor = 120;
+
     public function __construct(public int $userId, public string $email) {}
+
+    public function uniqueId(): string
+    {
+        return 'gate-jit-user-'.$this->userId;
+    }
 
     public function handle(GateClient $gate, SinkronisasiKaryawanService $sinkron): void
     {

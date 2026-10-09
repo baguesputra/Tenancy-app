@@ -19,6 +19,10 @@ class SinkronKaryawanGate extends Command
 
     public function handle(SinkronisasiKaryawanService $sinkron): int
     {
+        if (! GateSyncLog::where('kind', 'master')->where('is_dry_run', false)->exists()) {
+            $this->call('gate:sinkron-master');
+        }
+
         $hasil = $sinkron->sinkron(
             [
                 'company_id' => $this->option('company'),
@@ -31,11 +35,17 @@ class SinkronKaryawanGate extends Command
 
         GateSyncLog::create([
             'kind' => 'karyawan', 'source' => 'jadwal', 'is_dry_run' => (bool) $this->option('dry-run'),
+            'scope' => GateSyncLog::buatScope([
+                'company' => $this->option('company'),
+                'department' => $this->option('department'),
+                'limit' => $this->option('limit'),
+            ]),
             'count_baru' => count($hasil['baru']), 'count_diperbarui' => count($hasil['diperbarui']),
             'count_gagal' => count($hasil['gagal']), 'count_dilewati' => $hasil['dilewati'],
+            'count_nonaktif' => $hasil['nonaktif'],
         ]);
 
-        $this->info('Baru: '.count($hasil['baru']).', diperbarui: '.count($hasil['diperbarui']).', gagal: '.count($hasil['gagal']).', dilewati: '.$hasil['dilewati']);
+        $this->info('Baru: '.count($hasil['baru']).', diperbarui: '.count($hasil['diperbarui']).', gagal: '.count($hasil['gagal']).', dilewati: '.$hasil['dilewati'].', nonaktif: '.$hasil['nonaktif']);
 
         foreach ($hasil['gagal'] as $gagal) {
             $this->error($gagal);

@@ -20,6 +20,7 @@ class SinkronMasterGate extends Command
 
         GateSyncLog::create([
             'kind' => 'master', 'source' => 'jadwal', 'is_dry_run' => (bool) $this->option('dry-run'),
+            'scope' => GateSyncLog::buatScope(['company' => $this->option('company')]),
             'count_departemen' => $hasil['departemen'], 'count_divisi' => $hasil['divisi'],
             'count_jabatan' => $hasil['jabatan'], 'count_gagal' => count($hasil['gagal']),
         ]);

@@ -16,6 +16,13 @@ Artisan::command('inspire', function () {
 // DevCommands::artisan('serve --host=127.0.0.1 --port=8000', 'server');
 DevCommands::artisan('serve --host=127.0.0.1 --port=8001', 'server');
 
+// Master didaftarkan sebelum karyawan agar saat keduanya jatuh bareng
+// (mis. 02:00) schedule:run mengeksekusi master lebih dulu.
+Schedule::command('gate:sinkron-master')->dailyAt(
+    GateSyncSetting::current()->master_daily_at ?? '02:00'
+)->when(fn () => GateSyncSetting::current()->schedule_enabled)
+    ->withoutOverlapping()->onOneServer();
+
 Schedule::command('gate:sinkron-karyawan')->everyMinute()
     ->when(function () {
         $set = GateSyncSetting::current();
@@ -28,8 +35,3 @@ Schedule::command('gate:sinkron-karyawan')->everyMinute()
 
         return ! $last || $last->lt(now()->subMinutes($interval));
     })->withoutOverlapping()->onOneServer();
-
-Schedule::command('gate:sinkron-master')->dailyAt(
-    GateSyncSetting::current()->master_daily_at ?? '02:00'
-)->when(fn () => GateSyncSetting::current()->schedule_enabled)
-    ->withoutOverlapping()->onOneServer();

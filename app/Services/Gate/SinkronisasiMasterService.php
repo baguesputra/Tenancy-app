@@ -73,6 +73,12 @@ class SinkronisasiMasterService
                 $branch = Branch::where('code', $company['code'])->first();
                 $branch?->update(['gate_id' => $company['id']]);
             }
+            if (! $branch && ! empty($company['code'])) {
+                $branch = Branch::firstOrCreate(
+                    ['gate_id' => $company['id']],
+                    ['code' => $company['code'], 'name' => $company['name'] ?? $company['code']]
+                );
+            }
             if ($branch && ! $branch->gate_id) {
                 $branch->update(['gate_id' => $company['id']]);
             }
