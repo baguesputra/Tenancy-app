@@ -48,8 +48,9 @@ class HandleInertiaRequests extends Middleware
             'unreadNotificationsCount' => fn () => $notifiable?->unreadNotifications()->count() ?? 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
                 'answer' => fn () => $request->session()->get('answer'),
-                'credential' => fn () => $request->session()->get('credential'),
+                'credl' => fn () => $request->session()->get('credl'),
             ],
             'breadcrumbs' => fn () => BreadcrumbService::forRequest($request),
         ];

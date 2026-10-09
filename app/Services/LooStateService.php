@@ -55,7 +55,7 @@ class LooStateService
             if ($to === 'completed') {
                 $password = Str::random(12);
                 $this->tenantSync->sync($loo, $password);
-                $this->log($loo, $actor, 'handover_completed', [], ['portal_password' => $password]);
+                $this->log($loo, $actor, 'handover_completed', [], ['portal_account_created' => true]);
             }
 
             return $loo->fresh();

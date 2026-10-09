@@ -544,7 +544,7 @@ function NavLink({ href, currentUrl, children, icon, small = false, collapsed = 
 function FlashBanner() {
     const { flash, errors } = usePage().props;
     const errorMessages = Object.values(errors ?? {}).flat().filter(Boolean);
-    if (!flash?.success && errorMessages.length === 0) return null;
+    if (!flash?.success && !flash?.error && errorMessages.length === 0) return null;
 
     return (
         <div className="shrink-0">
@@ -554,6 +554,14 @@ function FlashBanner() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                     {flash.success}
+                </div>
+            )}
+            {flash?.error && (
+                <div className="bg-red-50 border-b border-red-100 text-red-700 text-sm px-4 sm:px-6 py-3 flex items-center gap-2" role="alert">
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    {flash.error}
                 </div>
             )}
             {errorMessages.length > 0 && (

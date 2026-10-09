@@ -33,11 +33,23 @@ export default function Index({ tenants, filters, withoutAccountCount, withAccou
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ username: '', password: '' });
 
     useEffect(() => {
-        if (flash?.credential) {
-            setResult(flash.credential);
-            setCopied(false);
-        }
-    }, [flash?.credential]);
+        if (!flash?.credl) return;
+        let batal = false;
+        fetch(`/settings/tenant-accounts/credential/${flash.credl}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+        })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (!batal && data) {
+                    setResult(data);
+                    setCopied(false);
+                }
+            })
+            .catch(() => {});
+        return () => {
+            batal = true;
+        };
+    }, [flash?.credl]);
 
     useEffect(() => {
         const t = setTimeout(() => {

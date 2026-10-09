@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\TenantUser;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -46,8 +48,8 @@ class TenantAccountController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'max:100'],
         ]);
 
-        $username = $validated['username'] ?: TenantUser::generateUsernameFrom($tenant->name);
-        $password = $validated['password'] ?: Str::random(10);
+        $username = $validated['username'] ?? null ?: TenantUser::generateUsernameFrom($tenant->name);
+        $password = $validated['password'] ?? null ?: Str::random(10);
 
         $tenantUser = TenantUser::create([
             'tenant_id' => $tenant->id,
@@ -56,14 +58,12 @@ class TenantAccountController extends Controller
             'is_active' => true,
         ]);
 
-        return back()
-            ->with('success', "Akun portal untuk \"{$tenant->name}\" berhasil dibuat.")
-            ->with('credential', [
-                'mode' => 'created',
-                'tenant_name' => $tenant->name,
-                'username' => $tenantUser->username,
-                'password' => $password,
-            ]);
+        return $this->kirimKredensial(back(), [
+            'mode' => 'created',
+            'tenant_name' => $tenant->name,
+            'username' => $tenantUser->username,
+            'password' => $password,
+        ])->with('success', "Akun portal untuk \"{$tenant->name}\" berhasil dibuat.");
     }
 
     public function bulkCreate()
@@ -88,9 +88,8 @@ class TenantAccountController extends Controller
             return back()->with('success', 'Semua tenant sudah punya akun.');
         }
 
-        return back()
-            ->with('success', count($created) . ' akun portal berhasil dibuat. Salin kredensial di bawah sebelum menutup halaman.')
-            ->with('credential', ['mode' => 'bulk', 'accounts' => $created]);
+        return $this->kirimKredensial(back(), ['mode' => 'bulk', 'accounts' => $created])
+            ->with('success', count($created) . ' akun portal berhasil dibuat. Salin kredensial di bawah sebelum menutup halaman.');
     }
 
     public function resetPassword(Request $request, $tenantId)
@@ -106,9 +105,9 @@ class TenantAccountController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'max:100'],
         ]);
 
-        $username = $validated['username'] ?: $tenant->tenantUser->username;
+        $username = $validated['username'] ?? null ?: $tenant->tenantUser->username;
         $passwordChanged = ! empty($validated['password']);
-        $password = $validated['password'] ?: null;
+        $password = $validated['password'] ?? null;
 
         $tenant->tenantUser->update(array_filter([
             'username' => $username,
@@ -119,14 +118,28 @@ class TenantAccountController extends Controller
             return back()->with('success', "Username akun \"{$tenant->name}\" diperbarui menjadi \"{$username}\". Password tidak berubah.");
         }
 
-        return back()
-            ->with('success', "Akun portal \"{$tenant->name}\" berhasil diperbarui.")
-            ->with('credential', [
-                'mode' => 'updated',
-                'tenant_name' => $tenant->name,
-                'username' => $username,
-                'password' => $password,
-            ]);
+        return $this->kirimKredensial(back(), [
+            'mode' => 'updated',
+            'tenant_name' => $tenant->name,
+            'username' => $username,
+            'password' => $password,
+        ])->with('success', "Akun portal \"{$tenant->name}\" berhasil diperbarui.");
+    }
+
+    public function credential(string $token)
+    {
+        $kredensial = Cache::pull("tenant-credential:{$token}");
+        abort_unless($kredensial, 404);
+
+        return response()->json($kredensial);
+    }
+
+    private function kirimKredensial(RedirectResponse $redirect, array $kredensial): RedirectResponse
+    {
+        $token = (string) Str::uuid();
+        Cache::put("tenant-credential:{$token}", $kredensial, now()->addMinutes(5));
+
+        return $redirect->with('credl', $token);
     }
 
     public function toggleActive($tenantId)
