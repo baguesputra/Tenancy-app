@@ -17,6 +17,7 @@ export default function Show({ inspection, checklistSnapshot }) {
     const [feedbackNotes, setFeedbackNotes] = useState(inspection.notes ?? '');
     const [savingNotes, setSavingNotes] = useState(null);
     const [notesSaved, setNotesSaved] = useState(false);
+    const [notesError, setNotesError] = useState(false);
     const notesTimer = useRef({});
     const versionRef = useRef({});
     const isLocked = inspection.session_status !== 'in_progress';
@@ -24,6 +25,7 @@ export default function Show({ inspection, checklistSnapshot }) {
     const saveNotes = async (field, value) => {
         setSavingNotes(field);
         setNotesSaved(false);
+        setNotesError(false);
         try {
             const res = await fetch(`/inspections/${inspection.id}/notes`, {
                 method: 'PATCH',
@@ -37,6 +39,9 @@ export default function Show({ inspection, checklistSnapshot }) {
                 },
             });
             if (res.ok) setNotesSaved(true);
+            else setNotesError(true);
+        } catch {
+            setNotesError(true);
         } finally {
             setSavingNotes(null);
         }
@@ -330,6 +335,8 @@ export default function Show({ inspection, checklistSnapshot }) {
                                 <h2 className="text-sm sm:text-[15px] font-semibold text-[#0F1E36]">Lain-lain & Keluhan / Saran</h2>
                                 {savingNotes ? (
                                     <span className="text-xs text-gray-400 shrink-0">Menyimpan…</span>
+                                ) : notesError ? (
+                                    <span className="text-xs text-red-600 shrink-0">Gagal menyimpan — ulangi</span>
                                 ) : notesSaved ? (
                                     <span className="text-xs text-emerald-600 shrink-0">Tersimpan ✓</span>
                                 ) : null}
