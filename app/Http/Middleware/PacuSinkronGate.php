@@ -18,15 +18,19 @@ class PacuSinkronGate
             return $respon;
         }
 
+        if (! config('services.gate.pacu_enabled')) {
+            return $respon;
+        }
+
         try {
-            if (Cache::get('gate_tick_at', 0) > now()->subMinute()->timestamp) {
+            if (! Cache::add('gate_tick_at', now()->timestamp, 60)) {
                 return $respon;
             }
-            Cache::put('gate_tick_at', now()->timestamp, 120);
 
             Artisan::call('schedule:run');
             Artisan::call('queue:work', ['--once' => true, '--sleep' => 0, '--tries' => 1]);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return $respon;

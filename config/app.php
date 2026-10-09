@@ -119,7 +119,7 @@ return [
     */
     'allow_local_login' => env('ALLOW_LOCAL_LOGIN', false),
     'enforce_password_change' => env('ENFORCE_PASSWORD_CHANGE', false),
-    
+
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
