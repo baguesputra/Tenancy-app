@@ -45,6 +45,7 @@ class SsoCallbackTest extends TestCase
         $user = User::create(array_merge([
             'name' => 'Budi', 'email' => 'budi@dutamall.com', 'employee_number' => 'NIK-1',
             'branch_id' => $branch->id, 'password' => bcrypt('x'), 'is_active' => true,
+            'auth_provider' => 'sso',
         ], $over));
         $user->assignRole('staff');
 
@@ -110,6 +111,48 @@ class SsoCallbackTest extends TestCase
         $this->get(route('sso.callback'))
             ->assertRedirect(route('sso.gagal'));
         $this->assertGuest();
+    }
+
+    public function test_callback_tidak_diatih_alih_akun_lokal(): void
+    {
+        $this->existingUser(['auth_provider' => 'local', 'sso_id' => null]);
+        $this->mockSsoUser();
+        $this->gateKosong();
+
+        $this->get(route('sso.callback'))
+            ->assertRedirect(route('sso.gagal'));
+
+        $this->assertGuest();
+        $this->assertNull(User::where('email', 'budi@dutamall.com')->firstOrFail()->sso_id);
+    }
+
+    public function test_callback_tidak_menimpa_sso_id_akun_lain(): void
+    {
+        $this->existingUser(['sso_id' => 'sso-berbeda']);
+        $this->mockSsoUser();
+        $this->gateKosong();
+
+        $this->get(route('sso.callback'))
+            ->assertRedirect(route('sso.gagal'));
+
+        $this->assertGuest();
+        $this->assertSame('sso-berbeda', User::where('email', 'budi@dutamall.com')->firstOrFail()->sso_id);
+    }
+
+    public function test_callback_taut_via_nik_ketika_email_lokal_ketinggalan(): void
+    {
+        $user = $this->existingUser(['email' => 'lama@dutamall.com']);
+        $this->mockSsoUser(['email' => 'baru@dutamall.com']);
+        Http::fake(['*/api/users*' => Http::response(['success' => true, 'data' => [[
+            'id' => 'gate-1', 'name' => 'Budi', 'email' => 'baru@dutamall.com',
+            'nik' => 'NIK-1', 'is_active' => true,
+        ]]], 200)]);
+
+        $this->get(route('sso.callback'))->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('baru@dutamall.com', $user->refresh()->email);
+        $this->assertSame('sso-123', $user->refresh()->sso_id);
     }
 
     public function test_callback_gagal_user_nonaktif(): void

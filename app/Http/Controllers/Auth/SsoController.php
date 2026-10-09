@@ -48,8 +48,20 @@ class SsoController extends Controller
                     ->with('error', 'Email tidak tersedia dari SSO. Hubungi admin untuk mendaftarkan email Anda.');
             }
 
-            $user = User::where('sso_id', $ssoId)->first()
-                ?? User::where('email', $email)->first();
+            $user = User::where('sso_id', $ssoId)->first();
+            $baris = null;
+            $viaNik = false;
+
+            if (! $user) {
+                $kandidat = User::where('email', $email)->first();
+                if ($kandidat) {
+                    if (! $this->bolehTaut($kandidat, $ssoId)) {
+                        return redirect()->route('sso.gagal')
+                            ->with('error', 'Email ini terkait akun login lokal atau SSO lain. Hubungi admin untuk penautan akun.');
+                    }
+                    $user = $kandidat;
+                }
+            }
 
             if (! $user) {
                 $baris = $gate->cariKaryawanByEmail($email);
@@ -61,6 +73,18 @@ class SsoController extends Controller
                         ->with('error', 'Akun SSO tidak terdaftar di data karyawan Gate. Hubungi admin untuk sinkronisasi.');
                 }
 
+                $kandidat = User::where('employee_number', $nik)->first();
+                if ($kandidat) {
+                    if (! $this->bolehTaut($kandidat, $ssoId)) {
+                        return redirect()->route('sso.gagal')
+                            ->with('error', 'Akun dengan NIK ini terkait login lokal atau SSO lain. Hubungi admin.');
+                    }
+                    $user = $kandidat;
+                    $viaNik = true;
+                }
+            }
+
+            if (! $user) {
                 $user = User::create([
                     'employee_number' => $nik,
                     'name' => $nama,
@@ -77,14 +101,18 @@ class SsoController extends Controller
                     Log::warning('SSO user tanpa branch (mapping belum ada)', ['user_id' => $user->id, 'email' => $email]);
                 }
             } else {
-                if ($user->email && $user->email !== $email) {
+                if (! $viaNik && $user->email && $user->email !== $email) {
                     return redirect()->route('sso.gagal')
                         ->with('error', 'Email SSO tidak cocok dengan data lokal. Hubungi admin untuk memperbarui data Anda.');
                 }
 
+                if (! $user->sso_id) {
+                    Log::info('SSO tautkan akun', ['user_id' => $user->id, 'sso_id' => $ssoId]);
+                }
+
                 $user->update([
-                    'sso_id' => $ssoId,
-                    'email' => $user->email ?? $email,
+                    'sso_id' => $user->sso_id ?: $ssoId,
+                    'email' => $viaNik ? $email : ($user->email ?? $email),
                     'name' => $name ?: $user->name,
                     'auth_provider' => 'sso',
                     'email_verified_at' => $user->email_verified_at ?? now(),
@@ -142,7 +170,7 @@ class SsoController extends Controller
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
-        $sloUrl = env('SAML_IDP_SLO_URL', route('login'));
+        $sloUrl = config('services.perusahaan.idp_slo') ?: route('login');
 
         return Inertia::location($sloUrl);
     }
@@ -170,5 +198,18 @@ class SsoController extends Controller
     {
         return Socialite::driver('perusahaan')
             ->getServiceProviderMetadata();
+    }
+
+    /**
+     * Akun lokal (break-glass, password) tidak boleh diambil alih SSO,
+     * dan sso_id yang sudah ada tidak boleh ditimpa akun berbeda.
+     */
+    private function bolehTaut(User $kandidat, string $ssoId): bool
+    {
+        if ($kandidat->auth_provider === 'local' && ! $kandidat->sso_id) {
+            return false;
+        }
+
+        return ! $kandidat->sso_id || $kandidat->sso_id === $ssoId;
     }
 }
