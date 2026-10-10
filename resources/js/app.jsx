@@ -37,9 +37,10 @@ class ErrorBoundary extends Component {
     }
 }
 
-router.onError((error) => {
-    if (error?.response?.status === 419) {
+router.on('httpException', (event) => {
+    if (event.detail.response.status === 419) {
         window.location.reload();
+        return false;
     }
 });
 
