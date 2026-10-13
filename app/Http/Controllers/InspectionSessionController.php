@@ -7,6 +7,7 @@ use App\Models\InspectionSession;
 use App\Models\ScannableCode;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\User;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use Illuminate\Http\Request;
@@ -36,11 +37,80 @@ class InspectionSessionController extends Controller
         return redirect()->route('sessions.show', $session->id);
     }
 
+    public function create(Request $request)
+    {
+        $user = $request->user();
+
+        return Inertia::render('InspectionSessions/Create', [
+            'picName' => $user->name,
+            'staffByDepartment' => $this->staffOptions($user->branch_id, $user->id),
+        ]);
+    }
+
+    private function staffOptions($branchId, $excludeUserId): array
+    {
+        $staff = User::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->where('id', '!=', $excludeUserId)
+            ->whereHas('department', fn ($q) => $q->whereIn('name', InspectionSessionService::PARTICIPANT_DEPARTMENTS))
+            ->with('department:id,name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'department_id']);
+
+        return collect(InspectionSessionService::PARTICIPANT_DEPARTMENTS)
+            ->mapWithKeys(fn ($dept) => [$dept => $staff
+                ->where('department.name', $dept)
+                ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+                ->values()
+                ->all()])
+            ->all();
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'participant_ids' => 'required|array|min:1',
+            'participant_ids.*' => 'exists:users,id',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'participant_ids.required' => 'Pilih minimal 1 peserta sidak.',
+            'participant_ids.min' => 'Pilih minimal 1 peserta sidak.',
+        ]);
+
+        $session = $this->sessionService->createSession(
+            $request->user(),
+            $validated['participant_ids'],
+            $validated['notes'] ?? null
+        );
+
+        return redirect()->route('sessions.show', $session->id)
+            ->with('success', 'Sesi sidak baru dimulai.');
+    }
+
+    public function updateParticipants(InspectionSession $session, Request $request)
+    {
+        $this->authorizeAccess($session, $request);
+
+        $validated = $request->validate([
+            'participant_ids' => 'required|array|min:1',
+            'participant_ids.*' => 'exists:users,id',
+        ], [
+            'participant_ids.required' => 'Pilih minimal 1 peserta sidak.',
+            'participant_ids.min' => 'Pilih minimal 1 peserta sidak.',
+        ]);
+
+        $this->sessionService->syncParticipants($session, $validated['participant_ids']);
+
+        return back()->with('success', 'Daftar peserta diperbarui.');
+    }
+
     public function show(InspectionSession $session, Request $request)
     {
         $this->authorizeAccess($session, $request);
 
         $session->load([
+            'user:id,name',
+            'participants',
             'inspections:id,inspection_session_id,tenant_id,status,is_flagged',
             'inspections.tenant:id,name,logo_path,tenant_category_id,product_category_id',
             'inspections.tenant.productCategory:id,name',
@@ -75,6 +145,9 @@ class InspectionSessionController extends Controller
         return Inertia::render('InspectionSessions/Show', [
             'session' => $session,
             'availableTenants' => $availableTenants,
+            'staffByDepartment' => $session->status === 'in_progress'
+                ? $this->staffOptions($session->branch_id, $session->user_id)
+                : [],
         ]);
     }
 

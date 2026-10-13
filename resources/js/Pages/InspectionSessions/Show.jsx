@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import TextInput from '@/Components/Form/TextInput';
+import MultiSelect from '@/Components/Form/MultiSelect';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
@@ -16,12 +17,40 @@ const filters = [
 
 import initials from '@/utils/initials';
 
-export default function Show({ session, availableTenants }) {
+export default function Show({ session, availableTenants, staffByDepartment = {} }) {
     const [search, setSearch] = useState('');
     const [adding, setAdding] = useState(false);
     const [filter, setFilter] = useState('all');
     const [scanOpen, setScanOpen] = useState(false);
     const isLocked = session.status !== 'in_progress';
+
+    const participants = session.participants ?? [];
+    const teamByDept = useMemo(() => {
+        const groups = {};
+        participants.forEach((p) => {
+            const key = p.department_name_snapshot || 'Lainnya';
+            (groups[key] = groups[key] || []).push(p);
+        });
+        return groups;
+    }, [session.participants]);
+
+    const [editingTeam, setEditingTeam] = useState(false);
+    const [teamIds, setTeamIds] = useState(participants.map((p) => p.user_id));
+    const [savingTeam, setSavingTeam] = useState(false);
+    const deptKeys = Object.keys(staffByDepartment);
+
+    const setDeptSelection = (dept, ids) => {
+        const deptIds = new Set((staffByDepartment[dept] ?? []).map((u) => u.id));
+        setTeamIds((prev) => [...prev.filter((id) => !deptIds.has(id)), ...ids]);
+    };
+
+    const saveTeam = () => {
+        setSavingTeam(true);
+        router.patch(`/inspection-sessions/${session.id}/participants`, { participant_ids: teamIds }, {
+            preserveScroll: true,
+            onFinish: () => { setSavingTeam(false); setEditingTeam(false); },
+        });
+    };
 
     const inspections = session.inspections ?? [];
     const done = inspections.filter((i) => i.status === 'completed').length;
@@ -72,6 +101,15 @@ export default function Show({ session, availableTenants }) {
                             <h1 className="text-lg sm:text-xl font-semibold mt-0.5">
                                 {new Date(session.started_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                             </h1>
+                            <p className="text-xs text-white/70 mt-1">
+                                PIC: <span className="font-semibold text-white">{session.pic_name ?? '—'}</span>
+                                {participants.length > 0 && (
+                                    <span> · Tim: {participants.map((p) => p.name_snapshot).join(', ')}</span>
+                                )}
+                            </p>
+                            {session.notes && (
+                                <p className="text-xs text-white/70 mt-1 italic">“{session.notes}”</p>
+                            )}
                         </div>
                         <Badge color={session.status === 'completed' ? 'gray' : 'green'} size="md">
                             {session.status === 'completed' ? 'Selesai' : 'Berlangsung'}
@@ -109,6 +147,73 @@ export default function Show({ session, availableTenants }) {
                             </Button>
                         </div>
                     )}
+                </div>
+
+                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm mb-4 overflow-hidden">
+                    <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-gray-100">
+                        <div className="flex items-center justify-between gap-2">
+                            <h2 className="text-sm font-semibold text-gray-900">Tim Sidak ({participants.length})</h2>
+                            {!isLocked && !editingTeam && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setTeamIds(participants.map((p) => p.user_id)); setEditingTeam(true); }}
+                                    className="text-xs font-medium text-[#0F1E36] bg-[#0F1E36]/5 hover:bg-[#0F1E36]/10 rounded-lg px-2.5 py-1.5 transition-colors"
+                                >
+                                    Ubah
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="px-4 sm:px-5 py-3">
+                        {!editingTeam ? (
+                            Object.keys(teamByDept).length > 0 ? (
+                                <dl className="space-y-2.5">
+                                    {Object.entries(teamByDept).map(([dept, members]) => (
+                                        <div key={dept}>
+                                            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{dept}</dt>
+                                            <dd className="flex flex-wrap gap-1.5 mt-1">
+                                                {members.map((m) => (
+                                                    <Badge key={m.id} color="blue">{m.name_snapshot}</Badge>
+                                                ))}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            ) : (
+                                <p className="text-xs text-gray-400">Belum ada peserta tercatat.</p>
+                            )
+                        ) : (
+                            <div className="space-y-3">
+                                {deptKeys.map((dept) => {
+                                    const options = (staffByDepartment[dept] ?? []).map((u) => ({ value: u.id, label: u.name }));
+                                    const deptIds = new Set(options.map((o) => o.value));
+                                    return (
+                                        <div key={dept}>
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">{dept}</p>
+                                            {options.length > 0 ? (
+                                                <MultiSelect
+                                                    value={teamIds.filter((id) => deptIds.has(id))}
+                                                    onChange={(ids) => setDeptSelection(dept, ids)}
+                                                    options={options}
+                                                    placeholder={`Pilih dari ${dept}...`}
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-gray-400">Tidak ada staff aktif {dept} di cabang ini.</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                <div className="flex gap-2 pt-1">
+                                    <Button type="button" variant="secondary" onClick={() => setEditingTeam(false)} className="flex-1 justify-center">
+                                        Batal
+                                    </Button>
+                                    <Button type="button" variant="success" disabled={savingTeam} onClick={saveTeam} className="flex-1 justify-center">
+                                        {savingTeam ? 'Menyimpan...' : 'Simpan Tim'}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm mb-4 overflow-hidden">
@@ -242,6 +347,8 @@ export default function Show({ session, availableTenants }) {
                 confirmLabel="Ya, Selesaikan"
                 note="Setelah selesai, sesi dan semua checklist di dalamnya tidak bisa diubah lagi."
             >
+                <ConfirmRow label="PIC" value={session.pic_name} />
+                <ConfirmRow label="Tim" value={participants.length > 0 ? `${participants.length} orang` : null} />
                 <ConfirmRow label="Tenant disidak" value={`${inspections.length} tenant`} />
                 <ConfirmRow label="Selesai checklist" value={`${done} dari ${inspections.length}`} />
             </ConfirmModal>

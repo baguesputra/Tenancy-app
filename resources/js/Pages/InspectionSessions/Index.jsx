@@ -8,6 +8,7 @@ import Pagination from '@/Components/Pagination';
 export default function Index({ sessions }) {
     const columns = [
         { key: 'date', label: 'Tanggal' },
+        { key: 'pic', label: 'PIC' },
         { key: 'branch', label: 'Cabang' },
         { key: 'count', label: 'Jumlah Tenant' },
         { key: 'status', label: 'Status', className: 'text-right' },
@@ -21,8 +22,8 @@ export default function Index({ sessions }) {
                         <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Riwayat Sesi Sidak</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{sessions.total} sesi tercatat</p>
                     </div>
-                    <Link href="/inspection-sessions/current" className="w-full sm:w-auto">
-                        <Button className="w-full sm:w-auto justify-center !py-3 min-h-[48px]">Mulai / Lanjut Sesi</Button>
+                    <Link href="/inspection-sessions/create" className="w-full sm:w-auto">
+                        <Button className="w-full sm:w-auto justify-center !py-3 min-h-[48px]">Tambah Sesi</Button>
                     </Link>
                 </div>
 
@@ -37,6 +38,7 @@ export default function Index({ sessions }) {
                                 <td className="px-5 py-3.5 font-medium text-gray-900">
                                     {new Date(session.started_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
                                 </td>
+                                <td className="px-5 py-3.5 text-gray-700">{session.pic_name ?? '—'}</td>
                                 <td className="px-5 py-3.5 text-gray-500">{session.branch?.name}</td>
                                 <td className="px-5 py-3.5 text-gray-500">{session.inspections?.length ?? 0}</td>
                                 <td className="px-5 py-3.5 text-right">
@@ -48,7 +50,7 @@ export default function Index({ sessions }) {
                         ))}
                         {sessions.data.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-5 py-12 text-center text-sm text-gray-400">
+                                <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">
                                     Belum ada riwayat sesi.
                                 </td>
                             </tr>
@@ -69,7 +71,7 @@ export default function Index({ sessions }) {
                                         {new Date(session.started_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
                                     </p>
                                     <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                        {session.branch?.name} · {session.inspections?.length ?? 0} tenant
+                                        PIC {session.pic_name ?? '—'} · {session.branch?.name} · {session.inspections?.length ?? 0} tenant
                                     </p>
                                 </div>
                                 <Badge color={session.status === 'completed' ? 'gray' : 'yellow'} size="sm">
@@ -82,8 +84,8 @@ export default function Index({ sessions }) {
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
                             <p className="text-sm font-medium text-gray-700">Belum ada riwayat sesi.</p>
                             <p className="text-xs text-gray-400 mt-1 mb-4">Mulai sesi pertama untuk inspeksi lapangan.</p>
-                            <Link href="/inspection-sessions/current">
-                                <Button className="justify-center !py-3 min-h-[48px]">Mulai Sesi</Button>
+                            <Link href="/inspection-sessions/create">
+                                <Button className="justify-center !py-3 min-h-[48px]">Tambah Sesi</Button>
                             </Link>
                         </div>
                     )}

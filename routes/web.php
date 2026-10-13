@@ -138,10 +138,15 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
     Route::middleware('can:sidak.create')->group(function () {
         // PENTING: route ini HARUS di atas '/inspection-sessions/{session}'
         Route::get('/inspection-sessions/current', [InspectionSessionController::class, 'current'])->name('sessions.current');
+        Route::get('/inspection-sessions/create', [InspectionSessionController::class, 'create'])->name('sessions.create');
+        Route::post('/inspection-sessions', [InspectionSessionController::class, 'store'])->name('sessions.store');
+        Route::patch('/inspection-sessions/{session}/participants', [InspectionSessionController::class, 'updateParticipants'])->name('sessions.updateParticipants');
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
         Route::post('/inspection-sessions/{session}/scan', [InspectionSessionController::class, 'scan'])->name('sessions.scan');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
+        Route::post('/inspections/{inspection}/extra-photos', [InspectionController::class, 'storeExtraPhoto'])->name('inspections.storeExtraPhoto');
+        Route::delete('/inspection-extra-photos/{photo}', [InspectionController::class, 'destroyExtraPhoto'])->name('inspections.destroyExtraPhoto');
         Route::patch('/inspections/{inspection}/notes', [InspectionController::class, 'updateNotes'])->name('inspections.updateNotes');
         Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
     });
