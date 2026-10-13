@@ -199,7 +199,7 @@ class DashboardController extends Controller
         $warnTo = now()->addDays(30)->toDateString();
 
         $permitQuery = PermitRequest::query()
-            ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id'])
+            ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id', 'event_name'])
             ->where(fn ($q) => $q
                 ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
                 ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
@@ -209,15 +209,30 @@ class DashboardController extends Controller
             ->latest('work_start_date')
             ->limit(200);
 
-        $events = $permitQuery->get()->map(fn ($p) => [
-            'id' => "permit-{$p->id}",
-            'type' => in_array('pameran', $p->activity_types ?? []) ? 'pameran' : 'permit',
-            'title' => "{$p->permit_number} — {$p->store_name_snapshot}",
-            'start' => ($p->work_start_date ?? $p->request_date)?->toDateString(),
-            'end' => ($p->work_end_date ?? $p->work_start_date ?? $p->request_date)?->toDateString(),
-            'status' => $p->status,
-            'url' => "/permit-requests/{$p->id}",
-        ]);
+        $events = $permitQuery->get()->map(function ($p) {
+            $types = $p->activity_types ?? [];
+            if (in_array('pameran', $types)) {
+                $type = 'pameran';
+                $title = "{$p->permit_number} — {$p->store_name_snapshot}";
+            } elseif (! empty(array_intersect(['event', 'meeting_internal', 'stock_opname'], $types))) {
+                $type = 'kegiatan';
+                $kind = in_array('event', $types) ? 'Event' : (in_array('meeting_internal', $types) ? 'Meeting' : 'Stock Opname');
+                $title = "{$kind}: {$p->store_name_snapshot}".($p->event_name ? " — {$p->event_name}" : '')." ({$p->permit_number})";
+            } else {
+                $type = 'permit';
+                $title = "{$p->permit_number} — {$p->store_name_snapshot}";
+            }
+
+            return [
+                'id' => "permit-{$p->id}",
+                'type' => $type,
+                'title' => $title,
+                'start' => ($p->work_start_date ?? $p->request_date)?->toDateString(),
+                'end' => ($p->work_end_date ?? $p->work_start_date ?? $p->request_date)?->toDateString(),
+                'status' => $p->status,
+                'url' => "/permit-requests/{$p->id}",
+            ];
+        });
 
         if (! $isMarketing) {
             $tenancies = Tenancy::select(['id', 'tenant_id', 'start_date', 'end_date', 'status'])->with(['tenant:id,name'])
@@ -253,7 +268,7 @@ class DashboardController extends Controller
             }
 
             if ($user->can('sidak.view')) {
-                $sessions = InspectionSession::select(['id', 'user_id', 'branch_id', 'status', 'started_at'])->with('user:id,name')
+                $sessions = InspectionSession::select(['id', 'user_id', 'branch_id', 'status', 'started_at', 'creator_name_snapshot'])->with('user:id,name')
                     ->whereDate('started_at', '>=', $start->toDateString())
                     ->whereDate('started_at', '<=', $end->toDateString())
                     ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
@@ -265,7 +280,7 @@ class DashboardController extends Controller
                     $events->push([
                         'id' => "sidak-{$s->id}",
                         'type' => 'sidak',
-                        'title' => 'Sidak '.($s->user?->name ? "— {$s->user->name}" : ''),
+                        'title' => 'Sidak '.(($s->creator_name_snapshot ?? $s->user?->name) ? "— ".($s->creator_name_snapshot ?? $s->user?->name) : ''),
                         'start' => $s->started_at?->toDateString(),
                         'end' => $s->started_at?->toDateString(),
                         'status' => $s->status,

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 
 const TYPE_META = {
     permit: {
-        label: "Izin",
+        label: "Izin Kerja",
         dot: "bg-blue-500",
         chip: "bg-blue-50 text-blue-800 border-blue-200",
         bar: "bg-blue-50 text-blue-800 border-blue-200 border-l-blue-500",
@@ -15,11 +15,17 @@ const TYPE_META = {
         chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
         bar: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/25 border-l-[#FF6B6B]",
     },
-    contract_start: {
-        label: "Kontrak mulai",
+    kegiatan: {
+        label: "Kegiatan",
         dot: "bg-emerald-500",
         chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
         bar: "bg-emerald-50 text-emerald-800 border-emerald-200 border-l-emerald-500",
+    },
+    contract_start: {
+        label: "Kontrak mulai",
+        dot: "bg-purple-500",
+        chip: "bg-purple-50 text-purple-800 border-purple-200",
+        bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
     },
     contract_end: {
         label: "Kontrak berakhir",
@@ -41,51 +47,92 @@ const TYPE_META = {
     },
     loo_submitted: {
         label: "LOO disubmit",
-        dot: "bg-cyan-500",
-        chip: "bg-cyan-50 text-cyan-800 border-cyan-200",
-        bar: "bg-cyan-50 text-cyan-800 border-cyan-200 border-l-cyan-500",
+        dot: "bg-indigo-500",
+        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
     },
     loo_completed: {
         label: "LOO selesai",
-        dot: "bg-emerald-600",
-        chip: "bg-emerald-100 text-emerald-800 border-emerald-300",
-        bar: "bg-emerald-100 text-emerald-800 border-emerald-300 border-l-emerald-600",
+        dot: "bg-indigo-500",
+        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
-        dot: "bg-red-500",
-        chip: "bg-red-50 text-red-800 border-red-200",
-        bar: "bg-red-50 text-red-800 border-red-200 border-l-red-500",
+        dot: "bg-indigo-500",
+        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
     },
     loo_track_expired: {
         label: "Tracking expired",
-        dot: "bg-gray-500",
-        chip: "bg-gray-50 text-gray-800 border-gray-200",
-        bar: "bg-gray-50 text-gray-800 border-gray-200 border-l-gray-500",
+        dot: "bg-gray-400",
+        chip: "bg-gray-50 text-gray-600 border-gray-200",
+        bar: "bg-gray-50 text-gray-600 border-gray-200 border-l-gray-400",
     },
     section_filled: {
         label: "Section diisi",
-        dot: "bg-teal-500",
-        chip: "bg-teal-50 text-teal-800 border-teal-200",
-        bar: "bg-teal-50 text-teal-800 border-teal-200 border-l-teal-500",
+        dot: "bg-indigo-500",
+        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
     },
     section_submitted: {
         label: "Section disubmit",
-        dot: "bg-violet-500",
-        chip: "bg-violet-50 text-violet-800 border-violet-200",
-        bar: "bg-violet-50 text-violet-800 border-violet-200 border-l-violet-500",
+        dot: "bg-indigo-500",
+        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
     },
 };
+
+// Legenda diringkas per keluarga agar hue tetap sedikit.
+const LEGEND_GROUPS = [
+    { label: "Izin Kerja", dot: "bg-blue-500", types: ["permit"] },
+    { label: "Pameran", dot: "bg-[#FF6B6B]", types: ["pameran"] },
+    { label: "Kegiatan", dot: "bg-emerald-500", types: ["kegiatan"] },
+    { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
+    { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
+    { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled", "section_filled", "section_submitted"] },
+    { label: "Expired", dot: "bg-gray-400", types: ["loo_track_expired"] },
+];
 
 const FILTERS = [
     { key: "all", label: "Semua" },
     { key: "permit", label: "Izin" },
     { key: "pameran", label: "Pameran" },
+    { key: "kegiatan", label: "Kegiatan" },
     { key: "contract_end", label: "Kontrak berakhir" },
     { key: "sidak", label: "Sidak" },
     { key: "loo", label: "LOO" },
     { key: "section", label: "Section" },
 ];
+
+const PERMIT_TYPES = ["permit", "pameran", "kegiatan"];
+
+const familyOf = (type) =>
+    LEGEND_GROUPS.find((g) => g.types.includes(type)) ?? LEGEND_GROUPS[0];
+
+// Posisi hari ini di dalam rentang event, mis. "Hari 2/5". Null bila bukan rentang.
+function spanDay(e, dateKey) {
+    if (!e.end || e.end === e.start || !dateKey) return null;
+    const ms = (k) => new Date(`${k}T00:00:00`).getTime();
+    const total = Math.round((ms(e.end) - ms(e.start)) / 86400000) + 1;
+    const idx = Math.round((ms(dateKey) - ms(e.start)) / 86400000) + 1;
+    if (idx < 1 || idx > total) return null;
+    return `Hari ${idx}/${total}`;
+}
+
+function groupByFamily(list) {
+    const groups = [];
+    const seen = {};
+    list.forEach((e) => {
+        const fam = familyOf(e.type);
+        if (!seen[fam.label]) {
+            seen[fam.label] = { ...fam, items: [] };
+            groups.push(seen[fam.label]);
+        }
+        seen[fam.label].items.push(e);
+    });
+    return groups;
+}
 
 const MAX_CHIPS = 3;
 
@@ -134,9 +181,7 @@ export default function EventCalendar({
     const events = useMemo(() => {
         if (filter === "all") return allEvents;
         if (filter === "permit")
-            return allEvents.filter(
-                (e) => e.type === "permit" || e.type === "pameran",
-            );
+            return allEvents.filter((e) => PERMIT_TYPES.includes(e.type));
         if (filter === "loo")
             return allEvents.filter((e) => e.type.startsWith("loo_"));
         if (filter === "section")
@@ -158,14 +203,15 @@ export default function EventCalendar({
                 d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
             ) {
                 const k = dayKey(d);
-                (map[k] ??= []).push(e);
+                const seg = s === en ? "single" : k === s ? "start" : k === en ? "end" : "middle";
+                (map[k] ??= []).push({ e, seg });
             }
         });
         Object.values(map).forEach((list) =>
             list.sort(
                 (a, b) =>
-                    (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) ||
-                    a.start.localeCompare(b.start),
+                    (b.e.urgent ? 1 : 0) - (a.e.urgent ? 1 : 0) ||
+                    a.e.start.localeCompare(b.e.start),
             ),
         );
         return map;
@@ -173,7 +219,10 @@ export default function EventCalendar({
 
     const cells = useMemo(() => monthCells(year, monthIdx), [year, monthIdx]);
 
-    const selectedEvents = byDay[selected] ?? [];
+    const selectedEvents = useMemo(
+        () => (byDay[selected] ?? []).map((x) => x.e),
+        [byDay, selected],
+    );
     const agenda = useMemo(() => {
         const today = dayKey(new Date());
         return events
@@ -335,8 +384,8 @@ export default function EventCalendar({
                     let count = 0;
                     if (f.key === "all") count = allEvents.length;
                     else if (f.key === "permit")
-                        count = allEvents.filter(
-                            (e) => e.type === "permit" || e.type === "pameran",
+                        count = allEvents.filter((e) =>
+                            PERMIT_TYPES.includes(e.type),
                         ).length;
                     else if (f.key === "loo")
                         count = allEvents.filter((e) =>
@@ -369,29 +418,20 @@ export default function EventCalendar({
             </div>
 
             <div className="px-5 py-2 flex flex-wrap gap-x-3 gap-y-1">
-                {Object.entries(TYPE_META)
-                    .filter(([k]) =>
-                        allEvents.some(
-                            (e) =>
-                                e.type === k ||
-                                (k.startsWith("loo_") &&
-                                    e.type.startsWith("loo_")) ||
-                                (k.startsWith("section_") &&
-                                    e.type.startsWith("section_")),
-                        ),
-                    )
-                    .map(([k, meta]) => (
+                {LEGEND_GROUPS.filter((g) =>
+                    allEvents.some((e) => g.types.includes(e.type)),
+                ).map((g) => (
+                    <span
+                        key={g.label}
+                        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500"
+                    >
                         <span
-                            key={k}
-                            className="inline-flex items-center gap-1.5 text-[11px] text-gray-500"
-                        >
-                            <span
-                                className={`w-2 h-2 rounded-full ${meta.dot}`}
-                                aria-hidden="true"
-                            />
-                            {meta.label}
-                        </span>
-                    ))}
+                            className={`w-2 h-2 rounded-full ${g.dot}`}
+                            aria-hidden="true"
+                        />
+                        {g.label}
+                    </span>
+                ))}
             </div>
 
             {view === "month" ? (
@@ -447,11 +487,45 @@ export default function EventCalendar({
                                         {d.getDate()}
                                     </button>
                                     <div className="mt-1 hidden sm:flex sm:flex-col gap-1">
-                                        {shown.map((e) => {
+                                        {shown.map(({ e, seg }) => {
                                             const meta =
                                                 TYPE_META[e.type] ??
                                                 TYPE_META.permit;
                                             const urgent = !!e.urgent;
+                                            const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
+                                            if (seg === "middle") {
+                                                return (
+                                                    <span
+                                                        key={e.id}
+                                                        title={rangeTitle}
+                                                        aria-hidden="true"
+                                                        className={`block h-1.5 rounded-full mt-[7px] ${meta.dot}`}
+                                                    />
+                                                );
+                                            }
+                                            if (seg === "end") {
+                                                const endLabel = new Date(
+                                                    `${e.end}T00:00:00`,
+                                                ).toLocaleDateString("id-ID", {
+                                                    day: "numeric",
+                                                    month: "short",
+                                                });
+                                                return (
+                                                    <span
+                                                        key={e.id}
+                                                        title={rangeTitle}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <span
+                                                            aria-hidden="true"
+                                                            className={`h-1.5 flex-1 rounded-r-full ${meta.dot}`}
+                                                        />
+                                                        <span className="text-[10px] font-medium text-gray-500 tabular-nums">
+                                                            s/d {endLabel}
+                                                        </span>
+                                                    </span>
+                                                );
+                                            }
                                             return (
                                                 <Link
                                                     key={e.id}
@@ -459,8 +533,8 @@ export default function EventCalendar({
                                                     onClick={(ev) =>
                                                         ev.stopPropagation()
                                                     }
-                                                    title={`${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`}
-                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""}`}
+                                                    title={rangeTitle}
+                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""}`}
                                                 >
                                                     {e.title}
                                                 </Link>
@@ -473,13 +547,13 @@ export default function EventCalendar({
                                         )}
                                     </div>
                                     <div className="mt-1 flex sm:hidden items-center justify-start gap-0.5 flex-wrap min-h-[6px]">
-                                        {dayEvents.slice(0, 4).map((e) => (
+                                        {dayEvents.slice(0, 4).map(({ e }) => (
                                             <span
                                                 key={e.id}
                                                 className={`w-1.5 h-1.5 rounded-full ${(TYPE_META[e.type] ?? TYPE_META.permit).dot}`}
                                             />
                                         ))}
-                                        {dayEvents.some((e) => e.urgent) && (
+                                        {dayEvents.some(({ e }) => e.urgent) && (
                                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                                         )}
                                     </div>
@@ -552,11 +626,22 @@ function DayPanel({ dateKey, events }) {
                     Tidak ada agenda hari ini.
                 </p>
             ) : (
-                <ul className="mt-2 space-y-1.5">
-                    {events.map((e) => (
-                        <AgendaRow key={e.id} event={e} compact />
+                <div className="mt-2 space-y-3">
+                    {groupByFamily(events).map((g) => (
+                        <div key={g.label}>
+                            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 mb-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
+                                {g.label}
+                                <span className="font-normal text-gray-400 tabular-nums">{g.items.length}</span>
+                            </p>
+                            <ul className="space-y-1.5">
+                                {g.items.map((e) => (
+                                    <AgendaRow key={e.id} event={e} compact span={spanDay(e, dateKey)} />
+                                ))}
+                            </ul>
+                        </div>
                     ))}
-                </ul>
+                </div>
             )}
         </div>
     );
@@ -680,11 +765,22 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                             Tidak ada agenda hari ini.
                         </p>
                     ) : (
-                        <ul className="space-y-1">
-                            {events.map((e) => (
-                                <AgendaRow key={e.id} event={e} compact />
+                        <div className="space-y-3 px-1">
+                            {groupByFamily(events).map((g) => (
+                                <div key={g.label}>
+                                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 px-1 mb-1">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
+                                        {g.label}
+                                        <span className="font-normal text-gray-400 tabular-nums">{g.items.length}</span>
+                                    </p>
+                                    <ul className="space-y-1">
+                                        {g.items.map((e) => (
+                                            <AgendaRow key={e.id} event={e} compact span={spanDay(e, dateKey)} />
+                                        ))}
+                                    </ul>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     )}
                 </div>
             </div>
@@ -693,7 +789,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
     );
 }
 
-function AgendaRow({ event: e, compact = false }) {
+function AgendaRow({ event: e, compact = false, span = null }) {
     const meta = TYPE_META[e.type] ?? TYPE_META.permit;
     const dateLabel = new Date(`${e.start}T00:00:00`).toLocaleDateString(
         "id-ID",
@@ -714,10 +810,17 @@ function AgendaRow({ event: e, compact = false }) {
                         {e.title}
                     </span>
                     <span className="block text-[11px] text-gray-400 mt-0.5">
-                        {meta.label} · {range} · {relDay(e.start)}
+                        {meta.label} · {range}
+                        {span ? ` · ${span}` : ""}
+                        {` · ${relDay(e.start)}`}
                         {e.urgent ? " · H-30" : ""}
                     </span>
                 </span>
+                {span && (
+                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums">
+                        {span}
+                    </span>
+                )}
                 {e.urgent && (
                     <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                         Segera

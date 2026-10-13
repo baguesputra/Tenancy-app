@@ -65,4 +65,40 @@ class DashboardCalendarTest extends TestCase
         $this->assertTrue($end['urgent']);
         Carbon::setTestNow();
     }
+
+    public function test_calendar_marks_kegiatan_with_kind_prefix(): void
+    {
+        Carbon::setTestNow('2026-09-22');
+        $mgr = $this->manager();
+
+        $cat = TenantCategory::firstOrCreate(['name' => 'Tenant']);
+        $pc = ProductCategory::firstOrCreate(['name' => 'Retail']);
+        $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
+        $tenant = Tenant::create([
+            'name' => 'Toko B', 'branch_id' => $branch->id,
+            'tenant_category_id' => $cat->id, 'product_category_id' => $pc->id, 'is_active' => true,
+        ]);
+        $unit = Unit::create(['branch_id' => $branch->id, 'floor' => 'GF', 'unit_number' => '02', 'unit_code' => 'GF-02', 'is_active' => true]);
+        Tenancy::create([
+            'unit_id' => $unit->id, 'tenant_id' => $tenant->id,
+            'start_date' => '2026-01-01', 'status' => 'active',
+        ]);
+
+        app(PermitRequestService::class)->create([
+            'activity_types' => ['event'], 'request_date' => '2026-09-22',
+            'tenant_id' => $tenant->id,
+            'event_name' => 'Beauty Class', 'event_area' => 'Atrium',
+            'work_start_date' => '2026-09-25', 'work_end_date' => '2026-09-27',
+        ], $mgr);
+
+        $res = $this->actingAs($mgr)->get('/dashboard?cal_month=2026-09')->assertOk();
+        $events = collect($res->viewData('page')['props']['calendar']['events']);
+        $kegiatan = $events->firstWhere('type', 'kegiatan');
+        $this->assertNotNull($kegiatan);
+        $this->assertStringStartsWith('Event:', $kegiatan['title']);
+        $this->assertStringContainsString('/EVT/', $kegiatan['title']);
+        $this->assertSame('2026-09-25', $kegiatan['start']);
+        $this->assertSame('2026-09-27', $kegiatan['end']);
+        Carbon::setTestNow();
+    }
 }
