@@ -142,8 +142,12 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
 
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
+    const isKegiatan = (permit.activity_types ?? []).some((v) => ['event', 'meeting_internal', 'stock_opname'].includes(v));
+    const kegiatanNameLabel = { event: 'Nama Event', meeting_internal: 'Nama Meeting', stock_opname: 'Nama Stock Opname' }[permit.activity_types?.[0]] ?? 'Nama Kegiatan';
     const category = (permit.activity_types ?? []).includes('pameran')
         ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
+        : isKegiatan
+        ? { key: 'kegiatan', label: 'Kegiatan', color: 'green' }
         : permit.tenant_id
         ? { key: 'tenant', label: 'Tenant', color: 'blue' }
         : { key: 'vendor', label: 'Vendor', color: 'amber' };
@@ -166,7 +170,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                             {canCompleteSecurityCheck && <Badge color="blue">{doneTasks}/{totalTasks} dicek</Badge>}
                         </div>
                         <p className="text-xs text-gray-500 truncate mt-0.5">
-                            {locationTitle} — {permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
+                            {locationTitle} — {permit.event_name || permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
                         </p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -195,8 +199,10 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                 <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto print:hidden" aria-label="Lompat section">
                     {[
                         ['#detail', 'Detail'],
-                        ['#pekerja', `Pekerja ${workersDone}/${workers.length}`],
-                        ['#barang', `Barang ${goodsDone}/${goods.length}`],
+                        ...(!isKegiatan ? [
+                            ['#pekerja', `Pekerja ${workersDone}/${workers.length}`],
+                            ['#barang', `Barang ${goodsDone}/${goods.length}`],
+                        ] : []),
                         ['#approval', 'Approval'],
                     ].map(([href, label]) => (
                         <a key={href} href={href} className="px-3 py-1.5 rounded-full text-gray-600 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-200 whitespace-nowrap transition-colors">
@@ -248,10 +254,19 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                             ))}
                                         </span>
                                     </DocRow>
-                                    <DocRow label="Jenis Pekerjaan">{permit.job_type || '—'}</DocRow>
+                                    {isKegiatan ? (
+                                        <>
+                                            <DocRow label={kegiatanNameLabel}>{permit.event_name || '—'}</DocRow>
+                                            <DocRow label="Area Event">{permit.event_area || '—'}</DocRow>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DocRow label="Jenis Pekerjaan">{permit.job_type || '—'}</DocRow>
+                                            <DocRow label="Akses Masuk / Keluar">{permit.access_route || '—'}</DocRow>
+                                        </>
+                                    )}
                                     <DocRow label="Tanggal Pelaksanaan">{formatDateRange(permit.work_start_date, permit.work_end_date)}</DocRow>
                                     <DocRow label="Jam Pelaksanaan">{formatTimeRange(permit.work_start_time, permit.work_end_time)}</DocRow>
-                                    <DocRow label="Akses Masuk / Keluar">{permit.access_route || '—'}</DocRow>
                                     {permit.notes && <DocRow label="Keterangan">{permit.notes}</DocRow>}
                                 </DocSection>
 
@@ -278,6 +293,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                             </article>
                         </div>
 
+                        {!isKegiatan && (
                         <FormSection title="Pemeriksaan Fisik" description={canCompleteSecurityCheck ? `${doneTasks}/${totalTasks} selesai — ketuk untuk cek` : 'Hasil cek fisik'}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div id="pekerja" className="scroll-mt-40 overflow-x-auto">
@@ -444,6 +460,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                 </div>
                             </div>
                         </FormSection>
+                        )}
                     </div>
 
                     <div id="approval" className="lg:sticky lg:top-[168px] space-y-4 scroll-mt-40">
@@ -486,7 +503,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-xs text-gray-400">QR aktif setelah izin selesai / disetujui Building Service.</p>
+                                <p className="text-xs text-gray-400">{isKegiatan ? 'QR aktif setelah izin selesai disetujui.' : 'QR aktif setelah izin selesai / disetujui Building Service.'}</p>
                             )}
                         </FormSection>
                         <FormSection title="Progress Approval" description={currentStep ? `Menunggu: ${currentStep.label}` : 'Semua tahap selesai'}>

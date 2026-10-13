@@ -22,6 +22,7 @@ class PermitRequest extends Model
         'is_external', 'contractor_company', 'contractor_pic', 'contractor_address', 'contractor_phone',
         'job_type', 'work_start_date', 'work_end_date', 'work_start_time', 'work_end_time',
         'access_route', 'notes', 'worker_count', 'needs_manager_approval',
+        'event_name', 'event_area',
         'requested_by_type', 'requested_by_id',
         'status',
         'barcode_token',
@@ -113,6 +114,14 @@ class PermitRequest extends Model
     public function getIsGoodsPermitAttribute(): bool
     {
         return in_array('masuk_keluar_barang', $this->activity_types ?? []);
+    }
+
+    public function getIsKegiatanAttribute(): bool
+    {
+        return ! empty(array_intersect(
+            ['event', 'meeting_internal', 'stock_opname'],
+            $this->activity_types ?? []
+        ));
     }
 
     public function branch()

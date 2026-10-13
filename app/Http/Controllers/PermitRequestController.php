@@ -30,15 +30,25 @@ class PermitRequestController extends Controller
         return in_array('pameran', $permit->activity_types ?? [], true);
     }
 
+    private function isKegiatanForm(PermitRequest $permit): bool
+    {
+        return ! empty(array_intersect(
+            ['event', 'meeting_internal', 'stock_opname'],
+            $permit->activity_types ?? []
+        ));
+    }
+
     private function canManageForm(User $user, PermitRequest $permit): bool
     {
         if ($user->hasAnyRole(self::PRIVILEGED_ROLES)) {
             return true;
         }
 
-        return $this->isPameranForm($permit)
-            ? $user->hasRole('marketing')
-            : $user->hasRole('tenancy_staff');
+        if ($this->isPameranForm($permit)) {
+            return $user->hasRole('marketing');
+        }
+
+        return $user->hasRole('tenancy_staff');
     }
 
     private const ACTIVITY_TYPES = [
@@ -52,7 +62,12 @@ class PermitRequestController extends Controller
         ['value' => 'pull_out', 'label' => 'Pull Out'],
         ['value' => 'renovasi', 'label' => 'Renovasi'],
         ['value' => 'pameran', 'label' => 'Pameran / Open Counter', 'code' => 'E&P'],
+        ['value' => 'event', 'label' => 'Event', 'code' => 'EVT'],
+        ['value' => 'meeting_internal', 'label' => 'Meeting Internal', 'code' => 'MTG'],
+        ['value' => 'stock_opname', 'label' => 'Stock Opname', 'code' => 'STO'],
     ];
+
+    private const KEGIATAN_TYPES = ['event', 'meeting_internal', 'stock_opname'];
 
     public function index(Request $request)
     {
@@ -85,14 +100,16 @@ class PermitRequestController extends Controller
             $agg = (clone $base)->toBase()->selectRaw("
                 count(*) as total,
                 sum(activity_types like '%pameran%') as pameran,
-                sum(tenant_id is not null and activity_types not like '%pameran%') as tenant,
-                sum(tenant_id is null and activity_types not like '%pameran%') as vendor
+                sum(activity_types not like '%pameran%' and (activity_types like '%event%' or activity_types like '%meeting_internal%' or activity_types like '%stock_opname%')) as kegiatan,
+                sum(tenant_id is not null and activity_types not like '%pameran%' and activity_types not like '%event%' and activity_types not like '%meeting_internal%' and activity_types not like '%stock_opname%') as tenant,
+                sum(tenant_id is null and activity_types not like '%pameran%' and activity_types not like '%event%' and activity_types not like '%meeting_internal%' and activity_types not like '%stock_opname%') as vendor
             ")->first();
 
             $summary = [
                 'total' => (int) ($agg->total ?? 0),
                 'counts' => [
                     'pameran' => (int) ($agg->pameran ?? 0),
+                    'kegiatan' => (int) ($agg->kegiatan ?? 0),
                     'tenant' => (int) ($agg->tenant ?? 0),
                     'vendor' => (int) ($agg->vendor ?? 0),
                 ],
@@ -139,8 +156,19 @@ class PermitRequestController extends Controller
     {
         return match ($category) {
             'pameran' => $query->where('activity_types', 'like', '%pameran%'),
-            'tenant' => $query->whereNotNull('tenant_id')->where('activity_types', 'not like', '%pameran%'),
+            'kegiatan' => $query->where('activity_types', 'not like', '%pameran%')
+                ->where(fn ($q) => $q->where('activity_types', 'like', '%event%')
+                    ->orWhere('activity_types', 'like', '%meeting_internal%')
+                    ->orWhere('activity_types', 'like', '%stock_opname%')),
+            'tenant' => $query->whereNotNull('tenant_id')
+                ->where('activity_types', 'not like', '%pameran%')
+                ->where('activity_types', 'not like', '%event%')
+                ->where('activity_types', 'not like', '%meeting_internal%')
+                ->where('activity_types', 'not like', '%stock_opname%'),
             'vendor' => $query->where('activity_types', 'not like', '%pameran%')
+                ->where('activity_types', 'not like', '%event%')
+                ->where('activity_types', 'not like', '%meeting_internal%')
+                ->where('activity_types', 'not like', '%stock_opname%')
                 ->whereNull('tenant_id'),
             default => $query,
         };
@@ -151,6 +179,9 @@ class PermitRequestController extends Controller
         if (in_array('pameran', $permit->activity_types ?? [])) {
             return 'pameran';
         }
+        if (! empty(array_intersect(self::KEGIATAN_TYPES, $permit->activity_types ?? []))) {
+            return 'kegiatan';
+        }
         if ($permit->tenant_id) {
             return 'tenant';
         }
@@ -160,10 +191,15 @@ class PermitRequestController extends Controller
 
     public function create(Request $request)
     {
-        // ponytail: marketing paksa pameran; non-marketing bebas ?mode=umum|pameran
+        // ponytail: marketing paksa pameran; non-marketing bebas ?mode=kerja|kegiatan|pameran
         $isRoleMarketing = $request->user()->hasRole('marketing');
-        $mode = $isRoleMarketing ? 'pameran' : ($request->query('mode') === 'pameran' ? 'pameran' : 'umum');
+        $rawMode = $request->query('mode', 'kerja');
+        if ($rawMode === 'umum') {
+            $rawMode = 'kerja'; // alias lama
+        }
+        $mode = $isRoleMarketing ? 'pameran' : (in_array($rawMode, ['kerja', 'kegiatan', 'pameran'], true) ? $rawMode : 'kerja');
         $isExhibition = $mode === 'pameran';
+        $isKegiatan = $mode === 'kegiatan';
 
         $viewable = $this->tenantScope->viewableCategoryIds($request->user());
 
@@ -171,8 +207,16 @@ class PermitRequestController extends Controller
             ->whereHas('activeTenancy')
             ->when($isExhibition, fn ($q) => $q->whereHas('tenantCategory', fn ($c) => $c->where('name', 'Open Counter')))
             ->when(! $isExhibition && $viewable !== null, fn ($q) => $q->whereIn('tenant_category_id', $viewable))
+            ->with(['activeTenancy.unit'])
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name'])
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'floor' => $t->activeTenancy?->unit?->floor,
+                'block' => $t->activeTenancy?->unit?->block,
+                'unit_number' => $t->activeTenancy?->unit?->unit_number,
+            ])->values();
 
         return Inertia::render('PermitRequests/Create', [
             'tenants' => $tenants,
@@ -187,10 +231,17 @@ class PermitRequestController extends Controller
     {
         $isRoleMarketing = $request->user()->hasRole('marketing');
         $isExhibition = $isRoleMarketing || $request->input('form_mode') === 'pameran';
+        $isKegiatan = ! $isExhibition && $request->input('form_mode') === 'kegiatan';
 
         if ($isExhibition) {
             $tenant = Tenant::with('tenantCategory')->find($request->tenant_id);
             abort_unless($tenant && $tenant->tenantCategory?->name === 'Open Counter', 403, 'Mode pameran hanya bisa mengajukan untuk tenant Open Counter.');
+        } elseif ($isKegiatan) {
+            $request->merge(['tenant_id' => $request->tenant_id ?: null]);
+            $tenant = Tenant::find($request->tenant_id);
+            abort_unless($tenant, 403, 'Mode kegiatan wajib memilih tenant terdaftar.');
+            $viewable = $this->tenantScope->viewableCategoryIds($request->user());
+            abort_if(! $tenant || ($viewable !== null && ! $viewable->contains((int) $tenant->tenant_category_id)), 403, 'Tidak boleh mengajukan untuk tenant kategori ini.');
         } else {
             $request->merge(['tenant_id' => $request->tenant_id ?: null]);
             if ($request->tenant_id) {
@@ -203,6 +254,9 @@ class PermitRequestController extends Controller
         $validated = $request->validated();
         if ($isExhibition) {
             $validated['activity_types'] = ['pameran'];
+        } elseif ($isKegiatan) {
+            $validated['activity_types'] = [$validated['kegiatan_type']];
+            unset($validated['kegiatan_type']);
         }
 
         $permit = $this->service->create($validated, $request->user());
@@ -274,7 +328,7 @@ class PermitRequestController extends Controller
         $bsStep = $permitRequest->approvals->firstWhere('step_key', 'bs');
         $showQr = $permitRequest->status === 'completed'
             || ($bsStep && $bsStep->status === 'approved' && $permitRequest->status !== 'rejected');
-        abort_unless($showQr, 403, 'QR belum tersedia — tunggu approval Building Service.');
+        abort_unless($showQr, 403, 'QR belum tersedia — tunggu seluruh approval selesai.');
 
         if (! $permitRequest->scannableCode) {
             $permitRequest->setRelation('scannableCode', ScannableCode::create([
@@ -317,6 +371,11 @@ class PermitRequestController extends Controller
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'ktpPhotos', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
+        // Sertifikat tempel satu halaman khusus surat ijin kegiatan (gaya cetakan foto).
+        if ($this->isKegiatanForm($permitRequest)) {
+            return $this->kegiatanPdf($permitRequest);
+        }
+
         $requestedBy = $permitRequest->requestedBy;
         $requestedByLabel = $requestedBy instanceof User
             ? $requestedBy->name
@@ -349,6 +408,14 @@ class PermitRequestController extends Controller
         $tenancyStep = $approvals->firstWhere('step_key', 'tenancy') ?? $approvals->first();
         $bsStep = $approvals->firstWhere('step_key', 'bs');
         $securityStep = $approvals->firstWhere('step_key', 'security');
+        $isKegiatanPdf = $this->isKegiatanForm($permitRequest);
+        $managerStep = $approvals->firstWhere('step_key', 'tenant_manager');
+        $kegiatanNameLabel = match ($permitRequest->activity_types[0] ?? null) {
+            'event' => 'Nama Event',
+            'meeting_internal' => 'Nama Meeting',
+            'stock_opname' => 'Nama Stock Opname',
+            default => 'Nama Kegiatan',
+        };
 
         if (! $permitRequest->scannableCode) {
             $permitRequest->setRelation('scannableCode', ScannableCode::create([
@@ -370,7 +437,11 @@ class PermitRequestController extends Controller
             'statusLabel' => $statusLabels[$permitRequest->status] ?? $permitRequest->status,
             'printedAt' => now()->locale('id')->translatedFormat('d F Y, H:i').' WITA',
             'leftSigner' => ['role' => $tenancyStep?->label ?? 'Tenancy', 'approval' => $tenancyStep],
-            'rightSigner' => ['role' => $bsStep?->label ?? 'Building Service', 'approval' => $bsStep],
+            'rightSigner' => $isKegiatanPdf
+                ? ['role' => $managerStep?->label ?? 'Manager Tenant', 'approval' => $managerStep]
+                : ['role' => $bsStep?->label ?? 'Building Service', 'approval' => $bsStep],
+            'isKegiatan' => $isKegiatanPdf,
+            'kegiatanNameLabel' => $kegiatanNameLabel,
             'securityStep' => $securityStep,
             'workersPresent' => $permitRequest->workers->isNotEmpty()
                 ? $permitRequest->workers->where('is_present', true)->count()
@@ -388,8 +459,79 @@ class PermitRequestController extends Controller
         return $pdf->download("Surat-Izin-{$safeNumber}.pdf");
     }
 
-    private function photoDataUri(?string $path): ?string
+    /**
+     * Sertifikat tempel satu halaman untuk surat ijin kegiatan (gaya cetakan foto).
+     * Penandatangan = approver Tenancy (pengeluar dokumen).
+     */
+    private function kegiatanPdf(PermitRequest $permitRequest)
     {
+        $permitRequest->loadMissing(['tenant', 'branch', 'approvals.approvedBy.position', 'scannableCode']);
+
+        if (! $permitRequest->scannableCode) {
+            $permitRequest->setRelation('scannableCode', ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => PermitRequest::class,
+                'scannable_id' => $permitRequest->id,
+            ]));
+        }
+
+        $kind = $permitRequest->activity_types[0] ?? 'event';
+        $kindWord = match ($kind) {
+            'meeting_internal' => 'MEETING',
+            'stock_opname' => 'STOCK OPNAME',
+            default => 'EVENT',
+        };
+        $nameLabel = match ($kind) {
+            'meeting_internal' => 'Nama Meeting',
+            'stock_opname' => 'Nama Stock Opname',
+            default => 'Nama Event',
+        };
+
+        $start = $permitRequest->work_start_date;
+        $end = $permitRequest->work_end_date;
+        $tanggalStr = ($start && $end && ! $start->eq($end))
+            ? strtoupper($start->locale('id')->translatedFormat('d').' s/d '.$end->locale('id')->translatedFormat('d F Y'))
+            : strtoupper(($start ?? $end)?->locale('id')->translatedFormat('d F Y') ?? '—');
+
+        $fmtJam = fn ($t) => $t ? str_replace(':', '.', $t->format('H:i')).' WITA' : null;
+        $jamParts = array_values(array_filter([
+            $fmtJam($permitRequest->work_start_time),
+            $fmtJam($permitRequest->work_end_time),
+        ]));
+        $jamStr = $jamParts !== [] ? implode(' s/d ', $jamParts) : '—';
+
+        $tenancyStep = $permitRequest->approvals->firstWhere('step_key', 'tenancy');
+        $signer = $tenancyStep?->approvedBy;
+        $signerName = $signer?->name ? strtoupper($signer->name) : '( Menunggu )';
+        $signerRole = $signer?->position?->name ? strtoupper($signer->position->name) : 'TENANCY DEPARTMENT';
+
+        $logoPath = public_path('images/logo.png');
+        $logoData = is_file($logoPath)
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            : null;
+
+        $pdf = Pdf::loadView('pdf.permit-kegiatan', [
+            'permit' => $permitRequest,
+            'title' => "IZIN {$kindWord} TENANT",
+            'kindWord' => $kindWord,
+            'nameLabel' => $nameLabel,
+            'tanggalStr' => $tanggalStr,
+            'jamStr' => $jamStr,
+            'kota' => strtoupper($permitRequest->branch?->name ?? 'Banjarmasin'),
+            'requestDate' => strtoupper($permitRequest->request_date?->locale('id')->translatedFormat('d F Y') ?? '—'),
+            'signerName' => $signerName,
+            'signerRole' => $signerRole,
+            'scanUrl' => $permitRequest->scanUrl,
+            'logoData' => $logoData,
+            'printedAt' => now()->locale('id')->translatedFormat('d F Y, H:i').' WITA',
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Izin-Kegiatan-{$safeNumber}.pdf");
+    }
+
+    private function photoDataUri(?string $path): ?string    {
         if (! $path || ! Storage::disk('public')->exists($path)) {
             return null;
         }
@@ -410,7 +552,7 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
         abort_if($request->user()->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
-            $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing.' : 'Revisi form tenant hanya oleh tenancy_staff.');
+            $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing.' : ($this->isKegiatanForm($permitRequest) ? 'Revisi form kegiatan hanya oleh tenancy_staff.' : 'Revisi form tenant hanya oleh tenancy_staff.'));
 
         $validated = $request->validated();
 
@@ -427,7 +569,7 @@ class PermitRequestController extends Controller
         }
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
-            $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing.' : 'Pembatalan form tenant hanya oleh tenancy_staff.');
+            $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing.' : ($this->isKegiatanForm($permitRequest) ? 'Pembatalan form kegiatan hanya oleh tenancy_staff.' : 'Pembatalan form tenant hanya oleh tenancy_staff.'));
 
         $this->service->cancel($permitRequest);
 

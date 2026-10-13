@@ -10,9 +10,24 @@ class PermitNumberService
 {
     private const ROMAN = [1 => 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
+    public const KEGIATAN_CODES = [
+        'event' => 'EVT',
+        'meeting_internal' => 'MTG',
+        'stock_opname' => 'STO',
+    ];
+
     public static function codeFor(array $activityTypes): string
     {
-        return in_array('pameran', $activityTypes) ? 'E&P' : 'TC';
+        if (in_array('pameran', $activityTypes)) {
+            return 'E&P';
+        }
+        foreach (self::KEGIATAN_CODES as $type => $code) {
+            if (in_array($type, $activityTypes)) {
+                return $code;
+            }
+        }
+
+        return 'TC';
     }
 
     public function next(array $activityTypes, ?Carbon $date = null): string

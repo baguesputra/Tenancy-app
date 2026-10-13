@@ -14,9 +14,12 @@ const statusLabel = { pending: 'Menunggu', completed: 'Selesai', rejected: 'Dito
 
 const categoryMeta = {
     pameran: { label: 'Pameran / Open Counter', color: 'coral', code: 'E&P' },
+    kegiatan: { label: 'Kegiatan', color: 'green', code: null },
     tenant: { label: 'Tenant', color: 'blue', code: 'TC' },
     vendor: { label: 'Vendor', color: 'amber', code: 'TC' },
 };
+
+const codeOf = (p, cat) => (p.permit_number?.split('/')?.[1]) || cat.code || '—';
 
 const sourceMeta = {
     marketing: { label: 'Marketing', color: 'coral' },
@@ -58,6 +61,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
     ] : [
         { key: '', label: 'Total Pengajuan', value: summary.total, dot: 'bg-[#0F1E36]' },
         { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
+        { key: 'kegiatan', label: 'Kegiatan', value: counts.kegiatan ?? 0, dot: 'bg-emerald-500' },
         { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
@@ -106,7 +110,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
                     </div>
                 ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                     {stats.map((s) => {
                         const active = (filters.category ?? '') === s.key;
                         return (
@@ -187,7 +191,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 <td className="px-5 py-3.5">
                                     <span className="flex items-center gap-2 min-w-0">
                                         <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
-                                            {cat.code}
+                                            {codeOf(p, cat)}
                                         </span>
                                         <span className="min-w-0">
                                             <span className="block font-medium text-gray-900 truncate">{p.permit_number}</span>
@@ -274,7 +278,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
                                     <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
-                                        {cat.code}
+                                        {codeOf(p, cat)}
                                     </span>
                                     <span className="text-xs text-gray-400 truncate">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
                                     {p.is_my_turn && (

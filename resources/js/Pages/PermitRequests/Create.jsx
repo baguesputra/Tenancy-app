@@ -1,7 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
-import { ACTIVITY_TYPES } from '@/Constants/permitActivityTypes';
+import { ACTIVITY_TYPES, KEGIATAN_TYPES } from '@/Constants/permitActivityTypes';
 import FormSection from '@/Components/Form/FormSection';
 import FormField from '@/Components/Form/FormField';
 import TextInput from '@/Components/Form/TextInput';
@@ -19,6 +19,7 @@ import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { formatDateRange, formatTimeRange } from '@/utils/format';
 
 const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Pelengkap', 'Review'];
+const KEGIATAN_STEPS = ['Tenant & Kegiatan', 'Jadwal', 'Review'];
 const MARKETING_STEPS = ['Tenant & Stand', 'Jadwal Pameran', 'Barang Pameran', 'Penanggung Jawab', 'Review'];
 
 const ACTIVITY_GROUPS = [
@@ -29,7 +30,8 @@ const ACTIVITY_GROUPS = [
     { label: 'Event', values: ['pameran'] },
 ].map((g) => ({ label: g.label, items: ACTIVITY_TYPES.filter((t) => g.values.includes(t.value)) }));
 
-export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'umum', canChooseMode = false }) {
+export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'kerja', canChooseMode = false }) {
+    const isKegiatan = !isMarketingLocked && formMode === 'kegiatan';
     const [step, setStep] = useState(1);
     const [unlocked, setUnlocked] = useState(isMarketingLocked);
     const [locationType, setLocationType] = useState(isMarketingLocked ? 'exhibition' : 'tenant');
@@ -45,6 +47,9 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         block_snapshot: '',
         unit_number_snapshot: '',
         activity_types: isMarketingLocked ? ['pameran'] : [],
+        kegiatan_type: '',
+        event_name: '',
+        event_area: '',
         request_date: new Date().toISOString().split('T')[0],
         pic_name: '',
         pic_phone: '',
@@ -98,6 +103,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     const getStepErrors = (s) => {
         const errs = {};
         if (isMarketingLocked) return getMarketingStepErrors(s, errs);
+        if (isKegiatan) return getKegiatanStepErrors(s, errs);
         if (s === 1) {
             if (locationType === 'tenant' && !data.tenant_id) errs.tenant_id = 'Pilih tenant terlebih dahulu.';
             if (locationType === 'vendor') {
@@ -134,13 +140,29 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         return errs;
     };
 
+    const getKegiatanStepErrors = (s, errs) => {
+        if (s === 1) {
+            if (!data.tenant_id) errs.tenant_id = 'Pilih tenant terlebih dahulu.';
+            if (!data.kegiatan_type) errs.kegiatan_type = 'Pilih jenis kegiatan.';
+            if (!data.event_name.trim() || data.event_name.trim().length < 3) errs.event_name = 'Nama kegiatan wajib diisi (min. 3 karakter).';
+        }
+        if (s === 2) {
+            if (!data.work_start_date) errs.work_start_date = 'Tanggal mulai wajib diisi.';
+            if (!data.work_end_date) errs.work_end_date = 'Tanggal selesai wajib diisi.';
+            if (data.work_start_date && data.work_end_date && data.work_end_date < data.work_start_date) errs.work_end_date = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+            if (!data.event_area.trim()) errs.event_area = 'Area event wajib diisi.';
+            if (!data.pic_name.trim() || data.pic_name.trim().length < 3) errs.pic_name = 'Penanggung jawab wajib diisi (min. 3 karakter).';
+        }
+        return errs;
+    };
+
     const validateStep = (s) => {
         const errs = getStepErrors(s);
         setClientErrors(errs);
         return Object.keys(errs).length === 0;
     };
 
-    const stepCount = (isMarketingLocked ? MARKETING_STEPS : STEPS).length;
+    const stepCount = (isMarketingLocked ? MARKETING_STEPS : isKegiatan ? KEGIATAN_STEPS : STEPS).length;
 
     const validateAll = () => {
         const all = {};
@@ -185,47 +207,69 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     };
 
     const activityLabels = data.activity_types.map((v) => ACTIVITY_TYPES.find((t) => t.value === v)?.label ?? v);
-    const tenantName = tenants.find((t) => t.id == data.tenant_id)?.name ?? null;
+    const selectedTenant = tenants.find((t) => t.id == data.tenant_id) ?? null;
+    const tenantName = selectedTenant?.name ?? null;
+    const tenantUnit = selectedTenant
+        ? [selectedTenant.floor, selectedTenant.block, selectedTenant.unit_number].filter(Boolean).join(' / ') || null
+        : null;
+    const kegiatanMeta = KEGIATAN_TYPES.find((t) => t.value === data.kegiatan_type) ?? null;
     const categoryLabel = isMarketingLocked
         ? 'Pameran / Open Counter'
-        : locationType === 'tenant' ? 'Tenant' : 'Vendor';
+        : isKegiatan ? 'Kegiatan' : locationType === 'tenant' ? 'Tenant' : 'Vendor';
     const locationDetail = isMarketingLocked
         ? [tenantName, data.stand_name].filter(Boolean).join(' — ') || '—'
+        : isKegiatan
+        ? [tenantName, tenantUnit].filter(Boolean).join(' — ') || '—'
         : locationType === 'tenant'
         ? tenantName ?? '—'
         : data.contractor_company || '—';
+    const nomorHint = isMarketingLocked
+        ? 'kode E&P'
+        : isKegiatan
+        ? (kegiatanMeta ? `kode ${kegiatanMeta.code}` : 'kode EVT/MTG/STO')
+        : (data.activity_types.includes('pameran') ? 'kode E&P' : 'kode TC');
     const workerCount = parseInt(data.worker_count, 10) || 0;
     const fmtGood = (g) => [(g.description ?? '').trim(), [(g.quantity_note ?? '').trim(), (g.unit ?? '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
     const lightNames = data.goods_light.map(fmtGood).filter(Boolean);
     const heavyNames = data.goods_heavy.map(fmtGood).filter(Boolean);
     const goodNames = isMarketingLocked ? [...lightNames, ...heavyNames] : data.goods.map(fmtGood).filter(Boolean);
     const deptNames = departments.filter((d) => data.accompanying_department_ids.includes(d.id)).map((d) => d.name);
-    const steps = isMarketingLocked ? MARKETING_STEPS : STEPS;
+    const steps = isMarketingLocked ? MARKETING_STEPS : isKegiatan ? KEGIATAN_STEPS : STEPS;
+    const formTitle = isMarketingLocked ? 'Ajukan Izin Pameran / Open Counter' : isKegiatan ? 'Ajukan Surat Izin Kegiatan' : 'Ajukan Surat Izin Kerja';
+    const formSubtitle = isMarketingLocked
+        ? (canChooseMode ? 'Mode pameran — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security' : 'Form khusus Marketing — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security')
+        : isKegiatan
+        ? 'Mode kegiatan — nomor EVT/MTG/STO otomatis, approval Tenancy › Manager Tenant'
+        : 'Mode kerja — nomor TC otomatis, approval Tenancy › Building Service › Security';
 
     return (
         <AppLayout>
             <div className="px-6 sm:px-8 py-6 flex-1">
-                <h1 className="text-xl font-semibold text-gray-900 mb-1">{isMarketingLocked ? 'Ajukan Izin Pameran / Open Counter' : 'Ajukan Surat Izin'}</h1>
-                <p className="text-sm text-gray-500 mb-4">{isMarketingLocked ? (canChooseMode ? 'Mode pameran — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security' : 'Form khusus Marketing — nomor E&P otomatis, approval Marketing › Keuangan › BS › Security') : 'Ikuti langkah di bawah untuk mengajukan izin baru'}</p>
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">{formTitle}</h1>
+                <p className="text-sm text-gray-500 mb-4">{formSubtitle}</p>
                 {canChooseMode && (
-                    <div className="flex gap-2 mb-6">
+                    <div className="flex flex-wrap gap-2 mb-6">
                         {[
-                            { value: 'umum', label: 'Umum (Tenant/Vendor)' },
+                            { value: 'kerja', label: 'Kerja (Tenant/Vendor)' },
+                            { value: 'kegiatan', label: 'Kegiatan (Event/Meeting/Stock)' },
                             { value: 'pameran', label: 'Pameran / Open Counter' },
-                        ].map((opt) => (
+                        ].map((opt) => {
+                            const active = isMarketingLocked ? opt.value === 'pameran' : formMode === opt.value;
+                            return (
                             <button
                                 key={opt.value}
                                 type="button"
-                                onClick={() => { if ((opt.value === 'pameran') !== isMarketingLocked) router.get('/permit-requests/create', { mode: opt.value }); }}
+                                onClick={() => { if (!active) router.get('/permit-requests/create', { mode: opt.value }); }}
                                 className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                                    (opt.value === 'pameran') === isMarketingLocked
+                                    active
                                         ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36] shadow-sm'
                                         : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                                 }`}
                             >
                                 {opt.label}
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -239,7 +283,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             )}
 
                             {Object.keys(errors).length > 0 && (
-                                <ErrorSummary errors={errors} onJump={goToStep} isMarketingLocked={isMarketingLocked} />
+                                <ErrorSummary errors={errors} onJump={goToStep} isMarketingLocked={isMarketingLocked} isKegiatan={isKegiatan} />
                             )}
 
                             <StepPanel stepKey={step}>
@@ -273,7 +317,107 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </div>
                                     </FormSection>
                                 )}
-                                {!isMarketingLocked && step === 1 && (
+                                {isKegiatan && step === 1 && (
+                                    <FormSection title="Tenant & Kegiatan" description="Unit terisi otomatis dari master tenant">
+                                        <div className="mb-4">
+                                            <Badge color="green">Kegiatan — terkunci</Badge>
+                                        </div>
+                                        <FormField label="Pilih Tenant" error={clientErrors.tenant_id || errors.tenant_id} required>
+                                            <SearchableSelect
+                                                value={data.tenant_id}
+                                                onChange={(e) => setData('tenant_id', e.target.value)}
+                                                options={tenants.map((t) => ({ value: t.id, label: t.name }))}
+                                                placeholder="Ketik untuk cari tenant..."
+                                                error={clientErrors.tenant_id || errors.tenant_id}
+                                            />
+                                        </FormField>
+                                        <FormField label="Unit (otomatis dari master)">
+                                            <TextInput value={tenantUnit ?? ''} placeholder="Pilih tenant untuk melihat unit" readOnly disabled />
+                                        </FormField>
+                                        <FormField label="Jenis Kegiatan" error={clientErrors.kegiatan_type || errors.kegiatan_type} required>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-1">
+                                                {KEGIATAN_TYPES.map((type) => (
+                                                    <button
+                                                        key={type.value}
+                                                        type="button"
+                                                        onClick={() => setData('kegiatan_type', type.value)}
+                                                        aria-pressed={data.kegiatan_type === type.value}
+                                                        className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                            data.kegiatan_type === type.value
+                                                                ? 'border-[#0F1E36] bg-[#0F1E36]/5 shadow-sm'
+                                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        <span className={`text-sm font-semibold ${data.kegiatan_type === type.value ? 'text-[#0F1E36]' : 'text-gray-700'}`}>{type.label}</span>
+                                                        <span className="text-[11px] text-gray-400">Nomor otomatis {type.code}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </FormField>
+                                        <FormField label={kegiatanMeta?.nameLabel ?? 'Nama Kegiatan'} error={clientErrors.event_name || errors.event_name} required>
+                                            <TextInput value={data.event_name} onChange={(e) => setData('event_name', e.target.value)} placeholder={kegiatanMeta?.namePlaceholder ?? 'cth. Nama kegiatan'} />
+                                        </FormField>
+                                        <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5">
+                                            Nomor surat dibuat otomatis saat diajukan ({nomorHint}).
+                                        </p>
+                                    </FormSection>
+                                )}
+                                {isKegiatan && step === 2 && (
+                                    <FormSection title="Jadwal & Area" description="Waktu dan lokasi pelaksanaan kegiatan">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormField label="Tanggal Mulai" error={clientErrors.work_start_date || errors.work_start_date} required>
+                                                <DateInput value={data.work_start_date} onChange={(e) => setData('work_start_date', e.target.value)} />
+                                            </FormField>
+                                            <FormField label="Tanggal Selesai" error={clientErrors.work_end_date || errors.work_end_date} required>
+                                                <DateInput value={data.work_end_date} onChange={(e) => setData('work_end_date', e.target.value)} />
+                                            </FormField>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormField label="Jam Mulai" error={errors.work_start_time}>
+                                                <TimeInput value={data.work_start_time} onChange={(e) => setData('work_start_time', e.target.value)} />
+                                            </FormField>
+                                            <FormField label="Jam Selesai" error={errors.work_end_time}>
+                                                <TimeInput value={data.work_end_time} onChange={(e) => setData('work_end_time', e.target.value)} />
+                                            </FormField>
+                                        </div>
+                                        <FormField label="Area Event" error={clientErrors.event_area || errors.event_area} required hint="cth. Atrium utama lantai GF">
+                                            <TextInput value={data.event_area} onChange={(e) => setData('event_area', e.target.value)} placeholder="cth. Atrium utama lantai GF" />
+                                        </FormField>
+                                        <FormField label="Penanggung Jawab" error={clientErrors.pic_name || errors.pic_name} required>
+                                            <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} autoComplete="name" placeholder="Nama lengkap penanggung jawab" />
+                                        </FormField>
+                                        <FormField label="Keterangan" error={errors.notes}>
+                                            <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} rows={2} />
+                                        </FormField>
+                                    </FormSection>
+                                )}
+                                {isKegiatan && step === 3 && (
+                                    <>
+                                        <FormSection title="Tenant & Kegiatan" description="Kategori: Kegiatan" action={<UbahButton step={1} onJump={goToStep} />}>
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                                <ReviewRow label="Kategori" value={<Badge color="green">Kegiatan</Badge>} />
+                                                <ReviewRow label="Jenis" value={kegiatanMeta ? `${kegiatanMeta.label} (${kegiatanMeta.code})` : '—'} />
+                                                <ReviewRow label="Tenant" value={tenantName ?? '—'} />
+                                                <ReviewRow label="Unit" value={tenantUnit ?? '—'} />
+                                                <ReviewRow label={kegiatanMeta?.nameLabel ?? 'Nama Kegiatan'} value={data.event_name || '—'} className="sm:col-span-2" />
+                                            </dl>
+                                        </FormSection>
+                                        <FormSection title="Jadwal & Area" action={<UbahButton step={2} onJump={goToStep} />}>
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                                <ReviewRow label="Nomor Surat" value={`Otomatis saat diajukan (${nomorHint})`} />
+                                                <ReviewRow label="Tanggal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
+                                                <ReviewRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
+                                                <ReviewRow label="Area Event" value={data.event_area || '—'} />
+                                                <ReviewRow label="Penanggung Jawab" value={data.pic_name || '—'} />
+                                                <ReviewRow label="Keterangan" value={data.notes || '—'} className="sm:col-span-2" />
+                                            </dl>
+                                            <p className="text-xs text-gray-400 mt-5 pt-4 border-t border-gray-100 leading-relaxed">
+                                                Periksa kembali data di atas. Setelah diajukan, surat izin kegiatan diproses Tenancy › Manager Tenant.
+                                            </p>
+                                        </FormSection>
+                                    </>
+                                )}
+                                {!isMarketingLocked && !isKegiatan && step === 1 && (
                                     <>
                                     <FormSection title="Kategori">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
@@ -357,7 +501,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     </FormSection>
                                     <FormSection title="Detail Permohonan">
                                         <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-4">
-                                            Nomor surat dibuat otomatis saat diajukan ({data.activity_types.includes('pameran') ? 'kode E&P' : 'kode TC'}).
+                                            Nomor surat dibuat otomatis saat diajukan ({nomorHint}).
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField label="Nama Penanggung Jawab" error={errors.pic_name}>
@@ -395,7 +539,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     </FormSection>
                                 )}
                                 {/* STEP 2 — Jadwal & Kegiatan */}
-                                {!isMarketingLocked && step === 2 && (
+                                {!isMarketingLocked && !isKegiatan && step === 2 && (
                                     <FormSection title="Jadwal & Kegiatan">
                                         <FormField label="Jenis Kegiatan" error={clientErrors.activity_types} required>
                                             <div className="space-y-4 mt-1">
@@ -505,7 +649,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     </FormSection>
                                 )}
                                 {/* STEP 3 — Pekerja & Barang */}
-                                {!isMarketingLocked && step === 3 && (
+                                {!isMarketingLocked && !isKegiatan && step === 3 && (
                                     <FormSection title="Pekerja & Barang">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div>
@@ -656,7 +800,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     </>
                                 )}
                                 {/* STEP 4 — Pelengkap */}
-                                {!isMarketingLocked && step === 4 && (
+                                {!isMarketingLocked && !isKegiatan && step === 4 && (
                                     <>
                                     {locationType !== 'vendor' && (
                                         <FormSection title="Vendor / Kontraktor Eksternal">
@@ -736,7 +880,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 )}
 
                                 {/* STEP 5 — Review */}
-                                {!isMarketingLocked && step === 5 && (
+                                {!isMarketingLocked && !isKegiatan && step === 5 && (
                                     <>
                                         <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`} action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -852,6 +996,9 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 tenants={tenants}
                                 currentStep={step}
                                 isMarketingLocked={isMarketingLocked}
+                                isKegiatan={isKegiatan}
+                                nomorHint={nomorHint}
+                                kegiatanMeta={kegiatanMeta}
                             />
                         </div>
                     </div>
@@ -865,16 +1012,21 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                 >
                     <ConfirmRow label="Kategori" value={categoryLabel} />
                     <ConfirmRow label="Lokasi" value={locationDetail} />
-                    <ConfirmRow label="Nomor" value={isMarketingLocked ? 'Otomatis (E&P)' : 'Otomatis saat diajukan'} />
+                    {isKegiatan && <ConfirmRow label="Kegiatan" value={kegiatanMeta ? `${kegiatanMeta.label} — ${data.event_name}` : null} />}
+                    <ConfirmRow label="Nomor" value={isMarketingLocked ? 'Otomatis (E&P)' : isKegiatan ? `Otomatis (${nomorHint})` : 'Otomatis saat diajukan'} />
                     <ConfirmRow label="Jadwal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
                     <ConfirmRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
-                    {!isMarketingLocked && <ConfirmRow label="Pekerja" value={workerCount > 0 ? `${workerCount} orang` : null} />}
-                    <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />
-                    {!isMarketingLocked && data.needs_manager_approval && <ConfirmRow label="Manager Tenant" value="Butuh persetujuan" />}
+                    {!isMarketingLocked && !isKegiatan && <ConfirmRow label="Pekerja" value={workerCount > 0 ? `${workerCount} orang` : null} />}
+                    {!isKegiatan && <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />}
+                    {!isMarketingLocked && !isKegiatan && data.needs_manager_approval && <ConfirmRow label="Manager Tenant" value="Butuh persetujuan" />}
+                    {isKegiatan && <ConfirmRow label="Area" value={data.event_area || null} />}
+                    {isKegiatan && <ConfirmRow label="Penanggung Jawab" value={data.pic_name || null} />}
                     <ConfirmRow
                         label="Alur Persetujuan"
                         value={(isMarketingLocked
                             ? ['Marketing', 'Keuangan', 'Building Service', 'Security']
+                            : isKegiatan
+                            ? ['Tenancy', 'Manager Tenant']
                             : ['Tenancy', ...(data.needs_manager_approval ? ['Manager Tenant'] : []), 'Building Service', 'Security']
                         ).join(' → ')}
                     />
@@ -884,10 +1036,16 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     );
 }
 
-function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLocked = false }) {
-    const tenantName = tenants.find((t) => t.id == data.tenant_id)?.name ?? null;
+function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLocked = false, isKegiatan = false, nomorHint = 'Otomatis', kegiatanMeta = null }) {
+    const selected = tenants.find((t) => t.id == data.tenant_id) ?? null;
+    const tenantName = selected?.name ?? null;
+    const tenantUnit = selected
+        ? [selected.floor, selected.block, selected.unit_number].filter(Boolean).join(' / ') || null
+        : null;
     const locationLabel = isMarketingLocked
         ? [tenantName, data.stand_name].filter(Boolean).join(' — ') || null
+        : isKegiatan
+        ? [tenantName, tenantUnit].filter(Boolean).join(' — ') || null
         : locationType === 'tenant'
         ? tenantName
         : data.contractor_company ? `Vendor — ${data.contractor_company}` : null;
@@ -909,16 +1067,23 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
             <div className="space-y-3">
                 <SummaryItem
                     label="Kategori"
-                    value={isMarketingLocked ? 'Pameran / Open Counter' : locationType === 'tenant' ? 'Tenant' : 'Vendor'}
+                    value={isMarketingLocked ? 'Pameran / Open Counter' : isKegiatan ? 'Kegiatan' : locationType === 'tenant' ? 'Tenant' : 'Vendor'}
                     filled
                 />
-                <SummaryItem label={isMarketingLocked ? 'Tenant / Stand' : 'Lokasi/Nama'} value={locationLabel} filled={!!locationLabel} />
+                <SummaryItem label={isMarketingLocked ? 'Tenant / Stand' : isKegiatan ? 'Tenant / Unit' : 'Lokasi/Nama'} value={locationLabel} filled={!!locationLabel} />
+                {isKegiatan && (
+                    <SummaryItem
+                        label="Jenis"
+                        value={kegiatanMeta ? `${kegiatanMeta.label} (${kegiatanMeta.code})` : null}
+                        filled={!!kegiatanMeta}
+                    />
+                )}
                 <SummaryItem
                     label="Nomor Surat"
-                    value={isMarketingLocked ? 'Otomatis (E&P)' : 'Otomatis'}
+                    value={isMarketingLocked ? 'Otomatis (E&P)' : isKegiatan ? `Otomatis (${nomorHint})` : 'Otomatis'}
                     filled
                 />
-                {!isMarketingLocked && (
+                {!isMarketingLocked && !isKegiatan && (
                     <SummaryItem
                         label="Jenis Kegiatan"
                         value={activityCount > 0 ? `${activityCount} dipilih` : null}
@@ -932,7 +1097,7 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                     filled={!!data.work_start_date}
                     dim={currentStep < 2}
                 />
-                {!isMarketingLocked && (
+                {!isMarketingLocked && !isKegiatan && (
                     <SummaryItem
                         label="Pekerja"
                         value={workerCount > 0 ? `${workerCount} orang` : null}
@@ -940,13 +1105,23 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                         dim={currentStep < 3}
                     />
                 )}
+                {!isKegiatan && (
                 <SummaryItem
                     label="Barang"
                     value={goodsCount > 0 ? `${goodsCount} item` : null}
                     filled={goodsCount > 0}
                     dim={currentStep < 3}
                 />
-                {!isMarketingLocked && (
+                )}
+                {isKegiatan && (
+                    <SummaryItem
+                        label="Area"
+                        value={data.event_area?.trim() || null}
+                        filled={!!data.event_area?.trim()}
+                        dim={currentStep < 2}
+                    />
+                )}
+                {!isMarketingLocked && !isKegiatan && (
                     <SummaryItem
                         label="Pendampingan"
                         value={deptCount > 0 ? `${deptCount} departemen` : 'Tidak ada'}
@@ -954,12 +1129,19 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                         dim={currentStep < 4}
                     />
                 )}
-                {!isMarketingLocked && (
+                {!isMarketingLocked && !isKegiatan && (
                     <SummaryItem
                         label="Manager Tenant"
                         value={data.needs_manager_approval ? 'Ya, butuh persetujuan' : 'Tidak perlu'}
                         filled={!!data.needs_manager_approval}
                         dim={currentStep < 4}
+                    />
+                )}
+                {isKegiatan && (
+                    <SummaryItem
+                        label="Approval"
+                        value="Tenancy › Manager Tenant"
+                        filled
                     />
                 )}
             </div>
@@ -1007,6 +1189,12 @@ const ERROR_STEP_PAMERAN = {
     pic_name: 4, pic_phone: 4, notes: 4,
 };
 
+const ERROR_STEP_KEGIATAN = {
+    tenant_id: 1, kegiatan_type: 1, event_name: 1,
+    work_start_date: 2, work_end_date: 2,
+    work_start_time: 2, work_end_time: 2, event_area: 2, pic_name: 2, notes: 2,
+};
+
 const ERROR_LABEL = {
     tenant_id: 'Tenant', store_name_snapshot: 'Nama lokasi', contractor_company: 'Perusahaan vendor',
     contractor_pic: 'PJ vendor', contractor_address: 'Alamat vendor', contractor_phone: 'Telp vendor',
@@ -1018,9 +1206,10 @@ const ERROR_LABEL = {
     accompanying_department_ids: 'Dept pendamping', notes: 'Catatan',
     needs_manager_approval: 'Persetujuan manager', stand_name: 'Nama stand',
     floor_snapshot: 'Lantai', block_snapshot: 'Blok', unit_number_snapshot: 'No. stand',
+    kegiatan_type: 'Jenis kegiatan', event_name: 'Nama kegiatan', event_area: 'Area event',
 };
 
-function ErrorSummary({ errors, onJump, isMarketingLocked }) {
+function ErrorSummary({ errors, onJump, isMarketingLocked, isKegiatan = false }) {
     const boxRef = useRef(null);
 
     useEffect(() => {
@@ -1028,7 +1217,7 @@ function ErrorSummary({ errors, onJump, isMarketingLocked }) {
         boxRef.current?.scrollIntoView({ block: 'nearest' });
     }, []);
 
-    const map = isMarketingLocked ? ERROR_STEP_PAMERAN : ERROR_STEP_UMUM;
+    const map = isMarketingLocked ? ERROR_STEP_PAMERAN : isKegiatan ? ERROR_STEP_KEGIATAN : ERROR_STEP_UMUM;
     const entries = Object.entries(errors);
 
     return (

@@ -59,7 +59,7 @@
 
     <h3 class="sec">I. Data Pemohon</h3>
     <table class="data">
-        <tr><td class="k">Kategori</td><td>: {{ in_array('pameran', $permit->activity_types ?? []) ? 'Pameran / Open Counter' : ($permit->tenant_id ? ($permit->tenant->name ?? 'Tenant') : ($permit->contractor_company ? 'Vendor' : 'Area')) }}</td></tr>
+        <tr><td class="k">Kategori</td><td>: {{ in_array('pameran', $permit->activity_types ?? []) ? 'Pameran / Open Counter' : (! empty(array_intersect(['event', 'meeting_internal', 'stock_opname'], $permit->activity_types ?? [])) ? 'Kegiatan' : ($permit->tenant_id ? ($permit->tenant->name ?? 'Tenant') : ($permit->contractor_company ? 'Vendor' : 'Area'))) }}</td></tr>
         <tr><td class="k">Diajukan Oleh</td><td>: {{ $requestedByLabel }}</td></tr>
         <tr><td class="k">Tanggal Pengajuan</td><td>: {{ $requestDate }}</td></tr>
         <tr><td class="k">Penanggung Jawab</td><td>: {{ $permit->pic_name ?? '—' }} ({{ $permit->pic_phone ?? '—' }})</td></tr>
@@ -69,10 +69,15 @@
     <table class="data">
         <tr><td class="k">Lokasi</td><td>: {{ $permit->store_name_snapshot }} — {{ $location }}</td></tr>
         <tr><td class="k">Jenis Kegiatan</td><td>: {{ $activityLabels->join(', ') }}</td></tr>
-        <tr><td class="k">Jenis Pekerjaan</td><td>: {{ $permit->job_type ?: '—' }}</td></tr>
+        @if ($isKegiatan ?? false)
+            <tr><td class="k">{{ $kegiatanNameLabel ?? 'Nama Kegiatan' }}</td><td>: {{ $permit->event_name ?: '—' }}</td></tr>
+            <tr><td class="k">Area Event</td><td>: {{ $permit->event_area ?: '—' }}</td></tr>
+        @else
+            <tr><td class="k">Jenis Pekerjaan</td><td>: {{ $permit->job_type ?: '—' }}</td></tr>
+            <tr><td class="k">Akses Masuk / Keluar</td><td>: {{ $permit->access_route ?: '—' }}</td></tr>
+        @endif
         <tr><td class="k">Tanggal Pelaksanaan</td><td>: {{ $schedule }}</td></tr>
         <tr><td class="k">Jam Pelaksanaan</td><td>: {{ $time }}</td></tr>
-        <tr><td class="k">Akses Masuk / Keluar</td><td>: {{ $permit->access_route ?: '—' }}</td></tr>
         @if ($permit->notes)
             <tr><td class="k">Keterangan</td><td>: {{ $permit->notes }}</td></tr>
         @endif
@@ -143,6 +148,7 @@
         </table>
     @endif
 
+    @unless ($isKegiatan ?? false)
     <h3 class="sec">Pemeriksaan Security</h3>
     <table class="secbox">
         <tr>
@@ -168,6 +174,7 @@
             </td>
         </tr>
     </table>
+    @endunless
 
     <table class="sig">
         <tr>

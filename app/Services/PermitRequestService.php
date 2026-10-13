@@ -64,7 +64,9 @@ class PermitRequestService
             'access_route' => $data['access_route'] ?? null,
             'notes' => $data['notes'] ?? null,
             'worker_count' => $data['worker_count'] ?? null,
-            'needs_manager_approval' => (bool) ($data['needs_manager_approval'] ?? false),
+            'needs_manager_approval' => (bool) ($data['needs_manager_approval'] ?? in_array($data['activity_types'][0] ?? null, ['event', 'meeting_internal', 'stock_opname'], true)),
+            'event_name' => $data['event_name'] ?? null,
+            'event_area' => $data['event_area'] ?? null,
             'requested_by_type' => get_class($requestedBy),
             'requested_by_id' => $requestedBy->id,
             'status' => 'pending',
@@ -173,6 +175,17 @@ class PermitRequestService
         $deptId = fn (string $name) => Cache::remember("dept.id.{$name}", 3600, fn () => Department::where('name', $name)->value('id'));
         $bsDeptId = $deptId('Building Service');
         $securityDeptId = $deptId('Security');
+        $tenancyDeptId = $deptId('Tenancy');
+
+        // Surat ijin kegiatan: approval Tenancy → Manager Tenant saja.
+        if (! empty(array_intersect(['event', 'meeting_internal', 'stock_opname'], $permit->activity_types ?? []))) {
+            $this->approvalService->setupSteps($permit, [
+                ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDeptId],
+                ['step_key' => 'tenant_manager', 'label' => 'Approval Manager Tenant', 'department_id' => $tenancyDeptId],
+            ]);
+
+            return;
+        }
 
         if (in_array('pameran', $permit->activity_types ?? [])) {
             $marketingDeptId = $deptId('Marketing');
@@ -187,8 +200,6 @@ class PermitRequestService
 
             return;
         }
-
-        $tenancyDeptId = $deptId('Tenancy');
 
         $steps = [
             ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDeptId],
