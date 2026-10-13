@@ -7,7 +7,6 @@ use App\Models\PermitRequest;
 use App\Models\PermitRevision;
 use App\Models\ScannableCode;
 use App\Models\Tenant;
-use App\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -21,14 +20,14 @@ class PermitRequestService
         private PermitNumberService $numberService,
     ) {}
 
-    public function create(array $data, User|TenantUser $requestedBy): PermitRequest
+    public function create(array $data, User $requestedBy): PermitRequest
     {
         return \DB::transaction(function () use ($data, $requestedBy) {
             return $this->createOnce($data, $requestedBy);
         }, 3);
     }
 
-    private function createOnce(array $data, User|TenantUser $requestedBy): PermitRequest
+    private function createOnce(array $data, User $requestedBy): PermitRequest
     {
         $tenant = isset($data['tenant_id']) ? Tenant::with('activeTenancy.unit')->find($data['tenant_id']) : null;
 
@@ -41,8 +40,7 @@ class PermitRequestService
 
         $locationSnapshot = $this->resolveLocationSnapshot($tenant, $data);
 
-        $branchId = $tenant?->branch_id
-            ?? ($requestedBy instanceof User ? $requestedBy->branch_id : $requestedBy->tenant?->branch_id);
+        $branchId = $tenant?->branch_id ?? $requestedBy->branch_id;
 
         $permit = PermitRequest::create([
             'permit_number' => $this->numberService->next($data['activity_types'] ?? []),
@@ -225,7 +223,7 @@ class PermitRequestService
 
     private const RESET_ON_REVISE = ['marketing', 'finance', 'bs', 'security'];
 
-    public function revise(PermitRequest $permit, array $data, User|TenantUser $revisedBy): PermitRevision
+    public function revise(PermitRequest $permit, array $data, User $revisedBy): PermitRevision
     {
         return \DB::transaction(function () use ($permit, $data, $revisedBy) {
             $changes = [];

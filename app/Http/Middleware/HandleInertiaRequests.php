@@ -18,8 +18,6 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $webUser = $request->user('web');
-        $tenantUser = $request->user('tenant');
-        $notifiable = $webUser ?? $tenantUser;
 
         return [
             ...parent::share($request),
@@ -34,10 +32,9 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => $webUser->getAllPermissions()->pluck('name'),
                     'roles' => $webUser->getRoleNames(),
                 ] : null,
-                'tenantUser' => fn () => $tenantUser?->load('tenant:id,name'),
             ],
-            'notifications' => fn () => $notifiable
-                ? $notifiable->unreadNotifications()->latest()->take(5)->get()->map(fn ($n) => [
+            'notifications' => fn () => $webUser
+                ? $webUser->unreadNotifications()->latest()->take(5)->get()->map(fn ($n) => [
                     'id' => $n->id,
                     'title' => $n->data['title'],
                     'message' => $n->data['message'],
@@ -45,7 +42,7 @@ class HandleInertiaRequests extends Middleware
                     'created_at' => $n->created_at->diffForHumans(),
                 ])
                 : [],
-            'unreadNotificationsCount' => fn () => $notifiable?->unreadNotifications()->count() ?? 0,
+            'unreadNotificationsCount' => fn () => $webUser?->unreadNotifications()->count() ?? 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

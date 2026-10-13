@@ -218,7 +218,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                     )}
 
                     {activeTab === 'kontak' && (
-                        <FormSection title="Kontak & Akses Portal">
+                        <FormSection title="Kontak">
                             {Object.keys(contactsByType).length === 0 && <Empty text="Belum ada kontak." />}
                             {Object.entries(contactsByType).map(([type, list]) => (
                                 <div key={type} className="mb-3 last:mb-0">
@@ -233,14 +233,6 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     </div>
                                 </div>
                             ))}
-                            <div className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5 mt-2">
-                                <p className="text-[10px] uppercase tracking-wide text-gray-400">Akun portal tenant</p>
-                                {tenant.tenant_user ? (
-                                    <p className="text-xs text-gray-800 mt-0.5 font-mono">{tenant.tenant_user.username} · {tenant.tenant_user.is_active ? 'Aktif' : 'Nonaktif'}</p>
-                                ) : (
-                                    <p className="text-xs text-gray-400 mt-0.5">Belum punya akun portal</p>
-                                )}
-                            </div>
                         </FormSection>
                     )}
 

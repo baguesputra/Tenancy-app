@@ -8,26 +8,24 @@ class StorePermitRequestRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // otorisasi akses sudah dihandle middleware auth/auth:tenant di route
+        return true; // otorisasi akses sudah dihandle middleware auth di route
     }
 
     public function rules(): array
     {
-        $isPortal = $this->routeIs('tenant-portal.*');
-        $isRoleMarketing = ! $isPortal && $this->user('web')?->hasRole('marketing');
+        $isRoleMarketing = $this->user('web')?->hasRole('marketing');
         // ponytail: mode ikut form, bukan cuma role — marketing paksa pameran, staff bebas pilih
-        $isExhibition = ! $isPortal && ($isRoleMarketing || $this->input('form_mode') === 'pameran');
+        $isExhibition = $isRoleMarketing || $this->input('form_mode') === 'pameran';
 
         return [
             'form_mode' => 'nullable|in:umum,pameran',
-            // Portal (staff toko) tidak perlu isi tenant_id/lokasi — otomatis dari akun login
             // Marketing terkunci: field non-pameran di-exclude (diabaikan), bukan ditolak,
             // karena form selalu kirim string kosong untuk field tak terpakai.
-            'tenant_id' => $isPortal ? 'prohibited' : ($isExhibition ? 'required|exists:tenants,id' : 'nullable|exists:tenants,id'),
-            'store_name_snapshot' => $isPortal || $isExhibition ? 'exclude' : 'nullable|required_without_all:tenant_id,contractor_company|string|min:3|max:255',
-            'floor_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
-            'block_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
-            'unit_number_snapshot' => $isPortal ? 'prohibited' : 'nullable|string|max:50',
+            'tenant_id' => $isExhibition ? 'required|exists:tenants,id' : 'nullable|exists:tenants,id',
+            'store_name_snapshot' => $isExhibition ? 'exclude' : 'nullable|required_without_all:tenant_id,contractor_company|string|min:3|max:255',
+            'floor_snapshot' => 'nullable|string|max:50',
+            'block_snapshot' => 'nullable|string|max:50',
+            'unit_number_snapshot' => 'nullable|string|max:50',
 
             'permit_number' => 'prohibited',
             'activity_types' => $isExhibition ? 'exclude' : 'required|array|min:1',
@@ -66,7 +64,6 @@ class StorePermitRequestRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tenant_id.prohibited' => 'Field ini tidak berlaku untuk pengajuan dari portal tenant.',
             'permit_number.prohibited' => 'Nomor surat dibuat otomatis oleh sistem.',
         ];
     }

@@ -108,16 +108,12 @@ class PermitCheckController extends Controller
         $this->permitService->syncStatus($permitRequest);
 
         $requester = $permitRequest->requestedBy;
-        if ($requester) {
-            $url = $requester instanceof \App\Models\TenantUser
-                ? "/portal/permits/{$permitRequest->id}"
-                : "/permit-requests/{$permitRequest->id}";
-
+        if ($requester instanceof \App\Models\User) {
             $this->notificationService->notify(
                 $requester,
                 'Surat Izin Selesai',
                 "{$permitRequest->permit_number} — {$permitRequest->store_name_snapshot} telah selesai diproses.",
-                $url,
+                "/permit-requests/{$permitRequest->id}",
                 'check'
             );
         }

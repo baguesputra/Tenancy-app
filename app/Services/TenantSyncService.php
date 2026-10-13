@@ -6,10 +6,7 @@ use App\Models\Loo;
 use App\Models\ProductCategory;
 use App\Models\Tenancy;
 use App\Models\Tenant;
-use App\Models\TenantUser;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * Saat LOO masuk status `completed`, semua section sudah terisi dan disubmit.
@@ -19,17 +16,17 @@ use Illuminate\Support\Str;
  */
 class TenantSyncService
 {
-    public function sync(Loo $loo, ?string $portalPassword = null): array
+    public function sync(Loo $loo): array
     {
-        return DB::transaction(function () use ($loo, $portalPassword) {
-            $tenant = $this->syncTenant($loo, $portalPassword);
+        return DB::transaction(function () use ($loo) {
+            $tenant = $this->syncTenant($loo);
             $tenancy = $this->syncTenancy($loo, $tenant);
 
             return [$tenant, $tenancy];
         });
     }
 
-    private function syncTenant(Loo $loo, ?string $portalPassword = null): Tenant
+    private function syncTenant(Loo $loo): Tenant
     {
         $sections = $this->sections($loo);
         $legal = $sections['legalitas'] ?? [];
@@ -72,7 +69,6 @@ class TenantSyncService
         } else {
             $tenant = Tenant::create($attributes);
             $this->syncContacts($tenant, $mgmt);
-            $this->createPortalAccount($tenant, $portalPassword);
         }
 
         return $tenant->fresh();
@@ -184,19 +180,5 @@ class TenantSyncService
                 ]
             );
         }
-    }
-
-    private function createPortalAccount(Tenant $tenant, ?string $password): void
-    {
-        if ($tenant->tenantUser()->exists()) {
-            return;
-        }
-
-        TenantUser::create([
-            'tenant_id' => $tenant->id,
-            'username' => TenantUser::generateUsernameFrom($tenant->name),
-            'password' => Hash::make($password ?: Str::random(10)),
-            'is_active' => true,
-        ]);
     }
 }

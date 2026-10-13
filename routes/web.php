@@ -4,7 +4,6 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\LocalLoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\SsoController;
-use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InspectionController;
@@ -16,14 +15,10 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\GateSyncController;
 use App\Http\Controllers\Settings\InspectionTemplateController;
-use App\Http\Controllers\Settings\TenantAccountController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\TenantController;
-use App\Http\Controllers\TenantPortal\DashboardController as PortalDashboardController;
-use App\Http\Controllers\TenantPortal\InspectionController as PortalInspectionController;
-use App\Http\Controllers\TenantPortal\PermitRequestController as PortalPermitRequestController;
 use App\Http\Controllers\TenantProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitQrController;
@@ -34,9 +29,6 @@ use Inertia\Inertia;
 Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
-    }
-    if (auth('tenant')->check()) {
-        return redirect()->route('tenant-portal.dashboard');
     }
     if (config('auth.mode') === 'sso') {
         return redirect()->route('sso.redirect');
@@ -58,40 +50,12 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
     Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
     Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
 
-    Route::middleware('can:users.manage')->name('tenant-accounts.')->group(function () {
-        Route::get('/tenant-accounts', [TenantAccountController::class, 'index'])->name('index');
-        Route::get('/tenant-accounts/credential/{token}', [TenantAccountController::class, 'credential'])->name('credential');
-        Route::post('/tenant-accounts/bulk-create', [TenantAccountController::class, 'bulkCreate'])->name('bulk-create');
-        Route::post('/tenant-accounts/{tenantId}', [TenantAccountController::class, 'store'])->name('store');
-        Route::post('/tenant-accounts/{tenantId}/reset-password', [TenantAccountController::class, 'resetPassword'])->name('reset-password');
-        Route::post('/tenant-accounts/{tenantId}/toggle-active', [TenantAccountController::class, 'toggleActive'])->name('toggle-active');
-    });
-
     Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
     Route::middleware('can:gate.sync')->group(function () {
         Route::post('/gate/sync', [GateSyncController::class, 'syncSemua'])->name('gate.sync');
         Route::post('/gate/sync-master', [GateSyncController::class, 'syncMaster'])->name('gate.sync-master');
         Route::post('/gate/sync-karyawan', [GateSyncController::class, 'syncKaryawan'])->name('gate.sync-karyawan');
         Route::post('/gate/jadwal', [GateSyncController::class, 'simpanJadwal'])->name('gate.jadwal');
-    });
-});
-
-Route::middleware('auth:tenant')->post('/portal/notifications/{id}/read', function ($id, Request $request) {
-    $request->user('tenant')->notifications()->where('id', $id)->update(['read_at' => now()]);
-
-    return back();
-})->name('tenant-portal.notifications.read');
-
-Route::prefix('portal')->name('tenant-portal.')->group(function () {
-    Route::middleware('guest:tenant')->group(function () {
-        Route::get('/login', [TenantLoginController::class, 'create'])->name('login');
-        Route::post('/login', [TenantLoginController::class, 'store']);
-    });
-
-    Route::middleware('auth:tenant')->group(function () {
-        Route::post('/logout', [TenantLoginController::class, 'destroy'])->name('logout');
-
-        Route::get('/dashboard', PortalDashboardController::class)->name('dashboard');
     });
 });
 
@@ -245,9 +209,9 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
 
     Route::middleware('can:loos.delete')->post('/loos/{loo}/destroy', [LooController::class, 'destroy'])->name('loos.destroy');
 
-    // Notifikasi — semua yang login boleh (web + tenant)
+    // Notifikasi — semua staff yang login boleh
     Route::post('/notifications/{id}/read', function ($id, Request $request) {
-        $notifiable = $request->user() ?? $request->user('tenant');
+        $notifiable = $request->user();
         abort_unless($notifiable, 401);
         $notifiable->notifications()->where('id', $id)->update(['read_at' => now()]);
 
@@ -259,13 +223,3 @@ Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)-
 
 // Tracking publik LOO untuk calon tenant (tanpa login, rate-limited).
 Route::middleware('throttle:30,1')->get('/lacak-loo/{token}', [LooTrackController::class, 'show'])->name('track.show');
-
-// Portal (staff toko)
-Route::prefix('portal')->name('tenant-portal.')->middleware('auth:tenant')->group(function () {
-    Route::get('inspections', [PortalInspectionController::class, 'index'])->name('inspections.index');
-    Route::get('inspections/{inspection}', [PortalInspectionController::class, 'show'])->name('inspections.show');
-    Route::get('permits/{permit}/qr.pdf', [PortalPermitRequestController::class, 'qrPdf'])->name('permits.qr-pdf');
-    Route::post('permits/{permit}/cancel', [PortalPermitRequestController::class, 'cancel'])->name('permits.cancel');
-    Route::post('permits', [PortalPermitRequestController::class, 'store'])->middleware('permit.time-lock')->name('permits.store');
-    Route::resource('permits', PortalPermitRequestController::class)->except(['edit', 'update', 'destroy', 'store']);
-});

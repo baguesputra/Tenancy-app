@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\TenantUser;
 use App\Models\User;
 
 return [
@@ -43,12 +42,6 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-
-        // Guard staff toko
-        'tenant' => [
-            'driver' => 'session',
-            'provider' => 'tenant_users',
-        ],
     ],
 
     /*
@@ -72,12 +65,6 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
-        ],
-
-        // Provider baru khusus staff toko
-        'tenant_users' => [
-            'driver' => 'eloquent',
-            'model' => TenantUser::class,
         ],
 
         // 'users' => [

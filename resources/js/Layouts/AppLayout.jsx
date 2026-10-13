@@ -129,7 +129,6 @@ export default function AppLayout({ children }) {
     };
     const settingsMenuItems = [
         { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users },
-        { label: 'Akun Portal Tenant', href: '/settings/tenant-accounts', icon: menuIcons.portal },
         { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access },
         { label: 'Sinkronisasi Gate', href: '/settings/gate', icon: menuIcons.refresh },
         { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak },

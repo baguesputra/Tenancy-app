@@ -153,11 +153,6 @@ class Tenant extends Model
         })->where('is_active', true)->get();
     }
 
-    public function tenantUser()
-    {
-        return $this->hasOne(TenantUser::class);
-    }
-
     public function permitRequests()
     {
         return $this->hasMany(PermitRequest::class);

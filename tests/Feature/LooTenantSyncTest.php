@@ -10,6 +10,7 @@ use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -177,14 +178,15 @@ class LooTenantSyncTest extends TestCase
         $this->assertEquals(135000000, $tenancy->deposit_value);
     }
 
-    public function test_completed_loo_creates_portal_account(): void
+    public function test_completed_loo_tidak_buat_akun_portal(): void
     {
         $loo = $this->makeLoo();
 
         $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
-        $this->assertNotNull($tenant->tenantUser, 'Akun portal toko harus dibuat otomatis');
+        $this->assertNotNull($tenant, 'Tenant tetap dibuat saat LOO completed');
+        $this->assertFalse(Schema::hasTable('tenant_users'), 'Tabel akun portal harus sudah dihapus');
     }
 
     public function test_completed_loo_creates_contacts(): void

@@ -58,16 +58,12 @@ class ApprovalController extends Controller
             $this->permitService->syncStatus($permit);
 
             $requester = $permit->requestedBy;
-            if ($requester) {
-                $url = $requester instanceof \App\Models\TenantUser
-                    ? "/portal/permits/{$permit->id}"
-                    : "/permit-requests/{$permit->id}";
-
+            if ($requester instanceof \App\Models\User) {
                 $this->notificationService->notify(
                     $requester,
                     'Surat Izin Ditolak',
                     "{$permit->permit_number} ditolak: {$request->reason}",
-                    $url,
+                    "/permit-requests/{$permit->id}",
                     'x'
                 );
             }

@@ -12,7 +12,6 @@ class BreadcrumbService
         $name = $route?->getName();
 
         $webHome = ['label' => 'Beranda', 'href' => '/dashboard'];
-        $portalHome = ['label' => 'Beranda', 'href' => '/portal/dashboard'];
 
         $crumbs = match ($name) {
             'dashboard' => [$webHome],
@@ -37,16 +36,9 @@ class BreadcrumbService
             'permit-requests.create' => [$webHome, self::item('Surat Izin', '/permit-requests'), self::item('Tambah')],
             'permit-requests.show' => [$webHome, self::item('Surat Izin', '/permit-requests'), self::item(self::permitLabel($request, 'permitRequest'))],
             'settings.users.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Manajemen User')],
-            'settings.tenant-accounts.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Akun Portal Tenant')],
             'settings.access-control.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Hak Akses')],
             'settings.gate.index' => [$webHome, self::item('Pengaturan', '/settings/users'), self::item('Sinkronisasi Gate')],
             'password.change.form' => [$webHome, self::item('Ubah Password')],
-            'tenant-portal.dashboard' => [$portalHome],
-            'tenant-portal.permits.index' => [$portalHome, self::item('Surat Izin', '/portal/permits')],
-            'tenant-portal.permits.create' => [$portalHome, self::item('Surat Izin', '/portal/permits'), self::item('Tambah')],
-            'tenant-portal.permits.show' => [$portalHome, self::item('Surat Izin', '/portal/permits'), self::item(self::permitLabel($request, 'permit'))],
-            'tenant-portal.inspections.index' => [$portalHome, self::item('Hasil Sidak')],
-            'tenant-portal.inspections.show' => [$portalHome, self::item('Hasil Sidak', '/portal/inspections'), self::item(self::portalInspectionLabel($request))],
             default => [$webHome, ...self::fallback($request)],
         };
 
@@ -103,21 +95,6 @@ class BreadcrumbService
         }
 
         return 'Detail Inspeksi';
-    }
-
-    private static function portalInspectionLabel(Request $request): string
-    {
-        $inspection = $request->route()?->parameter('inspection');
-
-        if (is_object($inspection)) {
-            try {
-                return $inspection->checklist_snapshot['template_name'] ?? 'Detail Sidak';
-            } catch (\Throwable) {
-                return 'Detail Sidak';
-            }
-        }
-
-        return 'Detail Sidak';
     }
 
     private static function inspectionParents(Request $request): array

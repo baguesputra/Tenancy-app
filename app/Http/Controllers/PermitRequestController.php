@@ -115,9 +115,7 @@ class PermitRequestController extends Controller
             $permit->activity_labels = collect($permit->activity_types ?? [])
                 ->map(fn ($v) => collect(self::ACTIVITY_TYPES)->firstWhere('value', $v)['label'] ?? $v)
                 ->values();
-            $permit->source = str_contains($permit->requested_by_type ?? '', 'TenantUser')
-                ? 'portal'
-                : (in_array($permit->requested_by_id, $marketingIds) ? 'marketing' : 'staff');
+            $permit->source = in_array($permit->requested_by_id, $marketingIds) ? 'marketing' : 'staff';
 
             return $permit;
         });
@@ -232,14 +230,14 @@ class PermitRequestController extends Controller
         $requestedBy = $permitRequest->requestedBy;
         $permitRequest->requested_by_label = $requestedBy instanceof User
             ? $requestedBy->name
-            : ($permitRequest->tenant->name ?? $requestedBy?->username ?? '—');
+            : ($permitRequest->tenant->name ?? '—');
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
             'can_revise' => $permitRequest->status === 'pending' && $this->canManageForm($user, $permitRequest),
             'can_cancel' => $permitRequest->status === 'pending'
                 && (string) $permitRequest->requested_by_id === (string) $user->id
-                && str_contains($permitRequest->requested_by_type ?? '', 'User')
+                && ($permitRequest->requested_by_type ?? null) === User::class
                 && $this->canManageForm($user, $permitRequest),
             'share' => $this->publicShare($permitRequest),
         ]);
@@ -324,7 +322,7 @@ class PermitRequestController extends Controller
         $requestedBy = $permitRequest->requestedBy;
         $requestedByLabel = $requestedBy instanceof User
             ? $requestedBy->name
-            : ($permitRequest->tenant->name ?? $requestedBy?->username ?? '—');
+            : ($permitRequest->tenant->name ?? '—');
 
         $activityLabels = collect($permitRequest->activity_types ?? [])
             ->map(fn ($v) => collect(self::ACTIVITY_TYPES)->firstWhere('value', $v)['label'] ?? $v)
@@ -422,7 +420,7 @@ class PermitRequestController extends Controller
     public function cancel(PermitRequest $permitRequest, Request $request)
     {
         if ((string) $permitRequest->requested_by_id !== (string) $request->user()->id
-            || ! str_contains($permitRequest->requested_by_type ?? '', 'User')) {
+            || ($permitRequest->requested_by_type ?? null) !== User::class) {
             abort(403, 'Hanya pembuat yang bisa membatalkan.');
         }
         abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);

@@ -134,7 +134,6 @@ class TenantProfileController extends Controller
         $tenant->load([
             'branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name',
             'contacts:id,tenant_id,name,position,phone,email,type',
-            'tenantUser:id,tenant_id,username,is_active',
             'activeTenancy:id,tenant_id,unit_id,status,start_date,end_date',
             'activeTenancy.unit:id,unit_code',
             'activeTenancy.unit.scannableCode:scannable_type,scannable_id,token',
@@ -240,7 +239,6 @@ class TenantProfileController extends Controller
 
         // ponytail: kirim kolom yg dipakai FE saja — toArray() full bawa relasi duplikat
         $tenantArr = $tenant->only(['id', 'name', 'logo_url', 'legal_entity_name', 'npwp_number', 'siup_number', 'company_phone', 'company_email', 'company_address', 'is_active'])
-            + ['tenant_user' => $tenant->tenantUser?->only(['username', 'is_active'])]
             + ['tenant_category' => $tenant->tenantCategory?->only(['name'])]
             + ['product_category' => $tenant->productCategory?->only(['name'])]
             + ['branch' => $tenant->branch?->only(['name'])];
