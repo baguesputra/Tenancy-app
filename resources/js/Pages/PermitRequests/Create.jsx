@@ -17,7 +17,7 @@ import StepPanel from '@/Components/StepPanel';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { formatDateRange, formatTimeRange } from '@/utils/format';
 
-const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Review'];
+const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Pelengkap', 'Review'];
 const MARKETING_STEPS = ['Tenant & Stand', 'Jadwal Pameran', 'Barang Pameran', 'Penanggung Jawab', 'Review'];
 
 export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'umum', canChooseMode = false }) {
@@ -338,52 +338,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </FormField>
                                         </div>
                                     </FormSection>
-
-                                    {locationType !== 'vendor' && (
-                                        <FormSection title="Vendor / Kontraktor Eksternal">
-                                            <Checkbox
-                                                label="Melibatkan vendor/kontraktor eksternal"
-                                                checked={data.is_external}
-                                                onChange={(e) => setData('is_external', e.target.checked)}
-                                                className="mb-4"
-                                            />
-                                            {data.is_external && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <FormField label="Nama Perusahaan" error={errors.contractor_company}>
-                                                        <TextInput value={data.contractor_company} onChange={(e) => setData('contractor_company', e.target.value)} />
-                                                    </FormField>
-                                                    <FormField label="Penanggung Jawab" error={errors.contractor_pic}>
-                                                        <TextInput value={data.contractor_pic} onChange={(e) => setData('contractor_pic', e.target.value)} />
-                                                    </FormField>
-                                                    <FormField label="Alamat" error={errors.contractor_address} className="sm:col-span-2">
-                                                        <Textarea value={data.contractor_address} onChange={(e) => setData('contractor_address', e.target.value)} rows={2} />
-                                                    </FormField>
-                                                    <FormField label="Telp/HP/Fax" error={errors.contractor_phone}>
-                                                        <TextInput value={data.contractor_phone} onChange={(e) => setData('contractor_phone', e.target.value)} />
-                                                    </FormField>
-                                                </div>
-                                            )}
-                                        </FormSection>
-                                    )}
-
-                                    <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
-                                        <div className="flex flex-wrap gap-3">
-                                            {departments.map((d) => (
-                                                <Checkbox
-                                                    key={d.id}
-                                                    label={d.name}
-                                                    checked={data.accompanying_department_ids.includes(d.id)}
-                                                    onChange={() => toggleDept(d.id)}
-                                                />
-                                            ))}
-                                        </div>
-                                    </FormSection>
-
-                                    <FormSection title="Catatan">
-                                        <FormField label="Keterangan Tambahan" error={errors.notes}>
-                                            <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} rows={2} />
-                                        </FormField>
-                                    </FormSection>
                                     </>
                                 )}
 
@@ -613,8 +567,59 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </FormSection>
                                     </>
                                 )}
-                                {/* STEP 4 — Review */}
+                                {/* STEP 4 — Pelengkap */}
                                 {!isMarketingLocked && step === 4 && (
+                                    <>
+                                    {locationType !== 'vendor' && (
+                                        <FormSection title="Vendor / Kontraktor Eksternal">
+                                            <Checkbox
+                                                label="Melibatkan vendor/kontraktor eksternal"
+                                                checked={data.is_external}
+                                                onChange={(e) => setData('is_external', e.target.checked)}
+                                                className="mb-4"
+                                            />
+                                            {data.is_external && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <FormField label="Nama Perusahaan" error={errors.contractor_company}>
+                                                        <TextInput value={data.contractor_company} onChange={(e) => setData('contractor_company', e.target.value)} />
+                                                    </FormField>
+                                                    <FormField label="Penanggung Jawab" error={errors.contractor_pic}>
+                                                        <TextInput value={data.contractor_pic} onChange={(e) => setData('contractor_pic', e.target.value)} />
+                                                    </FormField>
+                                                    <FormField label="Alamat" error={errors.contractor_address} className="sm:col-span-2">
+                                                        <Textarea value={data.contractor_address} onChange={(e) => setData('contractor_address', e.target.value)} rows={2} />
+                                                    </FormField>
+                                                    <FormField label="Telp/HP/Fax" error={errors.contractor_phone}>
+                                                        <TextInput value={data.contractor_phone} onChange={(e) => setData('contractor_phone', e.target.value)} />
+                                                    </FormField>
+                                                </div>
+                                            )}
+                                        </FormSection>
+                                    )}
+
+                                    <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
+                                        <div className="flex flex-wrap gap-3">
+                                            {departments.map((d) => (
+                                                <Checkbox
+                                                    key={d.id}
+                                                    label={d.name}
+                                                    checked={data.accompanying_department_ids.includes(d.id)}
+                                                    onChange={() => toggleDept(d.id)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </FormSection>
+
+                                    <FormSection title="Catatan">
+                                        <FormField label="Keterangan Tambahan" error={errors.notes}>
+                                            <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} rows={2} />
+                                        </FormField>
+                                    </FormSection>
+                                    </>
+                                )}
+
+                                {/* STEP 5 — Review */}
+                                {!isMarketingLocked && step === 5 && (
                                     <>
                                         <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -812,6 +817,7 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                         label="Pendampingan"
                         value={deptCount > 0 ? `${deptCount} departemen` : 'Tidak ada'}
                         filled
+                        dim={currentStep < 4}
                     />
                 )}
             </div>
