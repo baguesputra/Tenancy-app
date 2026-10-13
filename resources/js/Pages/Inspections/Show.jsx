@@ -4,12 +4,13 @@ import { useMemo, useRef, useState } from 'react';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import RealtimePhotoCapture from '@/Components/Sidak/RealtimePhotoCapture';
 
 import initials from '@/utils/initials';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-export default function Show({ inspection, checklistSnapshot, share }) {
+export default function Show({ inspection, checklistSnapshot, share, extraPhotos = [] }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
     const [savingItemId, setSavingItemId] = useState(null);
     const [itemError, setItemError] = useState({});
@@ -318,23 +319,13 @@ export default function Show({ inspection, checklistSnapshot, share }) {
 
                                             {item.type === 'binary_choice' && (
                                                 <div className="sm:flex sm:items-start sm:gap-3">
-                                                    <label className={`flex items-center justify-center gap-2 w-full sm:w-auto sm:px-4 py-3 sm:py-2.5 min-h-[48px] sm:min-h-[44px] rounded-xl border-2 border-dashed text-xs font-medium transition-colors cursor-pointer ${
-                                                        isLocked ? 'opacity-50 border-gray-200 text-gray-400' : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50 active:bg-gray-50'
-                                                    }`}>
-                                                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        </svg>
-                                                        {item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length})` : 'Ambil / Unggah Foto'}
-                                                        <input
-                                                            disabled={isLocked}
-                                                            type="file"
-                                                            accept="image/*"
-                                                            capture="environment"
-                                                            onChange={(e) => e.target.files[0] && handlePhotoUpload(sectionIdx, itemIdx, item, e.target.files[0])}
-                                                            className="hidden"
-                                                        />
-                                                    </label>
+                                                    <RealtimePhotoCapture
+                                                        tenantName={inspection.tenant?.name}
+                                                        disabled={isLocked}
+                                                        buttonLabel={item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length})` : 'Ambil Foto'}
+                                                        buttonHint="Kamera realtime"
+                                                        onCapture={(file) => handlePhotoUpload(sectionIdx, itemIdx, item, file)}
+                                                    />
 
                                                     {item.answer?.photos?.length > 0 && (
                                                         <div className="flex gap-2 flex-wrap mt-2 sm:mt-0">
@@ -399,6 +390,12 @@ export default function Show({ inspection, checklistSnapshot, share }) {
                                 </div>
                             </div>
                         </section>
+                        <ExtraPhotosSection
+                            inspectionId={inspection.id}
+                            tenantName={inspection.tenant?.name}
+                            locked={isLocked}
+                            initialPhotos={extraPhotos}
+                        />
                     </div>
 
                     <aside className="hidden lg:block sticky top-24 space-y-4">
@@ -461,5 +458,144 @@ export default function Show({ inspection, checklistSnapshot, share }) {
                 </ConfirmModal>
             </div>
         </AppLayout>
+    );
+}
+
+function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos }) {
+    const [photos, setPhotos] = useState(initialPhotos ?? []);
+    const [pending, setPending] = useState(null); // { file, url }
+    const [description, setDescription] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+    const [error, setError] = useState('');
+
+    const savePending = async () => {
+        if (!pending || saving) return;
+        setSaving(true);
+        setError('');
+        try {
+            const formData = new FormData();
+            formData.append('photo', pending.file);
+            if (description.trim()) formData.append('description', description.trim());
+            const res = await fetch(`/inspections/${inspectionId}/extra-photos`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data?.photo) {
+                setError(data?.message ?? 'Gagal menyimpan foto. Coba lagi.');
+                return;
+            }
+            setPhotos((prev) => [...prev, data.photo]);
+            URL.revokeObjectURL(pending.url);
+            setPending(null);
+            setDescription('');
+        } catch {
+            setError('Jaringan bermasalah. Coba lagi.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const removePhoto = async (id) => {
+        if (!confirm('Hapus foto ini?')) return;
+        setDeletingId(id);
+        try {
+            const res = await fetch(`/inspection-extra-photos/${id}`, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+            });
+            if (!res.ok) return;
+            setPhotos((prev) => prev.filter((p) => p.id !== id));
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    return (
+        <section className="bg-white rounded-2xl border border-[#E2E5EA] p-4 sm:p-6 mb-3.5 shadow-sm">
+            <div className="flex items-center justify-between gap-2 mb-1 pb-2.5 border-b border-gray-100">
+                <h2 className="text-sm sm:text-[15px] font-semibold text-[#0F1E36]">Foto Lain-lain ({photos.length})</h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Temuan di luar checklist — foto realtime tanpa batas, tiap foto wajib ada keterangan.</p>
+            {error && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">{error}</p>
+            )}
+
+            {photos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+                    {photos.map((photo) => (
+                        <figure key={photo.id} className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                            <img src={photo.url} alt={photo.description || 'Foto lain-lain'} loading="lazy" className="w-full aspect-[4/3] object-cover" />
+                            {photo.description && (
+                                <figcaption className="text-[11px] text-gray-700 px-2 py-1.5 leading-snug">{photo.description}</figcaption>
+                            )}
+                            {!locked && (
+                                <button
+                                    type="button"
+                                    disabled={deletingId === photo.id}
+                                    onClick={() => removePhoto(photo.id)}
+                                    aria-label="Hapus foto"
+                                    className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-black/60 text-white text-base leading-none hover:bg-black/80 transition-colors disabled:opacity-50"
+                                >
+                                    ×
+                                </button>
+                            )}
+                        </figure>
+                    ))}
+                </div>
+            )}
+
+            {!locked && !pending && (
+                <RealtimePhotoCapture
+                    tenantName={tenantName}
+                    buttonLabel={photos.length > 0 ? `Tambah Foto (${photos.length})` : 'Ambil Foto'}
+                    buttonHint="Kamera realtime"
+                    onCapture={(file) => setPending({ file, url: URL.createObjectURL(file) })}
+                />
+            )}
+
+            {!locked && pending && (
+                <div className="space-y-2">
+                    <img src={pending.url} alt="Pratinjau foto lain-lain" className="w-full aspect-[4/3] object-cover rounded-xl border border-gray-200" />
+                    <input
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Keterangan foto (cth. Keramik pecah dekat pintu)…"
+                        maxLength={255}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-gray-100"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => { URL.revokeObjectURL(pending.url); setPending(null); setDescription(''); }}
+                            disabled={saving}
+                            className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            Buang
+                        </button>
+                        <button
+                            type="button"
+                            onClick={savePending}
+                            disabled={saving}
+                            className="px-3 py-2 text-xs font-medium text-white bg-[#0F1E36] hover:bg-[#1a2f52] rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            {saving ? 'Menyimpan…' : 'Simpan Foto'}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </section>
     );
 }

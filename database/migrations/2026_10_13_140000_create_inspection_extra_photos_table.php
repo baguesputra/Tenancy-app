@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('inspection_extra_photos', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('inspection_id');
+            $table->foreign('inspection_id')->references('id')->on('inspections')->cascadeOnDelete();
+
+            $table->string('path'); // path file di storage
+            $table->string('description')->nullable(); // keterangan per foto
+            $table->timestamp('uploaded_at')->nullable();
+
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('inspection_extra_photos');
+    }
+};

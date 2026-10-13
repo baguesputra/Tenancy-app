@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\ChecklistItem;
 use App\Models\Inspection;
+use App\Models\InspectionExtraPhoto;
 use App\Models\ScannableCode;
 use App\Services\InspectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -20,7 +22,7 @@ class InspectionController extends Controller
     {
         $this->authorizeAccess($inspection, $request);
 
-        $inspection->load(['tenant.productCategory', 'session', 'answers.photos']);
+        $inspection->load(['tenant.productCategory', 'session', 'answers.photos', 'extraPhotos']);
 
         // Gabungkan snapshot checklist dengan jawaban yang sudah ada,
         // supaya frontend tinggal render tanpa perlu query terpisah
@@ -54,6 +56,11 @@ class InspectionController extends Controller
             ],
             'checklistSnapshot' => $snapshot,
             'share' => $this->publicShare($inspection),
+            'extraPhotos' => $inspection->extraPhotos->map(fn ($p) => [
+                'id' => $p->id,
+                'url' => $p->url(),
+                'description' => $p->description,
+            ]),
         ]);
     }
 
@@ -153,6 +160,50 @@ class InspectionController extends Controller
 
         return redirect()->route('sessions.show', $inspection->inspection_session_id)
             ->with('success', 'Checklist tenant ini selesai disimpan.');
+    }
+
+    /**
+     * Foto tambahan di luar checklist (section Lain-lain): tanpa batas, tiap foto ada keterangan.
+     */
+    public function storeExtraPhoto(Inspection $inspection, Request $request)
+    {
+        $this->authorizeAccess($inspection, $request);
+        abort_unless($inspection->session->status === 'in_progress', 422, 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.');
+
+        $validated = $request->validate([
+            'photo' => 'required|image|max:5120', // maksimal 5MB
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        $photo = $inspection->extraPhotos()->create([
+            'path' => $request->file('photo')->store('inspection-photos', 'public'),
+            'description' => $validated['description'] ?? null,
+            'uploaded_at' => now(),
+        ]);
+
+        $payload = ['id' => $photo->id, 'url' => $photo->url(), 'description' => $photo->description];
+
+        if ($request->wantsJson()) {
+            return response()->json(['photo' => $payload]);
+        }
+
+        return back()->with('success', 'Foto lain-lain tersimpan.');
+    }
+
+    public function destroyExtraPhoto(InspectionExtraPhoto $photo, Request $request)
+    {
+        $inspection = $photo->inspection;
+        $this->authorizeAccess($inspection, $request);
+        abort_unless($inspection->session->status === 'in_progress', 422, 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.');
+
+        Storage::disk('public')->delete($photo->path);
+        $photo->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['deleted' => true]);
+        }
+
+        return back()->with('success', 'Foto dihapus.');
     }
 
     private function authorizeAccess(Inspection $inspection, Request $request): void
