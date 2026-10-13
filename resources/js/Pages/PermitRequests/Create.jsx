@@ -10,6 +10,7 @@ import SearchableSelect from '@/Components/Form/SearchableSelect';
 import DateInput from '@/Components/Form/DateInput';
 import TimeInput from '@/Components/Form/TimeInput';
 import Checkbox from '@/Components/Form/Checkbox';
+import MultiSelect from '@/Components/Form/MultiSelect';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import StepIndicator from '@/Components/StepIndicator';
@@ -68,11 +69,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     const toggleActivityType = (value) => {
         const current = data.activity_types || [];
         setData('activity_types', current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
-    };
-
-    const toggleDept = (id) => {
-        const current = data.accompanying_department_ids;
-        setData('accompanying_department_ids', current.includes(id) ? current.filter((d) => d !== id) : [...current, id]);
     };
 
     const updateGood = (idx, field, value) => {
@@ -599,16 +595,12 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     )}
 
                                     <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
-                                        <div className="flex flex-wrap gap-3">
-                                            {departments.map((d) => (
-                                                <Checkbox
-                                                    key={d.id}
-                                                    label={d.name}
-                                                    checked={data.accompanying_department_ids.includes(d.id)}
-                                                    onChange={() => toggleDept(d.id)}
-                                                />
-                                            ))}
-                                        </div>
+                                        <MultiSelect
+                                            value={data.accompanying_department_ids}
+                                            onChange={(ids) => setData('accompanying_department_ids', ids)}
+                                            options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                                            placeholder="Pilih departemen pendamping..."
+                                        />
                                     </FormSection>
 
                                     <FormSection title="Persetujuan Manager Tenant">
@@ -831,6 +823,14 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                         label="Pendampingan"
                         value={deptCount > 0 ? `${deptCount} departemen` : 'Tidak ada'}
                         filled
+                        dim={currentStep < 4}
+                    />
+                )}
+                {!isMarketingLocked && (
+                    <SummaryItem
+                        label="Manager Tenant"
+                        value={data.needs_manager_approval ? 'Ya, butuh persetujuan' : 'Tidak perlu'}
+                        filled={!!data.needs_manager_approval}
                         dim={currentStep < 4}
                     />
                 )}
