@@ -1,4 +1,4 @@
-export default function FormSection({ title, description, children, collapsible = false, expanded = true, onToggle, variant }) {
+export default function FormSection({ title, description, children, action = null, collapsible = false, expanded = true, onToggle, variant }) {
     const drawer = variant === 'drawer';
     return (
         <div className={drawer ? 'bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm' : 'bg-white rounded-2xl border border-[#E2E5EA] p-6 sm:p-8 mb-6 shadow-sm hover:shadow-md transition-shadow duration-200'}>
@@ -25,6 +25,11 @@ export default function FormSection({ title, description, children, collapsible 
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
+                    )}
+                    {action && (
+                        <div className="shrink-0 ml-3">
+                            {action}
+                        </div>
                     )}
                 </div>
             ) : null}

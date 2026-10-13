@@ -144,15 +144,26 @@ export default function MultiSelect({
                     </div>
                     <div className="border-t border-gray-100 bg-gray-50 px-3.5 py-2 flex items-center justify-between gap-2">
                         <span className="text-xs text-gray-500 tabular-nums">{selected.length} dipilih</span>
-                        {selected.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={clearAll}
-                                className="text-xs font-medium text-gray-600 hover:text-gray-900"
-                            >
-                                Bersihkan
-                            </button>
-                        )}
+                        <div className="flex items-center gap-3">
+                            {filtered.length > 0 && selected.length < options.length && (
+                                <button
+                                    type="button"
+                                    onClick={() => onChange && onChange([...new Set([...value, ...filtered.map((o) => o.value)])])}
+                                    className="text-xs font-medium text-[#0F1E36] hover:underline"
+                                >
+                                    Pilih semua
+                                </button>
+                            )}
+                            {selected.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={clearAll}
+                                    className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                                >
+                                    Bersihkan
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

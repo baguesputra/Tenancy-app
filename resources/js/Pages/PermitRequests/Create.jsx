@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ACTIVITY_TYPES } from '@/Constants/permitActivityTypes';
 import FormSection from '@/Components/Form/FormSection';
 import FormField from '@/Components/Form/FormField';
@@ -20,6 +20,14 @@ import { formatDateRange, formatTimeRange } from '@/utils/format';
 
 const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Pelengkap', 'Review'];
 const MARKETING_STEPS = ['Tenant & Stand', 'Jadwal Pameran', 'Barang Pameran', 'Penanggung Jawab', 'Review'];
+
+const ACTIVITY_GROUPS = [
+    { label: 'Pekerjaan', values: ['kerja', 'lembur'] },
+    { label: 'Barang', values: ['masuk_barang', 'keluar_barang'] },
+    { label: 'Alat Kerja / Properti', values: ['masuk_alat', 'keluar_alat'] },
+    { label: 'Proyek', values: ['fit_out', 'pull_out', 'renovasi'] },
+    { label: 'Event', values: ['pameran'] },
+].map((g) => ({ label: g.label, items: ACTIVITY_TYPES.filter((t) => g.values.includes(t.value)) }));
 
 export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'umum', canChooseMode = false }) {
     const [step, setStep] = useState(1);
@@ -231,12 +239,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             )}
 
                             {Object.keys(errors).length > 0 && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3.5 rounded-lg mb-4">
-                                    <p className="font-medium mb-1">Ada kesalahan input:</p>
-                                    <ul className="list-disc list-inside">
-                                        {Object.entries(errors).map(([key, message]) => <li key={key}>{message}</li>)}
-                                    </ul>
-                                </div>
+                                <ErrorSummary errors={errors} onJump={goToStep} isMarketingLocked={isMarketingLocked} />
                             )}
 
                             <StepPanel stepKey={step}>
@@ -275,20 +278,50 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <FormSection title="Kategori">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                                             {[
-                                                { value: 'tenant', label: 'Tenant' },
-                                                { value: 'vendor', label: 'Vendor' },
+                                                {
+                                                    value: 'tenant',
+                                                    label: 'Tenant',
+                                                    desc: 'Izin atas nama tenant terdaftar di mall',
+                                                    icon: (
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    ),
+                                                },
+                                                {
+                                                    value: 'vendor',
+                                                    label: 'Vendor',
+                                                    desc: 'Kontraktor / perusahaan eksternal',
+                                                    icon: (
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0M1 7h12v8H1zM13 10h5l3 3v2h-8z" />
+                                                    ),
+                                                },
                                             ].map((opt) => (
                                                 <button
                                                     key={opt.value}
                                                     type="button"
                                                     onClick={() => selectLocationType(opt.value)}
-                                                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all text-left ${
+                                                    aria-pressed={locationType === opt.value}
+                                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                         locationType === opt.value
-                                                            ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36] shadow-sm'
-                                                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                                            ? 'border-[#0F1E36] bg-[#0F1E36]/5 shadow-sm'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                     }`}
                                                 >
-                                                    {opt.label}
+                                                    <span className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center transition-colors ${locationType === opt.value ? 'bg-[#0F1E36] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                                            {opt.icon}
+                                                        </svg>
+                                                    </span>
+                                                    <span className="min-w-0">
+                                                        <span className={`block text-sm font-semibold ${locationType === opt.value ? 'text-[#0F1E36]' : 'text-gray-700'}`}>{opt.label}</span>
+                                                        <span className="block text-xs text-gray-400 truncate">{opt.desc}</span>
+                                                    </span>
+                                                    {locationType === opt.value && (
+                                                        <span className="ml-auto w-5 h-5 shrink-0 rounded-full bg-[#1FA24C] text-white flex items-center justify-center" aria-hidden="true">
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </span>
+                                                    )}
                                                 </button>
                                             ))}
                                         </div>
@@ -328,10 +361,10 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField label="Nama Penanggung Jawab" error={errors.pic_name}>
-                                                <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} />
+                                                <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} autoComplete="name" placeholder="Nama lengkap PIC" />
                                             </FormField>
                                             <FormField label="Telepon PIC" error={errors.pic_phone}>
-                                                <TextInput value={data.pic_phone} onChange={(e) => setData('pic_phone', e.target.value)} />
+                                                <TextInput type="tel" value={data.pic_phone} onChange={(e) => setData('pic_phone', e.target.value)} autoComplete="tel" inputMode="tel" placeholder="cth. 0812xxxxxxx" />
                                             </FormField>
                                         </div>
                                     </FormSection>
@@ -365,15 +398,32 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {!isMarketingLocked && step === 2 && (
                                     <FormSection title="Jadwal & Kegiatan">
                                         <FormField label="Jenis Kegiatan" error={clientErrors.activity_types} required>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
-                                                {ACTIVITY_TYPES.map((type) => (
-                                                    <Checkbox
-                                                        key={type.value}
-                                                        label={type.label}
-                                                        checked={data.activity_types.includes(type.value)}
-                                                        onChange={() => toggleActivityType(type.value)}
-                                                    />
-                                                ))}
+                                            <div className="space-y-4 mt-1">
+                                                {ACTIVITY_GROUPS.map((group) => {
+                                                    const picked = group.items.filter((t) => data.activity_types.includes(t.value)).length;
+                                                    return (
+                                                        <div key={group.label}>
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{group.label}</p>
+                                                                {picked > 0 && (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-[#0F1E36]/5 text-[#0F1E36] tabular-nums">
+                                                                        {picked} dipilih
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                                {group.items.map((type) => (
+                                                                    <Checkbox
+                                                                        key={type.value}
+                                                                        label={type.label}
+                                                                        checked={data.activity_types.includes(type.value)}
+                                                                        onChange={() => toggleActivityType(type.value)}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </FormField>
 
@@ -414,28 +464,39 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             <div key={key} className="mb-5 last:mb-0">
                                                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">{title}</h3>
                                                 {data[key].map((good, idx) => (
-                                                    <div key={idx} className="flex gap-2 mb-2">
+                                                    <div key={idx} className="flex flex-col sm:flex-row gap-2 mb-2">
                                                         <TextInput
                                                             value={good.description}
                                                             onChange={(e) => updateExhibitionGood(key, idx, 'description', e.target.value)}
                                                             placeholder="Nama barang"
                                                             className="flex-1"
                                                         />
-                                                        <TextInput
-                                                            value={good.quantity_note}
-                                                            onChange={(e) => updateExhibitionGood(key, idx, 'quantity_note', e.target.value)}
-                                                            placeholder="Jumlah"
-                                                            className="w-20"
-                                                        />
-                                                        <TextInput
-                                                            value={good.unit}
-                                                            onChange={(e) => updateExhibitionGood(key, idx, 'unit', e.target.value)}
-                                                            placeholder="Satuan"
-                                                            className="w-20"
-                                                        />
-                                                        {data[key].length > 1 && (
-                                                            <button type="button" onClick={() => removeExhibitionGood(key, idx)} className="text-red-500 text-sm shrink-0">Hapus</button>
-                                                        )}
+                                                        <div className="flex gap-2">
+                                                            <TextInput
+                                                                value={good.quantity_note}
+                                                                onChange={(e) => updateExhibitionGood(key, idx, 'quantity_note', e.target.value)}
+                                                                placeholder="Jumlah"
+                                                                className="w-20 flex-1 sm:flex-none"
+                                                            />
+                                                            <TextInput
+                                                                value={good.unit}
+                                                                onChange={(e) => updateExhibitionGood(key, idx, 'unit', e.target.value)}
+                                                                placeholder="Satuan"
+                                                                className="w-20 flex-1 sm:flex-none"
+                                                            />
+                                                            {data[key].length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeExhibitionGood(key, idx)}
+                                                                    aria-label={`Hapus barang ${idx + 1}`}
+                                                                    className="w-11 shrink-0 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-400 min-h-[44px] flex items-center justify-center"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.87 12.14A2 2 0 0116.14 21H7.86a2 2 0 01-2-1.86L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 <Button type="button" variant="secondary" onClick={() => addExhibitionGood(key)} className="text-xs mt-1">+ Tambah Barang</Button>
@@ -450,41 +511,71 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             <div>
                                                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Pekerja</h3>
                                                 <FormField label="Jumlah Orang" error={clientErrors.worker_count} required hint="Cukup jumlahnya — daftar nama tidak perlu. Foto KTP diisi Security saat cek fisik.">
-                                                    <TextInput
-                                                        type="number"
-                                                        min={1}
-                                                        value={data.worker_count}
-                                                        onChange={(e) => setData('worker_count', e.target.value)}
-                                                        placeholder="cth. 5"
-                                                    />
+                                                    <div className="flex items-stretch gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setData('worker_count', String(Math.max(0, (parseInt(data.worker_count, 10) || 0) - 1) || ''))}
+                                                            aria-label="Kurangi jumlah pekerja"
+                                                            className="w-11 shrink-0 rounded-lg border border-gray-300 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-[#0F1E36] min-h-[44px]"
+                                                        >
+                                                            −
+                                                        </button>
+                                                        <TextInput
+                                                            type="number"
+                                                            min={1}
+                                                            value={data.worker_count}
+                                                            onChange={(e) => setData('worker_count', e.target.value)}
+                                                            placeholder="cth. 5"
+                                                            className="text-center tabular-nums"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setData('worker_count', String((parseInt(data.worker_count, 10) || 0) + 1))}
+                                                            aria-label="Tambah jumlah pekerja"
+                                                            className="w-11 shrink-0 rounded-lg border border-gray-300 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-[#0F1E36] min-h-[44px]"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
                                                 </FormField>
                                             </div>
 
                                             <div>
                                                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Daftar Barang / Peralatan</h3>
                                                 {data.goods.map((good, idx) => (
-                                                    <div key={idx} className="flex gap-2 mb-2">
+                                                    <div key={idx} className="flex flex-col sm:flex-row gap-2 mb-2">
                                                         <TextInput
                                                             value={good.description}
                                                             onChange={(e) => updateGood(idx, 'description', e.target.value)}
                                                             placeholder="Nama barang"
                                                             className="flex-1"
                                                         />
-                                                        <TextInput
-                                                            value={good.quantity_note}
-                                                            onChange={(e) => updateGood(idx, 'quantity_note', e.target.value)}
-                                                            placeholder="Jumlah"
-                                                            className="w-20"
-                                                        />
-                                                        <TextInput
-                                                            value={good.unit}
-                                                            onChange={(e) => updateGood(idx, 'unit', e.target.value)}
-                                                            placeholder="Satuan"
-                                                            className="w-20"
-                                                        />
-                                                        {data.goods.length > 1 && (
-                                                            <button type="button" onClick={() => removeGood(idx)} className="text-red-500 text-sm shrink-0">Hapus</button>
-                                                        )}
+                                                        <div className="flex gap-2">
+                                                            <TextInput
+                                                                value={good.quantity_note}
+                                                                onChange={(e) => updateGood(idx, 'quantity_note', e.target.value)}
+                                                                placeholder="Jumlah"
+                                                                className="w-20 flex-1 sm:flex-none"
+                                                            />
+                                                            <TextInput
+                                                                value={good.unit}
+                                                                onChange={(e) => updateGood(idx, 'unit', e.target.value)}
+                                                                placeholder="Satuan"
+                                                                className="w-20 flex-1 sm:flex-none"
+                                                            />
+                                                            {data.goods.length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeGood(idx)}
+                                                                    aria-label={`Hapus barang ${idx + 1}`}
+                                                                    className="w-11 shrink-0 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-400 min-h-[44px] flex items-center justify-center"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.87 12.14A2 2 0 0116.14 21H7.86a2 2 0 01-2-1.86L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 <Button type="button" variant="secondary" onClick={addGood} className="text-xs mt-1">+ Tambah Barang</Button>
@@ -517,7 +608,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 )}
                                 {isMarketingLocked && step === 5 && (
                                     <>
-                                        <FormSection title="Tenant & Stand" description="Kategori: Pameran / Open Counter">
+                                        <FormSection title="Tenant & Stand" description="Kategori: Pameran / Open Counter" action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Kategori" value={<Badge color="blue">Pameran / Open Counter</Badge>} />
                                                 <ReviewRow label="Tenant" value={tenantName ?? '—'} />
@@ -525,14 +616,14 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                 <ReviewRow label="Lokasi Stand" value={[data.floor_snapshot, data.block_snapshot, data.unit_number_snapshot].filter(Boolean).join(' / ') || '—'} />
                                             </dl>
                                         </FormSection>
-                                        <FormSection title="Jadwal Pameran">
+                                        <FormSection title="Jadwal Pameran" action={<UbahButton step={2} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Periode Pelaksanaan" value={formatDateRange(data.work_start_date, data.work_end_date)} />
+                                            <ReviewRow label="Periode Pelaksanaan" value={formatDateRange(data.work_start_date, data.work_end_date)} />
                                                 <ReviewRow label="Jam Masuk — Keluar Barang" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
                                                 <ReviewRow label="Akses Masuk / Keluar" value={data.access_route || '—'} className="sm:col-span-2" />
                                             </dl>
                                         </FormSection>
-                                        <FormSection title={`Barang (${goodNames.length})`}>
+                                        <FormSection title={`Barang (${goodNames.length})`} action={<UbahButton step={3} onJump={goToStep} />}>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                                 <div>
                                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Di bawah 100 kg ({lightNames.length})</h3>
@@ -552,7 +643,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                 </div>
                                             </div>
                                         </FormSection>
-                                        <FormSection title="Penanggung Jawab & Nomor">
+                                        <FormSection title="Penanggung Jawab & Nomor" action={<UbahButton step={4} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Nomor Surat" value="Otomatis saat diajukan (E&P)" />
                                                 <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
@@ -604,14 +695,36 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     </FormSection>
 
                                     <FormSection title="Persetujuan Manager Tenant">
-                                        <Checkbox
-                                            label="Butuh persetujuan Manager Tenant"
-                                            checked={!!data.needs_manager_approval}
-                                            onChange={(e) => setData('needs_manager_approval', e.target.checked)}
-                                        />
-                                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                                            Jika dicentang, alur persetujuan menjadi Tenancy → Manager Tenant → Building Service → Security.
-                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setData('needs_manager_approval', !data.needs_manager_approval)}
+                                            aria-pressed={!!data.needs_manager_approval}
+                                            className={`w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                data.needs_manager_approval
+                                                    ? 'border-[#0F1E36] bg-[#0F1E36]/5 shadow-sm'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className={`mt-0.5 w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-colors
+                                                    ${data.needs_manager_approval ? 'bg-[#0F1E36] border-[#0F1E36] text-white' : 'bg-white border-gray-300'}`}
+                                            >
+                                                {data.needs_manager_approval && (
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </span>
+                                            <span className="min-w-0">
+                                                <span className="block text-sm font-semibold text-gray-900">Butuh persetujuan Manager Tenant</span>
+                                                <span className="block text-xs text-gray-500 mt-1 leading-relaxed">
+                                                    {data.needs_manager_approval
+                                                        ? 'Aktif — alur menjadi Tenancy → Manager Tenant → Building Service → Security.'
+                                                        : 'Alur standar: Tenancy → Building Service → Security. Ketuk untuk mengaktifkan.'}
+                                                </span>
+                                            </span>
+                                        </button>
                                     </FormSection>
 
                                     <FormSection title="Catatan">
@@ -625,7 +738,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {/* STEP 5 — Review */}
                                 {!isMarketingLocked && step === 5 && (
                                     <>
-                                        <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`}>
+                                        <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`} action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Kategori" value={<Badge color="blue">{categoryLabel}</Badge>} />
                                                 <ReviewRow label="Lokasi / Nama" value={locationDetail} />
@@ -639,10 +752,10 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </dl>
                                         </FormSection>
 
-                                        <FormSection title="Jadwal & Kegiatan">
+                                        <FormSection title="Jadwal & Kegiatan" action={<UbahButton step={2} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow
-                                                    label="Jenis Kegiatan"
+                                            <ReviewRow
+                                                label="Jenis Kegiatan"
                                                         value={activityLabels.length > 0
                                                         ? <span className="flex flex-wrap gap-1.5">{activityLabels.map((l) => <Badge key={l} color="blue">{l}</Badge>)}</span>
                                                         : '—'}
@@ -655,7 +768,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </dl>
                                         </FormSection>
 
-                                        <FormSection title={`Pekerja & Barang (${goodNames.length})`}>
+                                        <FormSection title={`Pekerja & Barang (${goodNames.length})`} action={<UbahButton step={3} onJump={goToStep} />}>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                                 <div>
                                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Pekerja</h3>
@@ -674,7 +787,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </div>
                                         </FormSection>
 
-                                        <FormSection title="Detail Pengajuan">
+                                        <FormSection title="Detail Pengajuan" action={<UbahButton step={4} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Nomor Surat" value="Otomatis saat diajukan" />
                                                 <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
@@ -704,9 +817,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             </StepPanel>
 
                             {/* Navigasi step */}
-                            <div className="flex gap-2 mt-2">
+                            <div className="sticky bottom-0 z-10 -mx-6 px-6 sm:-mx-8 sm:px-8 py-3 mt-2 bg-[#F7F8FA]/95 backdrop-blur border-t border-[#E2E5EA] lg:static lg:mx-0 lg:px-0 lg:py-0 lg:mt-2 lg:bg-transparent lg:backdrop-blur-none lg:border-0">
+                                <div className="flex gap-2">
                                 {step > 1 && (
                                     <Button type="button" variant="secondary" onClick={goBack}>
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                        </svg>
                                         Kembali
                                     </Button>
                                 )}
@@ -714,12 +831,16 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {step < steps.length ? (
                                     <Button type="button" onClick={goNext}>
                                         Lanjut
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
                                     </Button>
                                 ) : (
                                     <Button type="button" disabled={processing} variant="success" onClick={handleAjukan}>
                                         {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
                                     </Button>
                                 )}
+                                </div>
                             </div>
                         </div>
 
@@ -750,6 +871,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                     {!isMarketingLocked && <ConfirmRow label="Pekerja" value={workerCount > 0 ? `${workerCount} orang` : null} />}
                     <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />
                     {!isMarketingLocked && data.needs_manager_approval && <ConfirmRow label="Manager Tenant" value="Butuh persetujuan" />}
+                    <ConfirmRow
+                        label="Alur Persetujuan"
+                        value={(isMarketingLocked
+                            ? ['Marketing', 'Keuangan', 'Building Service', 'Security']
+                            : ['Tenancy', ...(data.needs_manager_approval ? ['Manager Tenant'] : []), 'Building Service', 'Security']
+                        ).join(' → ')}
+                    />
                 </ConfirmModal>
             </div>
         </AppLayout>
@@ -848,10 +976,92 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
 function SummaryItem({ label, value, filled, dim = false }) {
     return (
         <div className={`flex justify-between items-start gap-3 transition-opacity duration-300 ${dim ? 'opacity-40' : 'opacity-100'}`}>
-            <span className="text-xs text-gray-500 shrink-0">{label}</span>
+            <span className="text-xs text-gray-500 shrink-0 flex items-center gap-1.5">
+                <span aria-hidden="true" className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${filled ? 'bg-[#1FA24C] text-white' : 'bg-gray-100 text-transparent'}`}>
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </span>
+                {label}
+            </span>
             <span className={`text-xs text-right ${filled ? 'text-gray-900 font-medium' : 'text-gray-300 italic'}`}>
                 {value || 'Belum diisi'}
             </span>
+        </div>
+    );
+}
+
+const ERROR_STEP_UMUM = {
+    tenant_id: 1, store_name_snapshot: 1, contractor_company: 1, contractor_pic: 1,
+    contractor_address: 1, contractor_phone: 1, pic_name: 1, pic_phone: 1,
+    activity_types: 2, job_type: 2, work_start_date: 2, work_end_date: 2,
+    work_start_time: 2, work_end_time: 2, access_route: 2,
+    worker_count: 3, workers: 3, goods: 3,
+    is_external: 4, accompanying_department_ids: 4, notes: 4, needs_manager_approval: 4,
+};
+
+const ERROR_STEP_PAMERAN = {
+    tenant_id: 1, stand_name: 1, floor_snapshot: 1, block_snapshot: 1, unit_number_snapshot: 1,
+    work_start_date: 2, work_end_date: 2, work_start_time: 2, work_end_time: 2, access_route: 2,
+    goods_light: 3, goods_heavy: 3,
+    pic_name: 4, pic_phone: 4, notes: 4,
+};
+
+const ERROR_LABEL = {
+    tenant_id: 'Tenant', store_name_snapshot: 'Nama lokasi', contractor_company: 'Perusahaan vendor',
+    contractor_pic: 'PJ vendor', contractor_address: 'Alamat vendor', contractor_phone: 'Telp vendor',
+    pic_name: 'Penanggung jawab', pic_phone: 'Telepon PIC', activity_types: 'Jenis kegiatan',
+    job_type: 'Jenis pekerjaan', work_start_date: 'Tanggal mulai', work_end_date: 'Tanggal selesai',
+    work_start_time: 'Jam mulai', work_end_time: 'Jam selesai', access_route: 'Akses',
+    worker_count: 'Jumlah pekerja', workers: 'Pekerja', goods: 'Barang',
+    goods_light: 'Barang ringan', goods_heavy: 'Barang berat', is_external: 'Vendor eksternal',
+    accompanying_department_ids: 'Dept pendamping', notes: 'Catatan',
+    needs_manager_approval: 'Persetujuan manager', stand_name: 'Nama stand',
+    floor_snapshot: 'Lantai', block_snapshot: 'Blok', unit_number_snapshot: 'No. stand',
+};
+
+function ErrorSummary({ errors, onJump, isMarketingLocked }) {
+    const boxRef = useRef(null);
+
+    useEffect(() => {
+        boxRef.current?.focus();
+        boxRef.current?.scrollIntoView({ block: 'nearest' });
+    }, []);
+
+    const map = isMarketingLocked ? ERROR_STEP_PAMERAN : ERROR_STEP_UMUM;
+    const entries = Object.entries(errors);
+
+    return (
+        <div
+            ref={boxRef}
+            tabIndex={-1}
+            role="alert"
+            aria-label="Ringkasan kesalahan input"
+            className="bg-red-50 border border-red-200 text-red-700 text-sm p-3.5 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-red-200"
+        >
+            <p className="font-medium mb-1">Ada {entries.length} kesalahan input — ketuk untuk melompat:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+                {entries.map(([key, message]) => {
+                    const base = key.split('.')[0];
+                    const step = map[base] ?? null;
+                    const label = ERROR_LABEL[base] ?? base;
+                    return (
+                        <li key={key}>
+                            {step ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onJump(step)}
+                                    className="underline underline-offset-2 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-red-400 rounded"
+                                >
+                                    {label} (langkah {step}): {message}
+                                </button>
+                            ) : (
+                                <span>{label}: {message}</span>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
         </div>
     );
 }
@@ -862,5 +1072,20 @@ function ReviewRow({ label, value, className = '' }) {
             <dt className="text-xs text-gray-500">{label}</dt>
             <dd className="text-gray-900 font-medium break-words">{value || '—'}</dd>
         </div>
+    );
+}
+
+function UbahButton({ step, onJump }) {
+    return (
+        <button
+            type="button"
+            onClick={() => onJump(step)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#0F1E36] bg-[#0F1E36]/5 hover:bg-[#0F1E36]/10 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+        >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+            </svg>
+            Ubah
+        </button>
     );
 }
