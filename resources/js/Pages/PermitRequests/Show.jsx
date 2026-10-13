@@ -519,7 +519,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                             </p>
                                         )}
 
-                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (
+                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (a.step_key !== 'tenant_manager' || permit.can_approve_tenant_manager) && (
                                             <div className="mt-2.5 flex gap-2 print:hidden">
                                                 <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                                     Approve

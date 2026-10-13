@@ -92,6 +92,12 @@ class ApprovalService
             }
         }
 
+        if ($approval->step_key === 'tenant_manager' && ! $user->hasRole('manager')) {
+            throw ValidationException::withMessages([
+                'approval' => 'Approval Manager Tenant hanya oleh role manager.',
+            ]);
+        }
+
         if ($approval->status !== 'pending') {
             throw ValidationException::withMessages([
                 'approval' => 'Tahap approval ini sudah diproses sebelumnya.',

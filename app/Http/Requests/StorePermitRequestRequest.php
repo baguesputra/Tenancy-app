@@ -45,6 +45,7 @@ class StorePermitRequestRequest extends FormRequest
             'work_end_time' => 'nullable|date_format:H:i',
             'access_route' => 'nullable|string',
             'notes' => 'nullable|string',
+            'needs_manager_approval' => $isExhibition ? 'exclude' : 'boolean',
             'worker_count' => $isExhibition ? 'exclude' : 'required|integer|min:1|max:500',
             'stand_name' => $isExhibition ? 'required|string|max:255' : 'exclude',
             'goods_light' => $isExhibition ? 'nullable|array' : 'exclude',

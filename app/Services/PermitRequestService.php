@@ -64,6 +64,7 @@ class PermitRequestService
             'access_route' => $data['access_route'] ?? null,
             'notes' => $data['notes'] ?? null,
             'worker_count' => $data['worker_count'] ?? null,
+            'needs_manager_approval' => (bool) ($data['needs_manager_approval'] ?? false),
             'requested_by_type' => get_class($requestedBy),
             'requested_by_id' => $requestedBy->id,
             'status' => 'pending',
@@ -189,11 +190,18 @@ class PermitRequestService
 
         $tenancyDeptId = $deptId('Tenancy');
 
-        $this->approvalService->setupSteps($permit, [
+        $steps = [
             ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDeptId],
-            ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDeptId],
-            ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDeptId],
-        ]);
+        ];
+
+        if ($permit->needs_manager_approval) {
+            $steps[] = ['step_key' => 'tenant_manager', 'label' => 'Approval Manager Tenant', 'department_id' => $tenancyDeptId];
+        }
+
+        $steps[] = ['step_key' => 'bs', 'label' => 'Approval Building Service', 'department_id' => $bsDeptId];
+        $steps[] = ['step_key' => 'security', 'label' => 'Cek Fisik Security', 'department_id' => $securityDeptId];
+
+        $this->approvalService->setupSteps($permit, $steps);
     }
 
     public function syncStatus(PermitRequest $permit): void
@@ -218,7 +226,7 @@ class PermitRequestService
         $permit->update(['status' => 'cancelled']);
     }
 
-    private const RESET_ON_REVISE = ['marketing', 'finance', 'bs', 'security'];
+    private const RESET_ON_REVISE = ['marketing', 'finance', 'tenant_manager', 'bs', 'security'];
 
     public function revise(PermitRequest $permit, array $data, User $revisedBy): PermitRevision
     {

@@ -52,6 +52,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         access_route: '',
         notes: '',
         worker_count: '',
+        needs_manager_approval: false,
         goods: [{ description: '', quantity_note: '', unit: '' }],
         goods_light: [{ description: '', quantity_note: '', unit: '' }],
         goods_heavy: [{ description: '', quantity_note: '', unit: '' }],
@@ -570,6 +571,16 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {/* STEP 4 — Pelengkap */}
                                 {!isMarketingLocked && step === 4 && (
                                     <>
+                                    <FormSection title="Persetujuan Manager Tenant">
+                                        <Checkbox
+                                            label="Butuh persetujuan Manager Tenant"
+                                            checked={!!data.needs_manager_approval}
+                                            onChange={(e) => setData('needs_manager_approval', e.target.checked)}
+                                        />
+                                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                                            Jika dicentang, alur persetujuan menjadi Tenancy → Manager Tenant → Building Service → Security.
+                                        </p>
+                                    </FormSection>
                                     {locationType !== 'vendor' && (
                                         <FormSection title="Vendor / Kontraktor Eksternal">
                                             <Checkbox
@@ -674,6 +685,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Nomor Surat" value="Otomatis saat diajukan" />
                                                 <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
+                                                <ReviewRow label="Persetujuan Manager" value={data.needs_manager_approval ? 'Ya — Tenancy → Manager Tenant → BS → Security' : 'Tidak'} />
                                                 {locationType !== 'vendor' && data.is_external && (
                                                     <>
                                                         <ReviewRow label="Vendor Eksternal" value={data.contractor_company || 'Ya'} className="sm:col-span-2" />
@@ -744,6 +756,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                     <ConfirmRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
                     {!isMarketingLocked && <ConfirmRow label="Pekerja" value={workerCount > 0 ? `${workerCount} orang` : null} />}
                     <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />
+                    {!isMarketingLocked && data.needs_manager_approval && <ConfirmRow label="Manager Tenant" value="Butuh persetujuan" />}
                 </ConfirmModal>
             </div>
         </AppLayout>

@@ -180,6 +180,50 @@ class PermitRequestFormTest extends TestCase
         $this->assertSame('completed', $permit->fresh()->status);
     }
 
+    public function test_flag_manager_menambah_step_setelah_tenancy(): void
+    {
+        $staff = $this->makeUser();
+
+        $this->actingAs($staff)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload(['needs_manager_approval' => true]))
+            ->assertRedirect();
+
+        $permit = PermitRequest::latest('id')->firstOrFail();
+        $this->assertTrue((bool) $permit->needs_manager_approval);
+        $this->assertSame(
+            ['tenancy', 'tenant_manager', 'bs', 'security'],
+            $permit->approvals()->orderBy('order')->pluck('step_key')->all()
+        );
+
+        $biasa = app(PermitRequestService::class)->create($this->payload(), $staff);
+        $this->assertSame(
+            ['tenancy', 'bs', 'security'],
+            $biasa->approvals()->orderBy('order')->pluck('step_key')->all()
+        );
+    }
+
+    public function test_approve_manager_hanya_oleh_role_manager_tenancy(): void
+    {
+        $staff = $this->makeUser();
+        $permit = app(PermitRequestService::class)->create($this->payload(['needs_manager_approval' => true]), $staff);
+        $steps = $permit->approvals()->orderBy('order')->get()->keyBy('step_key');
+
+        // Staff tenancy biasa menyetujui tahap tenancy...
+        $this->actingAs($staff)->post("/approvals/{$steps['tenancy']->id}/approve")->assertRedirect();
+
+        // ...tapi tidak boleh approve tahap manager.
+        $this->actingAs($staff)
+            ->post("/approvals/{$steps['tenant_manager']->id}/approve")
+            ->assertSessionHasErrors('approval');
+        $this->assertSame('pending', $steps['tenant_manager']->fresh()->status);
+
+        // Manager tenancy boleh.
+        $manager = $this->makeUser(['manager']);
+        $this->actingAs($manager)->post("/approvals/{$steps['tenant_manager']->id}/approve")->assertRedirect();
+        $this->assertSame('approved', $steps['tenant_manager']->fresh()->status);
+    }
+
     public function test_migrasi_area_jadi_vendor(): void
     {
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
