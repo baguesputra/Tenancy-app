@@ -571,16 +571,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {/* STEP 4 — Pelengkap */}
                                 {!isMarketingLocked && step === 4 && (
                                     <>
-                                    <FormSection title="Persetujuan Manager Tenant">
-                                        <Checkbox
-                                            label="Butuh persetujuan Manager Tenant"
-                                            checked={!!data.needs_manager_approval}
-                                            onChange={(e) => setData('needs_manager_approval', e.target.checked)}
-                                        />
-                                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                                            Jika dicentang, alur persetujuan menjadi Tenancy → Manager Tenant → Building Service → Security.
-                                        </p>
-                                    </FormSection>
                                     {locationType !== 'vendor' && (
                                         <FormSection title="Vendor / Kontraktor Eksternal">
                                             <Checkbox
@@ -619,6 +609,17 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                 />
                                             ))}
                                         </div>
+                                    </FormSection>
+
+                                    <FormSection title="Persetujuan Manager Tenant">
+                                        <Checkbox
+                                            label="Butuh persetujuan Manager Tenant"
+                                            checked={!!data.needs_manager_approval}
+                                            onChange={(e) => setData('needs_manager_approval', e.target.checked)}
+                                        />
+                                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                                            Jika dicentang, alur persetujuan menjadi Tenancy → Manager Tenant → Building Service → Security.
+                                        </p>
                                     </FormSection>
 
                                     <FormSection title="Catatan">
