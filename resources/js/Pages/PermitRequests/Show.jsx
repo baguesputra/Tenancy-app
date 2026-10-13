@@ -110,12 +110,32 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
     const canCompleteSecurityCheck = securityStep?.status === 'pending'
         && securityStep?.department_id === permit.currentUserDepartmentId;
 
-    const workersDone = workers.filter((w) => w.is_present).length;
+    const isLegacyWorkers = workers.length > 0;
+    const ktpPhotos = permit.ktp_photos ?? [];
+    const ktpTarget = permit.worker_count ?? 0;
+    const workersDone = isLegacyWorkers ? workers.filter((w) => w.is_present).length : Math.min(ktpPhotos.length, ktpTarget);
+    const workerTotal = isLegacyWorkers ? workers.length : ktpTarget;
     const goodsDone = goods.filter((g) => g.is_verified).length;
-    const totalTasks = workers.length + goods.length;
+    const totalTasks = workerTotal + goods.length;
     const doneTasks = workersDone + goodsDone;
     const allChecked = totalTasks > 0 && doneTasks === totalTasks;
     const pct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+    const [ktpKey, setKtpKey] = useState(0);
+    const uploadKtp = (id, file, note) => {
+        const formData = new FormData();
+        formData.append('photo', file);
+        if (note) formData.append('mismatch_note', note);
+        router.post(`/permit-requests/${permit.id}/ktp-photos`, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => setKtpKey((k) => k + 1),
+        });
+    };
+    const deleteKtp = (photoId) => {
+        if (!confirm('Hapus foto KTP ini?')) return;
+        router.delete(`/permit-ktp-photos/${photoId}`, { preserveScroll: true });
+    };
 
     const activityLabels = permit.activity_types
         .map((val) => ACTIVITY_TYPES.find((t) => t.value === val)?.label ?? val);
@@ -126,9 +146,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
         ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
         : permit.tenant_id
         ? { key: 'tenant', label: 'Tenant', color: 'blue' }
-        : (permit.is_external || (!permit.store_name_snapshot || permit.store_name_snapshot === 'Area Umum Mall') && permit.contractor_company)
-        ? { key: 'vendor', label: 'Vendor', color: 'amber' }
-        : { key: 'area', label: 'Area Duta Mall', color: 'gray' };
+        : { key: 'vendor', label: 'Vendor', color: 'amber' };
     const locationTitle = permit.tenant?.name
         ?? permit.contractor_company
         ?? permit.store_name_snapshot
@@ -264,8 +282,9 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div id="pekerja" className="scroll-mt-40 overflow-x-auto">
                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                                        Daftar Pekerja <span className="text-gray-400">({workersDone}/{workers.length})</span>
+                                        Daftar Pekerja <span className="text-gray-400">({workersDone}/{workerTotal})</span>
                                     </h3>
+                                    {isLegacyWorkers ? (
                                     <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
                                         <thead>
                                             <tr className="bg-[#0F1E36] text-white text-left">
@@ -306,6 +325,51 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                             ))}
                                         </tbody>
                                     </table>
+                                    ) : (
+                                    <div>
+                                        <p className="text-sm text-gray-700">
+                                            Jumlah pekerja: <span className="font-semibold tabular-nums">{ktpTarget} orang</span>
+                                            <span className="text-gray-400"> — foto KTP minimal {ktpTarget} (boleh lebih)</span>
+                                        </p>
+                                        {canCompleteSecurityCheck && (
+                                            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-3 print:hidden">
+                                                <p className="text-xs font-medium text-gray-700 mb-2">Tambah foto KTP pekerja</p>
+                                                <GoodPhotoCapture
+                                                    key={ktpKey}
+                                                    good={{ id: 'ktp', description: 'KTP pekerja', is_verified: false, mismatch_note: '' }}
+                                                    canEdit={canCompleteSecurityCheck}
+                                                    onSubmit={uploadKtp}
+                                                    onNoteUpdate={() => {}}
+                                                    submitting={false}
+                                                />
+                                            </div>
+                                        )}
+                                        {ktpPhotos.length > 0 ? (
+                                            <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                                {ktpPhotos.map((p) => (
+                                                    <div key={p.id} className="relative group">
+                                                        <img src={p.photo_url} alt="Foto KTP pekerja" loading="lazy" className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                                                        {p.mismatch_note && (
+                                                            <p className="text-[10px] text-amber-700 mt-1">Catatan: {p.mismatch_note}</p>
+                                                        )}
+                                                        {canCompleteSecurityCheck && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => deleteKtp(p.id)}
+                                                                aria-label="Hapus foto KTP"
+                                                                className="print:hidden absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600 text-white text-xs leading-none opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="mt-3 text-xs text-gray-400">Belum ada foto KTP.</p>
+                                        )}
+                                    </div>
+                                    )}
                                 </div>
 
                                 <div id="barang" className="scroll-mt-40 overflow-x-auto">
@@ -318,6 +382,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                                 <th scope="col" className="w-10 px-3 py-2.5 font-semibold">No</th>
                                                 <th scope="col" className="px-3 py-2.5 font-semibold">Barang</th>
                                                 <th scope="col" className="px-3 py-2.5 font-semibold">Jumlah</th>
+                                                <th scope="col" className="px-3 py-2.5 font-semibold">Satuan</th>
                                                 <th scope="col" className="px-3 py-2.5 font-semibold">Foto</th>
                                                 <th scope="col" className="px-3 py-2.5 font-semibold text-right">Status</th>
                                             </tr>
@@ -333,6 +398,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap align-top">{g.quantity_note}</td>
+                                                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap align-top">{g.unit ?? '—'}</td>
                                                     <td className="px-3 py-2.5 align-top">
                                                         {g.photo_url ? (
                                                             <img src={g.photo_url} alt={`Foto ${g.description}`} loading="lazy" className="w-12 h-12 object-cover rounded-md border border-gray-200" />

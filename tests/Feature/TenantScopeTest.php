@@ -181,6 +181,7 @@ class TenantScopeTest extends TestCase
             'tenant_id' => $oc->id,
             'work_start_date' => '2026-09-23',
             'work_end_date' => '2026-09-24',
+            'worker_count' => 2,
         ])->assertForbidden();
     }
 }

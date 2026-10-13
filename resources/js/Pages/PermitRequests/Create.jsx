@@ -17,12 +17,13 @@ import StepPanel from '@/Components/StepPanel';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { formatDateRange, formatTimeRange } from '@/utils/format';
 
-const STEPS = ['Kategori', 'Jadwal', 'Pekerja & Barang', 'Detail', 'Review'];
+const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Review'];
 const MARKETING_STEPS = ['Tenant & Stand', 'Jadwal Pameran', 'Barang Pameran', 'Penanggung Jawab', 'Review'];
 
 export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'umum', canChooseMode = false }) {
     const [step, setStep] = useState(1);
-    const [locationType, setLocationType] = useState(isMarketingLocked ? 'exhibition' : 'area');
+    const [unlocked, setUnlocked] = useState(isMarketingLocked);
+    const [locationType, setLocationType] = useState(isMarketingLocked ? 'exhibition' : 'tenant');
     const [clientErrors, setClientErrors] = useState({});
     const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -50,17 +51,16 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         work_end_time: '',
         access_route: '',
         notes: '',
-        workers: [{ name: '' }],
-        goods: [{ description: '', quantity_note: '' }],
-        goods_light: [{ description: '', quantity_note: '' }],
-        goods_heavy: [{ description: '', quantity_note: '' }],
+        worker_count: '',
+        goods: [{ description: '', quantity_note: '', unit: '' }],
+        goods_light: [{ description: '', quantity_note: '', unit: '' }],
+        goods_heavy: [{ description: '', quantity_note: '', unit: '' }],
         accompanying_department_ids: [],
     });
 
     const selectLocationType = (type) => {
         setLocationType(type);
         if (type === 'vendor') setData((prev) => ({ ...prev, tenant_id: '', is_external: true }));
-        else if (type === 'area') setData((prev) => ({ ...prev, tenant_id: '', is_external: false }));
         else setData((prev) => ({ ...prev, is_external: false }));
     };
 
@@ -74,20 +74,12 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         setData('accompanying_department_ids', current.includes(id) ? current.filter((d) => d !== id) : [...current, id]);
     };
 
-    const updateWorker = (idx, value) => {
-        const next = [...data.workers];
-        next[idx] = { name: value };
-        setData('workers', next);
-    };
-    const addWorker = () => setData('workers', [...data.workers, { name: '' }]);
-    const removeWorker = (idx) => setData('workers', data.workers.filter((_, i) => i !== idx));
-
     const updateGood = (idx, field, value) => {
         const next = [...data.goods];
         next[idx] = { ...next[idx], [field]: value };
         setData('goods', next);
     };
-    const addGood = () => setData('goods', [...data.goods, { description: '', quantity_note: '' }]);
+    const addGood = () => setData('goods', [...data.goods, { description: '', quantity_note: '', unit: '' }]);
     const removeGood = (idx) => setData('goods', data.goods.filter((_, i) => i !== idx));
 
     const updateExhibitionGood = (key, idx, field, value) => {
@@ -95,7 +87,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         next[idx] = { ...next[idx], [field]: value };
         setData(key, next);
     };
-    const addExhibitionGood = (key) => setData(key, [...data[key], { description: '', quantity_note: '' }]);
+    const addExhibitionGood = (key) => setData(key, [...data[key], { description: '', quantity_note: '', unit: '' }]);
     const removeExhibitionGood = (key, idx) => setData(key, data[key].filter((_, i) => i !== idx));
 
     const getStepErrors = (s) => {
@@ -103,7 +95,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         if (isMarketingLocked) return getMarketingStepErrors(s, errs);
         if (s === 1) {
             if (locationType === 'tenant' && !data.tenant_id) errs.tenant_id = 'Pilih tenant terlebih dahulu.';
-            if (locationType === 'area' && !data.store_name_snapshot) errs.store_name_snapshot = 'Nama lokasi wajib diisi.';
             if (locationType === 'vendor') {
                 if (!data.contractor_company) errs.contractor_company = 'Nama perusahaan wajib diisi.';
                 if (!data.contractor_pic) errs.contractor_pic = 'Penanggung jawab wajib diisi.';
@@ -116,7 +107,8 @@ export default function Create({ tenants, departments, isMarketingLocked = false
             if (!data.work_end_date) errs.work_end_date = 'Tanggal selesai wajib diisi.';
         }
         if (s === 3) {
-            if (!data.workers.some((w) => w.name.trim())) errs.workers = 'Minimal 1 nama pekerja wajib diisi.';
+            const n = parseInt(data.worker_count, 10);
+            if (!n || n < 1) errs.worker_count = 'Jumlah pekerja wajib diisi (minimal 1 orang).';
         }
         return errs;
     };
@@ -157,11 +149,19 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     };
 
     const goNext = () => {
-        if (validateStep(step)) setStep((s) => Math.min(s + 1, stepCount));
+        if (!validateStep(step)) return;
+        // Kunci wizard: navigasi bebas (maju-mundur) baru terbuka setelah step 1 valid.
+        if (step === 1) setUnlocked(true);
+        setStep((s) => Math.min(s + 1, stepCount));
     };
     const goBack = () => {
         setClientErrors({});
         setStep((s) => Math.max(s - 1, 1));
+    };
+    const goToStep = (s) => {
+        if (!unlocked) return;
+        setClientErrors({});
+        setStep(s);
     };
 
     const submit = (e) => {
@@ -183,18 +183,17 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     const tenantName = tenants.find((t) => t.id == data.tenant_id)?.name ?? null;
     const categoryLabel = isMarketingLocked
         ? 'Pameran / Open Counter'
-        : locationType === 'area' ? 'Area Duta Mall' : locationType === 'tenant' ? 'Tenant' : 'Vendor';
+        : locationType === 'tenant' ? 'Tenant' : 'Vendor';
     const locationDetail = isMarketingLocked
         ? [tenantName, data.stand_name].filter(Boolean).join(' — ') || '—'
-        : locationType === 'area'
-        ? [data.store_name_snapshot, data.floor_snapshot, data.block_snapshot].filter(Boolean).join(' · ') || '—'
         : locationType === 'tenant'
         ? tenantName ?? '—'
         : data.contractor_company || '—';
-    const workerNames = data.workers.map((w) => w.name.trim()).filter(Boolean);
-    const lightNames = data.goods_light.map((g) => [g.description.trim(), g.quantity_note.trim()].filter(Boolean).join(' — ')).filter(Boolean);
-    const heavyNames = data.goods_heavy.map((g) => [g.description.trim(), g.quantity_note.trim()].filter(Boolean).join(' — ')).filter(Boolean);
-    const goodNames = isMarketingLocked ? [...lightNames, ...heavyNames] : data.goods.map((g) => [g.description.trim(), g.quantity_note.trim()].filter(Boolean).join(' — ')).filter(Boolean);
+    const workerCount = parseInt(data.worker_count, 10) || 0;
+    const fmtGood = (g) => [(g.description ?? '').trim(), [(g.quantity_note ?? '').trim(), (g.unit ?? '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
+    const lightNames = data.goods_light.map(fmtGood).filter(Boolean);
+    const heavyNames = data.goods_heavy.map(fmtGood).filter(Boolean);
+    const goodNames = isMarketingLocked ? [...lightNames, ...heavyNames] : data.goods.map(fmtGood).filter(Boolean);
     const deptNames = departments.filter((d) => data.accompanying_department_ids.includes(d.id)).map((d) => d.name);
     const steps = isMarketingLocked ? MARKETING_STEPS : STEPS;
 
@@ -206,7 +205,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                 {canChooseMode && (
                     <div className="flex gap-2 mb-6">
                         {[
-                            { value: 'umum', label: 'Umum (Tenant/Vendor/Area)' },
+                            { value: 'umum', label: 'Umum (Tenant/Vendor)' },
                             { value: 'pameran', label: 'Pameran / Open Counter' },
                         ].map((opt) => (
                             <button
@@ -229,7 +228,10 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
                         {/* Kolom kiri — stepper */}
                         <div>
-                            <StepIndicator steps={steps} currentStep={step} />
+                            <StepIndicator steps={steps} currentStep={step} onSelect={unlocked ? goToStep : null} />
+                            {!unlocked && !isMarketingLocked && (
+                                <p className="text-xs text-gray-400 mb-4">Isi langkah 1 sampai valid untuk membuka navigasi maju-mundur.</p>
+                            )}
 
                             {Object.keys(errors).length > 0 && (
                                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3.5 rounded-lg mb-4">
@@ -271,12 +273,11 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </div>
                                     </FormSection>
                                 )}
-                                {/* STEP 1 — Kategori & Lokasi */}
                                 {!isMarketingLocked && step === 1 && (
-                                    <FormSection title="Kategori & Lokasi">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                                    <>
+                                    <FormSection title="Kategori">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                                             {[
-                                                { value: 'area', label: 'Area Duta Mall' },
                                                 { value: 'tenant', label: 'Tenant' },
                                                 { value: 'vendor', label: 'Vendor' },
                                             ].map((opt) => (
@@ -307,20 +308,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </FormField>
                                         )}
 
-                                        {locationType === 'area' && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                <FormField label="Nama Lokasi/Area" error={clientErrors.store_name_snapshot} className="sm:col-span-3" required>
-                                                    <TextInput value={data.store_name_snapshot} onChange={(e) => setData('store_name_snapshot', e.target.value)} />
-                                                </FormField>
-                                                <FormField label="Lantai" error={errors.floor_snapshot}>
-                                                    <TextInput value={data.floor_snapshot} onChange={(e) => setData('floor_snapshot', e.target.value)} />
-                                                </FormField>
-                                                <FormField label="Blok" error={errors.block_snapshot}>
-                                                    <TextInput value={data.block_snapshot} onChange={(e) => setData('block_snapshot', e.target.value)} />
-                                                </FormField>
-                                            </div>
-                                        )}
-
                                         {locationType === 'vendor' && (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <FormField label="Nama Perusahaan" error={clientErrors.contractor_company} required>
@@ -338,6 +325,66 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </div>
                                         )}
                                     </FormSection>
+                                    <FormSection title="Detail Permohonan">
+                                        <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-4">
+                                            Nomor surat dibuat otomatis saat diajukan ({data.activity_types.includes('pameran') ? 'kode E&P' : 'kode TC'}).
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormField label="Nama Penanggung Jawab" error={errors.pic_name}>
+                                                <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} />
+                                            </FormField>
+                                            <FormField label="Telepon PIC" error={errors.pic_phone}>
+                                                <TextInput value={data.pic_phone} onChange={(e) => setData('pic_phone', e.target.value)} />
+                                            </FormField>
+                                        </div>
+                                    </FormSection>
+
+                                    {locationType !== 'vendor' && (
+                                        <FormSection title="Vendor / Kontraktor Eksternal">
+                                            <Checkbox
+                                                label="Melibatkan vendor/kontraktor eksternal"
+                                                checked={data.is_external}
+                                                onChange={(e) => setData('is_external', e.target.checked)}
+                                                className="mb-4"
+                                            />
+                                            {data.is_external && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <FormField label="Nama Perusahaan" error={errors.contractor_company}>
+                                                        <TextInput value={data.contractor_company} onChange={(e) => setData('contractor_company', e.target.value)} />
+                                                    </FormField>
+                                                    <FormField label="Penanggung Jawab" error={errors.contractor_pic}>
+                                                        <TextInput value={data.contractor_pic} onChange={(e) => setData('contractor_pic', e.target.value)} />
+                                                    </FormField>
+                                                    <FormField label="Alamat" error={errors.contractor_address} className="sm:col-span-2">
+                                                        <Textarea value={data.contractor_address} onChange={(e) => setData('contractor_address', e.target.value)} rows={2} />
+                                                    </FormField>
+                                                    <FormField label="Telp/HP/Fax" error={errors.contractor_phone}>
+                                                        <TextInput value={data.contractor_phone} onChange={(e) => setData('contractor_phone', e.target.value)} />
+                                                    </FormField>
+                                                </div>
+                                            )}
+                                        </FormSection>
+                                    )}
+
+                                    <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
+                                        <div className="flex flex-wrap gap-3">
+                                            {departments.map((d) => (
+                                                <Checkbox
+                                                    key={d.id}
+                                                    label={d.name}
+                                                    checked={data.accompanying_department_ids.includes(d.id)}
+                                                    onChange={() => toggleDept(d.id)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </FormSection>
+
+                                    <FormSection title="Catatan">
+                                        <FormField label="Keterangan Tambahan" error={errors.notes}>
+                                            <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} rows={2} />
+                                        </FormField>
+                                    </FormSection>
+                                    </>
                                 )}
 
                                 {isMarketingLocked && step === 2 && (
@@ -427,7 +474,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                             value={good.quantity_note}
                                                             onChange={(e) => updateExhibitionGood(key, idx, 'quantity_note', e.target.value)}
                                                             placeholder="Jumlah"
-                                                            className="w-24"
+                                                            className="w-20"
+                                                        />
+                                                        <TextInput
+                                                            value={good.unit}
+                                                            onChange={(e) => updateExhibitionGood(key, idx, 'unit', e.target.value)}
+                                                            placeholder="Satuan"
+                                                            className="w-20"
                                                         />
                                                         {data[key].length > 1 && (
                                                             <button type="button" onClick={() => removeExhibitionGood(key, idx)} className="text-red-500 text-sm shrink-0">Hapus</button>
@@ -442,25 +495,18 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {/* STEP 3 — Pekerja & Barang */}
                                 {!isMarketingLocked && step === 3 && (
                                     <FormSection title="Pekerja & Barang">
-                                        {clientErrors.workers && (
-                                            <p className="text-xs text-red-600 mb-3">⚠ {clientErrors.workers}</p>
-                                        )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div>
-                                                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Daftar Pekerja</h3>
-                                                {data.workers.map((worker, idx) => (
-                                                    <div key={idx} className="flex gap-2 mb-2">
-                                                        <TextInput
-                                                            value={worker.name}
-                                                            onChange={(e) => updateWorker(idx, e.target.value)}
-                                                            placeholder={`Nama pekerja ${idx + 1}`}
-                                                        />
-                                                        {data.workers.length > 1 && (
-                                                            <button type="button" onClick={() => removeWorker(idx)} className="text-red-500 text-sm shrink-0 px-2">Hapus</button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                <Button type="button" variant="secondary" onClick={addWorker} className="text-xs mt-1">+ Tambah Pekerja</Button>
+                                                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Pekerja</h3>
+                                                <FormField label="Jumlah Orang" error={clientErrors.worker_count} required hint="Cukup jumlahnya — daftar nama tidak perlu. Foto KTP diisi Security saat cek fisik.">
+                                                    <TextInput
+                                                        type="number"
+                                                        min={1}
+                                                        value={data.worker_count}
+                                                        onChange={(e) => setData('worker_count', e.target.value)}
+                                                        placeholder="cth. 5"
+                                                    />
+                                                </FormField>
                                             </div>
 
                                             <div>
@@ -477,7 +523,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                             value={good.quantity_note}
                                                             onChange={(e) => updateGood(idx, 'quantity_note', e.target.value)}
                                                             placeholder="Jumlah"
-                                                            className="w-24"
+                                                            className="w-20"
+                                                        />
+                                                        <TextInput
+                                                            value={good.unit}
+                                                            onChange={(e) => updateGood(idx, 'unit', e.target.value)}
+                                                            placeholder="Satuan"
+                                                            className="w-20"
                                                         />
                                                         {data.goods.length > 1 && (
                                                             <button type="button" onClick={() => removeGood(idx)} className="text-red-500 text-sm shrink-0">Hapus</button>
@@ -512,71 +564,6 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </FormSection>
                                     </>
                                 )}
-                                {/* STEP 4 — Detail Tambahan */}
-                                {!isMarketingLocked && step === 4 && (
-                                    <>
-                                        <FormSection title="Detail Permohonan">
-                                            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-4">
-                                                Nomor surat dibuat otomatis saat diajukan ({data.activity_types.includes('pameran') ? 'kode E&P' : 'kode TC'}).
-                                            </p>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <FormField label="Nama Penanggung Jawab" error={errors.pic_name}>
-                                                    <TextInput value={data.pic_name} onChange={(e) => setData('pic_name', e.target.value)} />
-                                                </FormField>
-                                                <FormField label="Telepon PIC" error={errors.pic_phone}>
-                                                    <TextInput value={data.pic_phone} onChange={(e) => setData('pic_phone', e.target.value)} />
-                                                </FormField>
-                                            </div>
-                                        </FormSection>
-
-                                        {locationType !== 'vendor' && (
-                                            <FormSection title="Vendor / Kontraktor Eksternal">
-                                                <Checkbox
-                                                    label="Melibatkan vendor/kontraktor eksternal"
-                                                    checked={data.is_external}
-                                                    onChange={(e) => setData('is_external', e.target.checked)}
-                                                    className="mb-4"
-                                                />
-                                                {data.is_external && (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <FormField label="Nama Perusahaan" error={errors.contractor_company}>
-                                                            <TextInput value={data.contractor_company} onChange={(e) => setData('contractor_company', e.target.value)} />
-                                                        </FormField>
-                                                        <FormField label="Penanggung Jawab" error={errors.contractor_pic}>
-                                                            <TextInput value={data.contractor_pic} onChange={(e) => setData('contractor_pic', e.target.value)} />
-                                                        </FormField>
-                                                        <FormField label="Alamat" error={errors.contractor_address} className="sm:col-span-2">
-                                                            <Textarea value={data.contractor_address} onChange={(e) => setData('contractor_address', e.target.value)} rows={2} />
-                                                        </FormField>
-                                                        <FormField label="Telp/HP/Fax" error={errors.contractor_phone}>
-                                                            <TextInput value={data.contractor_phone} onChange={(e) => setData('contractor_phone', e.target.value)} />
-                                                        </FormField>
-                                                    </div>
-                                                )}
-                                            </FormSection>
-                                        )}
-
-                                        <FormSection title="Departemen Pendampingan" description="Pilih divisi yang perlu ikut mendampingi kegiatan ini">
-                                            <div className="flex flex-wrap gap-3">
-                                                {departments.map((d) => (
-                                                    <Checkbox
-                                                        key={d.id}
-                                                        label={d.name}
-                                                        checked={data.accompanying_department_ids.includes(d.id)}
-                                                        onChange={() => toggleDept(d.id)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </FormSection>
-
-                                        <FormSection title="Catatan">
-                                            <FormField label="Keterangan Tambahan" error={errors.notes}>
-                                                <Textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} rows={2} />
-                                            </FormField>
-                                        </FormSection>
-                                    </>
-                                )}
-
                                 {isMarketingLocked && step === 5 && (
                                     <>
                                         <FormSection title="Tenant & Stand" description="Kategori: Pameran / Open Counter">
@@ -626,19 +613,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                         </FormSection>
                                     </>
                                 )}
-                                {/* STEP 5 — Review */}
-                                {!isMarketingLocked && step === 5 && (
+                                {/* STEP 4 — Review */}
+                                {!isMarketingLocked && step === 4 && (
                                     <>
                                         <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                                 <ReviewRow label="Kategori" value={<Badge color="blue">{categoryLabel}</Badge>} />
                                                 <ReviewRow label="Lokasi / Nama" value={locationDetail} />
-                                                {locationType === 'area' && (
-                                                    <ReviewRow
-                                                        label="Lantai / Blok"
-                                                        value={[data.floor_snapshot, data.block_snapshot].filter(Boolean).join(' / ') || '—'}
-                                                    />
-                                                )}
                                                 {locationType === 'vendor' && (
                                                     <>
                                                         <ReviewRow label="Penanggung Jawab" value={data.contractor_pic || '—'} />
@@ -665,15 +646,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                             </dl>
                                         </FormSection>
 
-                                        <FormSection title={`Pekerja (${workerNames.length}) & Barang (${goodNames.length})`}>
+                                        <FormSection title={`Pekerja & Barang (${goodNames.length})`}>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                                 <div>
                                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Pekerja</h3>
-                                                    {workerNames.length > 0 ? (
-                                                        <ol className="list-decimal list-inside space-y-1 text-gray-900 font-medium">
-                                                            {workerNames.map((n, i) => <li key={`${n}-${i}`} className="truncate">{n}</li>)}
-                                                        </ol>
-                                                    ) : <p className="text-gray-400">Belum ada pekerja.</p>}
+                                                    {workerCount > 0 ? (
+                                                        <p className="text-gray-900 font-medium tabular-nums">{workerCount} orang</p>
+                                                    ) : <p className="text-gray-400">Belum diisi.</p>}
                                                 </div>
                                                 <div>
                                                     <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Barang</h3>
@@ -758,7 +737,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                     <ConfirmRow label="Nomor" value={isMarketingLocked ? 'Otomatis (E&P)' : 'Otomatis saat diajukan'} />
                     <ConfirmRow label="Jadwal" value={formatDateRange(data.work_start_date, data.work_end_date)} />
                     <ConfirmRow label="Jam" value={formatTimeRange(data.work_start_time, data.work_end_time)} />
-                    {!isMarketingLocked && <ConfirmRow label="Pekerja" value={workerNames.length > 0 ? `${workerNames.length} orang` : null} />}
+                    {!isMarketingLocked && <ConfirmRow label="Pekerja" value={workerCount > 0 ? `${workerCount} orang` : null} />}
                     <ConfirmRow label="Barang" value={goodNames.length > 0 ? `${goodNames.length} item` : null} />
                 </ConfirmModal>
             </div>
@@ -770,14 +749,12 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
     const tenantName = tenants.find((t) => t.id == data.tenant_id)?.name ?? null;
     const locationLabel = isMarketingLocked
         ? [tenantName, data.stand_name].filter(Boolean).join(' — ') || null
-        : locationType === 'area'
-        ? data.store_name_snapshot || null
         : locationType === 'tenant'
         ? tenantName
         : data.contractor_company ? `Vendor — ${data.contractor_company}` : null;
 
     const activityCount = data.activity_types.length;
-    const workerCount = data.workers.filter((w) => w.name).length;
+    const workerCount = parseInt(data.worker_count, 10) || 0;
     const goodsCount = isMarketingLocked
         ? [...data.goods_light, ...data.goods_heavy].filter((g) => g.description).length
         : data.goods.filter((g) => g.description).length;
@@ -793,7 +770,7 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
             <div className="space-y-3">
                 <SummaryItem
                     label="Kategori"
-                    value={isMarketingLocked ? 'Pameran / Open Counter' : locationType === 'area' ? 'Area Duta Mall' : locationType === 'tenant' ? 'Tenant' : 'Vendor'}
+                    value={isMarketingLocked ? 'Pameran / Open Counter' : locationType === 'tenant' ? 'Tenant' : 'Vendor'}
                     filled
                 />
                 <SummaryItem label={isMarketingLocked ? 'Tenant / Stand' : 'Lokasi/Nama'} value={locationLabel} filled={!!locationLabel} />
@@ -801,7 +778,6 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                     label="Nomor Surat"
                     value={isMarketingLocked ? 'Otomatis (E&P)' : 'Otomatis'}
                     filled
-                    dim={currentStep < 4}
                 />
                 {!isMarketingLocked && (
                     <SummaryItem
@@ -836,7 +812,6 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                         label="Pendampingan"
                         value={deptCount > 0 ? `${deptCount} departemen` : 'Tidak ada'}
                         filled
-                        dim={currentStep < 4}
                     />
                 )}
             </div>

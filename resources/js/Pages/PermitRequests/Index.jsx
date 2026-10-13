@@ -16,12 +16,10 @@ const categoryMeta = {
     pameran: { label: 'Pameran / Open Counter', color: 'coral', code: 'E&P' },
     tenant: { label: 'Tenant', color: 'blue', code: 'TC' },
     vendor: { label: 'Vendor', color: 'amber', code: 'TC' },
-    area: { label: 'Area Mall', color: 'gray', code: 'TC' },
 };
 
 const sourceMeta = {
     marketing: { label: 'Marketing', color: 'coral' },
-    portal: { label: 'Portal', color: 'green' },
     staff: { label: 'Staff', color: 'blue' },
 };
 
@@ -62,7 +60,6 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
         { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
-        { key: 'area', label: 'Area', value: counts.area ?? 0, dot: 'bg-gray-400' },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
     const columns = locked ? [
@@ -109,7 +106,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
                     </div>
                 ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                     {stats.map((s) => {
                         const active = (filters.category ?? '') === s.key;
                         return (
@@ -177,7 +174,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
                     {permits.data.map((p) => {
-                        const cat = categoryMeta[p.category] ?? categoryMeta.area;
+                        const cat = categoryMeta[p.category] ?? categoryMeta.vendor;
                         const src = sourceMeta[p.source] ?? sourceMeta.staff;
                         return (
                             <tr
@@ -257,7 +254,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
                 <div className="sm:hidden space-y-2.5">
                     {permits.data.map((p) => {
-                        const cat = categoryMeta[p.category] ?? categoryMeta.area;
+                        const cat = categoryMeta[p.category] ?? categoryMeta.vendor;
                         return (
                             <div
                                 key={p.id}

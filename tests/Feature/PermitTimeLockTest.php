@@ -84,7 +84,7 @@ class PermitTimeLockTest extends TestCase
             'request_date' => Carbon::today()->toDateString(),
             'work_start_date' => Carbon::today()->toDateString(),
             'work_end_date' => Carbon::today()->toDateString(),
-            'workers' => [['name' => 'Test Worker']],
+            'worker_count' => 3,
         ];
     }
 
