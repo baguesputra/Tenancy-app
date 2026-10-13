@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inspection;
 use App\Models\PermitRequest;
 use App\Models\ScannableCode;
 use App\Models\Unit;
@@ -28,37 +29,119 @@ class ScanController extends Controller
         }
 
         $webUser = $request->user('web');
-        $tenantUser = $request->user('tenant');
-
-        if (! $webUser && ! $tenantUser) {
-            $request->session()->put('scan_redirect_token', $token);
-
-            return Inertia::render('Scan/ChooseLogin', ['token' => $token]);
-        }
 
         return match (get_class($model)) {
-            Unit::class => $this->handleUnit($model, $webUser, $tenantUser, $sessions, $inspections),
-            PermitRequest::class => $this->handlePermit($model, $webUser, $tenantUser),
+            // Dokumen publik: bisa dibuka siapa pun pemegang QR, tanpa login.
+            PermitRequest::class => $this->handlePermit($model),
+            Inspection::class => $this->handleInspection($model),
+            Unit::class => $this->handleUnit($model, $webUser, $request, $sessions, $inspections),
             default => abort(400, 'Unsupported scannable type'),
         };
+    }
+
+    private function handlePermit(PermitRequest $permit)
+    {
+        if ($permit->is_expired) {
+            $label = $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA';
+
+            return Inertia::render('Scan/Expired', [
+                'permit_number' => $permit->permit_number,
+                'store_name' => $permit->store_name_snapshot,
+                'expires_label' => $label,
+            ])->toResponse(request())->setStatusCode(410);
+        }
+
+        $permit->load(['approvals' => fn ($q) => $q->orderBy('order')]);
+
+        $activityLabels = collect($permit->activity_types ?? [])
+            ->map(fn ($v) => self::ACTIVITY_LABELS[$v] ?? $v)
+            ->values();
+
+        return Inertia::render('Scan/PermitStatus', [
+            'permit' => [
+                'permit_number' => $permit->permit_number,
+                'store_name' => $permit->store_name_snapshot,
+                'status' => $permit->status,
+                'status_label' => self::STATUS_LABELS[$permit->status] ?? $permit->status,
+                'job_type' => $permit->job_type,
+                'activity_labels' => $activityLabels,
+                'request_date' => $permit->request_date?->toDateString(),
+                'work_start_date' => $permit->work_start_date?->toDateString(),
+                'work_end_date' => $permit->work_end_date?->toDateString(),
+                'work_start_time' => $permit->work_start_time?->format('H:i'),
+                'work_end_time' => $permit->work_end_time?->format('H:i'),
+                'location' => trim(collect([$permit->floor_snapshot, $permit->block_snapshot, $permit->unit_number_snapshot])->filter()->implode(' / ')) ?: null,
+                'pic_name' => $permit->pic_name,
+                'is_goods_permit' => $permit->is_goods_permit,
+                'expires_label' => $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA',
+                'approvals' => $permit->approvals->map(fn ($a) => [
+                    'label' => $a->label,
+                    'status' => $a->status,
+                ])->values(),
+            ],
+        ]);
+    }
+
+    private function handleInspection(Inspection $inspection)
+    {
+        $inspection->load(['tenant:id,name', 'session', 'answers.photos']);
+
+        // Hasil sidak hanya boleh dilihat publik setelah selesai.
+        $done = $inspection->status === 'completed'
+            || ($inspection->session && $inspection->session->status === 'completed');
+        abort_unless($done, 404);
+
+        $answersByItemId = $inspection->answers->keyBy('checklist_item_id');
+
+        $snapshot = $inspection->checklist_snapshot;
+        $answered = 0;
+        $total = 0;
+        foreach ($snapshot['sections'] as &$section) {
+            foreach ($section['items'] as &$item) {
+                $total++;
+                $existingAnswer = $answersByItemId->get($item['id']);
+                if ($existingAnswer?->value) {
+                    $answered++;
+                }
+                $item['answer'] = $existingAnswer ? [
+                    'value' => $existingAnswer->value,
+                    'note' => $existingAnswer->note,
+                    'photos' => $existingAnswer->photos->map(fn ($p) => [
+                        'id' => $p->id,
+                        'url' => $p->url(),
+                    ]),
+                ] : null;
+            }
+        }
+
+        return Inertia::render('Scan/InspectionStatus', [
+            'inspection' => [
+                'id' => $inspection->id,
+                'store_name' => $inspection->tenant?->name ?? '—',
+                'template_name' => $snapshot['template_name'] ?? '—',
+                'status' => $inspection->status,
+                'session_status' => $inspection->session->status,
+                'session_started_at' => $inspection->session->started_at?->toDateTimeString(),
+            ],
+            'checklistSnapshot' => $snapshot,
+            'progress' => ['answered' => $answered, 'total' => $total],
+        ]);
     }
 
     private function handleUnit(
         Unit $unit,
         $webUser,
-        $tenantUser,
+        Request $request,
         InspectionSessionService $sessions,
         InspectionService $inspections,
     ) {
         $unit->loadMissing('activeTenancy.tenant');
 
-        if ($tenantUser) {
-            $tenancy = $unit->activeTenancy;
-            if ($tenancy && (string) $tenancy->tenant_id === (string) $tenantUser->tenant_id) {
-                return redirect()->route('tenant-portal.permits.create');
-            }
+        // QR unit hanya untuk operasional staff — guest diarahkan ke login staff.
+        if (! $webUser) {
+            $request->session()->put('scan_redirect_token', $unit->scannableCode->token);
 
-            return redirect()->route('tenant-portal.permits.index');
+            return redirect()->route('login');
         }
 
         if ($webUser->can('sidak.create')) {
@@ -88,27 +171,20 @@ class ScanController extends Controller
             : redirect()->route('dashboard');
     }
 
-    private function handlePermit(PermitRequest $permit, $webUser, $tenantUser)
-    {
-        if ($permit->is_expired) {
-            $label = $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA';
+    private const ACTIVITY_LABELS = [
+        'kerja' => 'Kerja',
+        'lembur' => 'Lembur',
+        'masuk_keluar_barang' => 'Masuk/Keluar Barang',
+        'masuk_keluar_alat' => 'Masuk/Keluar Alat Kerja/Properti',
+        'fit_out_pull_out_renovasi' => 'Fit Out/Pull Out/Renovasi',
+        'pameran' => 'Pameran / Open Counter',
+    ];
 
-            return Inertia::render('Scan/Expired', [
-                'permit_number' => $permit->permit_number,
-                'store_name' => $permit->store_name_snapshot,
-                'expires_label' => $label,
-            ])->toResponse(request())->setStatusCode(410);
-        }
-
-        if ($tenantUser) {
-            abort_unless((string) $permit->tenant_id === (string) $tenantUser->tenant_id, 403);
-
-            return redirect()->route('tenant-portal.permits.show', $permit->id);
-        }
-
-        abort_unless($webUser->can('permits.view'), 403);
-        abort_unless($permit->branch_id === $webUser->branch_id || $webUser->canViewAllBranches(), 403);
-
-        return redirect()->route('permit-requests.show', $permit->id);
-    }
+    private const STATUS_LABELS = [
+        'pending' => 'Menunggu Persetujuan',
+        'completed' => 'Selesai',
+        'approved' => 'Disetujui',
+        'rejected' => 'Ditolak',
+        'cancelled' => 'Dibatalkan',
+    ];
 }

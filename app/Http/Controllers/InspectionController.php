@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\ChecklistItem;
 use App\Models\Inspection;
+use App\Models\ScannableCode;
 use App\Services\InspectionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class InspectionController extends Controller
 {
@@ -49,7 +53,41 @@ class InspectionController extends Controller
                 'session_status' => $inspection->session->status,
             ],
             'checklistSnapshot' => $snapshot,
+            'share' => $this->publicShare($inspection),
         ]);
+    }
+
+    /**
+     * QR + link publik hasil sidak untuk dibagikan ke tenant.
+     * Hanya aktif setelah sidak/sesi selesai (halaman publik 404 sebelumnya).
+     */
+    private function publicShare(Inspection $inspection): ?array
+    {
+        $done = $inspection->status === 'completed'
+            || ($inspection->session && $inspection->session->status === 'completed');
+
+        if (! $done) {
+            return null;
+        }
+
+        if (! $inspection->scannableCode) {
+            $inspection->setRelation('scannableCode', ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => Inspection::class,
+                'scannable_id' => $inspection->id,
+            ]));
+        }
+
+        $url = $inspection->scanUrl;
+
+        return [
+            'url' => $url,
+            'qr' => Cache::remember(
+                'inspection-qr.'.md5($url),
+                3600,
+                fn () => 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(200)->generate($url))
+            ),
+        ];
     }
 
     public function updateNotes(Inspection $inspection, Request $request)

@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Spatie\Permission\Models\Role;
 
 class PermitRequestController extends Controller
@@ -240,7 +241,76 @@ class PermitRequestController extends Controller
                 && (string) $permitRequest->requested_by_id === (string) $user->id
                 && str_contains($permitRequest->requested_by_type ?? '', 'User')
                 && $this->canManageForm($user, $permitRequest),
+            'share' => $this->publicShare($permitRequest),
         ]);
+    }
+
+    /**
+     * QR + link publik surat izin untuk dibagikan ke tenant (tanpa login).
+     * Hanya aktif setelah selesai / disetujui BS — sama dengan aturan tampil QR.
+     */
+    private function publicShare(PermitRequest $permitRequest): ?array
+    {
+        $permitRequest->loadMissing(['approvals' => fn ($q) => $q->orderBy('order')]);
+
+        $bsStep = $permitRequest->approvals->firstWhere('step_key', 'bs');
+        $showQr = $permitRequest->status === 'completed'
+            || ($bsStep && $bsStep->status === 'approved' && $permitRequest->status !== 'rejected');
+
+        if (! $showQr || ! $permitRequest->scan_url) {
+            return null;
+        }
+
+        return [
+            'url' => $permitRequest->scan_url,
+            'qr' => 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(200)->generate($permitRequest->scan_url)),
+        ];
+    }
+
+    /** Unduh kartu QR label (PDF) untuk dicetak dan diberikan ke tenant. */
+    public function qrLabel(PermitRequest $permitRequest, Request $request)
+    {
+        $user = $request->user();
+        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+
+        $permitRequest->load(['tenant', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
+
+        $bsStep = $permitRequest->approvals->firstWhere('step_key', 'bs');
+        $showQr = $permitRequest->status === 'completed'
+            || ($bsStep && $bsStep->status === 'approved' && $permitRequest->status !== 'rejected');
+        abort_unless($showQr, 403, 'QR belum tersedia — tunggu approval Building Service.');
+
+        if (! $permitRequest->scannableCode) {
+            $permitRequest->setRelation('scannableCode', ScannableCode::create([
+                'token' => (string) Str::uuid(),
+                'scannable_type' => PermitRequest::class,
+                'scannable_id' => $permitRequest->id,
+            ]));
+        }
+
+        $time = ($permitRequest->work_start_time?->format('H:i') ?? '').($permitRequest->work_end_time ? '–'.$permitRequest->work_end_time->format('H:i') : '');
+        $logoData = null;
+        if ($permitRequest->tenant?->logo_path && Storage::disk('public')->exists($permitRequest->tenant->logo_path)) {
+            $mime = match (strtolower(pathinfo($permitRequest->tenant->logo_path, PATHINFO_EXTENSION))) {
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                default => 'image/jpeg',
+            };
+            $logoData = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($permitRequest->tenant->logo_path));
+        }
+
+        $pdf = Pdf::loadView('pdf.permit-qr-label', [
+            'permit' => $permitRequest,
+            'schedule' => ($permitRequest->work_start_date?->translatedFormat('d M Y') ?? '—').($permitRequest->work_end_date && $permitRequest->work_end_date->ne($permitRequest->work_start_date) ? ' s/d '.$permitRequest->work_end_date->translatedFormat('d M Y') : ''),
+            'time' => $time !== '' ? str_replace(':', '.', $time).' WITA' : '—',
+            'expiresLabel' => $permitRequest->expires_at?->translatedFormat('d M Y, H:i').' WITA',
+            'isGoods' => $permitRequest->is_goods_permit,
+            'logoData' => $logoData,
+        ])->setPaper('a6');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("QR-{$safeNumber}.pdf");
     }
 
     public function pdf(PermitRequest $permitRequest, Request $request)

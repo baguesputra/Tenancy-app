@@ -53,4 +53,16 @@ class Inspection extends Model
     {
         return $this->hasMany(InspectionAnswer::class);
     }
+
+    public function scannableCode()
+    {
+        return $this->morphOne(ScannableCode::class, 'scannable');
+    }
+
+    public function getScanUrlAttribute(): string
+    {
+        $token = $this->scannableCode?->token;
+
+        return $token ? route('scan.resolve', $token) : '';
+    }
 }

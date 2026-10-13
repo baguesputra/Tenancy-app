@@ -197,6 +197,7 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
     });
 
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/pdf', [PermitRequestController::class, 'pdf'])->name('permit-requests.pdf');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/qr-label', [PermitRequestController::class, 'qrLabel'])->name('permit-requests.qr-label');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
     Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
 

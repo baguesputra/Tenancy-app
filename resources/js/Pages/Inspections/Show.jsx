@@ -9,7 +9,7 @@ import initials from '@/utils/initials';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-export default function Show({ inspection, checklistSnapshot }) {
+export default function Show({ inspection, checklistSnapshot, share }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
     const [savingItemId, setSavingItemId] = useState(null);
     const [itemError, setItemError] = useState({});
@@ -208,6 +208,35 @@ export default function Show({ inspection, checklistSnapshot }) {
                 {isLocked && (
                     <div className="bg-gray-100 text-gray-600 text-sm p-3.5 rounded-xl mb-4">
                         Sesi ini sudah selesai, checklist tidak bisa diubah lagi.
+                    </div>
+                )}
+
+                {share && (
+                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-4 sm:p-5 mb-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                            <img src={share.qr} alt="QR hasil sidak untuk tenant" className="w-24 h-24 rounded-lg border border-gray-200 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-gray-900">QR publik untuk tenant</p>
+                                <p className="text-xs text-gray-500 mt-0.5">Dipindai tanpa login — aktif karena sidak sudah selesai.</p>
+                                <p className="text-xs text-gray-700 font-mono break-all mt-1.5">{share.url}</p>
+                                <div className="flex flex-wrap gap-2 mt-2.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigator.clipboard?.writeText(share.url)}
+                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Salin link
+                                    </button>
+                                    <a
+                                        href={share.qr}
+                                        download={`qr-sidak-${inspection.tenant?.name ?? inspection.id}.svg`}
+                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Unduh QR
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

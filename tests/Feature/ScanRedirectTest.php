@@ -36,8 +36,8 @@ class ScanRedirectTest extends TestCase
         Tenancy::create(['unit_id' => $unit->id, 'tenant_id' => $tenant->id, 'status' => 'active', 'start_date' => now()->toDateString()]);
         $token = $unit->scannableCode->token;
 
-        // guest -> 200 ChooseLogin, no redirect loop
-        $this->get("/scan/{$token}")->assertOk();
+        // guest scan unit -> redirect ke login staff (QR unit untuk operasional)
+        $this->get("/scan/{$token}")->assertRedirect(route('login'));
 
         // staff tanpa sidak.create -> units.index (bukan scan lagi)
         foreach (['sidak.view', 'units.view'] as $p) { Permission::create(['name' => $p]); }

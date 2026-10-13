@@ -16,7 +16,7 @@ const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', app
 const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 const dotColor = { pending: 'bg-amber-400', approved: 'bg-emerald-500', rejected: 'bg-red-500' };
 
-export default function Show({ permit, can_revise, can_cancel }) {
+export default function Show({ permit, can_revise, can_cancel, share }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
     const [reviseOpen, setReviseOpen] = useState(false);
@@ -396,6 +396,33 @@ export default function Show({ permit, can_revise, can_cancel }) {
                                 <RevisionTimeline revisions={permit.revisions} />
                             </FormSection>
                         )}
+                        <FormSection title="QR Publik untuk Tenant" description="Dipindai tanpa login — cetak & berikan ke tenant">
+                            {share ? (
+                                <div className="flex items-start gap-3">
+                                    <img src={share.qr} alt="QR publik surat izin" className="w-24 h-24 rounded-lg border border-gray-200 shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs text-gray-700 font-mono break-all">{share.url}</p>
+                                        <div className="flex flex-wrap gap-2 mt-2.5 print:hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => navigator.clipboard?.writeText(share.url)}
+                                                className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                            >
+                                                Salin link
+                                            </button>
+                                            <a
+                                                href={`/permit-requests/${permit.id}/qr-label`}
+                                                className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                            >
+                                                Unduh kartu QR (PDF)
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400">QR aktif setelah izin selesai / disetujui Building Service.</p>
+                            )}
+                        </FormSection>
                         <FormSection title="Progress Approval" description={currentStep ? `Menunggu: ${currentStep.label}` : 'Semua tahap selesai'}>
                             <ol className="relative ml-1.5 border-l-2 border-gray-100 space-y-4">
                                 {permit.approvals.map((a) => (
