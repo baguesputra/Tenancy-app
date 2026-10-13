@@ -174,9 +174,13 @@ class ScanController extends Controller
     private const ACTIVITY_LABELS = [
         'kerja' => 'Kerja',
         'lembur' => 'Lembur',
-        'masuk_keluar_barang' => 'Masuk/Keluar Barang',
-        'masuk_keluar_alat' => 'Masuk/Keluar Alat Kerja/Properti',
-        'fit_out_pull_out_renovasi' => 'Fit Out/Pull Out/Renovasi',
+        'masuk_barang' => 'Masuk Barang',
+        'keluar_barang' => 'Keluar Barang',
+        'masuk_alat' => 'Masuk Alat Kerja/Properti',
+        'keluar_alat' => 'Keluar Alat Kerja/Properti',
+        'fit_out' => 'Fit Out',
+        'pull_out' => 'Pull Out',
+        'renovasi' => 'Renovasi',
         'pameran' => 'Pameran / Open Counter',
     ];
 

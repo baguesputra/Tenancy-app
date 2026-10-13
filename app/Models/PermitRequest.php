@@ -21,7 +21,7 @@ class PermitRequest extends Model
         'pic_name', 'pic_phone',
         'is_external', 'contractor_company', 'contractor_pic', 'contractor_address', 'contractor_phone',
         'job_type', 'work_start_date', 'work_end_date', 'work_start_time', 'work_end_time',
-        'access_route', 'notes',
+        'access_route', 'notes', 'worker_count',
         'requested_by_type', 'requested_by_id',
         'status',
         'barcode_token',
@@ -55,6 +55,11 @@ class PermitRequest extends Model
     public function workers()
     {
         return $this->hasMany(PermitWorker::class)->orderBy('order');
+    }
+
+    public function ktpPhotos()
+    {
+        return $this->hasMany(PermitKtpPhoto::class);
     }
 
     public function goods()

@@ -139,7 +139,7 @@ class TenantProfileController extends Controller
             'activeTenancy.unit.scannableCode:scannable_type,scannable_id,token',
             'tenancies' => fn ($q) => $q->with(['unit:id,unit_code,size,floor,block', 'unit.scannableCode:scannable_type,scannable_id,token'])->latest('start_date')->take(30),
             'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged', 'synced_at'])->with('session.user:id,name')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
-            'permitRequests' => fn ($q) => $q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name'])->latest()->take(30),
+            'permitRequests' => fn ($q) => $q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'ktpPhotos:permit_request_id', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name'])->latest()->take(30),
         ]);
 
         $now = now()->startOfDay();
@@ -214,8 +214,8 @@ class TenantProfileController extends Controller
                 'contractor_phone' => $p->contractor_phone,
                 'access_route' => $p->access_route,
                 'notes' => $p->notes,
-                'workers_present' => $workers->where('is_present', true)->count(),
-                'workers_total' => $workers->count(),
+                'workers_present' => $workers->isNotEmpty() ? $workers->where('is_present', true)->count() : $p->ktpPhotos->count(),
+                'workers_total' => $workers->isNotEmpty() ? $workers->count() : ($p->worker_count ?? 0),
                 'goods_verified' => $goods->where('is_verified', true)->count(),
                 'goods_total' => $goods->count(),
                 'approvals' => $p->approvals->map(fn ($a) => [

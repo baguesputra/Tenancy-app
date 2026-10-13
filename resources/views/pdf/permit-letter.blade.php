@@ -107,12 +107,18 @@
                 </tr>
             @endforeach
         </table>
+    @elseif ($permit->worker_count)
+        <h3 class="sec">Pekerja</h3>
+        <table class="grid">
+            <tr><th>Jumlah Pekerja</th><th style="width:110px">Foto KTP Masuk</th></tr>
+            <tr><td>{{ $permit->worker_count }} orang</td><td>{{ $workersPresent }} foto</td></tr>
+        </table>
     @endif
 
     @if ($permit->goods->isNotEmpty())
         <h3 class="sec">Daftar Barang</h3>
         <table class="grid">
-            <tr><th style="width:30px">No</th><th>Barang</th><th style="width:90px">Jumlah</th><th style="width:60px">Foto</th><th style="width:110px">Status</th></tr>
+            <tr><th style="width:30px">No</th><th>Barang</th><th style="width:90px">Jumlah</th><th style="width:70px">Satuan</th><th style="width:60px">Foto</th><th style="width:110px">Status</th></tr>
             @foreach ($permit->goods as $i => $g)
                 <tr>
                     <td>{{ $i + 1 }}</td>
@@ -123,6 +129,7 @@
                         @endif
                     </td>
                     <td>{{ $g->quantity_note }}</td>
+                    <td>{{ $g->unit ?? '—' }}</td>
                     <td>
                         @if (! empty($goodsPhotos[$g->id]))
                             <img class="thumb" src="{{ $goodsPhotos[$g->id] }}" alt="Foto {{ $g->description }}">

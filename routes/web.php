@@ -171,6 +171,8 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
         Route::post('/permit-workers/{worker}/toggle', [PermitCheckController::class, 'toggleWorker'])->name('permit-workers.toggle');
         Route::post('/permit-workers/{worker}/note', [PermitCheckController::class, 'updateWorkerNote'])->name('permit-workers.note');
         Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
+        Route::post('/permit-requests/{permitRequest}/ktp-photos', [PermitCheckController::class, 'uploadKtp'])->name('permit-ktp.store');
+        Route::delete('/permit-ktp-photos/{photo}', [PermitCheckController::class, 'deleteKtp'])->name('permit-ktp.destroy');
         Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
     });
 

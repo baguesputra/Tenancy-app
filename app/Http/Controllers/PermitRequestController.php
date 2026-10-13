@@ -44,9 +44,13 @@ class PermitRequestController extends Controller
     private const ACTIVITY_TYPES = [
         ['value' => 'kerja', 'label' => 'Kerja'],
         ['value' => 'lembur', 'label' => 'Lembur'],
-        ['value' => 'masuk_keluar_barang', 'label' => 'Masuk/Keluar Barang'],
-        ['value' => 'masuk_keluar_alat', 'label' => 'Masuk/Keluar Alat Kerja/Properti'],
-        ['value' => 'fit_out_pull_out_renovasi', 'label' => 'Fit Out/Pull Out/Renovasi'],
+        ['value' => 'masuk_barang', 'label' => 'Masuk Barang'],
+        ['value' => 'keluar_barang', 'label' => 'Keluar Barang'],
+        ['value' => 'masuk_alat', 'label' => 'Masuk Alat Kerja/Properti'],
+        ['value' => 'keluar_alat', 'label' => 'Keluar Alat Kerja/Properti'],
+        ['value' => 'fit_out', 'label' => 'Fit Out'],
+        ['value' => 'pull_out', 'label' => 'Pull Out'],
+        ['value' => 'renovasi', 'label' => 'Renovasi'],
         ['value' => 'pameran', 'label' => 'Pameran / Open Counter', 'code' => 'E&P'],
     ];
 
@@ -82,8 +86,7 @@ class PermitRequestController extends Controller
                 count(*) as total,
                 sum(activity_types like '%pameran%') as pameran,
                 sum(tenant_id is not null and activity_types not like '%pameran%') as tenant,
-                sum(activity_types not like '%pameran%' and (is_external = 1 or contractor_company is not null)) as vendor,
-                sum(tenant_id is null and activity_types not like '%pameran%' and (is_external = 0 or is_external is null) and contractor_company is null) as area
+                sum(tenant_id is null and activity_types not like '%pameran%') as vendor
             ")->first();
 
             $summary = [
@@ -92,7 +95,6 @@ class PermitRequestController extends Controller
                     'pameran' => (int) ($agg->pameran ?? 0),
                     'tenant' => (int) ($agg->tenant ?? 0),
                     'vendor' => (int) ($agg->vendor ?? 0),
-                    'area' => (int) ($agg->area ?? 0),
                 ],
             ];
         }
@@ -139,10 +141,7 @@ class PermitRequestController extends Controller
             'pameran' => $query->where('activity_types', 'like', '%pameran%'),
             'tenant' => $query->whereNotNull('tenant_id')->where('activity_types', 'not like', '%pameran%'),
             'vendor' => $query->where('activity_types', 'not like', '%pameran%')
-                ->where(fn ($w) => $w->where('is_external', true)->orWhereNotNull('contractor_company')),
-            'area' => $query->whereNull('tenant_id')->where('activity_types', 'not like', '%pameran%')
-                ->where(fn ($w) => $w->where('is_external', false)->orWhereNull('is_external'))
-                ->whereNull('contractor_company'),
+                ->whereNull('tenant_id'),
             default => $query,
         };
     }
@@ -155,11 +154,8 @@ class PermitRequestController extends Controller
         if ($permit->tenant_id) {
             return 'tenant';
         }
-        if ($permit->is_external || $permit->contractor_company) {
-            return 'vendor';
-        }
 
-        return 'area';
+        return 'vendor';
     }
 
     public function create(Request $request)
@@ -221,7 +217,7 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
         abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
-        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
+        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'ktpPhotos', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
         $permitRequest->can_approve_marketing = strtolower($user->department?->name ?? '') === 'marketing'
             && strtolower($user->position?->name ?? '') === 'manager'
@@ -317,7 +313,7 @@ class PermitRequestController extends Controller
         abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
         abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
-        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
+        $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'ktpPhotos', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
         $requestedBy = $permitRequest->requestedBy;
         $requestedByLabel = $requestedBy instanceof User
@@ -374,8 +370,12 @@ class PermitRequestController extends Controller
             'leftSigner' => ['role' => $tenancyStep?->label ?? 'Tenancy', 'approval' => $tenancyStep],
             'rightSigner' => ['role' => $bsStep?->label ?? 'Building Service', 'approval' => $bsStep],
             'securityStep' => $securityStep,
-            'workersPresent' => $permitRequest->workers->where('is_present', true)->count(),
-            'workersTotal' => $permitRequest->workers->count(),
+            'workersPresent' => $permitRequest->workers->isNotEmpty()
+                ? $permitRequest->workers->where('is_present', true)->count()
+                : $permitRequest->ktpPhotos->count(),
+            'workersTotal' => $permitRequest->workers->isNotEmpty()
+                ? $permitRequest->workers->count()
+                : ($permitRequest->worker_count ?? 0),
             'goodsVerified' => $permitRequest->goods->where('is_verified', true)->count(),
             'goodsTotal' => $permitRequest->goods->count(),
             'scanUrl' => $permitRequest->scanUrl,

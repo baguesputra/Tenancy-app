@@ -63,18 +63,12 @@ class PermitRequestService
             'work_end_time' => $data['work_end_time'] ?? null,
             'access_route' => $data['access_route'] ?? null,
             'notes' => $data['notes'] ?? null,
+            'worker_count' => $data['worker_count'] ?? null,
             'requested_by_type' => get_class($requestedBy),
             'requested_by_id' => $requestedBy->id,
             'status' => 'pending',
             'barcode_token' => (string) Str::uuid(),
         ]);
-
-        foreach ($data['workers'] ?? [] as $index => $worker) {
-            if (empty($worker['name'])) {
-                continue;
-            }
-            $permit->workers()->create(['name' => $worker['name'], 'order' => $index + 1]);
-        }
 
         foreach ($data['goods'] ?? [] as $good) {
             if (empty($good['description'])) {
@@ -83,6 +77,7 @@ class PermitRequestService
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
+                'unit' => $good['unit'] ?? null,
             ]);
         }
 
@@ -93,6 +88,7 @@ class PermitRequestService
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
+                'unit' => $good['unit'] ?? null,
                 'weight_class' => 'light',
             ]);
         }
@@ -104,6 +100,7 @@ class PermitRequestService
             $permit->goods()->create([
                 'description' => $good['description'],
                 'quantity_note' => $good['quantity_note'] ?? null,
+                'unit' => $good['unit'] ?? null,
                 'weight_class' => 'heavy',
             ]);
         }
@@ -151,7 +148,7 @@ class PermitRequestService
             ];
         }
 
-        // Vendor murni (tanpa tenant & tanpa nama area) — jangan fallback Area Umum Mall
+        // Vendor murni (tanpa tenant) — jangan fallback Area Umum Mall
         if (! $tenant && empty($data['store_name_snapshot'])) {
             return [
                 'store_name_snapshot' => $data['contractor_company'] ?? 'Vendor',
@@ -161,9 +158,9 @@ class PermitRequestService
             ];
         }
 
-        // Area umum mall — manual
+        // Lokasi manual (baris legacy pra-penghapusan kategori Area)
         return [
-            'store_name_snapshot' => $data['store_name_snapshot'] ?? 'Area Umum Mall',
+            'store_name_snapshot' => $data['store_name_snapshot'] ?? $data['contractor_company'] ?? 'Vendor',
             'floor_snapshot' => $data['floor_snapshot'] ?? null,
             'block_snapshot' => $data['block_snapshot'] ?? null,
             'unit_number_snapshot' => $data['unit_number_snapshot'] ?? null,

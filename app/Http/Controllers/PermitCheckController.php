@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\PermitGood;
+use App\Models\PermitKtpPhoto;
 use App\Models\PermitRequest;
 use App\Models\PermitWorker;
 use App\Services\ApprovalService;
@@ -77,25 +78,69 @@ class PermitCheckController extends Controller
     }
 
     /**
+     * Upload foto KTP pekerja saat cek fisik Security.
+     * Jumlah foto minimal = worker_count (boleh lebih, tidak boleh kurang).
+     */
+    public function uploadKtp(PermitRequest $permitRequest, Request $request)
+    {
+        $this->authorizeSecurityAction($permitRequest, $request);
+
+        $request->validate([
+            'photo' => 'required|image|max:5120',
+            'mismatch_note' => 'nullable|string',
+        ]);
+
+        $permitRequest->ktpPhotos()->create([
+            'photo_path' => $request->file('photo')->store('permit-ktp', 'public'),
+            'mismatch_note' => $request->mismatch_note,
+            'checked_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto KTP tersimpan.');
+    }
+
+    public function deleteKtp(PermitKtpPhoto $photo, Request $request)
+    {
+        $this->authorizeSecurityAction($photo->permitRequest, $request);
+
+        \Storage::disk('public')->delete($photo->photo_path);
+        $photo->delete();
+
+        return back();
+    }
+
+    /**
      * Selesaikan tahap cek fisik Security — wajib semua pekerja & barang
      * sudah dicek dulu. Kalau ada mismatch_note yang terisi, permit
      * ditandai is_flagged (soft-warning), bukan ditolak.
+     *
+     * Izin baru (tanpa baris pekerja): jumlah foto KTP minimal = worker_count.
+     * Izin lama (masih punya baris pekerja): pakai aturan toggle per nama.
      */
     public function completeSecurityCheck(PermitRequest $permitRequest, Request $request)
     {
         $securityStep = $this->authorizeSecurityAction($permitRequest, $request);
 
-        $allWorkersChecked = $permitRequest->workers()->where('is_present', false)->doesntExist();
+        if ($permitRequest->workers()->exists()) {
+            $allWorkersChecked = $permitRequest->workers()->where('is_present', false)->doesntExist();
+        } else {
+            $allWorkersChecked = $permitRequest->worker_count
+                ? $permitRequest->ktpPhotos()->count() >= $permitRequest->worker_count
+                : true;
+        }
         $allGoodsVerified = $permitRequest->goods()->where('is_verified', false)->doesntExist();
 
         if (! $allWorkersChecked || ! $allGoodsVerified) {
             throw ValidationException::withMessages([
-                'security' => 'Semua pekerja dan barang harus dicek dulu sebelum menyelesaikan pemeriksaan.',
+                'security' => $allWorkersChecked
+                    ? 'Semua barang harus dicek dulu sebelum menyelesaikan pemeriksaan.'
+                    : 'Foto KTP kurang — jumlah foto minimal sama dengan jumlah pekerja.',
             ]);
         }
 
         $hasMismatch = $permitRequest->workers()->whereNotNull('mismatch_note')->exists()
-            || $permitRequest->goods()->whereNotNull('mismatch_note')->exists();
+            || $permitRequest->goods()->whereNotNull('mismatch_note')->exists()
+            || $permitRequest->ktpPhotos()->whereNotNull('mismatch_note')->exists();
 
         $securityStep = $permitRequest->approvals()->where('step_key', 'security')->first();
         abort_if(! $securityStep, 422, 'Tahap Security tidak ditemukan untuk izin ini.');

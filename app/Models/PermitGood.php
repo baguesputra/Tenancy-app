@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 class PermitGood extends Model
 {
     protected $fillable = [
-        'permit_request_id', 'description', 'quantity_note', 'weight_class',
+        'permit_request_id', 'description', 'quantity_note', 'unit', 'weight_class',
         'is_verified', 'checked_at', 'photo_path', 'mismatch_note',
     ];
 
