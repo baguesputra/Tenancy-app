@@ -49,6 +49,7 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
 
     Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
     Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
+    Route::put('/inspection-items/{item}', [InspectionTemplateController::class, 'updateItem'])->name('inspection-items.update');
 
     Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
     Route::middleware('can:gate.sync')->group(function () {

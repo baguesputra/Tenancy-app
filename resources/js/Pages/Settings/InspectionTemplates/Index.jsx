@@ -8,176 +8,226 @@ import TextInput from '@/Components/Form/TextInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
-import DataTable from '@/Components/DataTable';
 import { IconClipboard, IconEdit } from '@/Components/Icons';
+
+const scopeLabel = (section) => {
+    const cats = section.scope_product_categories;
+    let cat = 'Semua kategori';
+    if (Array.isArray(cats)) {
+        cat = cats.length === 1 && cats[0] === 'F&B' ? 'F&B' : `Non-F&B (${cats.length} kategori)`;
+    }
+    const floor = section.floor_scope === 'ground_only'
+        ? ' · GF saja'
+        : section.floor_scope === 'non_ground' ? ' · di luar GF' : '';
+    return cat + floor;
+};
 
 export default function Index({ templates = [], productCategories = [] }) {
     const { errors } = usePage().props;
-    const [panelOpen, setPanelOpen] = useState(false);
-    const [editing, setEditing] = useState(null);
+    const [openSections, setOpenSections] = useState({});
+    const [tplPanel, setTplPanel] = useState(false);
+    const [itemPanel, setItemPanel] = useState(false);
 
-    const { data, setData, put, processing, clearErrors } = useForm({
-        name: '',
-        is_active: true,
-        product_category_ids: [],
-    });
+    const tplForm = useForm({ id: null, name: '', is_active: true });
+    const itemForm = useForm({ id: null, label: '', type: 'binary_choice', option_positive: '', option_negative: '' });
 
-    const openEdit = (template) => {
-        setEditing(template);
-        setData({
-            name: template.name,
-            is_active: template.is_active,
-            product_category_ids: (template.product_categories ?? []).map((c) => c.id),
+    const toggleSection = (id) => setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    const openTplEdit = (template) => {
+        tplForm.setData({ id: template.id, name: template.name, is_active: template.is_active });
+        tplForm.clearErrors();
+        setTplPanel(true);
+    };
+
+    const openItemEdit = (item) => {
+        itemForm.setData({
+            id: item.id,
+            label: item.label,
+            type: item.type,
+            option_positive: item.option_positive ?? '',
+            option_negative: item.option_negative ?? '',
         });
-        clearErrors();
-        setPanelOpen(true);
+        itemForm.clearErrors();
+        setItemPanel(true);
     };
 
-    const closePanel = () => {
-        setPanelOpen(false);
-        setEditing(null);
-        clearErrors();
-    };
-
-    const toggleCategory = (id) => {
-        const ids = data.product_category_ids.map(String);
-        setData(
-            'product_category_ids',
-            ids.includes(String(id))
-                ? data.product_category_ids.filter((c) => String(c) !== String(id))
-                : [...data.product_category_ids, id]
-        );
-    };
-
-    const submit = (e) => {
+    const submitTpl = (e) => {
         e.preventDefault();
-        put(`/settings/inspection-templates/${editing.id}`, { preserveScroll: true, onSuccess: closePanel });
+        tplForm.put(`/settings/inspection-templates/${tplForm.data.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setTplPanel(false),
+        });
     };
 
-    const columns = [
-        { key: 'name', label: 'Template' },
-        { key: 'categories', label: 'Berlaku Untuk' },
-        { key: 'status', label: 'Status' },
-        { key: 'actions', label: '', className: 'w-20 text-right' },
-    ];
+    const submitItem = (e) => {
+        e.preventDefault();
+        itemForm.put(`/settings/inspection-items/${itemForm.data.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setItemPanel(false),
+        });
+    };
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
                 <div className="mb-5">
-                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Template Inspeksi</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">Atur nama template dan kategori produk yang memakai tiap template</p>
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Form Sidak</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">Satu form untuk semua tenant — section menyesuaikan kategori produk & lantai unit</p>
                 </div>
 
-                <div className="hidden sm:block">
-                <DataTable columns={columns}>
-                    {templates.map((t) => (
-                        <tr
-                            key={t.id}
-                            onClick={() => openEdit(t)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(t); } }}
-                            tabIndex={0}
-                            className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                editing?.id === t.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'
-                            }`}
-                        >
-                            <td className="px-5 py-3.5">
-                                <p className="font-medium text-gray-900">{t.name}</p>
-                                <p className="text-xs text-gray-500 mt-0.5 tabular-nums">{t.sections_count} section · {t.items_count} item</p>
-                            </td>
-                            <td className="px-5 py-3.5">
-                                <span className="flex flex-wrap gap-1">
-                                    {(t.product_categories ?? []).length === 0 && (
-                                        <Badge color="gray">Tak dipakai tenant mana pun</Badge>
-                                    )}
-                                    {(t.product_categories ?? []).map((c) => (
-                                        <Badge key={c.id} color="blue">{c.name}</Badge>
-                                    ))}
-                                </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                                <Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                            </td>
-                            <td className="px-5 py-3.5 text-right">
-                                <span aria-hidden="true" className="p-2 inline-flex items-center justify-center rounded-lg text-gray-300">
-                                    <IconEdit className="w-4 h-4" />
-                                </span>
-                            </td>
-                        </tr>
-                    )                    )}
-                </DataTable>
-                </div>
+                {templates.length === 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-8 text-center">
+                        <p className="text-sm font-semibold text-red-800">Tidak ada template aktif — sidak tidak bisa dibuat.</p>
+                        <p className="text-xs text-red-600 mt-1">Aktifkan kembali template lewat seeder atau database.</p>
+                    </div>
+                )}
 
-                <div className="sm:hidden space-y-2.5">
-                    {templates.map((t) => (
-                        <div
-                            key={t.id}
-                            onClick={() => openEdit(t)}
-                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
-                        >
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5 tabular-nums">{t.sections_count} section · {t.items_count} item</p>
+                {templates.map((t) => (
+                    <div key={t.id} className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm mb-4 overflow-hidden">
+                        <div className="p-4 sm:p-5 flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-base font-semibold text-gray-900">{t.name}</h2>
+                                    <Badge color="green" size="sm">Aktif</Badge>
                                 </div>
-                                <Badge color={t.is_active ? 'green' : 'gray'} size="sm">{t.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
-                            </div>
-                            {(t.product_categories ?? []).length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                     {(t.product_categories ?? []).map((c) => (
                                         <Badge key={c.id} color="blue" size="sm">{c.name}</Badge>
                                     ))}
                                 </div>
-                            )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => openTplEdit(t)}
+                                aria-label="Edit template"
+                                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
+                                <IconEdit className="w-4 h-4" />
+                            </button>
                         </div>
-                    ))}
-                    {templates.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm text-gray-400">Belum ada template.</p>
+
+                        <div className="border-t border-gray-100">
+                            {(t.sections ?? []).map((s) => {
+                                const open = !!openSections[s.id];
+                                const count = (s.items ?? []).length;
+                                return (
+                                    <div key={s.id} className="border-b border-gray-100 last:border-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleSection(s.id)}
+                                            aria-expanded={open}
+                                            className="w-full flex items-center gap-2.5 px-4 sm:px-5 py-3 text-left hover:bg-gray-50/70 transition-colors min-h-[52px]"
+                                        >
+                                            <span className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-sm font-medium text-gray-800 truncate">{s.name}</span>
+                                                <span className="block text-[11px] text-gray-400 mt-0.5">{scopeLabel(s)} · {count} item</span>
+                                            </span>
+                                        </button>
+                                        {open && (
+                                            <ul className="px-4 sm:px-5 pb-3 space-y-1">
+                                                {(s.items ?? []).map((item) => (
+                                                    <li
+                                                        key={item.id}
+                                                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-gray-50 group"
+                                                    >
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[13px] text-gray-800 truncate">{item.label}</p>
+                                                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                                                {item.type === 'binary_choice'
+                                                                    ? `${item.option_positive ?? '—'} / ${item.option_negative ?? '—'}`
+                                                                    : 'Teks bebas'}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openItemEdit(item)}
+                                                            aria-label={`Edit item ${item.label}`}
+                                                            className="p-2 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 shrink-0 opacity-0 max-sm:opacity-100 group-hover:opacity-100 focus:opacity-100 transition-opacity min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                                        >
+                                                            <IconEdit className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
-                </div>
+                    </div>
+                ))}
             </div>
 
             <SlideOver
-                open={panelOpen}
-                onClose={closePanel}
+                open={tplPanel}
+                onClose={() => setTplPanel(false)}
                 title="Edit Template"
-                subtitle={editing?.name}
+                subtitle={tplForm.data.name}
                 icon={<IconClipboard className="w-4 h-4" />}
                 footer={
                     <div className="flex gap-2">
-                        <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>
-                        <Button type="submit" form="template-form" loading={processing} className="flex-1 justify-center">
+                        <Button type="button" variant="secondary" onClick={() => setTplPanel(false)} className="shrink-0">Batal</Button>
+                        <Button type="submit" form="template-form" loading={tplForm.processing} className="flex-1 justify-center">
                             Simpan Perubahan
                         </Button>
                     </div>
                 }
             >
-                <form id="template-form" onSubmit={submit}>
+                <form id="template-form" onSubmit={submitTpl}>
                     <FormSection variant="drawer" title="Identitas" description="Nama dan status template">
                         <FormField compact label="Nama Template" error={errors.name} required>
-                            <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                            <TextInput value={tplForm.data.name} onChange={(e) => tplForm.setData('name', e.target.value)} />
                         </FormField>
                         <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
                             <span className="text-xs font-medium text-gray-700">Status template</span>
-                            <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
+                            <Checkbox label={tplForm.data.is_active ? 'Aktif' : 'Nonaktif'} checked={tplForm.data.is_active} onChange={(e) => tplForm.setData('is_active', e.target.checked)} />
                         </div>
+                        {(errors.is_active || errors.product_category_ids) && (
+                            <p className="text-xs text-red-600 mt-1">{errors.is_active ?? errors.product_category_ids}</p>
+                        )}
                     </FormSection>
-
-                    <FormSection variant="drawer" title="Berlaku Untuk" description="Kategori produk yang memakai template ini saat sidak">
-                        <div className="grid grid-cols-1 gap-1">
+                    <FormSection variant="drawer" title="Berlaku Untuk" description="Kategori produk memakai template ini (read-only, diatur seeder)">
+                        <div className="flex flex-wrap gap-1">
                             {productCategories.map((c) => (
-                                <Checkbox
-                                    key={c.id}
-                                    label={c.name}
-                                    checked={data.product_category_ids.map(String).includes(String(c.id))}
-                                    onChange={() => toggleCategory(c.id)}
-                                />
+                                <Badge key={c.id} color="blue" size="sm">{c.name}</Badge>
                             ))}
                         </div>
-                        {errors.product_category_ids && (
-                            <p className="text-xs text-red-600 mt-1">{errors.product_category_ids}</p>
+                    </FormSection>
+                </form>
+            </SlideOver>
+
+            <SlideOver
+                open={itemPanel}
+                onClose={() => setItemPanel(false)}
+                title="Edit Item"
+                subtitle={itemForm.data.label}
+                icon={<IconEdit className="w-4 h-4" />}
+                footer={
+                    <div className="flex gap-2">
+                        <Button type="button" variant="secondary" onClick={() => setItemPanel(false)} className="shrink-0">Batal</Button>
+                        <Button type="submit" form="item-form" loading={itemForm.processing} className="flex-1 justify-center">
+                            Simpan Perubahan
+                        </Button>
+                    </div>
+                }
+            >
+                <form id="item-form" onSubmit={submitItem}>
+                    <FormSection variant="drawer" title="Item Checklist" description="Label tampil di form sidak (riwayat lama tidak berubah)">
+                        <FormField compact label="Label" error={errors.label} required>
+                            <TextInput value={itemForm.data.label} onChange={(e) => itemForm.setData('label', e.target.value)} />
+                        </FormField>
+                        {itemForm.data.type === 'binary_choice' ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                <FormField compact label="Opsi positif" error={errors.option_positive} required>
+                                    <TextInput value={itemForm.data.option_positive} onChange={(e) => itemForm.setData('option_positive', e.target.value)} />
+                                </FormField>
+                                <FormField compact label="Opsi negatif" error={errors.option_negative} required>
+                                    <TextInput value={itemForm.data.option_negative} onChange={(e) => itemForm.setData('option_negative', e.target.value)} />
+                                </FormField>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-500">Item teks bebas — jawaban berupa catatan.</p>
                         )}
                     </FormSection>
                 </form>
