@@ -89,7 +89,7 @@ class InspectionService
                     'inspection_session_id' => $session->id,
                     'tenant_id' => $tenant->id,
                     'checklist_template_id' => $template->id,
-                    'checklist_snapshot' => $template->toSnapshotArray(),
+                    'checklist_snapshot' => $template->toSnapshotArray($tenant),
                     'status' => 'draft',
                 ]
             );
