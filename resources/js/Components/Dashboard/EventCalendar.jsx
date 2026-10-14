@@ -8,78 +8,104 @@ const TYPE_META = {
         dot: "bg-blue-500",
         chip: "bg-blue-50 text-blue-800 border-blue-200",
         bar: "bg-blue-50 text-blue-800 border-blue-200 border-l-blue-500",
+        hlRing: "ring-blue-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(59,130,246,0.55)]",
     },
     pameran: {
         label: "Pameran",
         dot: "bg-[#FF6B6B]",
         chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
         bar: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/25 border-l-[#FF6B6B]",
+        hlRing: "ring-[#FF6B6B]",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(255,107,107,0.6)]",
     },
     kegiatan: {
         label: "Kegiatan",
         dot: "bg-emerald-500",
         chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
         bar: "bg-emerald-50 text-emerald-800 border-emerald-200 border-l-emerald-500",
+        hlRing: "ring-emerald-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(16,185,129,0.55)]",
     },
     contract_start: {
         label: "Kontrak mulai",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
         bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
+        hlRing: "ring-purple-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(168,85,247,0.55)]",
     },
     contract_end: {
         label: "Kontrak berakhir",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
         bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
+        hlRing: "ring-purple-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(168,85,247,0.55)]",
     },
     sidak: {
         label: "Sidak",
         dot: "bg-amber-500",
         chip: "bg-amber-50 text-amber-900 border-amber-200",
         bar: "bg-amber-50 text-amber-900 border-amber-200 border-l-amber-500",
+        hlRing: "ring-amber-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(245,158,11,0.6)]",
     },
     loo_received: {
         label: "LOO diterima",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_submitted: {
         label: "LOO disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_completed: {
         label: "LOO selesai",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_track_expired: {
         label: "Tracking expired",
         dot: "bg-gray-400",
         chip: "bg-gray-50 text-gray-600 border-gray-200",
         bar: "bg-gray-50 text-gray-600 border-gray-200 border-l-gray-400",
+        hlRing: "ring-gray-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(156,163,175,0.6)]",
     },
     section_filled: {
         label: "Section diisi",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     section_submitted: {
         label: "Section disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        hlRing: "ring-indigo-400",
+        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
 };
 
@@ -223,6 +249,16 @@ export default function EventCalendar({
         () => (byDay[selected] ?? []).map((x) => x.e),
         [byDay, selected],
     );
+
+    // Event rentang yang menyentuh tanggal terpilih — sel-selnya disorot
+    // dari awal sampai akhir agar batas event langsung kelihatan.
+    const highlightIds = useMemo(() => {
+        const set = new Set();
+        (byDay[selected] ?? []).forEach(({ e }) => {
+            if (e.end && e.end !== e.start) set.add(e.id);
+        });
+        return set;
+    }, [byDay, selected]);
     const agenda = useMemo(() => {
         const today = dayKey(new Date());
         return events
@@ -491,6 +527,7 @@ export default function EventCalendar({
                                             const meta =
                                                 TYPE_META[e.type] ??
                                                 TYPE_META.permit;
+                                            const isHl = highlightIds.has(e.id);
                                             const urgent = !!e.urgent;
                                             const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
                                             if (seg === "middle") {
@@ -499,7 +536,7 @@ export default function EventCalendar({
                                                         key={e.id}
                                                         title={rangeTitle}
                                                         aria-hidden="true"
-                                                        className={`block h-1.5 rounded-full mt-[7px] ${meta.dot}`}
+                                                        className={`block rounded-full ${isHl ? `h-2.5 mt-[5px] ${meta.hlGlow}` : "h-1.5 mt-[7px]"} ${meta.dot}`}
                                                     />
                                                 );
                                             }
@@ -518,7 +555,7 @@ export default function EventCalendar({
                                                     >
                                                         <span
                                                             aria-hidden="true"
-                                                            className={`h-1.5 flex-1 rounded-r-full ${meta.dot}`}
+                                                            className={`${isHl ? `h-2.5 ${meta.hlGlow}` : "h-1.5"} flex-1 rounded-r-full ${meta.dot}`}
                                                         />
                                                         <span className="text-[10px] font-medium text-gray-500 tabular-nums">
                                                             s/d {endLabel}
@@ -534,7 +571,7 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""}`}
+                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""} ${isHl ? `ring-2 ${meta.hlRing} ${meta.hlGlow}` : ""}`}
                                                 >
                                                     {e.title}
                                                 </Link>
@@ -547,12 +584,16 @@ export default function EventCalendar({
                                         )}
                                     </div>
                                     <div className="mt-1 flex sm:hidden items-center justify-start gap-0.5 flex-wrap min-h-[6px]">
-                                        {dayEvents.slice(0, 4).map(({ e }) => (
-                                            <span
-                                                key={e.id}
-                                                className={`w-1.5 h-1.5 rounded-full ${(TYPE_META[e.type] ?? TYPE_META.permit).dot}`}
-                                            />
-                                        ))}
+                                        {dayEvents.slice(0, 4).map(({ e }) => {
+                                            const m = TYPE_META[e.type] ?? TYPE_META.permit;
+                                            const isHl = highlightIds.has(e.id);
+                                            return (
+                                                <span
+                                                    key={e.id}
+                                                    className={`rounded-full ${m.dot} ${isHl ? `w-2.5 h-2.5 ring-2 ${m.hlRing}` : "w-1.5 h-1.5"}`}
+                                                />
+                                            );
+                                        })}
                                         {dayEvents.some(({ e }) => e.urgent) && (
                                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                                         )}
@@ -613,6 +654,7 @@ function DayPanel({ dateKey, events }) {
         day: "numeric",
         month: "long",
     });
+    const spanCount = events.filter((e) => e.end && e.end !== e.start).length;
     return (
         <div
             className="mt-3 rounded-xl border border-[#E2E5EA] bg-gray-50/60 p-3"
@@ -621,6 +663,11 @@ function DayPanel({ dateKey, events }) {
             <p className="text-xs font-semibold text-gray-900 capitalize">
                 {label} · {events.length} agenda
             </p>
+            {spanCount > 0 && (
+                <p className="mt-0.5 text-[11px] text-gray-500">
+                    Menyorot {spanCount} event rentang — sel terwarnai dari awal sampai akhir.
+                </p>
+            )}
             {events.length === 0 ? (
                 <p className="mt-1 text-xs text-gray-400">
                     Tidak ada agenda hari ini.
