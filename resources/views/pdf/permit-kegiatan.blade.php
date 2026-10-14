@@ -6,30 +6,30 @@
         @page { size: A4; margin: 14mm 13mm; }
         * { box-sizing: border-box; }
         body { font-family: sans-serif; color: #111827; margin: 0; }
-        .frame { border: 1.5px solid #111827; padding: 0; }
-        .inner { padding: 22px 30px 18px; }
+        .frame { border: 2px solid #111827; padding: 0; height: 267mm; }
+        .inner { padding: 30px 36px 22px; }
         .kop { margin-bottom: 4px; }
-        .kop img { width: 150px; }
-        .title { text-align: center; margin: 14px 0 2px; font-size: 21px; font-weight: bold; letter-spacing: 1px; }
-        .title u { text-decoration-thickness: 2px; text-underline-offset: 4px; }
-        .subtitle { text-align: center; font-size: 10px; color: #374151; margin-bottom: 10px; }
-        .nobox { text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 1px; margin-bottom: 12px; }
-        table.unit { width: 78%; margin: 0 auto 18px; border-collapse: collapse; }
-        table.unit th { font-size: 12px; letter-spacing: 1px; border: 1px solid #111827; padding: 5px 8px; background: #f3f4f6; }
-        table.unit td { font-size: 19px; font-weight: bold; text-align: center; border: 1px solid #111827; padding: 6px 8px; }
+        .kop img { width: 185px; }
+        .title { text-align: center; margin: 20px 0 4px; font-size: 30px; font-weight: bold; letter-spacing: 1px; }
+        .title u { text-decoration-thickness: 2.5px; text-underline-offset: 5px; }
+        .subtitle { text-align: center; font-size: 12px; color: #374151; margin-bottom: 12px; }
+        .nobox { text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 16px; }
+        table.unit { width: 86%; margin: 0 auto 22px; border-collapse: collapse; }
+        table.unit th { font-size: 14px; letter-spacing: 1px; border: 1px solid #111827; padding: 7px 8px; background: #f3f4f6; }
+        table.unit td { font-size: 24px; font-weight: bold; text-align: center; border: 1px solid #111827; padding: 9px 8px; }
         table.rows { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-        table.rows td { padding: 7px 2px; vertical-align: top; font-size: 14px; font-weight: bold; }
-        table.rows td.k { width: 235px; white-space: nowrap; }
-        table.rows td.sep { width: 14px; }
-        .sign { margin-top: 26px; }
+        table.rows td { padding: 10px 2px; vertical-align: top; font-size: 17px; font-weight: bold; }
+        table.rows td.k { width: 270px; white-space: nowrap; }
+        table.rows td.sep { width: 16px; }
+        .sign { margin-top: 60px; }
         .sign table { width: 100%; border-collapse: collapse; }
-        .sign td { vertical-align: top; font-size: 12px; }
-        .sign .right { text-align: center; width: 250px; }
+        .sign td { vertical-align: top; font-size: 14px; }
+        .sign .right { text-align: center; width: 280px; }
         .sign .name { font-weight: bold; text-decoration: underline; text-underline-offset: 3px; }
-        .qrbox { width: 150px; text-align: center; }
-        .qrbox img { width: 92px; height: 92px; border: 1px solid #9ca3af; }
-        .qrbox .cap { font-size: 8px; color: #4b5563; margin-top: 2px; }
-        .foot { margin-top: 10px; border-top: 1px solid #d1d5db; padding-top: 5px; font-size: 8.5px; color: #6b7280; text-align: right; }
+        .qrbox { width: 170px; text-align: center; }
+        .qrbox img { width: 130px; height: 130px; border: 1px solid #9ca3af; }
+        .qrbox .cap { font-size: 9px; color: #4b5563; margin-top: 3px; }
+        .foot { margin-top: 50px; border-top: 1px solid #d1d5db; padding-top: 6px; font-size: 9px; color: #6b7280; text-align: right; }
     </style>
 </head>
 <body>
@@ -70,7 +70,7 @@
                     <tr>
                         <td class="qrbox">
                             @if ($scanUrl)
-                                <img src="data:image/svg+xml;base64,{{ base64_encode((string) QrCode::size(140)->generate($scanUrl)) }}" alt="QR verifikasi">
+                                <img src="data:image/svg+xml;base64,{{ base64_encode((string) QrCode::size(200)->generate($scanUrl)) }}" alt="QR verifikasi">
                                 <div class="cap">Pindai untuk verifikasi</div>
                             @endif
                         </td>
