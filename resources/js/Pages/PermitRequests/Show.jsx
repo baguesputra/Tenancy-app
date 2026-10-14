@@ -484,7 +484,6 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                                 <div className="flex items-start gap-3">
                                     <img src={share.qr} alt="QR publik surat izin" className="w-24 h-24 rounded-lg border border-gray-200 shrink-0" />
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-xs text-gray-700 font-mono break-all">{share.url}</p>
                                         <div className="flex flex-wrap gap-2 mt-2.5 print:hidden">
                                             <button
                                                 type="button"
