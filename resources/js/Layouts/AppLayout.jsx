@@ -180,7 +180,7 @@ export default function AppLayout({ children }) {
             )}
 
             <aside
-                className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0F1E36] transition-all duration-200
+                className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0F1E36] transition-all duration-200 print:hidden
                     ${collapsed ? 'w-[72px]' : 'w-[232px]'}
                     ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
                 aria-label="Navigasi utama"
@@ -360,7 +360,7 @@ function Topbar({ user, onMenuClick, csrfToken }) {
     }, [notifOpen, profileOpen]);
 
     return (
-        <header className="sticky top-0 z-20 h-16 shrink-0 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-[#E2E5EA]">
+        <header className="sticky top-0 z-20 h-16 shrink-0 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-[#E2E5EA] print:hidden">
             <div className="flex items-center justify-between h-full px-4 sm:px-6 gap-3">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <button

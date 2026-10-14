@@ -13,6 +13,11 @@ export default function InspectionStatus({ inspection, checklistSnapshot, progre
                     </p>
                     <h1 className="mt-2 text-xl font-bold text-gray-900">{inspection.store_name}</h1>
                     <p className="mt-1 text-sm text-gray-500">{inspection.template_name}</p>
+                    {(inspection.location || inspection.session_started_at) && (
+                        <p className="mt-1 text-xs text-gray-500">
+                            {[inspection.location, inspection.session_started_at].filter(Boolean).join(' · ')}
+                        </p>
+                    )}
                     <p className="mt-3 text-sm text-gray-600">
                         Terisi <span className="font-semibold text-gray-900 tabular-nums">{progress?.answered ?? 0}/{progress?.total ?? 0}</span> item ({pct}%)
                     </p>
@@ -23,14 +28,14 @@ export default function InspectionStatus({ inspection, checklistSnapshot, progre
 
                 {sections.map((section, si) => (
                     <div key={si} className="bg-white border border-[#E2E5EA] rounded-2xl p-5 sm:p-6">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{section.title ?? `Bagian ${si + 1}`}</p>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{section.name ?? `Bagian ${si + 1}`}</p>
                         <div className="space-y-3">
                             {(section.items ?? []).map((item) => (
                                 <div key={item.id} className="rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5">
                                     <p className="text-sm font-medium text-gray-900">{item.label ?? item.question ?? '—'}</p>
                                     <p className="mt-1 text-sm">
                                         {item.answer?.value
-                                            ? <span className={`font-semibold ${item.answer.value === 'Tidak' ? 'text-red-700' : 'text-emerald-700'}`}>{item.answer.value}</span>
+                                            ? <span className={`font-semibold ${item.answer.value === item.option_negative ? 'text-red-700' : 'text-emerald-700'}`}>{item.answer.value}</span>
                                             : <span className="text-gray-400">Belum diisi</span>}
                                     </p>
                                     {item.answer?.note && (

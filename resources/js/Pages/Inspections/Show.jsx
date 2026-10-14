@@ -10,7 +10,14 @@ import initials from '@/utils/initials';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-export default function Show({ inspection, checklistSnapshot, share, extraPhotos = [] }) {
+const formatTanggalSidak = (value) => {
+    if (!value) return null;
+    const d = new Date(value.replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return value;
+    return new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(d);
+};
+
+export default function Show({ inspection, checklistSnapshot, share, extraPhotos = [], formHeader = {} }) {
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
     const [savingItemId, setSavingItemId] = useState(null);
     const [itemError, setItemError] = useState({});
@@ -193,10 +200,27 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                             <p className="text-xs text-gray-500 truncate mt-0.5">
                                 {inspection.tenant?.product_category?.name} — {snapshot.template_name}
                             </p>
+                            {(formHeader.inspected_at || formHeader.location) && (
+                                <div className="mt-1.5 space-y-0.5">
+                                    {formHeader.inspected_at && (
+                                        <p className="text-xs text-gray-600">Hari / Tanggal: <span className="font-medium text-gray-800">{formatTanggalSidak(formHeader.inspected_at)}</span></p>
+                                    )}
+                                    {formHeader.location && (
+                                        <p className="text-xs text-gray-600">Lokasi: <span className="font-medium text-gray-800">{formHeader.location}</span></p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <Badge color={inspection.status === 'completed' ? 'green' : 'yellow'} size="md">
                             {inspection.status === 'completed' ? 'Selesai' : 'Draft'}
                         </Badge>
+                        <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="print:hidden shrink-0 inline-flex items-center px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 min-h-[44px]"
+                        >
+                            Cetak
+                        </button>
                     </div>
                     <div className="flex items-center gap-2.5 mt-4">
                         <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={stats.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress checklist">
@@ -213,7 +237,7 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                 )}
 
                 {share && (
-                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-4 sm:p-5 mb-4">
+                    <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-4 sm:p-5 mb-4 print:hidden">
                         <div className="flex flex-wrap items-center gap-4">
                             <img src={share.qr} alt="QR hasil sidak untuk tenant" className="w-24 h-24 rounded-lg border border-gray-200 shrink-0" />
                             <div className="min-w-0 flex-1">
@@ -267,7 +291,8 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                             )}
 
                                             {item.type === 'binary_choice' ? (
-                                                <div className="flex gap-2 mb-2 sm:max-w-xl">
+                                                <>
+                                                    <div className="flex gap-2 mb-2 sm:max-w-xl print:hidden">
                                                     <button
                                                         type="button"
                                                         disabled={isLocked}
@@ -294,7 +319,11 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                                     >
                                                         {item.option_negative}
                                                     </button>
-                                                </div>
+                                                    </div>
+                                                    <p className="hidden print:block text-sm mb-2">
+                                                        Jawaban: <span className="font-semibold">{item.answer?.value ?? '—'}</span>
+                                                    </p>
+                                                </>
                                             ) : (
                                                 <textarea
                                                     disabled={isLocked}
@@ -319,13 +348,15 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
 
                                             {item.type === 'binary_choice' && (
                                                 <div className="sm:flex sm:items-start sm:gap-3">
-                                                    <RealtimePhotoCapture
-                                                        tenantName={inspection.tenant?.name}
-                                                        disabled={isLocked}
-                                                        buttonLabel={item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length})` : 'Ambil Foto'}
-                                                        buttonHint="Kamera realtime"
-                                                        onCapture={(file) => handlePhotoUpload(sectionIdx, itemIdx, item, file)}
-                                                    />
+                                                    <div className="print:hidden">
+                                                        <RealtimePhotoCapture
+                                                            tenantName={inspection.tenant?.name}
+                                                            disabled={isLocked}
+                                                            buttonLabel={item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length})` : 'Ambil Foto'}
+                                                            buttonHint="Kamera realtime"
+                                                            onCapture={(file) => handlePhotoUpload(sectionIdx, itemIdx, item, file)}
+                                                        />
+                                                    </div>
 
                                                     {item.answer?.photos?.length > 0 && (
                                                         <div className="flex gap-2 flex-wrap mt-2 sm:mt-0">
@@ -390,6 +421,40 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                 </div>
                             </div>
                         </section>
+                        <section className="bg-white rounded-2xl border border-[#E2E5EA] p-4 sm:p-6 mb-3.5 shadow-sm">
+                            <div className="mb-4 pb-2.5 border-b border-gray-100">
+                                <h2 className="text-sm sm:text-[15px] font-semibold text-[#0F1E36]">Mengetahui & Petugas Sidak</h2>
+                            </div>
+                            <div className="grid sm:grid-cols-2 gap-5">
+                                <div>
+                                    <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Mengetahui tenant</p>
+                                    <p className="text-sm font-semibold text-gray-900">{formHeader.tenant_pic?.name ?? '—'}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {[formHeader.tenant_pic?.position, formHeader.tenant_pic?.phone].filter(Boolean).join(' · ') || '—'}
+                                    </p>
+                                    <div className="h-14 border-b border-gray-300 mt-2" aria-hidden="true" />
+                                    <p className="text-[11px] text-gray-400 mt-1">Tanda tangan + nama jelas</p>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Petugas sidak</p>
+                                    <p className="text-sm text-gray-800">PIC: <span className="font-semibold text-gray-900">{formHeader.pic ?? '—'}</span></p>
+                                    {(formHeader.officers ?? []).length > 0 ? (
+                                        <ul className="mt-1.5 space-y-1">
+                                            {formHeader.officers.map((o, i) => (
+                                                <li key={i} className="text-sm text-gray-800">
+                                                    <span className="font-medium">{o.name}</span>
+                                                    {o.department && <span className="text-xs text-gray-500"> — {o.department}</span>}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-xs text-gray-400 mt-1">Belum ada tim peserta.</p>
+                                    )}
+                                    <div className="h-14 border-b border-gray-300 mt-2" aria-hidden="true" />
+                                    <p className="text-[11px] text-gray-400 mt-1">Tanda tangan petugas</p>
+                                </div>
+                            </div>
+                        </section>
                         <ExtraPhotosSection
                             inspectionId={inspection.id}
                             tenantName={inspection.tenant?.name}
@@ -398,7 +463,7 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                         />
                     </div>
 
-                    <aside className="hidden lg:block sticky top-24 space-y-4">
+                    <aside className="hidden lg:block sticky top-24 space-y-4 print:hidden">
                         <div className="bg-[#0F1E36] text-white rounded-2xl p-5 shadow-sm">
                             <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold mb-1">Progress Sidak</p>
                             <p className="text-2xl font-bold tabular-nums">{stats.pct}%</p>
@@ -437,7 +502,7 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                 </div>
 
                 {!isLocked && (
-                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E5EA] p-4 z-10" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E5EA] p-4 z-10 print:hidden" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
                         <Button variant="primary" onClick={() => setConfirmComplete(true)} className="w-full max-w-3xl mx-auto justify-center block !py-3.5 min-h-[52px] text-[15px]">
                             Selesai — Simpan Checklist Ini
                         </Button>
@@ -547,7 +612,7 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
                                     disabled={deletingId === photo.id}
                                     onClick={() => removePhoto(photo.id)}
                                     aria-label="Hapus foto"
-                                    className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-black/60 text-white text-base leading-none hover:bg-black/80 transition-colors disabled:opacity-50"
+                                    className="print:hidden absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-black/60 text-white text-base leading-none hover:bg-black/80 transition-colors disabled:opacity-50"
                                 >
                                     ×
                                 </button>
@@ -558,16 +623,18 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
             )}
 
             {!locked && !pending && (
-                <RealtimePhotoCapture
-                    tenantName={tenantName}
-                    buttonLabel={photos.length > 0 ? `Tambah Foto (${photos.length})` : 'Ambil Foto'}
-                    buttonHint="Kamera realtime"
-                    onCapture={(file) => setPending({ file, url: URL.createObjectURL(file) })}
-                />
+                <div className="print:hidden">
+                    <RealtimePhotoCapture
+                        tenantName={tenantName}
+                        buttonLabel={photos.length > 0 ? `Tambah Foto (${photos.length})` : 'Ambil Foto'}
+                        buttonHint="Kamera realtime"
+                        onCapture={(file) => setPending({ file, url: URL.createObjectURL(file) })}
+                    />
+                </div>
             )}
 
             {!locked && pending && (
-                <div className="space-y-2">
+                <div className="space-y-2 print:hidden">
                     <img src={pending.url} alt="Pratinjau foto lain-lain" className="w-full aspect-[4/3] object-cover rounded-xl border border-gray-200" />
                     <input
                         value={description}

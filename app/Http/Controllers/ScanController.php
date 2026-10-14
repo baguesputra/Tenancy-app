@@ -84,7 +84,7 @@ class ScanController extends Controller
 
     private function handleInspection(Inspection $inspection)
     {
-        $inspection->load(['tenant:id,name', 'session', 'answers.photos']);
+        $inspection->load(['tenant:id,name', 'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number', 'session', 'answers.photos']);
 
         // Hasil sidak hanya boleh dilihat publik setelah selesai.
         $done = $inspection->status === 'completed'
@@ -122,6 +122,13 @@ class ScanController extends Controller
                 'status' => $inspection->status,
                 'session_status' => $inspection->session->status,
                 'session_started_at' => $inspection->session->started_at?->toDateTimeString(),
+                'location' => ($unit = $inspection->tenant?->activeTenancy?->unit)
+                    ? trim(collect([
+                        $unit->floor ? "Lantai {$unit->floor}" : null,
+                        $unit->block ? "Blok {$unit->block}" : null,
+                        $unit->unit_number ? "No. {$unit->unit_number}" : null,
+                    ])->filter()->implode(' · ')) ?: null
+                    : null,
             ],
             'checklistSnapshot' => $snapshot,
             'progress' => ['answered' => $answered, 'total' => $total],

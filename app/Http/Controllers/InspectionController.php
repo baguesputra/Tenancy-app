@@ -22,7 +22,12 @@ class InspectionController extends Controller
     {
         $this->authorizeAccess($inspection, $request);
 
-        $inspection->load(['tenant.productCategory', 'session', 'answers.photos', 'extraPhotos']);
+        $inspection->load([
+            'tenant.productCategory',
+            'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number',
+            'session', 'session.user:id,name', 'session.participants',
+            'answers.photos', 'extraPhotos',
+        ]);
 
         // Gabungkan snapshot checklist dengan jawaban yang sudah ada,
         // supaya frontend tinggal render tanpa perlu query terpisah
@@ -44,6 +49,8 @@ class InspectionController extends Controller
             }
         }
 
+        $unit = $inspection->tenant->activeTenancy?->unit;
+
         return Inertia::render('Inspections/Show', [
             'inspection' => [
                 'id' => $inspection->id,
@@ -53,6 +60,25 @@ class InspectionController extends Controller
                 'tenant' => $inspection->tenant,
                 'session_id' => $inspection->inspection_session_id,
                 'session_status' => $inspection->session->status,
+            ],
+            // Kop formulir ala form sidak Excel (read-only).
+            'formHeader' => [
+                'inspected_at' => $inspection->session->started_at?->toDateTimeString(),
+                'location' => $unit ? trim(collect([
+                    $unit->floor ? "Lantai {$unit->floor}" : null,
+                    $unit->block ? "Blok {$unit->block}" : null,
+                    $unit->unit_number ? "No. {$unit->unit_number}" : null,
+                ])->filter()->implode(' · ')) ?: null : null,
+                'tenant_pic' => [
+                    'name' => $inspection->tenant->pic_name,
+                    'position' => $inspection->tenant->pic_position,
+                    'phone' => $inspection->tenant->pic_phone,
+                ],
+                'officers' => $inspection->session->participants->map(fn ($p) => [
+                    'name' => $p->name_snapshot,
+                    'department' => $p->department_name_snapshot,
+                ])->values(),
+                'pic' => $inspection->session->user?->name,
             ],
             'checklistSnapshot' => $snapshot,
             'share' => $this->publicShare($inspection),
