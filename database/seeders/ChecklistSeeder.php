@@ -30,8 +30,8 @@ class ChecklistSeeder extends Seeder
 
         $order = 1;
 
-        // --- Non-F&B (Anchor / Fashion / retail, dari FORM EVALUASI STANDAR TENANT) ---
-        $this->createSection($template, 'Kondisi Unit', $order++, $nonFnb, [
+        // --- Non-F&B di luar lantai dasar (dari FORM EVALUASI STANDAR TENANT) ---
+        $this->createSection($template, 'Kondisi Unit', $order++, $nonFnb, 'non_ground', [
             'Dinding' => ['baik', 'tidak baik'],
             'Lantai' => ['baik', 'tidak baik'],
             'Plafond' => ['baik', 'tidak baik'],
@@ -39,14 +39,14 @@ class ChecklistSeeder extends Seeder
             'Display Produk' => ['rapi', 'tidak rapi'],
             'Banner Promosi' => ['rapi', 'tidak rapi'],
         ]);
-        $this->createSection($template, 'AC & Ventilation', $order++, $nonFnb, [
+        $this->createSection($template, 'AC & Ventilation', $order++, $nonFnb, 'non_ground', [
             'Suhu Ruangan' => ['normal', 'tidak normal'],
             'Diffuser AC' => ['baik', 'tidak baik'],
             'RAG' => ['baik', 'tidak baik'],
             'Ruang AHU' => ['baik', 'tidak baik'],
             'Supply AC' => null, // free_text, di form asli tanpa pasangan opsi
         ]);
-        $this->createSection($template, 'Kelistrikan', $order++, $nonFnb, [
+        $this->createSection($template, 'Kelistrikan', $order++, $nonFnb, 'non_ground', [
             'Signage' => ['nyala', 'mati'],
             'Lampu Dalam Unit' => ['nyala', 'mati'],
             'Lampu Standby' => ['ada', 'tidak ada'],
@@ -54,21 +54,21 @@ class ChecklistSeeder extends Seeder
             'Jalur Kabel' => ['rapi', 'tidak rapi'],
             'Stop Kontak' => ['baik', 'tidak baik'],
         ]);
-        $this->createSection($template, 'Security', $order++, $nonFnb, [
+        $this->createSection($template, 'Security', $order++, $nonFnb, 'non_ground', [
             'CCTV' => ['ada', 'tidak ada'],
             'RF Security Gate' => ['ada', 'tidak ada'],
             'Alarm Sensor' => ['ada', 'tidak ada'],
             'Entrance Unit' => ['pintu kaca', 'rolling door'],
             'Kunci / Gembok Unit' => ['baik', 'tidak baik'],
         ]);
-        $this->createSection($template, 'Protection', $order++, $nonFnb, [
+        $this->createSection($template, 'Protection', $order++, $nonFnb, 'non_ground', [
             'Springkler' => ['ada', 'tidak ada'],
             'Heat Detector' => ['ada', 'tidak ada'],
             'Smoke Detector' => ['ada', 'tidak ada'],
             'APAR' => ['ada', 'tidak ada'],
             'Hydrant' => ['ada', 'tidak ada'],
         ]);
-        $this->createSection($template, 'Gudang / Storage', $order++, $nonFnb, [
+        $this->createSection($template, 'Gudang / Storage', $order++, $nonFnb, 'non_ground', [
             'Susunan Barang' => ['rapi', 'tidak rapi'],
             'Daya Tampung' => ['cukup', 'overload'],
             'Kebersihan' => ['baik', 'tidak baik'],
@@ -76,6 +76,32 @@ class ChecklistSeeder extends Seeder
             'Kondisi Ruangan' => ['baik', 'tidak baik'],
             'Rak' => ['ada', 'tidak ada'],
             'Bahan Mudah Terbakar' => ['ada', 'tidak ada'],
+        ]);
+
+        // --- Non-F&B di lantai dasar/GF (dari SIDAK TENANT NON-FNB Lantai Dasar) ---
+        $this->createSection($template, 'Sipil (Lantai Dasar)', $order++, $nonFnb, 'ground_only', [
+            'Lantai' => ['baik', 'tidak baik'],
+            'Dinding' => ['baik', 'tidak baik'],
+            'Plafond' => ['baik', 'tidak baik'],
+            'Rolling Door' => ['baik', 'tidak baik'],
+        ]);
+        $this->createSection($template, 'Safety Tools (Lantai Dasar)', $order++, $nonFnb, 'ground_only', [
+            'CCTV' => ['ada', 'tidak ada'],
+            'Sprinkler' => ['ada', 'tidak ada'],
+            'Head Detector' => ['ada', 'tidak ada'],
+            'Smoke Detector' => ['ada', 'tidak ada'],
+            'Pest Control' => ['ada', 'tidak ada'],
+            'Emergency Lamp' => ['ada', 'tidak ada'],
+        ]);
+        $this->createSection($template, 'Elektrikal (Lantai Dasar)', $order++, $nonFnb, 'ground_only', [
+            'Lampu Dalam Unit' => ['nyala', 'mati'],
+            'Signage' => ['nyala', 'mati'],
+            'Instalasi Listrik' => ['baik', 'tidak baik'],
+        ]);
+        $this->createSection($template, 'Produk Jualan', $order++, $nonFnb, 'ground_only', [
+            'Kerapian' => ['rapi', 'tidak rapi'],
+            'Kebersihan' => ['baik', 'tidak baik'],
+            'Batasan Area' => ['baik', 'tidak baik'],
         ]);
 
         // --- F&B (dari TENANT INSPECTION REPORT, pasangan Ok/Tidak) ---
@@ -106,11 +132,12 @@ class ChecklistSeeder extends Seeder
         string $name,
         int $order,
         ?array $scope,
+        ?string $floorScope,
         array $items
     ): void {
         $section = $template->sections()->updateOrCreate(
             ['name' => $name],
-            ['order' => $order, 'scope_product_categories' => $scope]
+            ['order' => $order, 'scope_product_categories' => $scope, 'floor_scope' => $floorScope]
         );
 
         $itemOrder = 1;
@@ -145,6 +172,7 @@ class ChecklistSeeder extends Seeder
             $name,
             $order,
             $scope,
+            null,
             array_fill_keys($labels, [$optionPositive, $optionNegative])
         );
     }

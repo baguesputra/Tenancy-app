@@ -6,8 +6,10 @@ use App\Models\Branch;
 use App\Models\ChecklistTemplate;
 use App\Models\InspectionSession;
 use App\Models\ProductCategory;
+use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Services\InspectionService;
 use Database\Seeders\ChecklistSeeder;
@@ -41,6 +43,20 @@ class UnifiedChecklistTemplateTest extends TestCase
                 : null,
             'is_active' => true,
         ]);
+    }
+
+    private function placeOnFloor(Branch $branch, Tenant $tenant, string $floor): Tenant
+    {
+        $unit = Unit::create([
+            'branch_id' => $branch->id,
+            'floor' => $floor, 'block' => 'A', 'unit_number' => '1',
+        ]);
+        Tenancy::create([
+            'unit_id' => $unit->id, 'tenant_id' => $tenant->id,
+            'status' => 'active', 'start_date' => now()->toDateString(),
+        ]);
+
+        return $tenant->load('activeTenancy.unit');
     }
 
     private function sectionNames(array $snapshot): array
@@ -98,7 +114,49 @@ class UnifiedChecklistTemplateTest extends TestCase
             ChecklistTemplate::where('name', 'Form Sidak Tenant')->firstOrFail()->toSnapshotArray()
         );
 
-        $this->assertCount(11, $names);
+        $this->assertCount(15, $names);
+    }
+
+    public function test_snapshot_tenant_gf_hanya_section_lantai_dasar(): void
+    {
+        [$branch, $tc] = $this->seedBase();
+        $tenant = $this->placeOnFloor($branch, $this->makeTenant($branch, $tc, 'Retail'), 'GF');
+
+        $names = $this->sectionNames(
+            ChecklistTemplate::where('name', 'Form Sidak Tenant')->firstOrFail()->toSnapshotArray($tenant)
+        );
+
+        $this->assertSame(
+            ['Sipil (Lantai Dasar)', 'Safety Tools (Lantai Dasar)', 'Elektrikal (Lantai Dasar)', 'Produk Jualan'],
+            $names
+        );
+    }
+
+    public function test_snapshot_tenant_lantai_atas_tetap_section_evaluasi(): void
+    {
+        [$branch, $tc] = $this->seedBase();
+        $tenant = $this->placeOnFloor($branch, $this->makeTenant($branch, $tc, 'Retail'), '1');
+
+        $names = $this->sectionNames(
+            ChecklistTemplate::where('name', 'Form Sidak Tenant')->firstOrFail()->toSnapshotArray($tenant)
+        );
+
+        $this->assertSame(
+            ['Kondisi Unit', 'AC & Ventilation', 'Kelistrikan', 'Security', 'Protection', 'Gudang / Storage'],
+            $names
+        );
+    }
+
+    public function test_snapshot_tenant_fnb_di_gf_tetap_section_fnb(): void
+    {
+        [$branch, $tc] = $this->seedBase();
+        $tenant = $this->placeOnFloor($branch, $this->makeTenant($branch, $tc, 'F&B'), 'GF');
+
+        $names = $this->sectionNames(
+            ChecklistTemplate::where('name', 'Form Sidak Tenant')->firstOrFail()->toSnapshotArray($tenant)
+        );
+
+        $this->assertSame(['Civil', 'Safety Tools', 'Kitchen', 'Plumbing', 'Electrical'], $names);
     }
 
     public function test_add_inspection_menyimpan_snapshot_terfilter(): void

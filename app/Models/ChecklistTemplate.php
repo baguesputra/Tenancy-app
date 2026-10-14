@@ -25,12 +25,13 @@ class ChecklistTemplate extends Model
     public function toSnapshotArray(?Tenant $tenant = null): array
     {
         $categoryName = $tenant?->productCategory?->name;
+        $floor = $tenant?->activeTenancy?->unit?->floor;
 
         return [
             'template_id' => $this->id,
             'template_name' => $this->name,
             'sections' => $this->sections
-                ->filter(fn ($section) => $section->isVisibleFor($categoryName))
+                ->filter(fn ($section) => $section->isVisibleFor($categoryName, $floor))
                 ->values()
                 ->map(function ($section) {
                     return [
