@@ -177,6 +177,8 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/fitout-tempel', [PermitRequestController::class, 'fitoutTempel'])->name('permit-requests.fitout-tempel');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/peraturan-fitout', [PermitRequestController::class, 'peraturanFitout'])->name('permit-requests.peraturan-fitout');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/tata-tertib-lembur', [PermitRequestController::class, 'tataTertibLembur'])->name('permit-requests.tata-tertib-lembur');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/kode-fitout', [PermitRequestController::class, 'kodeFitout'])->name('permit-requests.kode-fitout');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/penitipan-barang', [PermitRequestController::class, 'penitipanBarang'])->name('permit-requests.penitipan-barang');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/qr-label', [PermitRequestController::class, 'qrLabel'])->name('permit-requests.qr-label');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
     Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');

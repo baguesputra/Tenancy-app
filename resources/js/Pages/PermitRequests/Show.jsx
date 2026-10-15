@@ -183,7 +183,14 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     ? [{ label: 'Pernyataan Kontraktor', description: 'Data vendor di surat ini', href: `/permit-requests/${permit.id}/pernyataan-kontraktor`, icon: docIcon, format: 'PDF' }]
                     : [{ label: 'Pernyataan Kontraktor', disabled: true, disabledHint: 'Lengkapi data kontraktor di surat izin dulu', icon: docIcon, format: 'PDF' }]),
                 { label: 'Tempel Unit', description: 'Dilekatkan di depan unit', href: `/permit-requests/${permit.id}/fitout-tempel`, icon: docIcon, format: 'PDF' },
+                { label: 'Kode Fit Out', description: 'Kartu kontraktor / unit', href: `/permit-requests/${permit.id}/kode-fitout`, icon: docIcon, format: 'PDF' },
                 { label: 'Peraturan Fit Out', description: 'Tata tertib pekerja fit out', href: `/permit-requests/${permit.id}/peraturan-fitout`, icon: docIcon, format: docFiles['peraturan-fitout'] ?? 'PDF' },
+            ],
+        }] : []),
+        ...((permit.activity_types ?? []).some((v) => ['masuk_barang', 'fit_out'].includes(v)) ? [{
+            title: 'Penitipan',
+            items: [
+                { label: 'Penitipan Barang', description: 'Ijin loading dock DM 1', href: `/permit-requests/${permit.id}/penitipan-barang`, icon: docIcon, format: docFiles['penitipan-barang'] ?? 'PDF' },
             ],
         }] : []),
         ...(isLembur ? [{

@@ -296,6 +296,7 @@ class PermitRequestController extends Controller
             'doc_files' => [
                 'peraturan-fitout' => $this->staticDocFormat($permitRequest, 'peraturan-fitout'),
                 'tata-tertib-lembur' => $this->staticDocFormat($permitRequest, 'tata-tertib-lembur'),
+                'penitipan-barang' => $this->staticDocFormat($permitRequest, 'penitipan-barang'),
             ],
         ]);
     }
@@ -649,6 +650,83 @@ class PermitRequestController extends Controller
         $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
 
         return $pdf->download("Tata-Tertib-Lembur-{$safeNumber}.pdf");
+    }
+
+    /** Kode Fit Out — kartu kontraktor/unit, penanggung jawab dari PIC surat ijin. */
+    public function kodeFitout(PermitRequest $permitRequest, Request $request)
+    {
+        $this->guardFitoutDownload($permitRequest, $request);
+        $permitRequest->loadMissing(['tenant', 'branch']);
+
+        $upper = fn (?string $v) => strtoupper($v ?? '—');
+
+        $start = $permitRequest->work_start_date;
+        $end = $permitRequest->work_end_date;
+        $fmtTgl = fn ($d) => $d->locale('id')->translatedFormat('d F Y');
+        $tanggalFitout = ($start && $end && ! $start->eq($end))
+            ? $fmtTgl($start).' – '.$fmtTgl($end)
+            : ((($start ?? $end) ? $fmtTgl($start ?? $end) : '—'));
+
+        $unit = collect([$permitRequest->floor_snapshot, $permitRequest->block_snapshot, $permitRequest->unit_number_snapshot])
+            ->filter()->join(' / ') ?: '—';
+        $workerCount = $permitRequest->worker_count ?? 0;
+
+        $pdf = Pdf::loadView('pdf.permit-kode-fitout', [
+            'permit' => $permitRequest,
+            'namaTenant' => $upper($permitRequest->tenant->name ?? $permitRequest->store_name_snapshot),
+            'unit' => $upper($unit),
+            'penanggungJawab' => $upper($permitRequest->pic_name),
+            'jumlahPekerja' => $workerCount ? '+/- '.$workerCount.' ORANG' : '—',
+            'telepon' => $permitRequest->pic_phone ?: '—',
+            'tanggalFitout' => $tanggalFitout,
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Kode-Fitout-{$safeNumber}.pdf");
+    }
+
+    /** Penitipan barang — file upload (branch → semua branch) atau Blade bawaan. */
+    public function penitipanBarang(PermitRequest $permitRequest, Request $request)
+    {
+        $user = $request->user();
+        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_unless(! empty(array_intersect(['masuk_barang', 'fit_out'], $permitRequest->activity_types ?? [])), 403, 'Penitipan barang hanya untuk izin masuk barang / fit out.');
+        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+
+        if ($doc = StaticDocument::forPermit('penitipan-barang', $permitRequest->branch_id)) {
+            return $doc->downloadResponse();
+        }
+
+        $permitRequest->loadMissing(['tenant', 'branch']);
+
+        $start = $permitRequest->work_start_date;
+        $end = $permitRequest->work_end_date;
+        $fmtTgl = fn ($d) => $d->locale('id')->translatedFormat('d F Y');
+        $periode = ($start && $end && ! $start->eq($end))
+            ? $fmtTgl($start).' – '.$fmtTgl($end)
+            : ((($start ?? $end) ? $fmtTgl($start ?? $end) : '—'));
+
+        $pdf = Pdf::loadView('pdf.permit-penitipan-barang', [
+            'permit' => $permitRequest,
+            'nama' => $permitRequest->contractor_pic ?: $permitRequest->pic_name ?: '—',
+            'namaTenant' => $permitRequest->tenant->name ?? $permitRequest->store_name_snapshot ?? '—',
+            'unit' => collect([$permitRequest->floor_snapshot, $permitRequest->block_snapshot, $permitRequest->unit_number_snapshot])
+                ->filter()->join(' / ') ?: '—',
+            'telepon' => $permitRequest->contractor_phone ?: $permitRequest->pic_phone ?: '—',
+            'periode' => $periode,
+            'kota' => $permitRequest->branch?->name ?? 'Banjarmasin',
+            'tanggalSurat' => $permitRequest->request_date?->locale('id')->translatedFormat('d F Y')
+                ?? now()->locale('id')->translatedFormat('d F Y'),
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Penitipan-Barang-{$safeNumber}.pdf");
     }
 
     private function photoDataUri(?string $path): ?string    {

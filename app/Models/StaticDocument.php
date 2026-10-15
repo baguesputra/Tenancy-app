@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 
 class StaticDocument extends Model
 {
-    public const KEYS = ['peraturan-fitout', 'tata-tertib-lembur'];
+    public const KEYS = ['peraturan-fitout', 'tata-tertib-lembur', 'penitipan-barang'];
 
     protected $fillable = [
         'key', 'branch_id', 'file_path', 'original_name', 'mime', 'size', 'uploaded_by',

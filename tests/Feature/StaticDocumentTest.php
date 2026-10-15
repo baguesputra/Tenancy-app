@@ -129,6 +129,21 @@ class StaticDocumentTest extends TestCase
                 ->where('doc_files.tata-tertib-lembur', null));
     }
 
+    public function test_kode_fitout_dan_penitipan_dijaga_jenis_kegiatan(): void
+    {
+        $user = $this->makeUser();
+        $fitout = $this->makePermit($user, ['fit_out']);
+        $barang = $this->makePermit($user, ['masuk_barang']);
+        $lembur = $this->makePermit($user, ['lembur']);
+
+        $this->actingAs($user)->get("/permit-requests/{$fitout->id}/kode-fitout")->assertOk();
+        $this->actingAs($user)->get("/permit-requests/{$barang->id}/kode-fitout")->assertForbidden();
+
+        $this->actingAs($user)->get("/permit-requests/{$fitout->id}/penitipan-barang")->assertOk();
+        $this->actingAs($user)->get("/permit-requests/{$barang->id}/penitipan-barang")->assertOk();
+        $this->actingAs($user)->get("/permit-requests/{$lembur->id}/penitipan-barang")->assertForbidden();
+    }
+
     public function test_upload_butuh_izin_documents_manage_dan_menimpa_file_lama(): void
     {
         Storage::fake('local');
