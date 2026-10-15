@@ -37,6 +37,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+Route::middleware(['auth', 'can:documents.manage'])->prefix('settings')->name('settings.')->group(function () {
+    Route::get('/documents', [App\Http\Controllers\Settings\StaticDocumentController::class, 'index'])->name('documents.index');
+    Route::post('/documents', [App\Http\Controllers\Settings\StaticDocumentController::class, 'store'])->name('documents.store');
+});
+
 Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users', [UserManagementController::class, 'store']);
@@ -167,6 +172,11 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
     });
 
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/pdf', [PermitRequestController::class, 'pdf'])->name('permit-requests.pdf');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/pernyataan-tenant', [PermitRequestController::class, 'pernyataanTenant'])->name('permit-requests.pernyataan-tenant');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/pernyataan-kontraktor', [PermitRequestController::class, 'pernyataanKontraktor'])->name('permit-requests.pernyataan-kontraktor');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/fitout-tempel', [PermitRequestController::class, 'fitoutTempel'])->name('permit-requests.fitout-tempel');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/peraturan-fitout', [PermitRequestController::class, 'peraturanFitout'])->name('permit-requests.peraturan-fitout');
+    Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/tata-tertib-lembur', [PermitRequestController::class, 'tataTertibLembur'])->name('permit-requests.tata-tertib-lembur');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/qr-label', [PermitRequestController::class, 'qrLabel'])->name('permit-requests.qr-label');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
     Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');

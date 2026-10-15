@@ -7,6 +7,7 @@ use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
 use App\Models\PermitRequest;
 use App\Models\ScannableCode;
+use App\Models\StaticDocument;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermitRequestService;
@@ -531,6 +532,105 @@ class PermitRequestController extends Controller
         return $pdf->download("Izin-Kegiatan-{$safeNumber}.pdf");
     }
 
+    /** Ijin kerja fitout untuk dilekatkan di depan unit — tanpa nomor & QR sesuai template. */
+    public function fitoutTempel(PermitRequest $permitRequest, Request $request)
+    {
+        $this->guardFitoutDownload($permitRequest, $request);
+        $permitRequest->loadMissing(['tenant', 'branch', 'workers']);
+
+        $upper = fn (?string $v) => strtoupper($v ?? '—');
+
+        $start = $permitRequest->work_start_date;
+        $end = $permitRequest->work_end_date;
+        $fmtTgl = fn ($d) => strtoupper($d->locale('id')->translatedFormat('d F Y'));
+        $tanggalKerja = ($start && $end && ! $start->eq($end))
+            ? $fmtTgl($start).' – '.$fmtTgl($end)
+            : ((($start ?? $end) ? $fmtTgl($start ?? $end) : '—'));
+
+        $fmtJam = fn ($t) => $t ? str_replace(':', '.', $t->format('H:i')) : null;
+        $jamParts = array_values(array_filter([
+            $fmtJam($permitRequest->work_start_time),
+            $fmtJam($permitRequest->work_end_time),
+        ]));
+        $jamKerja = $jamParts !== [] ? implode(' – ', $jamParts).' WITA' : '24 JAM';
+
+        $pekerjaan = collect($permitRequest->activity_types ?? [])
+            ->map(fn ($v) => collect(self::ACTIVITY_TYPES)->firstWhere('value', $v)['label'] ?? $v)
+            ->map(fn ($l) => strtoupper($l))
+            ->join(' / ') ?: 'FIT OUT';
+
+        $workerCount = $permitRequest->worker_count ?? $permitRequest->workers->count();
+
+        $pdf = Pdf::loadView('pdf.permit-fitout-tempel', [
+            'permit' => $permitRequest,
+            'lantai' => $upper($permitRequest->floor_snapshot),
+            'blok' => $upper($permitRequest->block_snapshot),
+            'nomor' => $upper($permitRequest->unit_number_snapshot),
+            'namaTenant' => $upper($permitRequest->tenant->name ?? $permitRequest->store_name_snapshot),
+            'penanggungJawab' => $upper($permitRequest->pic_name),
+            'pekerjaan' => $pekerjaan,
+            'tanggalKerja' => $tanggalKerja,
+            'jamKerja' => $jamKerja,
+            'jumlahPekerja' => $workerCount ? '±'.$workerCount.' Orang' : '—',
+            'kota' => $permitRequest->branch?->name ?? 'Banjarmasin',
+            'tanggalSurat' => $permitRequest->request_date?->locale('id')->translatedFormat('d F Y')
+                ?? now()->locale('id')->translatedFormat('d F Y'),
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Ijin-Tempel-Fitout-{$safeNumber}.pdf");
+    }
+
+    /** Peraturan Pekerja Fit Out — file upload (branch → semua branch) atau Blade bawaan. */
+    public function peraturanFitout(PermitRequest $permitRequest, Request $request)
+    {
+        $this->guardFitoutDownload($permitRequest, $request);
+
+        if ($doc = StaticDocument::forPermit('peraturan-fitout', $permitRequest->branch_id)) {
+            return $doc->downloadResponse();
+        }
+
+        $pdf = Pdf::loadView('pdf.permit-peraturan-fitout', [
+            'permit' => $permitRequest,
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Peraturan-Fitout-{$safeNumber}.pdf");
+    }
+
+    /** Tata Tertib Pekerja Lembur — file upload (branch → semua branch) atau Blade bawaan. */
+    public function tataTertibLembur(PermitRequest $permitRequest, Request $request)
+    {
+        $user = $request->user();
+        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_unless(in_array('lembur', $permitRequest->activity_types ?? [], true), 403, 'Tata tertib lembur hanya untuk izin lembur.');
+
+        if ($doc = StaticDocument::forPermit('tata-tertib-lembur', $permitRequest->branch_id)) {
+            return $doc->downloadResponse();
+        }
+
+        $permitRequest->loadMissing('branch');
+
+        $pdf = Pdf::loadView('pdf.permit-tata-tertib-lembur', [
+            'permit' => $permitRequest,
+            'kota' => $permitRequest->branch?->name ?? 'Banjarmasin',
+            'tanggalSurat' => $permitRequest->request_date?->locale('id')->translatedFormat('d F Y')
+                ?? now()->locale('id')->translatedFormat('d F Y'),
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Tata-Tertib-Lembur-{$safeNumber}.pdf");
+    }
+
     private function photoDataUri(?string $path): ?string    {
         if (! $path || ! Storage::disk('public')->exists($path)) {
             return null;
@@ -544,6 +644,104 @@ class PermitRequestController extends Controller
         };
 
         return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
+    }
+
+    private function isFitoutForm(PermitRequest $permit): bool
+    {
+        return in_array('fit_out', $permit->activity_types ?? [], true);
+    }
+
+    private function fitoutImageDataUri(string $filename): ?string
+    {
+        $path = public_path('images/'.$filename);
+
+        return is_file($path)
+            ? 'data:image/jpeg;base64,'.base64_encode((string) file_get_contents($path))
+            : null;
+    }
+
+    private function fitoutBaseData(PermitRequest $permit): array
+    {
+        $permit->loadMissing(['tenant', 'branch']);
+
+        $unit = collect([$permit->floor_snapshot, $permit->block_snapshot, $permit->unit_number_snapshot])
+            ->filter()->join(' / ') ?: '—';
+
+        return [
+            'permit' => $permit,
+            'namaTenant' => $permit->tenant->name ?? $permit->store_name_snapshot ?? '—',
+            'unit' => $unit,
+            'kota' => $permit->branch?->name ?? 'Banjarmasin',
+            'tanggalSurat' => $permit->request_date?->locale('id')->translatedFormat('d F Y')
+                ?? now()->locale('id')->translatedFormat('d F Y'),
+            'printedAt' => now()->locale('id')->translatedFormat('d F Y, H:i').' WITA',
+            'kopData' => $this->fitoutImageDataUri('fitout-kop.jpeg'),
+            'guideData' => $this->fitoutImageDataUri('fitout-guide.jpeg'),
+        ];
+    }
+
+    private function guardFitoutDownload(PermitRequest $permit, Request $request): void
+    {
+        $user = $request->user();
+        abort_unless($permit->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permit->activity_types ?? []), 403);
+        abort_unless($this->isFitoutForm($permit), 403, 'Surat pernyataan hanya untuk izin Fit Out.');
+    }
+
+    /** Surat Pernyataan Tenant — ?source=surat (PIC surat ijin) atau master (PIC utama master tenant). */
+    public function pernyataanTenant(PermitRequest $permitRequest, Request $request)
+    {
+        $this->guardFitoutDownload($permitRequest, $request);
+
+        $source = $request->query('source', 'surat');
+        abort_unless(in_array($source, ['surat', 'master'], true), 422, 'Sumber tidak valid.');
+
+        $base = $this->fitoutBaseData($permitRequest);
+
+        if ($source === 'master') {
+            abort_unless($permitRequest->tenant, 422, 'Tenant tidak ditemukan untuk sumber master.');
+            $nama = $permitRequest->tenant->pic_name ?: '—';
+            $jabatan = $permitRequest->tenant->pic_position ?: 'Penanggung Jawab';
+            $telepon = $permitRequest->tenant->pic_phone ?: '—';
+            $sumberLabel = 'PIC Utama Master Tenant';
+        } else {
+            $nama = $permitRequest->pic_name ?: '—';
+            $jabatan = 'Penanggung Jawab';
+            $telepon = $permitRequest->pic_phone ?: '—';
+            $sumberLabel = 'Penanggung Jawab Surat Izin';
+        }
+
+        $pdf = Pdf::loadView('pdf.permit-pernyataan-tenant', [
+            ...$base,
+            'nama' => $nama,
+            'jabatan' => $jabatan,
+            'telepon' => $telepon,
+            'sumberLabel' => $sumberLabel,
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Pernyataan-Tenant-{$safeNumber}.pdf");
+    }
+
+    /** Surat Pernyataan Kontraktor — data vendor/kontraktor di surat ijin itu. */
+    public function pernyataanKontraktor(PermitRequest $permitRequest, Request $request)
+    {
+        $this->guardFitoutDownload($permitRequest, $request);
+        abort_unless($permitRequest->contractor_pic, 422, 'Lengkapi data kontraktor di surat izin dulu.');
+
+        $base = $this->fitoutBaseData($permitRequest);
+
+        $pdf = Pdf::loadView('pdf.permit-pernyataan-kontraktor', [
+            ...$base,
+            'nama' => $permitRequest->contractor_pic ?: '—',
+            'jabatan' => 'Penanggung Jawab',
+            'telepon' => $permitRequest->contractor_phone ?: '—',
+        ])->setPaper('a4');
+
+        $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
+
+        return $pdf->download("Pernyataan-Kontraktor-{$safeNumber}.pdf");
     }
 
     public function revise(PermitRequest $permitRequest, RevisePermitRequestRequest $request)

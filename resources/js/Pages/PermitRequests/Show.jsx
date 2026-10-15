@@ -8,6 +8,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import GoodPhotoCapture from '@/Components/Security/GoodPhotoCapture';
 import ReviseModal, { RevisionTimeline } from '@/Components/Permits/ReviseModal';
+import FitoutStatementModal from '@/Components/Permits/FitoutStatementModal';
 import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from '@/utils/format';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
@@ -20,6 +21,7 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
     const [reviseOpen, setReviseOpen] = useState(false);
+    const [fitoutModalOpen, setFitoutModalOpen] = useState(false);
 
     const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`, {}, { preserveScroll: true });
 
@@ -143,6 +145,9 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
     const isKegiatan = (permit.activity_types ?? []).some((v) => ['event', 'meeting_internal', 'stock_opname'].includes(v));
+    const isFitout = (permit.activity_types ?? []).includes('fit_out');
+    const isLembur = (permit.activity_types ?? []).includes('lembur');
+    const hasContractor = Boolean(permit.contractor_pic);
     const kegiatanNameLabel = { event: 'Nama Event', meeting_internal: 'Nama Meeting', stock_opname: 'Nama Stock Opname' }[permit.activity_types?.[0]] ?? 'Nama Kegiatan';
     const category = (permit.activity_types ?? []).includes('pameran')
         ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
@@ -194,6 +199,80 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                             </svg>
                             <span className="hidden sm:inline">Unduh PDF</span>
                         </a>
+                        {isFitout && (
+                            <button
+                                type="button"
+                                onClick={() => setFitoutModalOpen(true)}
+                                aria-label="Unduh surat pernyataan tenant"
+                                title="Pilih sumber data penandatangan lalu unduh"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                </svg>
+                                <span className="hidden sm:inline">Pernyataan Tenant</span>
+                            </button>
+                        )}
+                        {isFitout && (
+                            hasContractor ? (
+                                <a
+                                    href={`/permit-requests/${permit.id}/pernyataan-kontraktor`}
+                                    aria-label="Unduh surat pernyataan kontraktor"
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                    </svg>
+                                    <span className="hidden sm:inline">Pernyataan Kontraktor</span>
+                                </a>
+                            ) : (
+                                <span
+                                    title="Lengkapi data kontraktor di surat izin dulu"
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-gray-400 min-h-[36px] cursor-not-allowed"
+                                >
+                                    <span className="hidden sm:inline">Pernyataan Kontraktor</span>
+                                </span>
+                            )
+                        )}
+                        {isFitout && (
+                            <a
+                                href={`/permit-requests/${permit.id}/fitout-tempel`}
+                                aria-label="Unduh ijin kerja fitout untuk dilekatkan di depan unit"
+                                title="Ijin kerja untuk dilekatkan di depan unit"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                </svg>
+                                <span className="hidden sm:inline">Tempel Unit</span>
+                            </a>
+                        )}
+                        {isFitout && (
+                            <a
+                                href={`/permit-requests/${permit.id}/peraturan-fitout`}
+                                aria-label="Unduh peraturan pekerja fit out"
+                                title="Peraturan pekerja fit out"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                </svg>
+                                <span className="hidden sm:inline">Peraturan Fit Out</span>
+                            </a>
+                        )}
+                        {isLembur && (
+                            <a
+                                href={`/permit-requests/${permit.id}/tata-tertib-lembur`}
+                                aria-label="Unduh tata tertib pekerja lembur"
+                                title="Tata tertib pekerja lembur"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:text-gray-900 hover:border-gray-300 transition-colors min-h-[36px]"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                </svg>
+                                <span className="hidden sm:inline">Tata Tertib Lembur</span>
+                            </a>
+                        )}
                     </div>
                 </div>
                 <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto print:hidden" aria-label="Lompat section">
@@ -592,6 +671,11 @@ export default function Show({ permit, can_revise, can_cancel, share }) {
                 onClose={() => setReviseOpen(false)}
                 permit={permit}
                 postUrl={`/permit-requests/${permit.id}/revise`}
+            />
+            <FitoutStatementModal
+                open={fitoutModalOpen}
+                onClose={() => setFitoutModalOpen(false)}
+                permit={permit}
             />
         </AppLayout>
     );
