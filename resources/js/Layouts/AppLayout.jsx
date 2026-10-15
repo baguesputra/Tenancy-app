@@ -128,12 +128,14 @@ export default function AppLayout({ children }) {
         setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
     };
     const settingsMenuItems = [
-        { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users },
-        { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access },
-        { label: 'Sinkronisasi Gate', href: '/settings/gate', icon: menuIcons.refresh },
-        { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak },
+        { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users, permission: 'settings.access' },
+        { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access, permission: 'settings.access' },
+        { label: 'Sinkronisasi Gate', href: '/settings/gate', icon: menuIcons.refresh, permission: 'settings.access' },
+        { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak, permission: 'settings.access' },
+        { label: 'Dokumen Statis', href: '/settings/documents', icon: menuIcons.sidak, permission: 'documents.manage' },
     ];
-    const isSettingsActive = settingsMenuItems.some((item) => currentUrl.startsWith(item.href));
+    const visibleSettingsMenuItems = settingsMenuItems.filter((item) => can(item.permission));
+    const isSettingsActive = visibleSettingsMenuItems.some((item) => currentUrl.startsWith(item.href));
     const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
@@ -277,7 +279,7 @@ export default function AppLayout({ children }) {
                             </div>
                         );
                     })}
-                    {isSuperAdmin && (
+                    {visibleSettingsMenuItems.length > 0 && (
                         <div className="pt-1">
                             {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Pengaturan</p>}
                             <button
@@ -302,7 +304,7 @@ export default function AppLayout({ children }) {
 
                             {settingsOpen && !collapsed && (
                                 <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
-                                    {settingsMenuItems.map((item) => (
+                                    {visibleSettingsMenuItems.map((item) => (
                                         <NavLink key={item.href} href={item.href} currentUrl={currentUrl} icon={item.icon} small collapsed={false}>
                                             {item.label}
                                         </NavLink>
