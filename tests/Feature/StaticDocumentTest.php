@@ -103,6 +103,32 @@ class StaticDocumentTest extends TestCase
             ->assertDownload('cabang.docx');
     }
 
+    public function test_halaman_show_menyertakan_format_file_upload(): void
+    {
+        Storage::fake('local');
+        $user = $this->makeUser();
+        $permit = $this->makePermit($user, ['fit_out', 'lembur']);
+
+        $this->actingAs($user)->get("/permit-requests/{$permit->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('doc_files.peraturan-fitout', null)
+                ->where('doc_files.tata-tertib-lembur', null));
+
+        Storage::disk('local')->put('static-documents/aturan.docx', 'isi');
+        \App\Models\StaticDocument::create([
+            'key' => 'peraturan-fitout', 'branch_id' => null,
+            'file_path' => 'static-documents/aturan.docx', 'original_name' => 'aturan.docx', 'size' => 3,
+            'uploaded_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)->get("/permit-requests/{$permit->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('doc_files.peraturan-fitout', 'DOCX')
+                ->where('doc_files.tata-tertib-lembur', null));
+    }
+
     public function test_upload_butuh_izin_documents_manage_dan_menimpa_file_lama(): void
     {
         Storage::fake('local');

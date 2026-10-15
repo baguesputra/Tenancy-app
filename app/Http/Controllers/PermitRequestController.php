@@ -293,7 +293,27 @@ class PermitRequestController extends Controller
                 && ($permitRequest->requested_by_type ?? null) === User::class
                 && $this->canManageForm($user, $permitRequest),
             'share' => $this->publicShare($permitRequest),
+            'doc_files' => [
+                'peraturan-fitout' => $this->staticDocFormat($permitRequest, 'peraturan-fitout'),
+                'tata-tertib-lembur' => $this->staticDocFormat($permitRequest, 'tata-tertib-lembur'),
+            ],
         ]);
+    }
+
+    /**
+     * Ekstensi file upload divisi tenant (null = pakai PDF bawaan).
+     * Untuk badge format di menu Dokumen.
+     */
+    private function staticDocFormat(PermitRequest $permit, string $key): ?string
+    {
+        $doc = StaticDocument::forPermit($key, $permit->branch_id);
+        if (! $doc) {
+            return null;
+        }
+
+        $ext = strtoupper(pathinfo($doc->original_name, PATHINFO_EXTENSION));
+
+        return $ext !== '' ? $ext : 'FILE';
     }
 
     /**
