@@ -259,21 +259,20 @@ export default function EventCalendar({
         });
         return set;
     }, [byDay, selected]);
-    const agendaGroups = useMemo(() => {
-        const map = {};
-        events.forEach((e) => {
-            if (!e.start) return;
-            (map[e.start] ??= []).push(e);
-        });
-        return Object.keys(map)
-            .sort()
-            .map((date) => ({
-                date,
-                items: map[date].sort(
-                    (a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0),
-                ),
-            }));
-    }, [events]);
+    const boardColumns = useMemo(
+        () =>
+            LEGEND_GROUPS.map((fam) => ({
+                ...fam,
+                items: events
+                    .filter((e) => fam.types.includes(e.type))
+                    .sort(
+                        (a, b) =>
+                            (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) ||
+                            a.start.localeCompare(b.start),
+                    ),
+            })).filter((col) => col.items.length > 0),
+        [events],
+    );
 
     const goMonth = (delta) => {
         const d = new Date(year, monthIdx + delta, 1);
@@ -338,7 +337,7 @@ export default function EventCalendar({
                     <p className="text-xs text-gray-400 mt-0.5">
                         {view === "month"
                             ? `${events.length} agenda · klik tanggal untuk detail`
-                            : `${events.length} agenda bulan ini`}
+                            : `${events.length} agenda · dikelompokkan per jenis`}
                     </p>
                 </div>
                 <div
@@ -348,7 +347,7 @@ export default function EventCalendar({
                 >
                     {[
                         ["month", "Kalender"],
-                        ["agenda", "Agenda"],
+                        ["board", "Board"],
                     ].map(([k, label]) => (
                         <button
                             key={k}
@@ -605,8 +604,8 @@ export default function EventCalendar({
                     </div>
                 </div>
             ) : (
-                <div className="px-1 sm:px-3 pb-3">
-                    {agendaGroups.length === 0 && (
+                <div className="px-3 sm:px-5 pb-5">
+                    {events.length === 0 ? (
                         <div className="px-4 py-10 text-center">
                             <p className="text-sm font-medium text-gray-500">
                                 Tidak ada agenda bulan ini.
@@ -620,58 +619,34 @@ export default function EventCalendar({
                                 </button>
                             )}
                         </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
+                            {boardColumns.map((col) => (
+                                <div
+                                    key={col.label}
+                                    className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
+                                >
+                                    <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
+                                        <span
+                                            className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`}
+                                            aria-hidden="true"
+                                        />
+                                        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">
+                                            {col.label}
+                                        </span>
+                                        <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-gray-500 border border-gray-200 tabular-nums whitespace-nowrap">
+                                            {col.items.length}
+                                        </span>
+                                    </h3>
+                                    <ul className="space-y-2">
+                                        {col.items.map((e) => (
+                                            <BoardCard key={e.id} event={e} />
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
                     )}
-                    {agendaGroups.map((g) => {
-                        const d = new Date(`${g.date}T00:00:00`);
-                        const isToday = g.date === todayKey;
-                        const isPast = g.date < todayKey;
-                        return (
-                            <div
-                                key={g.date}
-                                className={isPast ? "opacity-70" : ""}
-                            >
-                                <h3 className="sticky top-0 z-10 bg-white/95 backdrop-blur px-2 sm:px-4 py-2.5 flex items-center gap-3 border-b border-gray-100">
-                                    <span
-                                        aria-hidden="true"
-                                        className={`w-10 h-10 shrink-0 rounded-xl flex flex-col items-center justify-center ${isToday ? "bg-[#0F1E36] text-white" : "bg-gray-100 text-gray-700"}`}
-                                    >
-                                        <span className="text-[9px] font-semibold uppercase leading-none tracking-wide">
-                                            {d.toLocaleDateString("id-ID", {
-                                                weekday: "short",
-                                            })}
-                                        </span>
-                                        <span className="mt-0.5 text-sm font-bold leading-none tabular-nums">
-                                            {d.getDate()}
-                                        </span>
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span
-                                            className={`block truncate text-sm font-semibold capitalize ${isToday ? "text-[#0F1E36]" : "text-gray-900"}`}
-                                        >
-                                            {d.toLocaleDateString("id-ID", {
-                                                weekday: "long",
-                                                day: "numeric",
-                                                month: "long",
-                                            })}
-                                        </span>
-                                        <span
-                                            className={`block text-xs mt-0.5 ${isToday ? "text-[#0F1E36] font-medium" : "text-gray-500"}`}
-                                        >
-                                            {relDay(g.date)}
-                                        </span>
-                                    </span>
-                                    <span className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 tabular-nums whitespace-nowrap">
-                                        {g.items.length} agenda
-                                    </span>
-                                </h3>
-                                <ul className="divide-y divide-gray-100">
-                                    {g.items.map((e) => (
-                                        <AgendaRow key={e.id} event={e} />
-                                    ))}
-                                </ul>
-                            </div>
-                        );
-                    })}
                 </div>
             )}
             <DaySheet
@@ -721,7 +696,7 @@ function DayPanel({ dateKey, events }) {
                             </p>
                             <ul className="space-y-1.5">
                                 {g.items.map((e) => (
-                                    <AgendaRow key={e.id} event={e} compact span={spanDay(e, dateKey)} />
+                                    <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />
                                 ))}
                             </ul>
                         </div>
@@ -860,7 +835,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                                     </p>
                                     <ul className="space-y-1">
                                         {g.items.map((e) => (
-                                            <AgendaRow key={e.id} event={e} compact span={spanDay(e, dateKey)} />
+                                            <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />
                                         ))}
                                     </ul>
                                 </div>
@@ -874,7 +849,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
     );
 }
 
-function AgendaRow({ event: e, compact = false, span = null }) {
+function AgendaRow({ event: e, span = null }) {
     const meta = TYPE_META[e.type] ?? TYPE_META.permit;
     const dateLabel = new Date(`${e.start}T00:00:00`).toLocaleDateString(
         "id-ID",
@@ -888,42 +863,22 @@ function AgendaRow({ event: e, compact = false, span = null }) {
         <li>
             <Link
                 href={e.url}
-                className={`flex items-center gap-2.5 rounded-xl border-l-2 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} ${
-                    compact
-                        ? "px-2 py-1.5"
-                        : `px-4 py-3 ${e.urgent ? "bg-red-50/40 !border-l-red-400 hover:bg-red-50/70" : "hover:bg-gray-50"}`
-                }`}
+                className={`flex items-center gap-2.5 rounded-xl border-l-2 px-2 py-1.5 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} hover:bg-gray-50`}
             >
                 <span className="min-w-0 flex-1">
-                    <span
-                        className={`block truncate group-hover:text-gray-950 ${
-                            compact
-                                ? "text-xs sm:text-sm text-gray-800"
-                                : "text-sm font-medium text-gray-900"
-                        }`}
-                    >
+                    <span className="block truncate text-xs sm:text-sm text-gray-800 group-hover:text-gray-950">
                         {e.title}
                     </span>
-                    <span
-                        className={`block mt-0.5 ${compact ? "text-[11px] text-gray-400" : "text-xs text-gray-500"}`}
-                    >
-                        {compact && <>{meta.label} · </>}
-                        {range}
+                    <span className="block mt-0.5 text-[11px] text-gray-400">
+                        {meta.label} · {range}
                         {span ? ` · ${span}` : ""}
-                        {compact ? ` · ${relDay(e.start)}` : ""}
-                        {compact && e.urgent ? " · H-30" : ""}
+                        {` · ${relDay(e.start)}`}
+                        {e.urgent ? " · H-30" : ""}
                     </span>
                 </span>
-                {compact && span && (
+                {span && (
                     <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums whitespace-nowrap">
                         {span}
-                    </span>
-                )}
-                {!compact && (
-                    <span
-                        className={`hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${meta.chip}`}
-                    >
-                        {meta.label}
                     </span>
                 )}
                 {e.urgent && (
@@ -931,31 +886,51 @@ function AgendaRow({ event: e, compact = false, span = null }) {
                         Segera
                     </span>
                 )}
-                {e.status &&
-                    (compact ? (
-                        <span className="hidden sm:inline shrink-0 text-[11px] text-gray-400">
-                            {e.status}
-                        </span>
-                    ) : (
-                        <span className="hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
-                            {e.status}
-                        </span>
-                    ))}
-                {!compact && (
-                    <svg
-                        className="w-4 h-4 shrink-0 text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        aria-hidden="true"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
+                {e.status && (
+                    <span className="hidden sm:inline shrink-0 text-[11px] text-gray-400">
+                        {e.status}
+                    </span>
+                )}
+            </Link>
+        </li>
+    );
+}
+
+function BoardCard({ event: e }) {
+    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
+    const dateLabel = new Date(`${e.start}T00:00:00`).toLocaleDateString(
+        "id-ID",
+        { day: "numeric", month: "short" },
+    );
+    const range =
+        e.end && e.end !== e.start
+            ? `${dateLabel} – ${new Date(`${e.end}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+            : dateLabel;
+    return (
+        <li>
+            <Link
+                href={e.url}
+                className={`block rounded-xl border border-[#E2E5EA] border-l-2 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,30,54,0.04)] transition-all group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} ${
+                    e.urgent
+                        ? "!border-l-red-400 bg-red-50/40 hover:bg-red-50/70"
+                        : "hover:border-gray-300 hover:shadow-[0_4px_12px_-6px_rgba(15,30,54,0.25)]"
+                }`}
+            >
+                <span className="line-clamp-2 text-xs sm:text-[13px] font-medium leading-snug text-gray-900 group-hover:text-gray-950">
+                    {e.title}
+                </span>
+                <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
+                    <span className="tabular-nums">{range}</span>
+                    <span className="text-gray-300" aria-hidden="true">
+                        ·
+                    </span>
+                    <span>{relDay(e.start)}</span>
+                    {e.status && <span>{e.status}</span>}
+                </span>
+                {e.urgent && (
+                    <span className="mt-1.5 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+                        Segera
+                    </span>
                 )}
             </Link>
         </li>
