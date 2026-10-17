@@ -322,6 +322,8 @@ export default function EventCalendar({
         return allEvents.some((e) => e.type === f.key);
     });
     const todayKey = dayKey(new Date());
+    const currentMonthKey = todayKey.slice(0, 7);
+    const viewedMonthKey = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
 
     return (
         <section
@@ -605,31 +607,71 @@ export default function EventCalendar({
             ) : (
                 <div className="px-1 sm:px-3 pb-3">
                     {agendaGroups.length === 0 && (
-                        <p className="px-4 py-8 text-sm text-gray-400 text-center">
-                            Tidak ada agenda bulan ini.
-                        </p>
-                    )}
-                    {agendaGroups.map((g) => (
-                        <div key={g.date}>
-                            <p className="sticky top-0 bg-white/95 backdrop-blur px-4 pt-3 pb-1.5 text-xs font-semibold text-gray-900 capitalize z-10">
-                                {new Date(
-                                    `${g.date}T00:00:00`,
-                                ).toLocaleDateString("id-ID", {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "long",
-                                })}
-                                <span className="ml-1.5 font-normal text-gray-400">
-                                    · {relDay(g.date)}
-                                </span>
+                        <div className="px-4 py-10 text-center">
+                            <p className="text-sm font-medium text-gray-500">
+                                Tidak ada agenda bulan ini.
                             </p>
-                            <ul className="divide-y divide-gray-100">
-                                {g.items.map((e) => (
-                                    <AgendaRow key={e.id} event={e} />
-                                ))}
-                            </ul>
+                            {viewedMonthKey !== currentMonthKey && (
+                                <button
+                                    onClick={goToday}
+                                    className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    Kembali ke bulan ini
+                                </button>
+                            )}
                         </div>
-                    ))}
+                    )}
+                    {agendaGroups.map((g) => {
+                        const d = new Date(`${g.date}T00:00:00`);
+                        const isToday = g.date === todayKey;
+                        const isPast = g.date < todayKey;
+                        return (
+                            <div
+                                key={g.date}
+                                className={isPast ? "opacity-70" : ""}
+                            >
+                                <h3 className="sticky top-0 z-10 bg-white/95 backdrop-blur px-2 sm:px-4 py-2.5 flex items-center gap-3 border-b border-gray-100">
+                                    <span
+                                        aria-hidden="true"
+                                        className={`w-10 h-10 shrink-0 rounded-xl flex flex-col items-center justify-center ${isToday ? "bg-[#0F1E36] text-white" : "bg-gray-100 text-gray-700"}`}
+                                    >
+                                        <span className="text-[9px] font-semibold uppercase leading-none tracking-wide">
+                                            {d.toLocaleDateString("id-ID", {
+                                                weekday: "short",
+                                            })}
+                                        </span>
+                                        <span className="mt-0.5 text-sm font-bold leading-none tabular-nums">
+                                            {d.getDate()}
+                                        </span>
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span
+                                            className={`block truncate text-sm font-semibold capitalize ${isToday ? "text-[#0F1E36]" : "text-gray-900"}`}
+                                        >
+                                            {d.toLocaleDateString("id-ID", {
+                                                weekday: "long",
+                                                day: "numeric",
+                                                month: "long",
+                                            })}
+                                        </span>
+                                        <span
+                                            className={`block text-xs mt-0.5 ${isToday ? "text-[#0F1E36] font-medium" : "text-gray-500"}`}
+                                        >
+                                            {relDay(g.date)}
+                                        </span>
+                                    </span>
+                                    <span className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 tabular-nums whitespace-nowrap">
+                                        {g.items.length} agenda
+                                    </span>
+                                </h3>
+                                <ul className="divide-y divide-gray-100">
+                                    {g.items.map((e) => (
+                                        <AgendaRow key={e.id} event={e} />
+                                    ))}
+                                </ul>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
             <DaySheet
@@ -846,33 +888,74 @@ function AgendaRow({ event: e, compact = false, span = null }) {
         <li>
             <Link
                 href={e.url}
-                className={`flex items-center gap-2.5 rounded-xl border-l-2 ${meta.bar.split(" ").slice(-1)[0]} hover:bg-gray-50 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${compact ? "px-2 py-1.5" : "px-4 py-2.5"}`}
+                className={`flex items-center gap-2.5 rounded-xl border-l-2 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} ${
+                    compact
+                        ? "px-2 py-1.5"
+                        : `px-4 py-3 ${e.urgent ? "bg-red-50/40 !border-l-red-400 hover:bg-red-50/70" : "hover:bg-gray-50"}`
+                }`}
             >
                 <span className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-sm text-gray-800 truncate group-hover:text-gray-950">
+                    <span
+                        className={`block truncate group-hover:text-gray-950 ${
+                            compact
+                                ? "text-xs sm:text-sm text-gray-800"
+                                : "text-sm font-medium text-gray-900"
+                        }`}
+                    >
                         {e.title}
                     </span>
-                    <span className="block text-[11px] text-gray-400 mt-0.5">
-                        {meta.label} · {range}
+                    <span
+                        className={`block mt-0.5 ${compact ? "text-[11px] text-gray-400" : "text-xs text-gray-500"}`}
+                    >
+                        {compact && <>{meta.label} · </>}
+                        {range}
                         {span ? ` · ${span}` : ""}
-                        {` · ${relDay(e.start)}`}
-                        {e.urgent ? " · H-30" : ""}
+                        {compact ? ` · ${relDay(e.start)}` : ""}
+                        {compact && e.urgent ? " · H-30" : ""}
                     </span>
                 </span>
-                {span && (
-                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums">
+                {compact && span && (
+                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums whitespace-nowrap">
                         {span}
                     </span>
                 )}
+                {!compact && (
+                    <span
+                        className={`hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${meta.chip}`}
+                    >
+                        {meta.label}
+                    </span>
+                )}
                 {e.urgent && (
-                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
                         Segera
                     </span>
                 )}
-                {e.status && (
-                    <span className="hidden sm:inline shrink-0 text-[11px] text-gray-400">
-                        {e.status}
-                    </span>
+                {e.status &&
+                    (compact ? (
+                        <span className="hidden sm:inline shrink-0 text-[11px] text-gray-400">
+                            {e.status}
+                        </span>
+                    ) : (
+                        <span className="hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
+                            {e.status}
+                        </span>
+                    ))}
+                {!compact && (
+                    <svg
+                        className="w-4 h-4 shrink-0 text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden="true"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
                 )}
             </Link>
         </li>
