@@ -161,6 +161,7 @@ function groupByFamily(list) {
 }
 
 const MAX_CHIPS = 3;
+const BOARD_PREVIEW = 6;
 
 const dayKey = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -193,6 +194,7 @@ export default function EventCalendar({
     const [filter, setFilter] = useState("all");
     const [selected, setSelected] = useState(dayKey(new Date()));
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [expandedCols, setExpandedCols] = useState(() => new Set());
     const touchX = useRef(null);
 
     const [y, m] = (calendar.month || "").split("-").map(Number);
@@ -307,6 +309,13 @@ export default function EventCalendar({
         if (window.matchMedia?.("(max-width: 639px)").matches)
             setSheetOpen(true);
     };
+    const toggleCol = (label) =>
+        setExpandedCols((prev) => {
+            const next = new Set(prev);
+            if (next.has(label)) next.delete(label);
+            else next.add(label);
+            return next;
+        });
 
     const monthLabel = new Date(year, monthIdx, 1).toLocaleDateString("id-ID", {
         month: "long",
@@ -621,30 +630,51 @@ export default function EventCalendar({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
-                            {boardColumns.map((col) => (
-                                <div
-                                    key={col.label}
-                                    className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
-                                >
-                                    <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
-                                        <span
-                                            className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`}
-                                            aria-hidden="true"
-                                        />
-                                        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">
-                                            {col.label}
-                                        </span>
-                                        <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-gray-500 border border-gray-200 tabular-nums whitespace-nowrap">
-                                            {col.items.length}
-                                        </span>
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {col.items.map((e) => (
-                                            <BoardCard key={e.id} event={e} />
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
+                            {boardColumns.map((col) => {
+                                const isOpen =
+                                    expandedCols.has(col.label) ||
+                                    col.items.length <= BOARD_PREVIEW;
+                                const visibleItems = isOpen
+                                    ? col.items
+                                    : col.items.slice(0, BOARD_PREVIEW);
+                                return (
+                                    <div
+                                        key={col.label}
+                                        className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
+                                    >
+                                        <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
+                                            <span
+                                                className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`}
+                                                aria-hidden="true"
+                                            />
+                                            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">
+                                                {col.label}
+                                            </span>
+                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-gray-500 border border-gray-200 tabular-nums whitespace-nowrap">
+                                                {col.items.length}
+                                            </span>
+                                        </h3>
+                                        <ul className="space-y-2">
+                                            {visibleItems.map((e) => (
+                                                <BoardCard key={e.id} event={e} />
+                                            ))}
+                                        </ul>
+                                        {col.items.length > BOARD_PREVIEW && (
+                                            <button
+                                                onClick={() =>
+                                                    toggleCol(col.label)
+                                                }
+                                                aria-expanded={isOpen}
+                                                className="mt-2 w-full rounded-lg py-1.5 text-[11px] font-medium text-gray-500 hover:bg-white hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                            >
+                                                {isOpen
+                                                    ? "Sembunyikan"
+                                                    : `+${col.items.length - BOARD_PREVIEW} agenda lagi`}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
