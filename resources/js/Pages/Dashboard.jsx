@@ -3,7 +3,7 @@ import { usePage, Link, router } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import {
-    IconBuilding, IconGrid, IconDocument, IconClipboard, IconContract,
+    IconBuilding, IconDocument, IconClipboard, IconContract,
     IconArrowRight, IconRefresh,
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
@@ -81,7 +81,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                     </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                <div className={`mt-5 grid grid-cols-2 ${canLoo ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-3 sm:gap-4`}>
                     <StatCard
                         icon={<IconBuilding className="w-5 h-5" aria-hidden="true" />}
                         tint="bg-[#0F1E36]/5 text-[#0F1E36]"
@@ -89,14 +89,6 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         value={stats?.total_tenants ?? 0}
                         hint={`${total} unit dikelola`}
                         href="/tenants"
-                    />
-                    <StatCard
-                        icon={<IconGrid className="w-5 h-5" aria-hidden="true" />}
-                        tint="bg-emerald-50 text-emerald-600"
-                        label="Okupansi"
-                        value={`${percentage}%`}
-                        hint={`${occupied}/${total} unit terisi`}
-                        href="/units"
                     />
                     <StatCard
                         icon={<IconDocument className="w-5 h-5" aria-hidden="true" />}
