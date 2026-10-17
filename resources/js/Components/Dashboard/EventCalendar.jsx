@@ -629,7 +629,7 @@ export default function EventCalendar({
                             )}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
+                        <div className="flex items-start gap-3 overflow-x-auto pt-1 pb-2 [scrollbar-width:thin]">
                             {boardColumns.map((col) => {
                                 const isOpen =
                                     expandedCols.has(col.label) ||
@@ -640,7 +640,7 @@ export default function EventCalendar({
                                 return (
                                     <div
                                         key={col.label}
-                                        className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
+                                        className="shrink-0 w-72 bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
                                     >
                                         <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
                                             <span
