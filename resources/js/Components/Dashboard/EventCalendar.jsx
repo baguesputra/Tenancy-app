@@ -133,6 +133,10 @@ const FILTERS = [
 
 const PERMIT_TYPES = ["permit", "pameran", "kegiatan"];
 
+const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
+    new Date(2026, i, 1).toLocaleDateString("id-ID", { month: "long" }),
+);
+
 const familyOf = (type) =>
     LEGEND_GROUPS.find((g) => g.types.includes(type)) ?? LEGEND_GROUPS[0];
 
@@ -190,12 +194,57 @@ function relDay(start) {
 export default function EventCalendar({
     calendar = { month: "", events: [] },
 }) {
-    const [view, setView] = useState("month");
-    const [filter, setFilter] = useState("all");
+    const [view, setView] = useState(() =>
+        new URLSearchParams(window.location.search).get("view") === "board"
+            ? "board"
+            : "month",
+    );
+    const [filter, setFilter] = useState(() => {
+        const f = new URLSearchParams(window.location.search).get("jenis");
+        return FILTERS.some((x) => x.key === f) ? f : "all";
+    });
     const [selected, setSelected] = useState(dayKey(new Date()));
     const [sheetOpen, setSheetOpen] = useState(false);
     const [expandedCols, setExpandedCols] = useState(() => new Set());
+    const [navLoading, setNavLoading] = useState(false);
+    const [legendOpen, setLegendOpen] = useState(false);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerYear, setPickerYear] = useState(null);
     const touchX = useRef(null);
+    const cellRefs = useRef([]);
+    const pickerRef = useRef(null);
+
+    useEffect(() => {
+        const isCalendarVisit = (e) =>
+            e.detail.visit?.only?.includes("calendar");
+        const offs = [
+            router.on("start", (e) => {
+                if (isCalendarVisit(e)) setNavLoading(true);
+            }),
+            router.on("finish", (e) => {
+                if (isCalendarVisit(e)) setNavLoading(false);
+            }),
+            router.on("networkError", () => setNavLoading(false)),
+            router.on("httpException", () => setNavLoading(false)),
+        ];
+        return () => offs.forEach((off) => off());
+    }, []);
+
+    useEffect(() => {
+        if (!pickerOpen) return;
+        const onDown = (e) => {
+            if (!pickerRef.current?.contains(e.target)) setPickerOpen(false);
+        };
+        const onKey = (e) => {
+            if (e.key === "Escape") setPickerOpen(false);
+        };
+        document.addEventListener("mousedown", onDown);
+        document.addEventListener("keydown", onKey);
+        return () => {
+            document.removeEventListener("mousedown", onDown);
+            document.removeEventListener("keydown", onKey);
+        };
+    }, [pickerOpen]);
 
     const [y, m] = (calendar.month || "").split("-").map(Number);
     const year = y || new Date().getFullYear();
@@ -276,38 +325,70 @@ export default function EventCalendar({
         [events],
     );
 
+    const visitData = (mm) => {
+        const data = { cal_month: mm };
+        if (view === "board") data.view = "board";
+        if (filter !== "all") data.jenis = filter;
+        return data;
+    };
+    const syncUrl = (nextView, nextFilter) => {
+        const params = new URLSearchParams(window.location.search);
+        if (nextView === "board") params.set("view", "board");
+        else params.delete("view");
+        if (nextFilter !== "all") params.set("jenis", nextFilter);
+        else params.delete("jenis");
+        const qs = params.toString();
+        window.history.replaceState(
+            window.history.state,
+            "",
+            `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+        );
+    };
     const goMonth = (delta) => {
         const d = new Date(year, monthIdx + delta, 1);
         const mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        router.get(
-            "/dashboard",
-            { cal_month: mm },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                only: ["calendar"],
-            },
-        );
+        router.get("/dashboard", visitData(mm), {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["calendar"],
+        });
     };
     const goToday = () => {
-        const mm = new Date().toISOString().slice(0, 7);
+        const mm = dayKey(new Date()).slice(0, 7);
         setSelected(dayKey(new Date()));
-        router.get(
-            "/dashboard",
-            { cal_month: mm },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                only: ["calendar"],
-            },
-        );
+        router.get("/dashboard", visitData(mm), {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["calendar"],
+        });
     };
     const handleSelect = (k) => {
         setSelected(k);
         if (window.matchMedia?.("(max-width: 639px)").matches)
             setSheetOpen(true);
+    };
+    const handleCellClick = (k, d) => {
+        const delta = (d.getFullYear() - year) * 12 + (d.getMonth() - monthIdx);
+        if (delta !== 0) {
+            setSelected(k);
+            goMonth(delta);
+            return;
+        }
+        handleSelect(k);
+    };
+    const onCellKeyDown = (ev, i) => {
+        let target = null;
+        if (ev.key === "ArrowLeft") target = i - 1;
+        else if (ev.key === "ArrowRight") target = i + 1;
+        else if (ev.key === "ArrowUp") target = i - 7;
+        else if (ev.key === "ArrowDown") target = i + 7;
+        else if (ev.key === "Home") target = i - (i % 7);
+        else if (ev.key === "End") target = i - (i % 7) + 6;
+        if (target == null || target < 0 || target > cells.length - 1) return;
+        ev.preventDefault();
+        cellRefs.current[target]?.focus();
     };
     const toggleCol = (label) =>
         setExpandedCols((prev) => {
@@ -332,6 +413,27 @@ export default function EventCalendar({
     const todayKey = dayKey(new Date());
     const currentMonthKey = todayKey.slice(0, 7);
     const viewedMonthKey = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+    const rovingIdx = (() => {
+        const sel = cells.findIndex((d) => dayKey(d) === selected);
+        if (sel >= 0) return sel;
+        const today = cells.findIndex((d) => dayKey(d) === todayKey);
+        return today >= 0
+            ? today
+            : cells.findIndex((d) => d.getMonth() === monthIdx);
+    })();
+    const dayAriaLabel = (d) =>
+        d.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        });
+
+    useEffect(() => {
+        if (!visibleFilters.some((f) => f.key === filter)) {
+            setFilter("all");
+            syncUrl(view, "all");
+        }
+    }, [visibleFilters, filter, view]);
 
     return (
         <section
@@ -340,9 +442,140 @@ export default function EventCalendar({
         >
             <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-2.5">
                 <div className="min-w-0 mr-auto">
-                    <h2 className="text-sm font-semibold text-gray-900 capitalize">
-                        {monthLabel}
-                    </h2>
+                    <div className="relative inline-block" ref={pickerRef}>
+                        <h2
+                            aria-live="polite"
+                            className="text-sm font-semibold text-gray-900"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPickerYear(year);
+                                    setPickerOpen((o) => !o);
+                                }}
+                                aria-expanded={pickerOpen}
+                                aria-haspopup="dialog"
+                                aria-label={`Pilih bulan — sekarang ${monthLabel}`}
+                                className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                <span className="capitalize">{monthLabel}</span>
+                                <svg
+                                    className={`h-3.5 w-3.5 text-gray-400 transition-transform ${pickerOpen ? "rotate-180" : ""}`}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M19 9l-7 7-7-7"
+                                    />
+                                </svg>
+                            </button>
+                            {navLoading && (
+                                <svg
+                                    className="ml-2 inline-block h-3.5 w-3.5 animate-spin align-middle text-gray-400"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    aria-hidden="true"
+                                >
+                                    <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                    />
+                                    <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                    />
+                                </svg>
+                            )}
+                        </h2>
+                        {pickerOpen && (
+                            <div
+                                role="dialog"
+                                aria-label="Pilih bulan"
+                                className="absolute left-0 top-full z-30 mt-1 w-60 rounded-xl border border-[#E2E5EA] bg-white p-2 shadow-lg"
+                            >
+                                <div className="flex items-center justify-between px-1 pb-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPickerYear((v) => v - 1)}
+                                        aria-label="Tahun sebelumnya"
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                                    >
+                                        <svg
+                                            className="h-3.5 w-3.5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M15 19l-7-7 7-7"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <span className="text-xs font-semibold tabular-nums text-gray-900">
+                                        {pickerYear}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPickerYear((v) => v + 1)}
+                                        aria-label="Tahun berikutnya"
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                                    >
+                                        <svg
+                                            className="h-3.5 w-3.5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {MONTH_NAMES.map((name, i) => {
+                                        const active =
+                                            pickerYear === year && i === monthIdx;
+                                        return (
+                                            <button
+                                                key={name}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPickerOpen(false);
+                                                    const delta =
+                                                        (pickerYear - year) * 12 +
+                                                        (i - monthIdx);
+                                                    if (delta !== 0) goMonth(delta);
+                                                }}
+                                                aria-pressed={active}
+                                                className={`rounded-lg px-1 py-1.5 text-[11px] font-medium capitalize transition-colors ${active ? "bg-[#0F1E36] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                                            >
+                                                {name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                         {view === "month"
                             ? `${events.length} agenda · klik tanggal untuk detail`
@@ -362,7 +595,10 @@ export default function EventCalendar({
                             key={k}
                             role="tab"
                             aria-selected={view === k}
-                            onClick={() => setView(k)}
+                            onClick={() => {
+                                setView(k);
+                                syncUrl(k, filter);
+                            }}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${view === k ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
                         >
                             {label}
@@ -444,7 +680,10 @@ export default function EventCalendar({
                     return (
                         <button
                             key={f.key}
-                            onClick={() => setFilter(f.key)}
+                            onClick={() => {
+                                setFilter(f.key);
+                                syncUrl(view, f.key);
+                            }}
                             aria-pressed={filter === f.key}
                             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === f.key ? "bg-[#0F1E36] text-white border-[#0F1E36]" : "bg-white text-gray-600 border-[#E2E5EA] hover:bg-gray-50"}`}
                         >
@@ -459,26 +698,57 @@ export default function EventCalendar({
                 })}
             </div>
 
-            <div className="px-5 py-2 flex flex-wrap gap-x-3 gap-y-1">
-                {LEGEND_GROUPS.filter((g) =>
-                    allEvents.some((e) => g.types.includes(e.type)),
-                ).map((g) => (
-                    <span
-                        key={g.label}
-                        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500"
+            <div className="px-5 py-2">
+                <button
+                    type="button"
+                    onClick={() => setLegendOpen((o) => !o)}
+                    aria-expanded={legendOpen}
+                    aria-controls="calendar-legend"
+                    className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                >
+                    Legenda
+                    <svg
+                        className={`h-3 w-3 transition-transform ${legendOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden="true"
                     >
-                        <span
-                            className={`w-2 h-2 rounded-full ${g.dot}`}
-                            aria-hidden="true"
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19 9l-7 7-7-7"
                         />
-                        {g.label}
-                    </span>
-                ))}
+                    </svg>
+                </button>
+                {legendOpen && (
+                    <div
+                        id="calendar-legend"
+                        className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1"
+                    >
+                        {LEGEND_GROUPS.filter((g) =>
+                            allEvents.some((e) => g.types.includes(e.type)),
+                        ).map((g) => (
+                            <span
+                                key={g.label}
+                                className="inline-flex items-center gap-1.5 text-[11px] text-gray-500"
+                            >
+                                <span
+                                    className={`w-2 h-2 rounded-full ${g.dot}`}
+                                    aria-hidden="true"
+                                />
+                                {g.label}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {view === "month" ? (
                 <div
-                    className="px-3 sm:px-5 pb-5"
+                    aria-busy={navLoading}
+                    className={`px-3 sm:px-5 pb-5 transition-opacity ${navLoading ? "pointer-events-none opacity-60" : ""}`}
                     onTouchStart={(e) => {
                         touchX.current = e.touches[0].clientX;
                     }}
@@ -510,7 +780,7 @@ export default function EventCalendar({
                             return (
                                 <div
                                     key={i}
-                                    onClick={() => handleSelect(k)}
+                                    onClick={() => handleCellClick(k, d)}
                                     className={`min-h-[52px] sm:min-h-[92px] rounded-xl border p-1 sm:p-1.5 flex flex-col cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${
                                         isSelected
                                             ? "border-[#0F1E36] ring-1 ring-[#0F1E36] bg-[#0F1E36]/[0.03]"
@@ -518,13 +788,16 @@ export default function EventCalendar({
                                     } ${inMonth ? "" : "opacity-40"} ${weekend && inMonth ? "bg-gray-50/70" : ""}`}
                                 >
                                     <button
+                                        ref={(el) => (cellRefs.current[i] = el)}
+                                        tabIndex={i === rovingIdx ? 0 : -1}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleSelect(k);
+                                            handleCellClick(k, d);
                                         }}
+                                        onKeyDown={(e) => onCellKeyDown(e, i)}
                                         aria-pressed={isSelected}
-                                        aria-label={`${d.getDate()} ${monthLabel}, ${dayEvents.length} agenda`}
-                                        className={`self-start inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : "text-gray-700"}`}
+                                        aria-label={`${dayAriaLabel(d)}, ${dayEvents.length} agenda`}
+                                        className={`self-start inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-gray-400" : "text-gray-700"}`}
                                     >
                                         {d.getDate()}
                                     </button>
@@ -577,7 +850,7 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""} ${isHl ? `ring-2 ${meta.hlRing} ${meta.hlGlow}` : ""}`}
+                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""} ${isHl ? `ring-2 ${meta.hlRing} ${meta.hlGlow}` : ""}`}
                                                 >
                                                     {e.title}
                                                 </Link>
@@ -613,7 +886,10 @@ export default function EventCalendar({
                     </div>
                 </div>
             ) : (
-                <div className="px-3 sm:px-5 pb-5">
+                <div
+                    aria-busy={navLoading}
+                    className={`px-3 sm:px-5 pb-5 transition-opacity ${navLoading ? "pointer-events-none opacity-60" : ""}`}
+                >
                     {events.length === 0 ? (
                         <div className="px-4 py-10 text-center">
                             <p className="text-sm font-medium text-gray-500">
