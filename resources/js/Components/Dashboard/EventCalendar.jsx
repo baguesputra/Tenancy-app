@@ -259,16 +259,10 @@ export default function EventCalendar({
         });
         return set;
     }, [byDay, selected]);
-    const agenda = useMemo(() => {
-        const today = dayKey(new Date());
-        return events
-            .filter((e) => (e.end || e.start) >= today)
-            .sort((a, b) => a.start.localeCompare(b.start))
-            .slice(0, 60);
-    }, [events]);
     const agendaGroups = useMemo(() => {
         const map = {};
-        agenda.forEach((e) => {
+        events.forEach((e) => {
+            if (!e.start) return;
             (map[e.start] ??= []).push(e);
         });
         return Object.keys(map)
@@ -279,7 +273,7 @@ export default function EventCalendar({
                     (a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0),
                 ),
             }));
-    }, [agenda]);
+    }, [events]);
 
     const goMonth = (delta) => {
         const d = new Date(year, monthIdx + delta, 1);
@@ -340,7 +334,9 @@ export default function EventCalendar({
                         {monthLabel}
                     </h2>
                     <p className="text-xs text-gray-400 mt-0.5">
-                        {events.length} agenda · klik tanggal untuk detail
+                        {view === "month"
+                            ? `${events.length} agenda · klik tanggal untuk detail`
+                            : `${events.length} agenda bulan ini`}
                     </p>
                 </div>
                 <div
@@ -349,7 +345,7 @@ export default function EventCalendar({
                     aria-label="Tampilan kalender"
                 >
                     {[
-                        ["month", "Bulan"],
+                        ["month", "Kalender"],
                         ["agenda", "Agenda"],
                     ].map(([k, label]) => (
                         <button
@@ -610,7 +606,7 @@ export default function EventCalendar({
                 <div className="px-1 sm:px-3 pb-3">
                     {agendaGroups.length === 0 && (
                         <p className="px-4 py-8 text-sm text-gray-400 text-center">
-                            Tidak ada agenda mendatang.
+                            Tidak ada agenda bulan ini.
                         </p>
                     )}
                     {agendaGroups.map((g) => (
