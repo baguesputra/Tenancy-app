@@ -8,23 +8,9 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
-
-const statusColor = { pending: 'yellow', completed: 'green', rejected: 'red', cancelled: 'gray' };
-const statusLabel = { pending: 'Menunggu', completed: 'Selesai', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
-
-const categoryMeta = {
-    pameran: { label: 'Pameran / Open Counter', color: 'coral', code: 'E&P' },
-    kegiatan: { label: 'Kegiatan', color: 'green', code: null },
-    tenant: { label: 'Tenant', color: 'blue', code: 'TC' },
-    vendor: { label: 'Vendor', color: 'amber', code: 'TC' },
-};
+import { PERMIT_CATEGORY_META, PERMIT_SOURCE_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 
 const codeOf = (p, cat) => (p.permit_number?.split('/')?.[1]) || cat.code || '—';
-
-const sourceMeta = {
-    marketing: { label: 'Marketing', color: 'coral' },
-    staff: { label: 'Staff', color: 'blue' },
-};
 
 export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
@@ -57,13 +43,13 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
     const counts = summary.counts ?? {};
 
     const stats = locked ? [
-        { key: 'pameran', label: 'Pengajuan Pameran', value: summary.total, dot: 'bg-[#FF6B6B]' },
+        { key: 'pameran', label: 'Pengajuan Pameran', value: summary.total },
     ] : [
-        { key: '', label: 'Total Pengajuan', value: summary.total, dot: 'bg-[#0F1E36]' },
-        { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0, dot: 'bg-[#FF6B6B]' },
-        { key: 'kegiatan', label: 'Kegiatan', value: counts.kegiatan ?? 0, dot: 'bg-emerald-500' },
-        { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0, dot: 'bg-blue-500' },
-        { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0, dot: 'bg-amber-500' },
+        { key: '', label: 'Total Pengajuan', value: summary.total },
+        { key: 'pameran', label: 'Pameran', value: counts.pameran ?? 0 },
+        { key: 'kegiatan', label: 'Kegiatan', value: counts.kegiatan ?? 0 },
+        { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0 },
+        { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0 },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
     const columns = locked ? [
@@ -105,7 +91,6 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
                 {locked ? (
                     <div className="bg-white rounded-xl border border-[#E2E5EA] px-4 py-3 mb-4 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-hidden="true" />
                         <span className="text-xs text-gray-500">Pengajuan Pameran</span>
                         <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
                     </div>
@@ -120,10 +105,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 aria-pressed={active}
                                 className={`text-left bg-white rounded-xl border px-4 py-3 transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${active ? 'border-[#0F1E36] ring-1 ring-[#0F1E36]' : 'border-[#E2E5EA] hover:border-gray-300 hover:shadow-sm'}`}
                             >
-                                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                    {s.label}
-                                </span>
+                                <span className="block text-xs text-gray-500">{s.label}</span>
                                 <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
                             </button>
                         );
@@ -178,8 +160,8 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
                     {permits.data.map((p) => {
-                        const cat = categoryMeta[p.category] ?? categoryMeta.vendor;
-                        const src = sourceMeta[p.source] ?? sourceMeta.staff;
+                        const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
+                        const src = PERMIT_SOURCE_META[p.source] ?? PERMIT_SOURCE_META.staff;
                         return (
                             <tr
                                 key={p.id}
@@ -190,7 +172,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                             >
                                 <td className="px-5 py-3.5">
                                     <span className="flex items-center gap-2 min-w-0">
-                                        <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
+                                        <span className="shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#0F1E36]/5 text-[#0F1E36]">
                                             {codeOf(p, cat)}
                                         </span>
                                         <span className="min-w-0">
@@ -205,14 +187,14 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 </td>
                                 {!locked && (
                                 <td className="px-5 py-3.5">
-                                    <Badge color={cat.color}>{cat.label}</Badge>
+                                    <Badge color="gray" variant="soft">{cat.label}</Badge>
                                     {(p.activity_labels ?? []).length > 1 && (
                                         <span className="block text-[11px] text-gray-400 mt-1">+{(p.activity_labels ?? []).length - 1} aktivitas</span>
                                     )}
                                 </td>
                                 )}
                                 <td className="px-5 py-3.5">
-                                    <Badge color={src.color} size="sm">{src.label}</Badge>
+                                    <Badge color="gray" size="sm">{src.label}</Badge>
                                 </td>
                                 <td className="px-5 py-3.5">
                                     <span className="block text-sm text-gray-900 truncate max-w-52" title={p.store_name_snapshot}>{p.store_name_snapshot}</span>
@@ -230,7 +212,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                         {p.status === 'pending' && p.current_step_label ? (
                                             <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
                                         ) : (
-                                            <Badge color={statusColor[p.status]}>{statusLabel[p.status] ?? p.status}</Badge>
+                                            <Badge color={PERMIT_STATUS_META[p.status]?.color ?? 'gray'}>{PERMIT_STATUS_META[p.status]?.label ?? p.status}</Badge>
                                         )}
                                         <svg className="w-4 h-4 text-gray-300 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -258,7 +240,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
                 <div className="sm:hidden space-y-2.5">
                     {permits.data.map((p) => {
-                        const cat = categoryMeta[p.category] ?? categoryMeta.vendor;
+                        const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
                         return (
                             <div
                                 key={p.id}
@@ -273,11 +255,11 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     {p.status === 'pending' && p.current_step_label ? (
                                         <Badge color="yellow" size="sm">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
                                     ) : (
-                                        <Badge color={statusColor[p.status]} size="sm">{statusLabel[p.status] ?? p.status}</Badge>
+                                        <Badge color={PERMIT_STATUS_META[p.status]?.color ?? 'gray'} size="sm">{PERMIT_STATUS_META[p.status]?.label ?? p.status}</Badge>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
-                                    <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${p.category === 'pameran' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 'bg-gray-100 text-gray-500'}`}>
+                                    <span className="shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#0F1E36]/5 text-[#0F1E36]">
                                         {codeOf(p, cat)}
                                     </span>
                                     <span className="text-xs text-gray-400 truncate">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
