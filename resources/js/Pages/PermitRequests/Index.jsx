@@ -8,7 +8,16 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
+import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding } from '@/Components/Icons';
 import { PERMIT_CATEGORY_META, PERMIT_SOURCE_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
+import { formatRelativeID, formatDateID } from '@/utils/format';
+
+const CATEGORY_ICON = {
+    storefront: IconStorefront,
+    calendar: IconCalendarEvent,
+    building: IconBuilding,
+    wrench: IconWrench,
+};
 
 const codeOf = (p, cat) => (p.permit_number?.split('/')?.[1]) || cat.code || '—';
 
@@ -52,17 +61,20 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0 },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
+    const rows = [...permits.data].sort((a, b) => Number(b.is_my_turn) - Number(a.is_my_turn));
+
     const columns = locked ? [
         { key: 'number', label: 'Nomor Surat' },
         { key: 'source', label: 'Sumber' },
         { key: 'location', label: 'Lokasi / Tenant' },
+        { key: 'date', label: 'Diajukan' },
         { key: 'progress', label: 'Progress' },
         { key: 'status', label: 'Status', className: 'text-right' },
     ] : [
         { key: 'number', label: 'Nomor Surat' },
         { key: 'category', label: 'Jenis' },
-        { key: 'source', label: 'Sumber' },
         { key: 'location', label: 'Lokasi / Tenant' },
+        { key: 'date', label: 'Diajukan' },
         { key: 'progress', label: 'Progress' },
         { key: 'status', label: 'Status', className: 'text-right' },
     ];
@@ -159,9 +171,11 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
-                    {permits.data.map((p) => {
+                    {rows.map((p) => {
                         const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
                         const src = PERMIT_SOURCE_META[p.source] ?? PERMIT_SOURCE_META.staff;
+                        const CatIcon = CATEGORY_ICON[cat.icon] ?? IconBuilding;
+                        const extraActivities = (p.activity_labels ?? []).length - 1;
                         return (
                             <tr
                                 key={p.id}
@@ -176,7 +190,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                             {codeOf(p, cat)}
                                         </span>
                                         <span className="min-w-0">
-                                            <span className="block font-medium text-gray-900 truncate">{p.permit_number}</span>
+                                            <span className="block font-semibold text-gray-900 truncate">{p.permit_number}</span>
                                             {p.is_my_turn && (
                                                 <span className="block text-[10px] font-medium text-amber-600 uppercase tracking-wide">
                                                     Menunggu Anda
@@ -187,18 +201,26 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 </td>
                                 {!locked && (
                                 <td className="px-5 py-3.5">
-                                    <Badge color="gray" variant="soft">{cat.label}</Badge>
-                                    {(p.activity_labels ?? []).length > 1 && (
-                                        <span className="block text-[11px] text-gray-400 mt-1">+{(p.activity_labels ?? []).length - 1} aktivitas</span>
-                                    )}
+                                    <span className="flex items-center gap-1.5">
+                                        <CatIcon className={`w-4 h-4 shrink-0 ${cat.tint}`} aria-hidden="true" />
+                                        <span className="text-sm text-gray-900">{cat.label}</span>
+                                    </span>
+                                    <span className="block text-[11px] text-gray-400 mt-0.5">
+                                        via {src.label}{extraActivities > 0 ? ` · +${extraActivities} aktivitas` : ''}
+                                    </span>
                                 </td>
                                 )}
+                                {locked && (
                                 <td className="px-5 py-3.5">
                                     <Badge color="gray" size="sm">{src.label}</Badge>
                                 </td>
+                                )}
                                 <td className="px-5 py-3.5">
                                     <span className="block text-sm text-gray-900 truncate max-w-52" title={p.store_name_snapshot}>{p.store_name_snapshot}</span>
                                     <span className="block text-xs text-gray-400 truncate max-w-52" title={(p.activity_labels ?? []).join(' · ') || '—'}>{(p.activity_labels ?? []).join(' · ') || '—'}</span>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                    <span className="text-sm text-gray-600" title={formatDateID(p.request_date)}>{formatRelativeID(p.request_date)}</span>
                                 </td>
                                 <td className="px-5 py-3.5">
                                     {p.step_progress?.length > 0 ? (
@@ -224,7 +246,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                     })}
                     {permits.data.length === 0 && (
                         <tr>
-                            <td colSpan={locked ? 5 : 6} className="px-5 py-12 text-center">
+                            <td colSpan={6} className="px-5 py-12 text-center">
                                 <p className="text-sm font-medium text-gray-700">{locked ? 'Belum ada pengajuan pameran.' : 'Belum ada surat izin ditemukan.'}</p>
                                 <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.'}</p>
                                 {hasFilter && (
@@ -239,8 +261,9 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 </div>
 
                 <div className="sm:hidden space-y-2.5">
-                    {permits.data.map((p) => {
+                    {rows.map((p) => {
                         const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
+                        const CatIcon = CATEGORY_ICON[cat.icon] ?? IconBuilding;
                         return (
                             <div
                                 key={p.id}
@@ -250,7 +273,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">{p.permit_number}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5 truncate">{p.store_name_snapshot}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5 truncate">{p.store_name_snapshot} · {formatRelativeID(p.request_date)}</p>
                                     </div>
                                     {p.status === 'pending' && p.current_step_label ? (
                                         <Badge color="yellow" size="sm">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
@@ -259,7 +282,8 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
-                                    <span className="shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#0F1E36]/5 text-[#0F1E36]">
+                                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#0F1E36]/5 text-[#0F1E36]">
+                                        <CatIcon className={`w-3 h-3 ${cat.tint}`} aria-hidden="true" />
                                         {codeOf(p, cat)}
                                     </span>
                                     <span className="text-xs text-gray-400 truncate">{(p.activity_labels ?? []).join(' · ') || '—'}</span>

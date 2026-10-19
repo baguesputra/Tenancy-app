@@ -47,12 +47,12 @@ export default function StepProgressMini({ steps }) {
                     <span
                         key={idx}
                         aria-hidden="true"
-                        className={`h-1.5 rounded-full transition-all duration-300 ${dotColor[step.status]} ${
-                            step.status === 'pending' && idx === currentIdx ? 'w-4 animate-pulse' : 'w-2.5'
+                        className={`h-2 rounded-full transition-all duration-300 ${dotColor[step.status]} ${
+                            step.status === 'pending' && idx === currentIdx ? 'w-5 animate-pulse' : 'w-3'
                         }`}
                     />
                 ))}
-                <span className="ml-1 text-[10px] font-medium text-gray-400 tabular-nums">{done}/{steps.length}</span>
+                <span className="ml-1 text-[11px] font-medium text-gray-500 tabular-nums">{done}/{steps.length}</span>
             </button>
             {open && (
                 <div className="absolute left-0 top-full z-20 mt-1.5 w-56 rounded-xl border border-[#E2E5EA] bg-white p-2.5 shadow-lg" onClick={(e) => e.stopPropagation()}>

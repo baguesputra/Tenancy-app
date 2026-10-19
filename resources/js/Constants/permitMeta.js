@@ -1,8 +1,8 @@
 export const PERMIT_CATEGORY_META = {
-    pameran: { label: 'Pameran / Open Counter', code: 'E&P' },
-    kegiatan: { label: 'Kegiatan', code: null },
-    tenant: { label: 'Tenant', code: 'TC' },
-    vendor: { label: 'Vendor', code: 'TC' },
+    pameran: { label: 'Pameran / Open Counter', code: 'E&P', icon: 'storefront', tint: 'text-[#FF6B6B]' },
+    kegiatan: { label: 'Kegiatan', code: null, icon: 'calendar', tint: 'text-indigo-500' },
+    tenant: { label: 'Tenant', code: 'TC', icon: 'building', tint: 'text-sky-600' },
+    vendor: { label: 'Vendor', code: 'TC', icon: 'wrench', tint: 'text-teal-600' },
 };
 
 export const PERMIT_SOURCE_META = {

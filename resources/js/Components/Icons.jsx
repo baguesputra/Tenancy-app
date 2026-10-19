@@ -6,6 +6,30 @@ export function IconBuilding(props) {
     );
 }
 
+export function IconStorefront(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.75V19.5a.75.75 0 00.75.75h15a.75.75 0 00.75-.75V9.75M3 9.75l1.8-5.32a.75.75 0 01.72-.53h12.96a.75.75 0 01.72.53l1.8 5.32M3 9.75a2.25 2.25 0 004.5 0 2.25 2.25 0 004.5 0 2.25 2.25 0 004.5 0 2.25 2.25 0 004.5 0M9.75 20.25v-4.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75v4.5" />
+        </svg>
+    );
+}
+
+export function IconCalendarEvent(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75V7.5a2.25 2.25 0 012.25-2.25h12a2.25 2.25 0 012.25 2.25v11.25a2.25 2.25 0 01-2.25 2.25h-12a2.25 2.25 0 01-2.25-2.25zM3.75 10.5h16.5M8.25 14.25h.01M12 14.25h.01M15.75 14.25h.01M8.25 17.25h.01M12 17.25h.01" />
+        </svg>
+    );
+}
+
+export function IconWrench(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486l-3.276 3.276a3.004 3.004 0 002.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852z" />
+        </svg>
+    );
+}
+
 export function IconGrid(props) {
     return (
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
