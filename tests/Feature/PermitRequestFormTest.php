@@ -137,6 +137,36 @@ class PermitRequestFormTest extends TestCase
             ->assertSessionHasErrors('activity_types.0');
     }
 
+    public function test_fit_out_dan_pull_out_tidak_bisa_dipilih_bersamaan(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload(['activity_types' => ['fit_out', 'pull_out']]))
+            ->assertSessionHasErrors(['activity_types' => 'Fit Out dan Pull Out hanya bisa dipilih salah satu.']);
+
+        $this->assertDatabaseCount('permit_requests', 0);
+    }
+
+    public function test_fit_out_atau_pull_out_tetap_bisa_diajukan_sendiri(): void
+    {
+        $user = $this->makeUser();
+
+        foreach (['fit_out', 'pull_out'] as $type) {
+            $this->actingAs($user)
+                ->from('/permit-requests/create')
+                ->post('/permit-requests', $this->payload(['activity_types' => [$type]]))
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertDatabaseCount('permit_requests', 2);
+        $this->assertSame(
+            [['fit_out'], ['pull_out']],
+            PermitRequest::orderBy('id')->get()->pluck('activity_types')->all(),
+        );
+    }
+
     public function test_security_diblokir_saat_foto_ktp_kurang(): void
     {
         Storage::fake('public');

@@ -180,7 +180,7 @@ class StaticDocumentTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_permit_dengan_fitout_dan_pullout_mendukung_kedua_varian(): void
+    public function test_data_lama_dengan_fitout_dan_pullout_tetap_mendukung_kedua_varian(): void
     {
         $user = $this->makeUser();
         $permit = $this->makePermit($user, ['fit_out', 'pull_out']);

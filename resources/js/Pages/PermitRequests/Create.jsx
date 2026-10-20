@@ -31,6 +31,8 @@ const ACTIVITY_GROUPS = [
     { label: 'Event', values: ['pameran'] },
 ].map((g) => ({ label: g.label, items: ACTIVITY_TYPES.filter((t) => g.values.includes(t.value)) }));
 
+const EXCLUSIVE_ACTIVITY_TYPES = ['fit_out', 'pull_out'];
+
 export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'kerja', canChooseMode = false }) {
     const isKegiatan = !isMarketingLocked && formMode === 'kegiatan';
     const isParkir = !isMarketingLocked && formMode === 'parkir';
@@ -87,6 +89,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
 
     const toggleActivityType = (value) => {
         const current = data.activity_types || [];
+        if (EXCLUSIVE_ACTIVITY_TYPES.includes(value)) {
+            const next = current.includes(value)
+                ? current.filter((v) => v !== value)
+                : [...current.filter((v) => !EXCLUSIVE_ACTIVITY_TYPES.includes(v)), value];
+            setData('activity_types', next);
+            return;
+        }
         setData('activity_types', current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
     };
 
@@ -120,7 +129,9 @@ export default function Create({ tenants, departments, isMarketingLocked = false
             }
         }
         if (s === 2) {
+            const hasBothProjectTypes = EXCLUSIVE_ACTIVITY_TYPES.every((value) => data.activity_types.includes(value));
             if (data.activity_types.length === 0) errs.activity_types = 'Pilih minimal 1 jenis kegiatan.';
+            else if (hasBothProjectTypes) errs.activity_types = 'Fit Out dan Pull Out hanya bisa dipilih salah satu.';
             if (!data.work_start_date) errs.work_start_date = 'Tanggal mulai wajib diisi.';
             if (!data.work_end_date) errs.work_end_date = 'Tanggal selesai wajib diisi.';
         }
@@ -685,6 +696,9 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                                                     />
                                                                 ))}
                                                             </div>
+                                                            {group.label === 'Proyek' && (
+                                                                <p className="text-[11px] text-gray-400 mt-2">Fit Out dan Pull Out hanya bisa dipilih salah satu.</p>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}

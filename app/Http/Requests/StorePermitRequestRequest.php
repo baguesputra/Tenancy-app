@@ -73,6 +73,19 @@ class StorePermitRequestRequest extends FormRequest
         ];
     }
 
+    public function after(): array
+    {
+        return [
+            function ($validator) {
+                $types = $this->input('activity_types');
+
+                if (is_array($types) && in_array('fit_out', $types, true) && in_array('pull_out', $types, true)) {
+                    $validator->errors()->add('activity_types', 'Fit Out dan Pull Out hanya bisa dipilih salah satu.');
+                }
+            },
+        ];
+    }
+
     public function messages(): array
     {
         return [
