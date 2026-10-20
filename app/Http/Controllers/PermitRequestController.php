@@ -11,6 +11,7 @@ use App\Models\StaticDocument;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermitRequestService;
+use App\Services\PermitRequestVisibilityService;
 use App\Services\TenantScopeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -22,7 +23,11 @@ use Spatie\Permission\Models\Role;
 
 class PermitRequestController extends Controller
 {
-    public function __construct(private PermitRequestService $service, private TenantScopeService $tenantScope) {}
+    public function __construct(
+        private PermitRequestService $service,
+        private TenantScopeService $tenantScope,
+        private PermitRequestVisibilityService $visibility,
+    ) {}
 
     private const PRIVILEGED_ROLES = ['manager', 'admin', 'super_admin'];
 
@@ -78,7 +83,21 @@ class PermitRequestController extends Controller
 
     public function index(Request $request)
     {
-        $isMarketing = $request->user()->hasRole('marketing');
+        $user = $request->user();
+        $isMarketing = $this->visibility->isMarketingLocked($user);
+        $hiddenCategories = $this->visibility->hiddenCategories($user);
+
+        if ($isMarketing) {
+            $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
+        }
+
+        if ($request->filled('category') && in_array($request->category, $hiddenCategories, true)) {
+            $request->merge(['category' => null]);
+        }
+
+        if ($request->filled('activity_type') && $request->activity_type === 'pameran' && ! $this->visibility->canViewPameran($user)) {
+            $request->merge(['activity_type' => null]);
+        }
 
         $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
@@ -88,14 +107,7 @@ class PermitRequestController extends Controller
                 ->orWhere('store_name_snapshot', 'like', "%{$request->search}%")))
             ->latest();
 
-        if ($isMarketing) {
-            $base->where('activity_types', 'like', '%pameran%');
-            $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
-        }
-
-        if (! $request->user()->canViewAllBranches()) {
-            $base->where('branch_id', $request->user()->branch_id);
-        }
+        $this->visibility->applyView($base, $user);
 
         if ($isMarketing) {
             $total = (clone $base)->count();
@@ -127,7 +139,6 @@ class PermitRequestController extends Controller
 
         $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 
-        $user = $request->user();
         $userDepartmentId = $user->department_id;
         $isManager = $user->hasRole('manager');
         $marketingIds = Role::where('name', 'marketing')->first()?->users()->pluck('users.id')->all() ?? [];
@@ -160,10 +171,13 @@ class PermitRequestController extends Controller
                 $request->only(['status', 'category', 'activity_type', 'search']),
                 $isMarketing ? ['category' => 'pameran'] : []
             ),
-            'activityTypes' => self::ACTIVITY_TYPES,
+            'activityTypes' => collect(self::ACTIVITY_TYPES)
+                ->reject(fn ($type) => $type['value'] === 'pameran' && ! $this->visibility->canViewPameran($user))
+                ->values()
+                ->all(),
             'summary' => $summary,
             'categoryLocked' => $isMarketing ? 'pameran' : null,
-            'hiddenCategories' => [],
+            'hiddenCategories' => $hiddenCategories,
         ]);
     }
 
@@ -212,18 +226,23 @@ class PermitRequestController extends Controller
 
     public function create(Request $request)
     {
-        // ponytail: marketing paksa pameran; non-marketing bebas ?mode=kerja|kegiatan|pameran
-        $isRoleMarketing = $request->user()->hasRole('marketing');
+        $user = $request->user();
+        $isMarketing = $this->visibility->isMarketingLocked($user);
+        $canCreatePameran = $this->visibility->canCreatePameran($user);
         $rawMode = $request->query('mode', 'kerja');
         if ($rawMode === 'umum') {
             $rawMode = 'kerja'; // alias lama
         }
-        $mode = $isRoleMarketing ? 'pameran' : (in_array($rawMode, ['kerja', 'kegiatan', 'pameran', 'parkir'], true) ? $rawMode : 'kerja');
+        $allowedModes = ['kerja', 'kegiatan', 'parkir'];
+        if ($canCreatePameran) {
+            $allowedModes[] = 'pameran';
+        }
+        $mode = $isMarketing ? 'pameran' : (in_array($rawMode, $allowedModes, true) ? $rawMode : 'kerja');
         $isExhibition = $mode === 'pameran';
         $isKegiatan = $mode === 'kegiatan';
         $isParkir = $mode === 'parkir';
 
-        $viewable = $this->tenantScope->viewableCategoryIds($request->user());
+        $viewable = $this->tenantScope->viewableCategoryIds($user);
 
         $tenants = Tenant::where('is_active', true)
             ->whereHas('activeTenancy')
@@ -246,14 +265,17 @@ class PermitRequestController extends Controller
             'departments' => Department::orderBy('name')->get(['id', 'name']),
             'isMarketingLocked' => $isExhibition,
             'formMode' => $mode,
-            'canChooseMode' => ! $isRoleMarketing,
+            'canChooseMode' => ! $isMarketing,
+            'canCreatePameran' => $canCreatePameran,
         ]);
     }
 
     public function store(StorePermitRequestRequest $request)
     {
-        $isRoleMarketing = $request->user()->hasRole('marketing');
-        $isExhibition = $isRoleMarketing || $request->input('form_mode') === 'pameran';
+        $user = $request->user();
+        $isMarketing = $this->visibility->isMarketingLocked($user);
+        $isExhibition = $isMarketing || $request->input('form_mode') === 'pameran';
+        abort_if($isExhibition && ! $this->visibility->canCreatePameran($user), 403);
         $isKegiatan = ! $isExhibition && $request->input('form_mode') === 'kegiatan';
         $isParkir = ! $isExhibition && ! $isKegiatan && $request->input('form_mode') === 'parkir';
 
@@ -285,7 +307,7 @@ class PermitRequestController extends Controller
             $validated['activity_types'] = ['langganan_parkir'];
         }
 
-        $permit = $this->service->create($validated, $request->user());
+        $permit = $this->service->create($validated, $user);
 
         return redirect()->route('permit-requests.show', $permit->id)
             ->with('success', 'Surat izin berhasil diajukan atas nama tenant.');
@@ -294,8 +316,7 @@ class PermitRequestController extends Controller
     public function show(PermitRequest $permitRequest, Request $request)
     {
         $user = $request->user();
-        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_unless($this->visibility->canView($user, $permitRequest), 403);
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'ktpPhotos', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy', 'revisions']);
         $permitRequest->currentUserDepartmentId = $user->department_id;
@@ -372,7 +393,7 @@ class PermitRequestController extends Controller
     public function qrLabel(PermitRequest $permitRequest, Request $request)
     {
         $user = $request->user();
-        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_unless($this->visibility->canView($user, $permitRequest), 403);
 
         $permitRequest->load(['tenant', 'scannableCode', 'approvals' => fn ($q) => $q->orderBy('order')]);
 
@@ -417,8 +438,7 @@ class PermitRequestController extends Controller
     public function pdf(PermitRequest $permitRequest, Request $request)
     {
         $user = $request->user();
-        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_unless($this->visibility->canView($user, $permitRequest), 403);
 
         $permitRequest->load(['tenant', 'requestedBy', 'workers', 'goods', 'ktpPhotos', 'accompanyingDepartments', 'approvals.department', 'approvals.approvedBy']);
 
@@ -689,7 +709,7 @@ class PermitRequestController extends Controller
     public function tataTertibLembur(PermitRequest $permitRequest, Request $request)
     {
         $user = $request->user();
-        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_unless($this->visibility->canView($user, $permitRequest), 403);
         abort_unless(in_array('lembur', $permitRequest->activity_types ?? [], true), 403, 'Tata tertib lembur hanya untuk izin lembur.');
 
         if ($doc = StaticDocument::forPermit('tata-tertib-lembur', $permitRequest->branch_id)) {
@@ -755,9 +775,8 @@ class PermitRequestController extends Controller
     public function penitipanBarang(PermitRequest $permitRequest, Request $request)
     {
         $user = $request->user();
-        abort_unless($permitRequest->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        abort_unless($this->visibility->canView($user, $permitRequest), 403);
         abort_unless(! empty(array_intersect(['masuk_barang', 'fit_out', 'pull_out'], $permitRequest->activity_types ?? [])), 403, 'Penitipan barang hanya untuk izin masuk barang / fit out / pull out.');
-        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
 
         $jenis = array_intersect(['fit_out', 'pull_out'], $permitRequest->activity_types ?? [])
             ? $this->resolveDocVariant($permitRequest, $request)
@@ -867,8 +886,7 @@ class PermitRequestController extends Controller
     private function guardFitoutDownload(PermitRequest $permit, Request $request): string
     {
         $user = $request->user();
-        abort_unless($permit->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
-        abort_if($user->hasRole('marketing') && ! in_array('pameran', $permit->activity_types ?? []), 403);
+        abort_unless($this->visibility->canView($user, $permit), 403);
         abort_unless($this->hasFitoutDocs($permit), 403, 'Surat pernyataan hanya untuk izin Fit Out / Pull Out.');
 
         return $this->resolveDocVariant($permit, $request);
@@ -938,8 +956,7 @@ class PermitRequestController extends Controller
     {
         abort_unless($permitRequest->status === 'pending', 422, 'Hanya izin pending yang bisa direvisi.');
         abort_if($this->isParkirForm($permitRequest), 422, 'Form langganan parkir tidak mendukung revisi.');
-        abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
-        abort_if($request->user()->hasRole('marketing') && ! in_array('pameran', $permitRequest->activity_types ?? []), 403);
+        abort_unless($this->visibility->canView($request->user(), $permitRequest), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
             $this->isPameranForm($permitRequest) ? 'Revisi form pameran hanya oleh marketing.' : ($this->isKegiatanForm($permitRequest) ? 'Revisi form kegiatan hanya oleh tenancy_staff.' : 'Revisi form tenant hanya oleh tenancy_staff.'));
 
@@ -956,7 +973,7 @@ class PermitRequestController extends Controller
             || ($permitRequest->requested_by_type ?? null) !== User::class) {
             abort(403, 'Hanya pembuat yang bisa membatalkan.');
         }
-        abort_unless($permitRequest->branch_id === $request->user()->branch_id || $request->user()->canViewAllBranches(), 403);
+        abort_unless($this->visibility->canView($request->user(), $permitRequest), 403);
         abort_unless($this->canManageForm($request->user(), $permitRequest), 403,
             $this->isPameranForm($permitRequest) ? 'Pembatalan form pameran hanya oleh marketing.' : ($this->isKegiatanForm($permitRequest) ? 'Pembatalan form kegiatan hanya oleh tenancy_staff.' : 'Pembatalan form tenant hanya oleh tenancy_staff.'));
 

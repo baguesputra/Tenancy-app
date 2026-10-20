@@ -7,6 +7,7 @@ use App\Models\PermitRequest;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Services\BranchScopeService;
+use App\Services\PermitRequestVisibilityService;
 use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +16,11 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class TenantProfileController extends Controller
 {
-    public function __construct(private BranchScopeService $branchScope, private TenantScopeService $tenantScope) {}
+    public function __construct(
+        private BranchScopeService $branchScope,
+        private TenantScopeService $tenantScope,
+        private PermitRequestVisibilityService $permitVisibility,
+    ) {}
 
     public function index(Request $request)
     {
@@ -32,7 +37,7 @@ class TenantProfileController extends Controller
             ->withCount([
                 'tenancies',
                 'inspections as inspections_completed_count' => fn ($q) => $q->where('status', 'completed'),
-                'permitRequests as permits_pending_count' => fn ($q) => $q->where('status', 'pending'),
+                'permitRequests as permits_pending_count' => fn ($q) => $this->permitVisibility->applyView($q->where('status', 'pending'), $request->user()),
             ])
             ->latest();
 
@@ -56,7 +61,7 @@ class TenantProfileController extends Controller
             'activeTenancy:id,tenant_id,unit_id,status', 'activeTenancy.unit:id,unit_code',
             'tenancies' => fn ($q) => $q->select(['id', 'tenant_id', 'unit_id', 'status', 'start_date', 'end_date', 'contract_number'])->with('unit:id,unit_code')->latest('start_date')->take(20),
             'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged'])->with('session:id,status,started_at')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(20),
-            'permitRequests' => fn ($q) => $q->select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date'])->latest()->take(20),
+            'permitRequests' => fn ($q) => $this->permitVisibility->applyView($q->select(['id', 'tenant_id', 'permit_number', 'status', 'job_type', 'request_date']), $request->user())->latest()->take(20),
         ]);
 
         $inspections = $tenant->inspections->map(fn ($i) => [
@@ -139,7 +144,7 @@ class TenantProfileController extends Controller
             'activeTenancy.unit.scannableCode:scannable_type,scannable_id,token',
             'tenancies' => fn ($q) => $q->with(['unit:id,unit_code,size,floor,block', 'unit.scannableCode:scannable_type,scannable_id,token'])->latest('start_date')->take(30),
             'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged', 'synced_at'])->with('session.user:id,name')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
-            'permitRequests' => fn ($q) => $q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'ktpPhotos:permit_request_id', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name'])->latest()->take(30),
+            'permitRequests' => fn ($q) => $this->permitVisibility->applyView($q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'ktpPhotos:permit_request_id', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name']), $request->user())->latest()->take(30),
         ]);
 
         $now = now()->startOfDay();
@@ -258,6 +263,7 @@ class TenantProfileController extends Controller
     {
         $this->authorizeView($tenant, $request);
         abort_unless($permit->tenant_id === $tenant->id, 404);
+        abort_unless($this->permitVisibility->canView($request->user(), $permit), 403);
 
         $permit->load(['workers', 'goods', 'approvals.approvedBy', 'scannableCode']);
 

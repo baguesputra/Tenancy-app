@@ -12,6 +12,7 @@ use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Services\BranchScopeService;
+use App\Services\PermitRequestVisibilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -25,14 +26,17 @@ class DashboardController extends Controller
         'measurement', 'ba_handover', 'fitout', 'pre_handover',
     ];
 
-    public function __construct(private BranchScopeService $branchScope) {}
+    public function __construct(
+        private BranchScopeService $branchScope,
+        private PermitRequestVisibilityService $permitVisibility,
+    ) {}
 
     public function index(Request $request)
     {
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
 
-        $statsKey = 'dashboard.stats.'.($branchScoped ? 'b'.$user->branch_id : 'all');
+        $statsKey = 'dashboard.stats.'.($branchScoped ? 'b'.$user->branch_id : 'all').'.'.$this->permitVisibility->cacheKey($user);
         $cached = Cache::remember($statsKey, 60, function () use ($branchScoped, $user) {
             $totalTenants = Tenant::where('is_active', true)
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
@@ -41,8 +45,10 @@ class DashboardController extends Controller
             $occupiedUnits = Unit::where('is_active', true)
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
                 ->whereHas('activeTenancy')->count();
-            $pendingPermits = PermitRequest::where('status', 'pending')
-                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            $pendingPermits = $this->permitVisibility->applyView(
+                PermitRequest::where('status', 'pending'),
+                $user
+            )->count();
             $activeSessions = InspectionSession::where('status', 'in_progress')
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
             $looBase = fn () => Loo::when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id));
@@ -62,10 +68,10 @@ class DashboardController extends Controller
 
             $permitIds = $pendingApprovals->pluck('approvable_id');
 
-            $permitsQuery = PermitRequest::whereIn('id', $permitIds);
-            if ($branchScoped) {
-                $permitsQuery->where('branch_id', $user->branch_id);
-            }
+            $permitsQuery = $this->permitVisibility->applyView(
+                PermitRequest::whereIn('id', $permitIds),
+                $user
+            );
             $validPermits = $permitsQuery->get()->keyBy('id');
 
             $candidateApprovals = $pendingApprovals->filter(
@@ -97,9 +103,10 @@ class DashboardController extends Controller
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
-        $recentPermits = PermitRequest::select(['id', 'permit_number', 'store_name_snapshot', 'status', 'created_at'])
-            ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
-            ->latest()->take(5)->get()
+        $recentPermits = $this->permitVisibility->applyView(
+            PermitRequest::select(['id', 'permit_number', 'store_name_snapshot', 'status', 'created_at']),
+            $user
+        )->latest()->take(5)->get()
             ->map(fn ($p) => [
                 'type' => 'permit',
                 'title' => "Surat Izin {$p->permit_number} — {$p->store_name_snapshot}",
@@ -173,7 +180,7 @@ class DashboardController extends Controller
         $key = implode('|', [
             'dashboard.calendar',
             $branchScoped ? 'b'.$user->branch_id : 'all',
-            $user->hasRole('marketing') ? 'mkt' : 'std',
+            $this->permitVisibility->cacheKey($user),
             $user->can('loos.view') ? 'loo' : 'noloo',
             $monthInput,
         ]);
@@ -185,7 +192,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $branchScoped = ! $user->canViewAllBranches();
-        $isMarketing = $user->hasRole('marketing');
+        $isMarketingLocked = $this->permitVisibility->isMarketingLocked($user);
         $canViewLoo = $user->can('loos.view');
 
         try {
@@ -198,16 +205,15 @@ class DashboardController extends Controller
         $warnFrom = now()->toDateString();
         $warnTo = now()->addDays(30)->toDateString();
 
-        $permitQuery = PermitRequest::query()
-            ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id', 'event_name'])
-            ->where(fn ($q) => $q
-                ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
-                ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
-                ->orWhere(fn ($w) => $w->where('work_start_date', '<=', $start->toDateString())->where(fn ($x) => $x->whereNull('work_end_date')->orWhere('work_end_date', '>=', $end->toDateString()))))
-            ->when($isMarketing, fn ($q) => $q->where('activity_types', 'like', '%pameran%'))
-            ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
-            ->latest('work_start_date')
-            ->limit(200);
+        $permitQuery = $this->permitVisibility->applyView(
+            PermitRequest::query()
+                ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id', 'event_name'])
+                ->where(fn ($q) => $q
+                    ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhere(fn ($w) => $w->where('work_start_date', '<=', $start->toDateString())->where(fn ($x) => $x->whereNull('work_end_date')->orWhere('work_end_date', '>=', $end->toDateString())))),
+            $user
+        )->latest('work_start_date')->limit(200);
 
         $events = $permitQuery->get()->map(function ($p) {
             $types = $p->activity_types ?? [];
@@ -234,7 +240,7 @@ class DashboardController extends Controller
             ];
         });
 
-        if (! $isMarketing) {
+        if (! $isMarketingLocked) {
             $tenancies = Tenancy::select(['id', 'tenant_id', 'start_date', 'end_date', 'status'])->with(['tenant:id,name'])
                 ->where(fn ($q) => $q
                     ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
@@ -280,7 +286,7 @@ class DashboardController extends Controller
                     $events->push([
                         'id' => "sidak-{$s->id}",
                         'type' => 'sidak',
-                        'title' => 'Sidak '.(($s->creator_name_snapshot ?? $s->user?->name) ? "— ".($s->creator_name_snapshot ?? $s->user?->name) : ''),
+                        'title' => 'Sidak '.(($s->creator_name_snapshot ?? $s->user?->name) ? '— '.($s->creator_name_snapshot ?? $s->user?->name) : ''),
                         'start' => $s->started_at?->toDateString(),
                         'end' => $s->started_at?->toDateString(),
                         'status' => $s->status,

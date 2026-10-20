@@ -141,7 +141,7 @@ class TenantScopeTest extends TestCase
         $this->assertTrue($svc->canCreate($tnc, (int) $cat->id));
     }
 
-    public function test_tenancy_can_see_pameran_permits_but_tenant_dropdown_scoped(): void
+    public function test_tenancy_cannot_see_pameran_permits_but_tenant_dropdown_scoped(): void
     {
         $tnc = $this->tenancy();
         foreach (['permits.view', 'permits.create'] as $p) {
@@ -166,14 +166,15 @@ class TenantScopeTest extends TestCase
         $res = $this->actingAs($tnc)->get('/permit-requests')->assertOk();
         $numbers = collect($res->viewData('page')['props']['permits']['data'])->pluck('permit_number')->all();
         $this->assertContains($biasa->permit_number, $numbers);
-        $this->assertContains($pameran->permit_number, $numbers);
+        $this->assertNotContains($pameran->permit_number, $numbers);
 
-        $this->actingAs($tnc)->get("/permit-requests/{$pameran->id}")->assertOk();
+        $this->actingAs($tnc)->get("/permit-requests/{$pameran->id}")->assertForbidden();
 
         $res = $this->actingAs($tnc)->get('/permit-requests/create')->assertOk();
         $names = collect($res->viewData('page')['props']['tenants'])->pluck('name')->all();
         $this->assertContains('Tenant Test', $names);
         $this->assertNotContains('Open Counter Test', $names);
+        $this->assertFalse($res->viewData('page')['props']['canCreatePameran']);
 
         $this->actingAs($tnc)->post('/permit-requests', [
             'activity_types' => ['pameran'],

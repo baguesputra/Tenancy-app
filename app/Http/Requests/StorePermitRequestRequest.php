@@ -2,20 +2,32 @@
 
 namespace App\Http\Requests;
 
+use App\Services\PermitRequestVisibilityService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePermitRequestRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // otorisasi akses sudah dihandle middleware auth di route
+        $user = $this->user('web');
+
+        if (! $user) {
+            return false;
+        }
+
+        $visibility = app(PermitRequestVisibilityService::class);
+        $isPameran = $this->input('form_mode') === 'pameran'
+            || in_array('pameran', (array) $this->input('activity_types', []), true);
+
+        return ! $isPameran || $visibility->canCreatePameran($user);
     }
 
     public function rules(): array
     {
-        $isRoleMarketing = $this->user('web')?->hasRole('marketing');
+        $user = $this->user('web');
+        $visibility = app(PermitRequestVisibilityService::class);
         // ponytail: mode ikut form, bukan cuma role — marketing paksa pameran, staff bebas pilih
-        $isExhibition = $isRoleMarketing || $this->input('form_mode') === 'pameran';
+        $isExhibition = ($user && $visibility->isMarketingLocked($user)) || $this->input('form_mode') === 'pameran';
         $isKegiatan = ! $isExhibition && $this->input('form_mode') === 'kegiatan';
         $isParkir = ! $isExhibition && ! $isKegiatan && $this->input('form_mode') === 'parkir';
 
