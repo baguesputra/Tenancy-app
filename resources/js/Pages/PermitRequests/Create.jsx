@@ -33,7 +33,7 @@ const ACTIVITY_GROUPS = [
 
 const EXCLUSIVE_ACTIVITY_TYPES = ['fit_out', 'pull_out'];
 
-export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'kerja', canChooseMode = false }) {
+export default function Create({ tenants, departments, isMarketingLocked = false, formMode = 'kerja', canChooseMode = false, canCreatePameran = false }) {
     const isKegiatan = !isMarketingLocked && formMode === 'kegiatan';
     const isParkir = !isMarketingLocked && formMode === 'parkir';
     const [step, setStep] = useState(1);
@@ -41,6 +41,11 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     const [locationType, setLocationType] = useState(isMarketingLocked ? 'exhibition' : 'tenant');
     const [clientErrors, setClientErrors] = useState({});
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const activityGroups = canCreatePameran
+        ? ACTIVITY_GROUPS
+        : ACTIVITY_GROUPS
+            .map((group) => ({ ...group, items: group.items.filter((type) => type.value !== 'pameran') }))
+            .filter((group) => group.items.length > 0);
 
     const { data, setData, post, processing, errors } = useForm({
         form_mode: isMarketingLocked ? 'pameran' : formMode,
@@ -289,7 +294,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             { value: 'kegiatan', label: 'Kegiatan (Event/Meeting/Stock)' },
                             { value: 'pameran', label: 'Pameran / Open Counter' },
                             { value: 'parkir', label: 'Langganan Parkir' },
-                        ].map((opt) => {
+                        ].filter((opt) => opt.value !== 'pameran' || canCreatePameran).map((opt) => {
                             const active = isMarketingLocked ? opt.value === 'pameran' : formMode === opt.value;
                             return (
                             <button
@@ -674,7 +679,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <FormSection title="Jadwal & Kegiatan">
                                         <FormField label="Jenis Kegiatan" error={clientErrors.activity_types} required>
                                             <div className="space-y-4 mt-1">
-                                                {ACTIVITY_GROUPS.map((group) => {
+                                                {activityGroups.map((group) => {
                                                     const picked = group.items.filter((t) => data.activity_types.includes(t.value)).length;
                                                     return (
                                                         <div key={group.label}>
