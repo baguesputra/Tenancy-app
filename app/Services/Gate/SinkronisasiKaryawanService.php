@@ -66,10 +66,12 @@ class SinkronisasiKaryawanService
 
         // tandaiHilang hanya pada sinkron full-scope (tanpa filter/limit) dengan
         // daftar non-kosong — subset/daftar kosong tidak boleh disimpulkan sebagai "hilang".
+        // Saat HCIS jadi otoritas status, deaktivasi hanya dari webhook HCIS.
         $filterAktif = array_filter($filter, fn ($v) => $v !== null && $v !== '' && $v !== false);
         $skalaPenuh = $filterAktif === [] && ! $batas;
+        $otoritasHcis = (bool) config('services.hcis.status_authority');
 
-        if (! $kering && $skalaPenuh && $daftar !== []) {
+        if (! $kering && $skalaPenuh && $daftar !== [] && ! $otoritasHcis) {
             $hasil['nonaktif'] = $this->tandaiHilang($daftar, $grace);
         }
 
@@ -173,7 +175,9 @@ class SinkronisasiKaryawanService
                 'gate_miss_count' => 0,
             ];
             if ($aktif !== null) {
-                $attrs['is_active'] = $aktif;
+                // Otoritas status ada di webhook HCIS: pull Gate tidak boleh
+                // mengaktifkan kembali user yang sudah nonaktif.
+                $attrs['is_active'] = $aktif === false ? false : ($user?->is_active ?? true);
             }
 
             if (! $user) {
@@ -201,8 +205,9 @@ class SinkronisasiKaryawanService
     {
         $org = $this->resolveOrg($baris);
         $fotoUrl = $this->normalisasiFoto($baris['photo_url'] ?? $baris['photo'] ?? null);
+        $aktif = array_key_exists('is_active', $baris) ? (bool) $baris['is_active'] : null;
 
-        DB::transaction(function () use ($user, $baris, $org, $fotoUrl) {
+        DB::transaction(function () use ($user, $baris, $org, $fotoUrl, $aktif) {
             $user->update([
                 'gate_id' => $user->gate_id ?? ($baris['id'] ?? null),
                 'employee_number' => $user->employee_number ?: (trim((string) ($baris['nik'] ?? '')) ?: null),
@@ -212,7 +217,8 @@ class SinkronisasiKaryawanService
                 'department_id' => $user->department_id ?? $org['department_id'] ?? null,
                 'division_id' => $user->division_id ?? $org['division_id'] ?? null,
                 'position_id' => $user->position_id ?? $org['position_id'] ?? null,
-                'is_active' => (bool) ($baris['is_active'] ?? $user->is_active ?? true),
+                // Pull Gate hanya boleh menonaktifkan, tidak mengaktifkan kembali.
+                'is_active' => $user->is_active && $aktif !== false,
             ]);
         });
     }

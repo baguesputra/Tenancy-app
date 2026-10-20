@@ -63,4 +63,11 @@ return [
         'pacu_enabled' => env('GATE_PACU_ENABLED', true),
     ],
 
+    'hcis' => [
+        'webhook_secret' => env('HCIS_WEBHOOK_SECRET'),
+        // true = webhook HCIS otoritas status: tandai-hilang pull Gate dimatikan
+        // dan pull tidak boleh mengaktifkan kembali user nonaktif.
+        'status_authority' => (bool) env('HCIS_STATUS_AUTHORITY', false),
+    ],
+
 ];
