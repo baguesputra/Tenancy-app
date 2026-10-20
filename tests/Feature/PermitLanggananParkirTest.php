@@ -204,6 +204,41 @@ class PermitLanggananParkirTest extends TestCase
         $res->assertOk();
         $this->assertStringContainsString('application/pdf', $res->headers->get('Content-Type'));
         $this->assertStringContainsString('Form-Langganan-Parkir-', $res->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('/Subtype /Image', $res->getContent());
+    }
+
+    public function test_parkir_pdf_view_matches_word_form_layout(): void
+    {
+        $staff = $this->user('tenancy_staff', 'Tenancy');
+        $tenant = $this->tenant($this->branch());
+        $permit = app(PermitRequestService::class)->create($this->payload($tenant), $staff);
+
+        $html = view('pdf.permit-langganan-parkir', [
+            'permit' => $permit,
+            'tenantName' => $tenant->name,
+            'lantai' => $permit->floor_snapshot ?: '—',
+            'blok' => $permit->block_snapshot ?: '—',
+            'nomor' => $permit->unit_number_snapshot ?: '—',
+            'tanggal' => '20',
+            'bulan' => 'Oktober',
+            'tahun' => '2026',
+            'vehicleTypeLabel' => 'MOBIL (R4)',
+            'logoData' => 'data:image/png;base64,abc',
+            'printedAt' => '20 Oktober 2026, 10:00 WITA',
+        ])->render();
+
+        $this->assertStringContainsString('data:image/png;base64,abc', $html);
+        $this->assertStringContainsString('Form Langganan Parkir', $html);
+        $this->assertStringContainsString('No. Pengajuan: '.$permit->permit_number, $html);
+        $this->assertStringContainsString('Lantai : GF', $html);
+        $this->assertStringContainsString('Blok : A', $html);
+        $this->assertStringContainsString('No : '.$permit->unit_number_snapshot, $html);
+        $this->assertStringContainsString('Nama : Siti Pemohon', $html);
+        $this->assertStringContainsString('Jabatan : Store Manager', $html);
+        $this->assertStringContainsString('Tenancy &amp; FO Dept.', $html);
+        $this->assertStringContainsString('border-top: 0.5pt solid #000', $html);
+        $this->assertStringContainsString('border-bottom: 0.5pt solid #000', $html);
+        $this->assertStringNotContainsString('1px dotted', $html);
     }
 
     public function test_branch_manager_approval_is_limited_to_permit_branch(): void

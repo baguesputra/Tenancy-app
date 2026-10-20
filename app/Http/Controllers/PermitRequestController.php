@@ -612,18 +612,24 @@ class PermitRequestController extends Controller
         $permitRequest->loadMissing(['tenant', 'branch']);
 
         $date = $permitRequest->request_date ?? now();
-        $location = collect([$permitRequest->floor_snapshot, $permitRequest->block_snapshot, $permitRequest->unit_number_snapshot])
-            ->filter()->join(' / ') ?: '—';
+
+        $logoPath = public_path('images/logo.png');
+        $logoData = is_file($logoPath)
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            : null;
 
         $pdf = Pdf::loadView('pdf.permit-langganan-parkir', [
             'permit' => $permitRequest,
             'tenantName' => $permitRequest->tenant->name ?? $permitRequest->store_name_snapshot,
-            'location' => $location,
+            'lantai' => $permitRequest->floor_snapshot ?: '—',
+            'blok' => $permitRequest->block_snapshot ?: '—',
+            'nomor' => $permitRequest->unit_number_snapshot ?: '—',
             'tanggal' => $date->locale('id')->translatedFormat('d'),
             'bulan' => $date->locale('id')->translatedFormat('F'),
             'tahun' => $date->locale('id')->translatedFormat('Y'),
             'vehicleTypeLabel' => $permitRequest->vehicle_type === 'motor' ? 'MOTOR (R2)' : 'MOBIL (R4)',
-            'printedAt' => now()->locale('id')->translatedFormat('d F Y, H:i').' WITA',
+            'logoData' => $logoData,
+            'printedAt' => now('Asia/Makassar')->locale('id')->translatedFormat('d F Y, H:i').' WITA',
         ])->setPaper('a4');
 
         $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
