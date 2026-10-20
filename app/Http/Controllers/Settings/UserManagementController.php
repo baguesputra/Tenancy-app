@@ -18,7 +18,8 @@ class UserManagementController extends Controller
     public function index(Request $request)
     {
         abort_unless($request->user()->can('users.manage'), 403);
-        $users = User::with(['branch:id,name', 'department:id,name', 'division:id,name', 'position:id,name', 'roles'])
+        $users = User::with(['branch:id,name,gate_id,company_name', 'department:id,name', 'division:id,name', 'position:id,name', 'roles'])
+            ->where('is_active', true)
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$request->search}%")
                 ->orWhere('employee_number', 'like', "%{$request->search}%")))
@@ -34,12 +35,12 @@ class UserManagementController extends Controller
         return Inertia::render('Settings/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['search', 'role', 'branch_id', 'department_id', 'division_id', 'position_id']),
-            'summary' => ['total' => User::count()],
+            'summary' => ['total' => User::where('is_active', true)->count()],
             'roles' => Role::orderBy('name')->pluck('name'),
-            'departments' => Department::orderBy('name')->get(['id', 'name']),
-            'divisions' => Division::orderBy('name')->get(['id', 'name']),
-            'positions' => Position::orderBy('name')->get(['id', 'name']),
-            'branches' => Branch::orderBy('name')->get(['id', 'name']),
+            'departments' => Department::orderBy('name')->get(['id', 'name', 'code', 'company_gate_id']),
+            'divisions' => Division::orderBy('name')->get(['id', 'name', 'code', 'company_gate_id']),
+            'positions' => Position::orderBy('name')->get(['id', 'name', 'department_id', 'division_id', 'company_gate_id']),
+            'branches' => Branch::orderBy('name')->get(['id', 'name', 'gate_id', 'company_name']),
         ]);
     }
 

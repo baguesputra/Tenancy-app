@@ -26,6 +26,14 @@ const roleColor = (role) => {
     return 'gray';
 };
 
+const branchGate = (branches, branchId) => branches.find((b) => String(b.id) === String(branchId))?.gate_id ?? null;
+const cocokCabang = (branches, item, branchId) => {
+    if (!branchId || !item.company_gate_id) return true;
+    const gateId = branchGate(branches, branchId);
+    return !!gateId && item.company_gate_id === gateId;
+};
+const opsiCabang = (branches, list, branchId) => list.filter((item) => cocokCabang(branches, item, branchId));
+
 export default function Index({ users, filters = {}, summary = { total: 0 }, roles = [], departments = [], divisions = [], positions = [], branches = [] }) {
     const { auth } = usePage().props;
     const [searchText, setSearchText] = useState(filters.search ?? '');
@@ -37,6 +45,51 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         name: '', employee_number: '', branch_id: '', department_id: '', division_id: '', position_id: '', role: '', password: '',
     });
+
+    const labelOpsi = (list, item) => {
+        if (list.filter((x) => x.name === item.name).length <= 1) return item.name;
+        const bedaCabang = list.some((x) => x.company_gate_id && x.company_gate_id !== item.company_gate_id && x.name === item.name);
+        const branch = branches.find((b) => b.gate_id === item.company_gate_id);
+        if (bedaCabang && branch) return `${item.name} (${branch.name})`;
+        const dept = departments.find((d) => d.id === item.department_id);
+        return dept && dept.name !== item.name ? `${item.name} (${dept.name})` : item.name;
+    };
+
+    const deptOpsiFilter = opsiCabang(branches, departments, filters.branch_id);
+    const divOpsiFilter = opsiCabang(branches, divisions, filters.branch_id);
+    const posOpsiFilter = opsiCabang(branches, positions, filters.branch_id)
+        .filter((p) => !filters.department_id || !p.department_id || String(p.department_id) === String(filters.department_id));
+
+    const deptOpsiForm = opsiCabang(branches, departments, data.branch_id);
+    const divOpsiForm = opsiCabang(branches, divisions, data.branch_id)
+        .filter((d) => !data.department_id || !d.department_id || String(d.department_id) === String(data.department_id));
+    const posOpsiForm = opsiCabang(branches, positions, data.branch_id)
+        .filter((p) => !data.department_id || !p.department_id || String(p.department_id) === String(data.department_id))
+        .filter((p) => !data.division_id || !p.division_id || String(p.division_id) === String(data.division_id));
+
+    const pilihCabangForm = (value) => {
+        const dept = opsiCabang(branches, departments, value).map((d) => String(d.id));
+        const div = opsiCabang(branches, divisions, value).map((d) => String(d.id));
+        const pos = opsiCabang(branches, positions, value).map((p) => String(p.id));
+        setData({
+            ...data,
+            branch_id: value,
+            department_id: dept.includes(String(data.department_id)) ? data.department_id : '',
+            division_id: div.includes(String(data.division_id)) ? data.division_id : '',
+            position_id: pos.includes(String(data.position_id)) ? data.position_id : '',
+        });
+    };
+
+    const pilihDepartemenForm = (value) => {
+        setData({ ...data, department_id: value, division_id: '', position_id: '' });
+    };
+
+    const pilihDivisiForm = (value) => {
+        const cocok = opsiCabang(branches, positions, data.branch_id)
+            .filter((p) => !value || !p.division_id || String(p.division_id) === String(value))
+            .map((p) => String(p.id));
+        setData({ ...data, division_id: value, position_id: cocok.includes(String(data.position_id)) ? data.position_id : '' });
+    };
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -118,6 +171,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
         { key: 'user', label: 'User' },
         { key: 'role', label: 'Role' },
         { key: 'org', label: 'Organisasi' },
+        { key: 'company', label: 'Perusahaan' },
         { key: 'branch', label: 'Cabang', className: 'text-right' },
     ];
 
@@ -164,19 +218,19 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         </SelectInput>
                         <SelectInput value={filters.branch_id ?? ''} onChange={(e) => updateFilter('branch_id', e.target.value)} className="lg:w-48" aria-label="Filter cabang">
                             <option value="">Semua Cabang</option>
-                            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            {branches.map((b) => <option key={b.id} value={b.id}>{b.company_name ?? b.name}</option>)}
                         </SelectInput>
                         <SelectInput value={filters.department_id ?? ''} onChange={(e) => updateFilter('department_id', e.target.value)} className="lg:w-48" aria-label="Filter departemen">
                             <option value="">Semua Departemen</option>
-                            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            {deptOpsiFilter.map((d) => <option key={d.id} value={d.id}>{labelOpsi(departments, d)}</option>)}
                         </SelectInput>
                         <SelectInput value={filters.division_id ?? ''} onChange={(e) => updateFilter('division_id', e.target.value)} className="lg:w-48" aria-label="Filter divisi">
                             <option value="">Semua Divisi</option>
-                            {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            {divOpsiFilter.map((d) => <option key={d.id} value={d.id}>{labelOpsi(divisions, d)}</option>)}
                         </SelectInput>
                         <SelectInput value={filters.position_id ?? ''} onChange={(e) => updateFilter('position_id', e.target.value)} className="lg:w-48" aria-label="Filter jabatan">
                             <option value="">Semua Jabatan</option>
-                            {positions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            {posOpsiFilter.map((p) => <option key={p.id} value={p.id}>{labelOpsi(positions, p)}</option>)}
                         </SelectInput>
                         {hasFilter && (
                             <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
@@ -219,12 +273,13 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                 <span className="block text-sm text-gray-700">{user.department?.name ?? '—'}</span>
                                 <span className="block text-xs text-gray-400">{[user.division?.name, user.position?.name].filter(Boolean).join(' · ') || '—'}</span>
                             </td>
+                            <td className="px-5 py-3.5 text-sm text-gray-500">{user.branch?.company_name ?? '—'}</td>
                             <td className="px-5 py-3.5 text-right text-sm text-gray-500 whitespace-nowrap">{user.branch?.name ?? '—'}</td>
                         </tr>
                     ))}
                     {users.data.length === 0 && (
                         <tr>
-                            <td colSpan={4} className="px-5 py-12 text-center">
+                            <td colSpan={5} className="px-5 py-12 text-center">
                                 <p className="text-sm font-medium text-gray-700">Belum ada user ditemukan.</p>
                                 <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah User untuk data pertama.'}</p>
                                 {hasFilter && (
@@ -263,7 +318,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                 <Badge color={roleColor(user.roles[0]?.name)} size="sm">{user.roles[0]?.name ?? '—'}</Badge>
                             </div>
                             <p className="text-xs text-gray-500 mt-2 truncate">
-                                {[user.department?.name, user.division?.name, user.position?.name].filter(Boolean).join(' · ') || '—'} · {user.branch?.name ?? '—'}
+                                {[user.branch?.company_name, user.department?.name, user.division?.name, user.position?.name].filter(Boolean).join(' · ') || '—'} · {user.branch?.name ?? '—'}
                             </p>
                         </div>
                     ))}
@@ -328,6 +383,28 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                             </div>
                         </div>
 
+                        {panel?.type === 'edit' && panel.user?.gate_id && (
+                            <>
+                                <FormSection variant="drawer" title="Identitas" description="Tersinkron dari Gate">
+                                    <dl className="space-y-2 text-sm">
+                                        <ConfirmRow label="Nama" value={panel.user.name} />
+                                        <ConfirmRow label="NIP" value={panel.user.employee_number} />
+                                        <ConfirmRow label="Email" value={panel.user.email} />
+                                        <ConfirmRow label="Status" value={<Badge color="green">Aktif</Badge>} />
+                                    </dl>
+                                </FormSection>
+                                <FormSection variant="drawer" title="Penempatan">
+                                    <dl className="space-y-2 text-sm">
+                                        <ConfirmRow label="Perusahaan" value={panel.user.branch?.company_name} />
+                                        <ConfirmRow label="Cabang" value={panel.user.branch?.name} />
+                                        <ConfirmRow label="Departemen" value={panel.user.department?.name} />
+                                        <ConfirmRow label="Divisi" value={panel.user.division?.name} />
+                                        <ConfirmRow label="Jabatan" value={panel.user.position?.name} />
+                                    </dl>
+                                </FormSection>
+                            </>
+                        )}
+
                         {!(panel?.type === 'edit' && panel.user?.gate_id) && (
                         <>
                         <FormSection variant="drawer" title="Identitas" description="Nama tampil dan nomor induk pegawai">
@@ -341,28 +418,28 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
 
                         <FormSection variant="drawer" title="Penempatan & Hak Akses" description="Cabang, departemen, dan role">
                             <FormField compact label="Cabang" error={errors.branch_id} required>
-                                <SelectInput value={data.branch_id} onChange={(e) => setData('branch_id', e.target.value)}>
+                                <SelectInput value={data.branch_id} onChange={(e) => pilihCabangForm(e.target.value)}>
                                     <option value="">Pilih...</option>
-                                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    {branches.map((b) => <option key={b.id} value={b.id}>{b.company_name ?? b.name}</option>)}
                                 </SelectInput>
                             </FormField>
                             <FormField compact label="Departemen" error={errors.department_id} hint="Kosongkan jika tidak relevan (misal manager)">
-                                <SelectInput value={data.department_id} onChange={(e) => setData('department_id', e.target.value)}>
+                                <SelectInput value={data.department_id} onChange={(e) => pilihDepartemenForm(e.target.value)}>
                                     <option value="">Tidak ada</option>
-                                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    {deptOpsiForm.map((d) => <option key={d.id} value={d.id}>{labelOpsi(departments, d)}</option>)}
                                 </SelectInput>
                             </FormField>
                             <div className="grid grid-cols-2 gap-2.5">
                                 <FormField compact label="Divisi" error={errors.division_id}>
-                                    <SelectInput value={data.division_id} onChange={(e) => setData('division_id', e.target.value)}>
+                                    <SelectInput value={data.division_id} onChange={(e) => pilihDivisiForm(e.target.value)}>
                                         <option value="">Tidak ada</option>
-                                        {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        {divOpsiForm.map((d) => <option key={d.id} value={d.id}>{labelOpsi(divisions, d)}</option>)}
                                     </SelectInput>
                                 </FormField>
                                 <FormField compact label="Jabatan" error={errors.position_id}>
                                     <SelectInput value={data.position_id} onChange={(e) => setData('position_id', e.target.value)}>
                                         <option value="">Tidak ada</option>
-                                        {positions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        {posOpsiForm.map((p) => <option key={p.id} value={p.id}>{labelOpsi(positions, p)}</option>)}
                                     </SelectInput>
                                 </FormField>
                             </div>
