@@ -23,6 +23,7 @@ class PermitRequest extends Model
         'job_type', 'work_start_date', 'work_end_date', 'work_start_time', 'work_end_time',
         'access_route', 'notes', 'worker_count', 'needs_manager_approval',
         'event_name', 'event_area',
+        'vehicle_plate', 'vehicle_type', 'applicant_name', 'applicant_position',
         'requested_by_type', 'requested_by_id',
         'status',
         'barcode_token',

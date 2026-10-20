@@ -8,7 +8,7 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
-import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding } from '@/Components/Icons';
+import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding, IconCar } from '@/Components/Icons';
 import { PERMIT_CATEGORY_META, PERMIT_SOURCE_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 import { formatRelativeID, formatDateID } from '@/utils/format';
 
@@ -17,6 +17,7 @@ const CATEGORY_ICON = {
     calendar: IconCalendarEvent,
     building: IconBuilding,
     wrench: IconWrench,
+    car: IconCar,
 };
 
 const codeOf = (p, cat) => (p.permit_number?.split('/')?.[1]) || cat.code || '—';
@@ -59,6 +60,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         { key: 'kegiatan', label: 'Kegiatan', value: counts.kegiatan ?? 0 },
         { key: 'tenant', label: 'Tenant', value: counts.tenant ?? 0 },
         { key: 'vendor', label: 'Vendor', value: counts.vendor ?? 0 },
+        { key: 'parkir', label: 'Parkir', value: counts.parkir ?? 0 },
     ].filter((s) => s.key === '' || !hiddenCategories.includes(s.key));
 
     const rows = [...permits.data].sort((a, b) => Number(b.is_my_turn) - Number(a.is_my_turn));
@@ -107,7 +109,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         <span className="text-xl font-semibold text-gray-900 tabular-nums ml-auto">{summary.total}</span>
                     </div>
                 ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
                     {stats.map((s) => {
                         const active = (filters.category ?? '') === s.key;
                         return (

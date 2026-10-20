@@ -66,6 +66,10 @@ class PermitRequestService
             'needs_manager_approval' => (bool) ($data['needs_manager_approval'] ?? in_array($data['activity_types'][0] ?? null, ['event', 'meeting_internal', 'stock_opname'], true)),
             'event_name' => $data['event_name'] ?? null,
             'event_area' => $data['event_area'] ?? null,
+            'vehicle_plate' => $data['vehicle_plate'] ?? null,
+            'vehicle_type' => $data['vehicle_type'] ?? null,
+            'applicant_name' => $data['applicant_name'] ?? null,
+            'applicant_position' => $data['applicant_position'] ?? null,
             'requested_by_type' => get_class($requestedBy),
             'requested_by_id' => $requestedBy->id,
             'status' => 'pending',
@@ -171,9 +175,19 @@ class PermitRequestService
 
     private function setupApprovalSteps(PermitRequest $permit): void
     {
+        $tenancyDeptId = $this->departmentResolver->id('tenancy', $permit->branch_id);
+
+        if (in_array('langganan_parkir', $permit->activity_types ?? [], true)) {
+            $this->approvalService->setupSteps($permit, [
+                ['step_key' => 'tenancy', 'label' => 'Approval Supervisor Tenant', 'department_id' => $tenancyDeptId],
+                ['step_key' => 'branch_manager', 'label' => 'Approval Manager Cabang', 'department_id' => null],
+            ]);
+
+            return;
+        }
+
         $bsDeptId = $this->departmentResolver->id('bs', $permit->branch_id);
         $securityDeptId = $this->departmentResolver->id('security', $permit->branch_id);
-        $tenancyDeptId = $this->departmentResolver->id('tenancy', $permit->branch_id);
 
         // Surat ijin kegiatan: approval Tenancy → Manager Tenant saja.
         if (! empty(array_intersect(['event', 'meeting_internal', 'stock_opname'], $permit->activity_types ?? []))) {

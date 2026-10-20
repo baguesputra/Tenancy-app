@@ -146,6 +146,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     const location = [permit.floor_snapshot, permit.block_snapshot, permit.unit_number_snapshot]
         .filter(Boolean).join(' / ') || '—';
     const isKegiatan = (permit.activity_types ?? []).some((v) => ['event', 'meeting_internal', 'stock_opname'].includes(v));
+    const isParkir = (permit.activity_types ?? []).includes('langganan_parkir');
     const isFitout = (permit.activity_types ?? []).includes('fit_out');
     const isPullout = (permit.activity_types ?? []).includes('pull_out');
     const fitoutDocVariants = [
@@ -159,9 +160,12 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
         ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
         : isKegiatan
         ? { key: 'kegiatan', label: 'Kegiatan', color: 'green' }
+        : isParkir
+        ? { key: 'parkir', label: 'Parkir', color: 'amber' }
         : permit.tenant_id
         ? { key: 'tenant', label: 'Tenant', color: 'blue' }
         : { key: 'vendor', label: 'Vendor', color: 'amber' };
+    const vehicleTypeLabel = permit.vehicle_type === 'motor' ? 'Motor (R2)' : permit.vehicle_type === 'mobil' ? 'Mobil (R4)' : '—';
     const locationTitle = permit.tenant?.name
         ?? permit.contractor_company
         ?? permit.store_name_snapshot
@@ -174,12 +178,17 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
         </svg>
     );
     const docSections = [
-        {
+        ...(isParkir ? [{
+            title: 'Surat Ijin',
+            items: [
+                { label: 'Form Langganan Parkir', description: 'PDF form parkir + approval', href: `/permit-requests/${permit.id}/pdf`, icon: docIcon, format: 'PDF' },
+            ],
+        }] : [{
             title: 'Surat Ijin',
             items: [
                 { label: 'Surat Ijin Kerja', description: 'PDF lengkap + approval & cek fisik', href: `/permit-requests/${permit.id}/pdf`, icon: docIcon, format: 'PDF' },
             ],
-        },
+        }]),
         ...fitoutDocVariants.map(({ value, label }) => ({
             title: label,
             items: [
@@ -230,7 +239,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                             {canCompleteSecurityCheck && <Badge color="blue">{doneTasks}/{totalTasks} dicek</Badge>}
                         </div>
                         <p className="text-xs text-gray-500 truncate mt-0.5">
-                            {locationTitle} — {permit.event_name || permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
+                            {locationTitle} — {isParkir ? `${permit.vehicle_plate ?? '—'} · ${vehicleTypeLabel}` : permit.event_name || permit.job_type || 'Kegiatan'} — Diajukan {formatDateID(permit.request_date)}{currentStep ? ` — Menunggu: ${currentStep.label}` : ''}
                         </p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -250,7 +259,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                 <nav className="flex gap-1 mt-2 text-xs font-medium overflow-x-auto print:hidden" aria-label="Lompat section">
                     {[
                         ['#detail', 'Detail'],
-                        ...(!isKegiatan ? [
+                        ...(!isKegiatan && !isParkir ? [
                             ['#pekerja', `Pekerja ${workersDone}/${workers.length}`],
                             ['#barang', `Barang ${goodsDone}/${goods.length}`],
                         ] : []),
@@ -278,7 +287,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                         <div id="detail" className="scroll-mt-40">
                             <article className="permit-doc bg-white rounded-2xl border border-[#E2E5EA] shadow-sm px-6 py-8 sm:px-10 mb-6">
                                 <div className="permit-doc-kop text-center border-b-2 border-[#0F1E36] pb-5">
-                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Surat Izin Kegiatan</h2>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{isParkir ? 'Form Langganan Parkir' : 'Surat Izin Kegiatan'}</h2>
                                     <p className="text-sm text-gray-600 mt-1.5">
                                         Nomor: <span className="font-semibold text-gray-900">{permit.permit_number}</span>
                                     </p>
@@ -293,35 +302,46 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     <DocRow label="Kategori"><Badge color={category.color}>{category.label}</Badge></DocRow>
                                     <DocRow label="Diajukan Oleh">{permit.requested_by_label}</DocRow>
                                     <DocRow label="Tanggal Pengajuan">{formatDateID(permit.request_date)}</DocRow>
-                                    <DocRow label="Penanggung Jawab">{`${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`}</DocRow>
+                                    <DocRow label="Penanggung Jawab">{isParkir ? (permit.pic_name || '—') : `${permit.pic_name ?? '—'} (${permit.pic_phone ?? '—'})`}</DocRow>
+                                    {isParkir && <DocRow label="Nama Pemohon">{permit.applicant_name || '—'}</DocRow>}
+                                    {isParkir && <DocRow label="Jabatan">{permit.applicant_position || '—'}</DocRow>}
                                 </DocSection>
 
-                                <DocSection numeral="II" title="Pelaksanaan Kegiatan">
+                                <DocSection numeral="II" title={isParkir ? 'Data Tenant & Kendaraan' : 'Pelaksanaan Kegiatan'}>
                                     <DocRow label="Lokasi">{`${permit.store_name_snapshot} — ${location}`}</DocRow>
-                                    <DocRow label="Jenis Kegiatan">
-                                        <span className="flex flex-wrap gap-1.5">
-                                            {activityLabels.map((label) => (
-                                                <Badge key={label} color="blue">{label}</Badge>
-                                            ))}
-                                        </span>
-                                    </DocRow>
-                                    {isKegiatan ? (
+                                    {isParkir ? (
                                         <>
-                                            <DocRow label={kegiatanNameLabel}>{permit.event_name || '—'}</DocRow>
-                                            <DocRow label="Area Event">{permit.event_area || '—'}</DocRow>
+                                            <DocRow label="NOPOL">{permit.vehicle_plate || '—'}</DocRow>
+                                            <DocRow label="Jenis Kendaraan">{vehicleTypeLabel}</DocRow>
                                         </>
                                     ) : (
                                         <>
-                                            <DocRow label="Jenis Pekerjaan">{permit.job_type || '—'}</DocRow>
-                                            <DocRow label="Akses Masuk / Keluar">{permit.access_route || '—'}</DocRow>
+                                            <DocRow label="Jenis Kegiatan">
+                                                <span className="flex flex-wrap gap-1.5">
+                                                    {activityLabels.map((label) => (
+                                                        <Badge key={label} color="blue">{label}</Badge>
+                                                    ))}
+                                                </span>
+                                            </DocRow>
+                                            {isKegiatan ? (
+                                                <>
+                                                    <DocRow label={kegiatanNameLabel}>{permit.event_name || '—'}</DocRow>
+                                                    <DocRow label="Area Event">{permit.event_area || '—'}</DocRow>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <DocRow label="Jenis Pekerjaan">{permit.job_type || '—'}</DocRow>
+                                                    <DocRow label="Akses Masuk / Keluar">{permit.access_route || '—'}</DocRow>
+                                                </>
+                                            )}
+                                            <DocRow label="Tanggal Pelaksanaan">{formatDateRange(permit.work_start_date, permit.work_end_date)}</DocRow>
+                                            <DocRow label="Jam Pelaksanaan">{formatTimeRange(permit.work_start_time, permit.work_end_time)}</DocRow>
                                         </>
                                     )}
-                                    <DocRow label="Tanggal Pelaksanaan">{formatDateRange(permit.work_start_date, permit.work_end_date)}</DocRow>
-                                    <DocRow label="Jam Pelaksanaan">{formatTimeRange(permit.work_start_time, permit.work_end_time)}</DocRow>
                                     {permit.notes && <DocRow label="Keterangan">{permit.notes}</DocRow>}
                                 </DocSection>
 
-                                {(permit.is_external || permit.contractor_company) && (
+                                {!isParkir && (permit.is_external || permit.contractor_company) && (
                                     <DocSection numeral="III" title={category.key === 'vendor' ? 'Data Vendor' : 'Kontraktor Eksternal'}>
                                         <DocRow label="Perusahaan">{permit.contractor_company || '—'}</DocRow>
                                         <DocRow label="Penanggung Jawab">{permit.contractor_pic || '—'}</DocRow>
@@ -330,7 +350,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     </DocSection>
                                 )}
 
-                                {permit.accompanying_departments?.length > 0 && (
+                                {!isParkir && permit.accompanying_departments?.length > 0 && (
                                     <DocSection numeral={(permit.is_external || permit.contractor_company) ? 'IV' : 'III'} title="Departemen Pendampingan">
                                         <DocRow label="Departemen">
                                             <span className="flex flex-wrap gap-1.5">
@@ -344,7 +364,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                             </article>
                         </div>
 
-                        {!isKegiatan && (
+                        {!isKegiatan && !isParkir && (
                         <FormSection title="Pemeriksaan Fisik" description={canCompleteSecurityCheck ? `${doneTasks}/${totalTasks} selesai — ketuk untuk cek` : 'Hasil cek fisik'}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div id="pekerja" className="scroll-mt-40 overflow-x-auto">
@@ -530,7 +550,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 <RevisionTimeline revisions={permit.revisions} />
                             </FormSection>
                         )}
-                        <FormSection title="QR Publik untuk Tenant" description="Dipindai tanpa login — cetak & berikan ke tenant">
+                        {!isParkir && <FormSection title="QR Publik untuk Tenant" description="Dipindai tanpa login — cetak & berikan ke tenant">
                             {share ? (
                                 <div className="flex items-start gap-3">
                                     <img src={share.qr} alt="QR publik surat izin" className="w-24 h-24 rounded-lg border border-gray-200 shrink-0" />
@@ -555,7 +575,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                             ) : (
                                 <p className="text-xs text-gray-400">{isKegiatan ? 'QR aktif setelah izin selesai disetujui.' : 'QR aktif setelah izin selesai / disetujui Building Service.'}</p>
                             )}
-                        </FormSection>
+                        </FormSection>}
                         <FormSection title="Progress Approval" description={currentStep ? `Menunggu: ${currentStep.label}` : 'Semua tahap selesai'}>
                             <ol className="relative ml-1.5 border-l-2 border-gray-100 space-y-4">
                                 {permit.approvals.map((a) => (
@@ -586,7 +606,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                             </p>
                                         )}
 
-                                        {a.step_key !== 'security' && a.status === 'pending' && a.department_id === permit.currentUserDepartmentId && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (a.step_key !== 'tenant_manager' || permit.can_approve_tenant_manager) && (
+                                        {a.step_key !== 'security' && a.status === 'pending' && currentStep?.id === a.id && (a.step_key === 'branch_manager' ? permit.can_approve_branch_manager : a.department_id === permit.currentUserDepartmentId) && (a.step_key !== 'marketing' || permit.can_approve_marketing) && (a.step_key !== 'tenant_manager' || permit.can_approve_tenant_manager) && (
                                             <div className="mt-2.5 flex gap-2 print:hidden">
                                                 <Button variant="success" onClick={() => approve(a.id)} className="!px-3 !py-1.5 text-xs">
                                                     Approve

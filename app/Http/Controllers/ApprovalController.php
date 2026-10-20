@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Approval;
 use App\Models\PermitRequest;
+use App\Models\User;
 use App\Services\ApprovalService;
 use App\Services\NotificationService;
 use App\Services\PermitRequestService;
@@ -33,14 +34,16 @@ class ApprovalController extends Controller
                 ->orderBy('order')
                 ->first();
 
-            if ($nextStep && $nextStep->department_id) {
-                $this->notificationService->notifyDepartment(
-                    $nextStep->department_id,
-                    'Surat Izin Menunggu Persetujuan',
-                    "{$permit->permit_number} — {$permit->store_name_snapshot} menunggu: {$nextStep->label}",
-                    "/permit-requests/{$permit->id}",
-                    'document'
-                );
+            if ($nextStep) {
+                $title = 'Surat Izin Menunggu Persetujuan';
+                $message = "{$permit->permit_number} - {$permit->store_name_snapshot} menunggu: {$nextStep->label}";
+                $url = "/permit-requests/{$permit->id}";
+
+                if ($nextStep->step_key === 'branch_manager') {
+                    $this->notificationService->notifyBranchManagers($permit->branch_id, $title, $message, $url, 'document');
+                } elseif ($nextStep->department_id) {
+                    $this->notificationService->notifyDepartment($nextStep->department_id, $title, $message, $url, 'document');
+                }
             }
         }
 
@@ -58,7 +61,7 @@ class ApprovalController extends Controller
             $this->permitService->syncStatus($permit);
 
             $requester = $permit->requestedBy;
-            if ($requester instanceof \App\Models\User) {
+            if ($requester instanceof User) {
                 $this->notificationService->notify(
                     $requester,
                     'Surat Izin Ditolak',

@@ -98,6 +98,20 @@ class ApprovalService
             ]);
         }
 
+        if ($approval->step_key === 'branch_manager') {
+            if (! $user->hasRole('manager')) {
+                throw ValidationException::withMessages([
+                    'approval' => 'Approval Manager Cabang hanya oleh role manager.',
+                ]);
+            }
+
+            if ((int) $user->branch_id !== (int) $approval->approvable->branch_id) {
+                throw ValidationException::withMessages([
+                    'approval' => 'Approval Manager Cabang hanya untuk branch pengajuan.',
+                ]);
+            }
+        }
+
         if ($approval->status !== 'pending') {
             throw ValidationException::withMessages([
                 'approval' => 'Tahap approval ini sudah diproses sebelumnya.',

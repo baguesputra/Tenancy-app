@@ -22,6 +22,14 @@ export function IconCalendarEvent(props) {
     );
 }
 
+export function IconCar(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v-5l2-5h12l2 5v5M4 16h16M6.5 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.5 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM6 11h12" />
+        </svg>
+    );
+}
+
 export function IconWrench(props) {
     return (
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>

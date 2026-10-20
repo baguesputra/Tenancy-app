@@ -21,4 +21,15 @@ class NotificationService
             Notification::send($users, new SystemNotification($title, $message, $url, $icon));
         }
     }
+
+    public function notifyBranchManagers(int $branchId, string $title, string $message, string $url, string $icon = 'bell'): void
+    {
+        $users = User::where('branch_id', $branchId)
+            ->whereHas('roles', fn ($q) => $q->where('name', 'manager'))
+            ->get();
+
+        if ($users->isNotEmpty()) {
+            Notification::send($users, new SystemNotification($title, $message, $url, $icon));
+        }
+    }
 }
