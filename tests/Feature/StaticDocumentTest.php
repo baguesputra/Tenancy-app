@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Department;
 use App\Models\PermitRequest;
+use App\Models\StaticDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -86,12 +87,12 @@ class StaticDocumentTest extends TestCase
 
         Storage::disk('local')->put('static-documents/all.docx', 'isi-all');
         Storage::disk('local')->put('static-documents/cabang.docx', 'isi-cabang');
-        \App\Models\StaticDocument::create([
+        StaticDocument::create([
             'key' => 'peraturan-fitout', 'branch_id' => null,
             'file_path' => 'static-documents/all.docx', 'original_name' => 'all.docx', 'size' => 7,
             'uploaded_by' => $user->id,
         ]);
-        \App\Models\StaticDocument::create([
+        StaticDocument::create([
             'key' => 'peraturan-fitout', 'branch_id' => $user->branch_id,
             'file_path' => 'static-documents/cabang.docx', 'original_name' => 'cabang.docx', 'size' => 10,
             'uploaded_by' => $user->id,
@@ -116,7 +117,7 @@ class StaticDocumentTest extends TestCase
                 ->where('doc_files.tata-tertib-lembur', null));
 
         Storage::disk('local')->put('static-documents/aturan.docx', 'isi');
-        \App\Models\StaticDocument::create([
+        StaticDocument::create([
             'key' => 'peraturan-fitout', 'branch_id' => null,
             'file_path' => 'static-documents/aturan.docx', 'original_name' => 'aturan.docx', 'size' => 3,
             'uploaded_by' => $user->id,
@@ -133,15 +134,84 @@ class StaticDocumentTest extends TestCase
     {
         $user = $this->makeUser();
         $fitout = $this->makePermit($user, ['fit_out']);
+        $pullout = $this->makePermit($user, ['pull_out']);
         $barang = $this->makePermit($user, ['masuk_barang']);
         $lembur = $this->makePermit($user, ['lembur']);
 
         $this->actingAs($user)->get("/permit-requests/{$fitout->id}/kode-fitout")->assertOk();
+        $this->actingAs($user)->get("/permit-requests/{$pullout->id}/kode-fitout")->assertOk();
         $this->actingAs($user)->get("/permit-requests/{$barang->id}/kode-fitout")->assertForbidden();
 
         $this->actingAs($user)->get("/permit-requests/{$fitout->id}/penitipan-barang")->assertOk();
+        $this->actingAs($user)->get("/permit-requests/{$pullout->id}/penitipan-barang")->assertOk();
         $this->actingAs($user)->get("/permit-requests/{$barang->id}/penitipan-barang")->assertOk();
         $this->actingAs($user)->get("/permit-requests/{$lembur->id}/penitipan-barang")->assertForbidden();
+    }
+
+    public function test_seluruh_dokumen_pullout_tersedia_dan_berjudul_pullout(): void
+    {
+        $user = $this->makeUser();
+        $pullout = $this->makePermit($user, ['pull_out']);
+        $pullout->update(['contractor_pic' => 'Vendor', 'contractor_phone' => '0813']);
+
+        foreach (['fitout-tempel', 'pernyataan-tenant', 'pernyataan-kontraktor', 'kode-fitout', 'peraturan-fitout', 'penitipan-barang'] as $doc) {
+            $this->actingAs($user)
+                ->get("/permit-requests/{$pullout->id}/{$doc}")
+                ->assertOk()
+                ->assertHeader('content-type', 'application/pdf');
+        }
+
+        foreach (['fitout-tempel', 'kode-fitout', 'peraturan-fitout'] as $doc) {
+            $response = $this->actingAs($user)->get("/permit-requests/{$pullout->id}/{$doc}");
+            $this->assertStringContainsString('Pullout', (string) $response->headers->get('content-disposition'));
+        }
+    }
+
+    public function test_varian_pullout_ditolak_untuk_permit_fitout_saja(): void
+    {
+        $user = $this->makeUser();
+        $permit = $this->makePermit($user, ['fit_out']);
+
+        $this->actingAs($user)
+            ->get("/permit-requests/{$permit->id}/kode-fitout?jenis=pull_out")
+            ->assertForbidden();
+        $this->actingAs($user)
+            ->get("/permit-requests/{$permit->id}/pernyataan-tenant?jenis=pull_out")
+            ->assertForbidden();
+    }
+
+    public function test_permit_dengan_fitout_dan_pullout_mendukung_kedua_varian(): void
+    {
+        $user = $this->makeUser();
+        $permit = $this->makePermit($user, ['fit_out', 'pull_out']);
+        $permit->update(['contractor_pic' => 'Vendor']);
+
+        foreach (['fit_out', 'pull_out'] as $jenis) {
+            foreach (['fitout-tempel', 'pernyataan-tenant', 'pernyataan-kontraktor', 'kode-fitout', 'peraturan-fitout', 'penitipan-barang'] as $doc) {
+                $this->actingAs($user)
+                    ->get("/permit-requests/{$permit->id}/{$doc}?jenis={$jenis}")
+                    ->assertOk();
+            }
+        }
+    }
+
+    public function test_upload_statis_dipakai_untuk_varian_pullout(): void
+    {
+        Storage::fake('local');
+        $user = $this->makeUser();
+        $permit = $this->makePermit($user, ['pull_out']);
+
+        Storage::disk('local')->put('static-documents/aturan.docx', 'isi');
+        StaticDocument::create([
+            'key' => 'peraturan-fitout', 'branch_id' => null,
+            'file_path' => 'static-documents/aturan.docx', 'original_name' => 'aturan.docx', 'size' => 3,
+            'uploaded_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get("/permit-requests/{$permit->id}/peraturan-fitout?jenis=pull_out")
+            ->assertOk()
+            ->assertDownload('aturan.docx');
     }
 
     public function test_upload_butuh_izin_documents_manage_dan_menimpa_file_lama(): void
@@ -159,7 +229,7 @@ class StaticDocumentTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('static_documents', 1);
-        $first = \App\Models\StaticDocument::first()->file_path;
+        $first = StaticDocument::first()->file_path;
         $this->assertTrue(Storage::disk('local')->exists($first));
 
         $this->actingAs($user)->post('/settings/documents', [

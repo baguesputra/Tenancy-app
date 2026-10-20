@@ -12,9 +12,9 @@ use Inertia\Inertia;
 class StaticDocumentController extends Controller
 {
     public const LABELS = [
-        'peraturan-fitout' => ['label' => 'Peraturan Pekerja Fit Out', 'trigger' => 'Centang Fit Out'],
+        'peraturan-fitout' => ['label' => 'Peraturan Pekerja Fit Out', 'trigger' => 'Centang Fit Out / Pull Out'],
         'tata-tertib-lembur' => ['label' => 'Tata Tertib Pekerja Lembur', 'trigger' => 'Centang Lembur'],
-        'penitipan-barang' => ['label' => 'Surat Izin Penitipan Barang', 'trigger' => 'Centang Masuk Barang / Fit Out'],
+        'penitipan-barang' => ['label' => 'Surat Izin Penitipan Barang', 'trigger' => 'Centang Masuk Barang / Fit Out / Pull Out'],
     ];
 
     public function index()

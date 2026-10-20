@@ -22,7 +22,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
     const [reviseOpen, setReviseOpen] = useState(false);
-    const [fitoutModalOpen, setFitoutModalOpen] = useState(false);
+    const [fitoutModal, setFitoutModal] = useState(null);
 
     const approve = (approvalId) => router.post(`/approvals/${approvalId}/approve`, {}, { preserveScroll: true });
 
@@ -147,6 +147,11 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
         .filter(Boolean).join(' / ') || '—';
     const isKegiatan = (permit.activity_types ?? []).some((v) => ['event', 'meeting_internal', 'stock_opname'].includes(v));
     const isFitout = (permit.activity_types ?? []).includes('fit_out');
+    const isPullout = (permit.activity_types ?? []).includes('pull_out');
+    const fitoutDocVariants = [
+        ...(isFitout ? [{ value: 'fit_out', label: 'Fit Out' }] : []),
+        ...(isPullout ? [{ value: 'pull_out', label: 'Pull Out' }] : []),
+    ];
     const isLembur = (permit.activity_types ?? []).includes('lembur');
     const hasContractor = Boolean(permit.contractor_pic);
     const kegiatanNameLabel = { event: 'Nama Event', meeting_internal: 'Nama Meeting', stock_opname: 'Nama Stock Opname' }[permit.activity_types?.[0]] ?? 'Nama Kegiatan';
@@ -175,23 +180,29 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                 { label: 'Surat Ijin Kerja', description: 'PDF lengkap + approval & cek fisik', href: `/permit-requests/${permit.id}/pdf`, icon: docIcon, format: 'PDF' },
             ],
         },
-        ...(isFitout ? [{
-            title: 'Fit Out',
+        ...fitoutDocVariants.map(({ value, label }) => ({
+            title: label,
             items: [
-                { label: 'Pernyataan Tenant', description: 'Pilih sumber data lalu unduh', onClick: () => setFitoutModalOpen(true), icon: docIcon, format: 'PDF' },
+                { label: 'Pernyataan Tenant', description: 'Pilih sumber data lalu unduh', onClick: () => setFitoutModal({ jenis: value }), icon: docIcon, format: 'PDF' },
                 ...(hasContractor
-                    ? [{ label: 'Pernyataan Kontraktor', description: 'Data vendor di surat ini', href: `/permit-requests/${permit.id}/pernyataan-kontraktor`, icon: docIcon, format: 'PDF' }]
+                    ? [{ label: 'Pernyataan Kontraktor', description: 'Data vendor di surat ini', href: `/permit-requests/${permit.id}/pernyataan-kontraktor?jenis=${value}`, icon: docIcon, format: 'PDF' }]
                     : [{ label: 'Pernyataan Kontraktor', disabled: true, disabledHint: 'Lengkapi data kontraktor di surat izin dulu', icon: docIcon, format: 'PDF' }]),
-                { label: 'Tempel Unit', description: 'Dilekatkan di depan unit', href: `/permit-requests/${permit.id}/fitout-tempel`, icon: docIcon, format: 'PDF' },
-                { label: 'Kode Fit Out', description: 'Kartu kontraktor / unit', href: `/permit-requests/${permit.id}/kode-fitout`, icon: docIcon, format: 'PDF' },
-                { label: 'Peraturan Fit Out', description: 'Tata tertib pekerja fit out', href: `/permit-requests/${permit.id}/peraturan-fitout`, icon: docIcon, format: docFiles['peraturan-fitout'] ?? 'PDF' },
+                { label: 'Tempel Unit', description: 'Dilekatkan di depan unit', href: `/permit-requests/${permit.id}/fitout-tempel?jenis=${value}`, icon: docIcon, format: 'PDF' },
+                { label: `Kode ${label}`, description: 'Kartu kontraktor / unit', href: `/permit-requests/${permit.id}/kode-fitout?jenis=${value}`, icon: docIcon, format: 'PDF' },
+                { label: `Peraturan ${label}`, description: `Tata tertib pekerja ${label.toLowerCase()}`, href: `/permit-requests/${permit.id}/peraturan-fitout?jenis=${value}`, icon: docIcon, format: docFiles['peraturan-fitout'] ?? 'PDF' },
             ],
-        }] : []),
-        ...((permit.activity_types ?? []).some((v) => ['masuk_barang', 'fit_out'].includes(v)) ? [{
+        })),
+        ...((permit.activity_types ?? []).some((v) => ['masuk_barang', 'fit_out', 'pull_out'].includes(v)) ? [{
             title: 'Penitipan',
-            items: [
-                { label: 'Penitipan Barang', description: 'Ijin loading dock DM 1', href: `/permit-requests/${permit.id}/penitipan-barang`, icon: docIcon, format: docFiles['penitipan-barang'] ?? 'PDF' },
-            ],
+            items: fitoutDocVariants.length
+                ? fitoutDocVariants.map(({ value, label }) => ({
+                    label: `Penitipan Barang (${label})`,
+                    description: 'Ijin loading dock DM 1',
+                    href: `/permit-requests/${permit.id}/penitipan-barang?jenis=${value}`,
+                    icon: docIcon,
+                    format: docFiles['penitipan-barang'] ?? 'PDF',
+                }))
+                : [{ label: 'Penitipan Barang', description: 'Ijin loading dock DM 1', href: `/permit-requests/${permit.id}/penitipan-barang`, icon: docIcon, format: docFiles['penitipan-barang'] ?? 'PDF' }],
         }] : []),
         ...(isLembur ? [{
             title: 'Lembur',
@@ -634,8 +645,9 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                 postUrl={`/permit-requests/${permit.id}/revise`}
             />
             <FitoutStatementModal
-                open={fitoutModalOpen}
-                onClose={() => setFitoutModalOpen(false)}
+                open={Boolean(fitoutModal)}
+                jenis={fitoutModal?.jenis ?? 'fit_out'}
+                onClose={() => setFitoutModal(null)}
                 permit={permit}
             />
         </AppLayout>

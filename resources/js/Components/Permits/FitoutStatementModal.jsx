@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import Button from '@/Components/Form/Button';
 
-export default function FitoutStatementModal({ open, onClose, permit }) {
+export default function FitoutStatementModal({ open, onClose, permit, jenis = 'fit_out' }) {
     const [source, setSource] = useState('surat');
 
     useEffect(() => {
@@ -33,7 +33,7 @@ export default function FitoutStatementModal({ open, onClose, permit }) {
             telepon: permit.pic_phone || '—',
         };
 
-    const downloadUrl = `/permit-requests/${permit.id}/pernyataan-tenant?source=${source}`;
+    const downloadUrl = `/permit-requests/${permit.id}/pernyataan-tenant?source=${source}&jenis=${jenis}`;
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Surat pernyataan tenant">

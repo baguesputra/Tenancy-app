@@ -28,7 +28,7 @@
         @if ($guideData)<img src="{{ $guideData }}" alt="Fit Out Guide">@endif
     </div>
 
-    <div class="title">FIT OUT</div>
+    <div class="title">{{ $jenisUpper ?? 'FIT OUT' }}</div>
 
     <table class="bio">
         <tr><td class="k">NAMA TENANT</td><td class="sep">:</td><td>{{ $namaTenant }}</td></tr>
@@ -49,7 +49,7 @@
     <table class="bio">
         <tr><td class="k">JUMLAH PEKERJA</td><td class="sep">:</td><td>{{ $jumlahPekerja }}</td></tr>
         <tr><td class="k">NO. TELEPON</td><td class="sep">:</td><td>{{ $telepon }}</td></tr>
-        <tr><td class="k">TANGGAL FIT OUT</td><td class="sep">:</td><td>{{ $tanggalFitout }}</td></tr>
+        <tr><td class="k">TANGGAL {{ $jenisUpper ?? 'FIT OUT' }}</td><td class="sep">:</td><td>{{ $tanggalFitout }}</td></tr>
     </table>
 
     <div class="issuer">

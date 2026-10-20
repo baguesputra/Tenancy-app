@@ -44,13 +44,13 @@
     <p class="narr">Dengan ini meminta ijin kepada pihak Building Management bahwa akan melakukan loading dan penitipan sementara barang ke unit Tenant pada jam operasional di area loading dock DM 1.</p>
     <p class="narr">Adapun barang dan material yang akan diloading diantaranya:</p>
     <ol class="goods">
-        <li>Material Fitout</li>
+        <li>Material {{ $jenisLabel ?? 'Fit Out' }}</li>
         <li>Furniture / Meuble</li>
     </ol>
 
     <p class="narr">Demikian surat ini saya buat dengan sebenar-benarnya dan dapat dipertanggungjawabkan.</p>
     <p class="narr">Segala bentuk kehilangan dan kerusakan bukan menjadi tanggung jawab pihak Mall.</p>
-    <p class="note">Note : Loading barang dan penitipan selama fit out berlangsung selama proses ({{ $periode }})</p>
+    <p class="note">Note : Loading barang dan penitipan selama {{ strtolower($jenisLabel ?? 'Fit Out') }} berlangsung selama proses ({{ $periode }})</p>
     <p class="narr">Akses Loading Dock DM 1 (penitipan tidak boleh melebihi 24 jam, dari hari Senin – Jumat)</p>
 
     <p class="date">{{ $kota }}, {{ $tanggalSurat }}</p>

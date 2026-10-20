@@ -28,7 +28,7 @@
         @if ($kopData)<img src="{{ $kopData }}" alt="Duta Mall Banjarmasin">@endif
     </div>
     <div class="guide">
-        @if ($guideData)<img src="{{ $guideData }}" alt="Fit Out Guide">@endif
+        @if ($guideData)<img src="{{ $guideData }}" alt="{{ $jenisLabel ?? 'Fit Out' }} Guide">@endif
     </div>
 
     <div class="title">SURAT PERNYATAAN TENANT</div>
@@ -40,24 +40,24 @@
         <tr><td class="k">Nama Tenant</td><td>: {{ $namaTenant }}</td></tr>
         <tr><td class="k">Telepon</td><td>: {{ $telepon }}</td></tr>
     </table>
-    <p class="narr">Merupakan penanggung jawab atas pekerjaan Fit Out yang bertempat di :</p>
+    <p class="narr">Merupakan penanggung jawab atas pekerjaan {{ $jenisLabel ?? 'Fit Out' }} yang bertempat di :</p>
     <table class="bio">
         <tr><td class="k">Lantai / No. Unit</td><td>: {{ $unit }}</td></tr>
     </table>
 
     <p class="narr">Menyatakan bahwa bersedia untuk menyetujui perjanjian sebagai berikut :</p>
     <ol class="pernyataan">
-        <li>Memilih kontraktor yang akan melaksanakan pekerjaan Fit Out di Duta Mall Banjarmasin.</li>
-        <li>Melaksanakan pekerjaan Fit Out sesuai dengan prosedur yang berlaku di Duta Mall Banjarmasin.</li>
-        <li>Menghentikan sementara pekerjaan Fit Out, apabila terdapat kegiatan yang tidak sesuai dengan peraturan dan tanpa persetujuan dari Badan Pengelola Duta Mall Banjarmasin.</li>
-        <li>Membongkar Instalasi Fit Out, apabila ditemukan instalasi yang melanggar peraturan dan tanpa disetujui oleh Badan Pengelola Duta Mall Banjarmasin dan biaya akan ditanggung pihak tenant.</li>
-        <li>Memberikan teguran secara lisan ataupun tulisan, apabila kontraktor tidak mematuhi peraturan Fit Out yang telah ditetapkan oleh Badan Pengelola Duta Mall Banjarmasin.</li>
-        <li>Menghentikan pekerjaan Fit Out apabila setelah mendapatkan teguran baik lisan maupun tulisan, kontraktor tetap melanggar peraturan yang telah ditetapkan Badan Pengelola Duta Mall Banjarmasin.</li>
-        <li>Mengkoordinasikan kepada Badan Pengelola Duta Mall Banjarmasin dalam hal izin keluar masuk barang, uji kelistrikan/plumbing serta pembuangan sampah bongkaran pekerjaan Fit Out.</li>
-        <li>Menjalankan Fit Out sesuai jadwal yang telah ditetapkan, apabila pekerjaan mengalami keterlambatan maka pihak kontraktor akan mendapatkan penalty sebagai berikut:
+        <li>Memilih kontraktor yang akan melaksanakan pekerjaan {{ $jenisLabel ?? 'Fit Out' }} di Duta Mall Banjarmasin.</li>
+        <li>Melaksanakan pekerjaan {{ $jenisLabel ?? 'Fit Out' }} sesuai dengan prosedur yang berlaku di Duta Mall Banjarmasin.</li>
+        <li>Menghentikan sementara pekerjaan {{ $jenisLabel ?? 'Fit Out' }}, apabila terdapat kegiatan yang tidak sesuai dengan peraturan dan tanpa persetujuan dari Badan Pengelola Duta Mall Banjarmasin.</li>
+        <li>Membongkar Instalasi {{ $jenisLabel ?? 'Fit Out' }}, apabila ditemukan instalasi yang melanggar peraturan dan tanpa disetujui oleh Badan Pengelola Duta Mall Banjarmasin dan biaya akan ditanggung pihak tenant.</li>
+        <li>Memberikan teguran secara lisan ataupun tulisan, apabila kontraktor tidak mematuhi peraturan {{ $jenisLabel ?? 'Fit Out' }} yang telah ditetapkan oleh Badan Pengelola Duta Mall Banjarmasin.</li>
+        <li>Menghentikan pekerjaan {{ $jenisLabel ?? 'Fit Out' }} apabila setelah mendapatkan teguran baik lisan maupun tulisan, kontraktor tetap melanggar peraturan yang telah ditetapkan Badan Pengelola Duta Mall Banjarmasin.</li>
+        <li>Mengkoordinasikan kepada Badan Pengelola Duta Mall Banjarmasin dalam hal izin keluar masuk barang, uji kelistrikan/plumbing serta pembuangan sampah bongkaran pekerjaan {{ $jenisLabel ?? 'Fit Out' }}.</li>
+        <li>Menjalankan {{ $jenisLabel ?? 'Fit Out' }} sesuai jadwal yang telah ditetapkan, apabila pekerjaan mengalami keterlambatan maka pihak kontraktor akan mendapatkan penalty sebagai berikut:
             <ol class="sub">
-                <li>Perpanjangan Fit Out akan dikenakan biaya administrasi Fit Out seperti diawal, terhitung mulai tanggal Fit Out berakhir apabila pengajuan perpanjangan Fit Out tidak disetujui oleh Badan Pengelola Duta Mall Banjarmasin.</li>
-                <li>Apabila pengajuan perpanjangan Fit Out disetujui oleh Badan Pengelola Duta Mall Banjarmasin, maka tidak akan penalty.</li>
+                <li>Perpanjangan {{ $jenisLabel ?? 'Fit Out' }} akan dikenakan biaya administrasi {{ $jenisLabel ?? 'Fit Out' }} seperti diawal, terhitung mulai tanggal {{ $jenisLabel ?? 'Fit Out' }} berakhir apabila pengajuan perpanjangan {{ $jenisLabel ?? 'Fit Out' }} tidak disetujui oleh Badan Pengelola Duta Mall Banjarmasin.</li>
+                <li>Apabila pengajuan perpanjangan {{ $jenisLabel ?? 'Fit Out' }} disetujui oleh Badan Pengelola Duta Mall Banjarmasin, maka tidak akan penalty.</li>
             </ol>
         </li>
         <li>Tidak diperkenankan untuk membuka unit / toko apabila tidak memenuhi standar yang telah ditetapkan oleh Badan Pengelola Duta Mall Banjarmasin.</li>

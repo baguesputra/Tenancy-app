@@ -27,7 +27,7 @@
     </div>
 
     <div class="title">PERATURAN PEKERJA</div>
-    <div class="subtitle">(FIT OUT)</div>
+    <div class="subtitle">({{ strtoupper($jenisLabel ?? 'Fit Out') }})</div>
 
     <ol class="rules">
         <li>DILARANG MEMBAWA &amp; MEROKOK DI AREA KERJA</li>
@@ -43,10 +43,10 @@
         <li>DILARANG MENJEMUR PAKAIAN DI AREA KERJA</li>
         <li>DILARANG TIDAK MEMAKAI BAJU PADA SAAT BEKERJA</li>
         <li>WAJIB MEMAKAI TANDA PENGENAL SELAMA KERJA</li>
-        <li>TIDAK BOLEH MEMBUANG SAMPAH MATERIAL DI LOKASI TENANT FIT OUT</li>
+        <li>TIDAK BOLEH MEMBUANG SAMPAH MATERIAL DI LOKASI TENANT {{ strtoupper($jenisLabel ?? 'Fit Out') }}</li>
     </ol>
 
-    <p class="note">*Pihak Pengelola Gedung berhak untuk menghentikan setiap pekerjaan/pekerja yang bersangkutan akan dikenakan denda sebesar Rp. 1.000.000,- untuk setiap pelanggaran, apabila kontraktor/penyewa tidak mematuhi peraturan tersebut di atas selama proses Fit Out/Pull Out.</p>
+    <p class="note">*Pihak Pengelola Gedung berhak untuk menghentikan setiap pekerjaan/pekerja yang bersangkutan akan dikenakan denda sebesar Rp. 1.000.000,- untuk setiap pelanggaran, apabila kontraktor/penyewa tidak mematuhi peraturan tersebut di atas @if (($jenis ?? 'fit_out') === 'pull_out') selama proses Pull Out. @else selama proses Fit Out/Pull Out. @endif</p>
 
     <table class="sig">
         <tr>
@@ -58,7 +58,7 @@
             <td>
                 <div>Mengetahui,</div>
                 <div class="space">&nbsp;</div>
-                <div>(Tenancy &amp; FitOut)</div>
+                <div>(Tenancy &amp; {{ str_replace(' ', '', $jenisLabel ?? 'Fit Out') }})</div>
             </td>
             <td>
                 <div>&nbsp;</div>
