@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\Department;
 use App\Models\PermitRequest;
 use App\Models\PermitRevision;
 use App\Models\ScannableCode;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +16,7 @@ class PermitRequestService
         private ApprovalService $approvalService,
         private NotificationService $notificationService,
         private PermitNumberService $numberService,
+        private DepartmentResolver $departmentResolver,
     ) {}
 
     public function create(array $data, User $requestedBy): PermitRequest
@@ -172,10 +171,9 @@ class PermitRequestService
 
     private function setupApprovalSteps(PermitRequest $permit): void
     {
-        $deptId = fn (string $name) => Cache::remember("dept.id.{$name}", 3600, fn () => Department::where('name', $name)->value('id'));
-        $bsDeptId = $deptId('Building Service');
-        $securityDeptId = $deptId('Security');
-        $tenancyDeptId = $deptId('Tenancy');
+        $bsDeptId = $this->departmentResolver->id('bs', $permit->branch_id);
+        $securityDeptId = $this->departmentResolver->id('security', $permit->branch_id);
+        $tenancyDeptId = $this->departmentResolver->id('tenancy', $permit->branch_id);
 
         // Surat ijin kegiatan: approval Tenancy → Manager Tenant saja.
         if (! empty(array_intersect(['event', 'meeting_internal', 'stock_opname'], $permit->activity_types ?? []))) {
@@ -188,8 +186,8 @@ class PermitRequestService
         }
 
         if (in_array('pameran', $permit->activity_types ?? [])) {
-            $marketingDeptId = $deptId('Marketing');
-            $financeDeptId = $deptId('Keuangan');
+            $marketingDeptId = $this->departmentResolver->id('marketing', $permit->branch_id);
+            $financeDeptId = $this->departmentResolver->id('finance', $permit->branch_id);
 
             $this->approvalService->setupSteps($permit, [
                 ['step_key' => 'marketing', 'label' => 'Approval Marketing', 'department_id' => $marketingDeptId],
@@ -276,7 +274,7 @@ class PermitRequestService
             $this->syncStatus($permit->fresh());
 
             $summary = collect($changes)->map(fn ($c, $f) => $this->revisionLabel($f).': '.($c['old'] ?? '—').' → '.($c['new'] ?? '—'))->values()->join('; ');
-            $bsDeptId = Cache::remember('dept.id.Building Service', 3600, fn () => Department::where('name', 'Building Service')->value('id'));
+            $bsDeptId = $this->departmentResolver->id('bs', $permit->branch_id);
             if ($bsDeptId) {
                 $this->notificationService->notifyDepartment(
                     $bsDeptId,

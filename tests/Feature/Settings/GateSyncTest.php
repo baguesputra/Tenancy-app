@@ -118,6 +118,46 @@ class GateSyncTest extends TestCase
         $this->assertSame('Staff', Position::where('gate_id', 'pos-1')->value('name'));
     }
 
+    public function test_sync_master_menyimpan_code_departemen_dan_divisi(): void
+    {
+        $tree = [
+            'id' => 'comp-1', 'code' => 'PTA', 'name' => 'PT A',
+            'departments' => [[
+                'id' => 'dept-1', 'code' => 'TNC', 'name' => 'Tenancy',
+                'divisions' => [[
+                    'id' => 'div-1', 'code' => 'OPS', 'name' => 'Ops',
+                    'positions' => [],
+                ]],
+                'positions' => [],
+            ]],
+            'direct_divisions' => [],
+        ];
+        $this->fakeGate([], [['id' => 'comp-1', 'name' => 'PT A', 'code' => 'PTA']], $tree);
+
+        $this->actingAs($this->admin())
+            ->post(route('settings.gate.sync-master'), ['company_id' => 'comp-1'])
+            ->assertRedirect();
+
+        $this->assertSame('TNC', Department::where('gate_id', 'dept-1')->value('code'));
+        $this->assertSame('OPS', Division::where('gate_id', 'div-1')->value('code'));
+        $this->assertSame('PT A', Branch::where('gate_id', 'comp-1')->value('company_name'));
+    }
+
+    public function test_sync_master_isi_company_name_branch_lama(): void
+    {
+        $branch = Branch::create(['code' => 'BJM', 'name' => 'Banjarmasin']);
+        $this->fakeGate([], [['id' => 'comp-1', 'name' => 'DMB Duta Mall Banjarmasin', 'code' => 'BJM']]);
+
+        $this->actingAs($this->admin())
+            ->post(route('settings.gate.sync-master'), ['company_id' => 'comp-1'])
+            ->assertRedirect();
+
+        $branch->refresh();
+        $this->assertSame('comp-1', $branch->gate_id);
+        $this->assertSame('DMB Duta Mall Banjarmasin', $branch->company_name);
+        $this->assertSame('Banjarmasin', $branch->name);
+    }
+
     public function test_sync_karyawan_resolve_branch_tanpa_map(): void
     {
         Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
@@ -405,6 +445,42 @@ class GateSyncTest extends TestCase
         $this->actingAs($this->admin())->post(route('settings.gate.sync-karyawan'));
 
         $this->assertFalse(User::where('employee_number', 'NIK-1')->firstOrFail()->is_active);
+    }
+
+    public function test_sync_tidak_mengaktifkan_kembali_user_nonaktif(): void
+    {
+        Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+        $this->fakeGateUrut([
+            ['success' => true, 'data' => [$this->karyawan()]],
+            ['success' => true, 'data' => [$this->karyawan(['name' => 'Budi Baru'])]],
+        ], [['id' => 'comp-1', 'name' => 'PT A']]);
+        $this->actingAs($this->admin())->post(route('settings.gate.sync'));
+
+        User::where('employee_number', 'NIK-1')->update(['is_active' => false]);
+
+        $this->actingAs($this->admin())->post(route('settings.gate.sync-karyawan'));
+
+        $user = User::where('employee_number', 'NIK-1')->firstOrFail();
+        $this->assertFalse($user->is_active);
+        $this->assertSame('Budi Baru', $user->name);
+    }
+
+    public function test_status_authority_hcis_mematikan_tandai_hilang(): void
+    {
+        Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+        $this->fakeGate([$this->karyawan()], [['id' => 'comp-1', 'name' => 'PT A']]);
+        $this->actingAs($this->admin())->post(route('settings.gate.sync'));
+
+        config(['services.hcis.status_authority' => true]);
+        GateSyncSetting::simpan(['grace_miss_count' => 1]);
+        $lain = $this->karyawan(['id' => 'gate-2', 'nik' => 'NIK-2', 'email' => 'budi2@dutamall.com']);
+        $this->mock(GateClient::class, fn ($mock) => $mock->shouldReceive('ambilKaryawan')->andReturn([$lain]));
+
+        $this->actingAs($this->admin())->post(route('settings.gate.sync-karyawan'));
+
+        $user = User::where('employee_number', 'NIK-1')->firstOrFail();
+        $this->assertTrue($user->is_active);
+        $this->assertSame(0, (int) $user->gate_miss_count);
     }
 
     public function test_email_sama_bukan_duplikat_saat_nik_di_gate_berubah(): void

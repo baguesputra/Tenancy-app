@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Division;
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SinkronisasiMasterService
 {
@@ -79,8 +80,17 @@ class SinkronisasiMasterService
                     ['code' => $company['code'], 'name' => $company['name'] ?? $company['code']]
                 );
             }
-            if ($branch && ! $branch->gate_id) {
-                $branch->update(['gate_id' => $company['id']]);
+            if ($branch) {
+                $ubah = [];
+                if (! $branch->gate_id) {
+                    $ubah['gate_id'] = $company['id'];
+                }
+                if (! empty($company['name']) && $branch->company_name !== $company['name']) {
+                    $ubah['company_name'] = $company['name'];
+                }
+                if ($ubah) {
+                    $branch->update($ubah);
+                }
             }
             $counts['branch'] = ($branch && $branch->wasRecentlyCreated) ? 1 : 0;
 
@@ -88,10 +98,11 @@ class SinkronisasiMasterService
                 if (empty($dept['id']) || empty($dept['name'])) {
                     continue;
                 }
-                $deptModel = Department::updateOrCreate(
-                    ['gate_id' => $dept['id']],
-                    ['name' => $dept['name'], 'company_gate_id' => $company['id']]
-                );
+                $deptAttrs = ['name' => $dept['name'], 'company_gate_id' => $company['id']];
+                if (array_key_exists('code', $dept)) {
+                    $deptAttrs['code'] = $dept['code'];
+                }
+                $deptModel = Department::updateOrCreate(['gate_id' => $dept['id']], $deptAttrs);
                 $counts['departemen'] += $deptModel->wasRecentlyCreated ? 1 : 0;
 
                 foreach ($dept['divisions'] ?? [] as $div) {
@@ -107,6 +118,19 @@ class SinkronisasiMasterService
                 $counts['divisi'] += $this->simpanDivisi($div, null, $company['id']) ? 1 : 0;
             }
 
+            $duplikat = Department::where('company_gate_id', $company['id'])
+                ->selectRaw('name, count(*) as jml')
+                ->groupBy('name')
+                ->havingRaw('count(*) > 1')
+                ->pluck('name');
+
+            if ($duplikat->isNotEmpty()) {
+                Log::warning('GATE master: nama departemen duplikat dalam satu company', [
+                    'company' => $company['id'],
+                    'names' => $duplikat->all(),
+                ]);
+            }
+
             return $counts;
         });
     }
@@ -117,16 +141,18 @@ class SinkronisasiMasterService
             return false;
         }
 
-        $model = Division::updateOrCreate(
-            ['gate_id' => $div['id']],
-            [
-                'name' => $div['name'],
-                'company_gate_id' => $companyGateId,
-                'department_id' => ! empty($div['department_id'])
-                    ? Department::where('gate_id', $div['department_id'])->value('id') ?? $departmentId
-                    : $departmentId,
-            ]
-        );
+        $attrs = [
+            'name' => $div['name'],
+            'company_gate_id' => $companyGateId,
+            'department_id' => ! empty($div['department_id'])
+                ? Department::where('gate_id', $div['department_id'])->value('id') ?? $departmentId
+                : $departmentId,
+        ];
+        if (array_key_exists('code', $div)) {
+            $attrs['code'] = $div['code'];
+        }
+
+        $model = Division::updateOrCreate(['gate_id' => $div['id']], $attrs);
         $baru = $model->wasRecentlyCreated;
 
         foreach ($div['positions'] ?? [] as $jab) {

@@ -9,6 +9,10 @@ class DepartmentSeeder extends Seeder
 {
     public function run(): void
     {
+        if (Department::whereNotNull('gate_id')->exists()) {
+            return;
+        }
+
         $departments = [
             ['name' => 'Tenancy', 'description' => 'Divisi yang menangani administrasi tenant, approval kontrak, dan surat izin.'],
             ['name' => 'Building Service', 'description' => 'Divisi yang bertanggung jawab atas fasilitas dan operasional gedung.'],
