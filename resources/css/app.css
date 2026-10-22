@@ -96,6 +96,15 @@
   }
 }
 
+/* Utilitas sembunyikan scrollbar horizontal/vertikal */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @media print {
   /* Sembunyikan chrome aplikasi saat mencetak: sidebar + topbar. */
   aside,
