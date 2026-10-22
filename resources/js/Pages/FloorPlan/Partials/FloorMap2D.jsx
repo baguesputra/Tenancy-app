@@ -173,55 +173,107 @@ export default function FloorMap2D({ currentPlan, units = [] }) {
 
                                             {/* Centroid Label: Unit Code & Tenant Name / Logo */}
                                             {unit.tenant?.logo_url ? (
-                                                <image
-                                                    href={unit.tenant.logo_url}
-                                                    x={cx - 18}
-                                                    y={cy - 20}
-                                                    width="36"
-                                                    height="24"
-                                                    preserveAspectRatio="xMidYMid meet"
-                                                    className="pointer-events-none"
-                                                />
-                                            ) : null}
+                                                <g className="pointer-events-none select-none">
+                                                    {/* Card pelindung logo dengan border & drop shadow */}
+                                                    <rect
+                                                        x={cx - 30}
+                                                        y={cy - 34}
+                                                        width="60"
+                                                        height="38"
+                                                        rx="7"
+                                                        fill="#ffffff"
+                                                        stroke={isSelected ? '#4f46e5' : isHovered ? '#1e293b' : '#cbd5e1'}
+                                                        strokeWidth={isSelected ? '2.5' : '1.2'}
+                                                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.10))' }}
+                                                    />
+                                                    <image
+                                                        href={unit.tenant.logo_url}
+                                                        x={cx - 26}
+                                                        y={cy - 31}
+                                                        width="52"
+                                                        height="32"
+                                                        preserveAspectRatio="xMidYMid meet"
+                                                    />
+                                                    {/* Kode Unit di bawah logo */}
+                                                    <text
+                                                        x={cx}
+                                                        y={cy + 19}
+                                                        textAnchor="middle"
+                                                        fontSize="13.5"
+                                                        fontWeight="800"
+                                                        fill="#0f172a"
+                                                        style={{
+                                                            paintOrder: 'stroke',
+                                                            stroke: '#ffffff',
+                                                            strokeWidth: '3.5px',
+                                                            strokeLinejoin: 'round',
+                                                        }}
+                                                    >
+                                                        {unit.unit_code}
+                                                    </text>
+                                                    {/* Nama Tenant di bawah kode unit */}
+                                                    {unit.tenant?.name && (
+                                                        <text
+                                                            x={cx}
+                                                            y={cy + 34}
+                                                            textAnchor="middle"
+                                                            fontSize="11"
+                                                            fontWeight="600"
+                                                            fill="#334155"
+                                                            style={{
+                                                                paintOrder: 'stroke',
+                                                                stroke: '#ffffff',
+                                                                strokeWidth: '2.5px',
+                                                                strokeLinejoin: 'round',
+                                                            }}
+                                                        >
+                                                            {unit.tenant.name.length > 15
+                                                                ? `${unit.tenant.name.slice(0, 13)}…`
+                                                                : unit.tenant.name}
+                                                        </text>
+                                                    )}
+                                                </g>
+                                            ) : (
+                                                <g className="pointer-events-none select-none">
+                                                    {/* Unit tanpa logo: Teks kode unit & nama tenant tebal & terbaca */}
+                                                    <text
+                                                        x={cx}
+                                                        y={cy - 1}
+                                                        textAnchor="middle"
+                                                        fontSize="15"
+                                                        fontWeight="800"
+                                                        fill="#0f172a"
+                                                        style={{
+                                                            paintOrder: 'stroke',
+                                                            stroke: '#ffffff',
+                                                            strokeWidth: '4px',
+                                                            strokeLinejoin: 'round',
+                                                        }}
+                                                    >
+                                                        {unit.unit_code}
+                                                    </text>
 
-                                            <text
-                                                x={cx}
-                                                y={unit.tenant?.logo_url ? cy + 14 : cy - 2}
-                                                textAnchor="middle"
-                                                fontSize="12"
-                                                fontWeight="700"
-                                                fill="#0f172a"
-                                                className="pointer-events-none select-none"
-                                                style={{
-                                                    paintOrder: 'stroke',
-                                                    stroke: '#ffffff',
-                                                    strokeWidth: '2.5px',
-                                                    strokeLinejoin: 'round',
-                                                }}
-                                            >
-                                                {unit.unit_code}
-                                            </text>
-
-                                            {unit.tenant?.name && !unit.tenant?.logo_url && (
-                                                <text
-                                                    x={cx}
-                                                    y={cy + 13}
-                                                    textAnchor="middle"
-                                                    fontSize="9.5"
-                                                    fontWeight="500"
-                                                    fill="#334155"
-                                                    className="pointer-events-none select-none"
-                                                    style={{
-                                                        paintOrder: 'stroke',
-                                                        stroke: '#ffffff',
-                                                        strokeWidth: '2px',
-                                                        strokeLinejoin: 'round',
-                                                    }}
-                                                >
-                                                    {unit.tenant.name.length > 14
-                                                        ? `${unit.tenant.name.slice(0, 12)}…`
-                                                        : unit.tenant.name}
-                                                </text>
+                                                    {unit.tenant?.name && (
+                                                        <text
+                                                            x={cx}
+                                                            y={cy + 18}
+                                                            textAnchor="middle"
+                                                            fontSize="11.5"
+                                                            fontWeight="600"
+                                                            fill="#334155"
+                                                            style={{
+                                                                paintOrder: 'stroke',
+                                                                stroke: '#ffffff',
+                                                                strokeWidth: '2.5px',
+                                                                strokeLinejoin: 'round',
+                                                            }}
+                                                        >
+                                                            {unit.tenant.name.length > 15
+                                                                ? `${unit.tenant.name.slice(0, 13)}…`
+                                                                : unit.tenant.name}
+                                                        </text>
+                                                    )}
+                                                </g>
                                             )}
                                         </g>
                                     );

@@ -7,7 +7,106 @@ import { STATUS_COLORS } from '../utils/geometry';
 const SCALE = 0.04;
 const UNIT_HEIGHT = 1.35;
 
-// Helper: buat tekstur label atap unit tenant secara offline & ringan
+// Helper: buat tekstur papan nama / signboard billboard 3D dengan logo & teks unit
+function createSignboardTexture(unitCode, tenantName, logoUrl) {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    const renderCard = (img = null) => {
+        ctx.clearRect(0, 0, 512, 256);
+
+        // Card background putih bersih dengan border rounded
+        ctx.fillStyle = '#ffffff';
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(8, 8, 496, 240, 24);
+            ctx.fill();
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+        } else {
+            ctx.fillRect(8, 8, 496, 240);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(8, 8, 496, 240);
+        }
+
+        if (img) {
+            // Gambar logo tenant di bagian atas card
+            const maxLogoW = 320;
+            const maxLogoH = 120;
+            const aspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height || 1);
+            let drawW = maxLogoW;
+            let drawH = drawW / aspect;
+            if (drawH > maxLogoH) {
+                drawH = maxLogoH;
+                drawW = drawH * aspect;
+            }
+            const drawX = 256 - drawW / 2;
+            const drawY = 22 + (maxLogoH - drawH) / 2;
+
+            try {
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            } catch (e) {}
+
+            // Kode Unit tebal & besar di bawah logo
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 38px system-ui, -apple-system, sans-serif';
+            ctx.fillText(unitCode || '', 256, 186);
+
+            // Nama Tenant di baris terbawah
+            if (tenantName) {
+                ctx.fillStyle = '#475569';
+                ctx.font = '600 24px system-ui, -apple-system, sans-serif';
+                const display = tenantName.length > 20 ? `${tenantName.slice(0, 18)}…` : tenantName;
+                ctx.fillText(display, 256, 224);
+            }
+        } else {
+            // Unit tanpa logo: Teks kode unit ekstra besar & nama tenant
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+            ctx.fillText(unitCode || '', 256, 108);
+
+            ctx.fillStyle = '#334155';
+            ctx.font = '600 32px system-ui, -apple-system, sans-serif';
+            const display = tenantName && tenantName !== '-' ? tenantName : 'Unit Kosong';
+            const truncated = display.length > 22 ? `${display.slice(0, 20)}…` : display;
+            ctx.fillText(truncated, 256, 172);
+
+            // Garis aksen bawah
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(100, 200, 312, 6);
+        }
+    };
+
+    renderCard(null);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+
+    if (logoUrl) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            renderCard(img);
+            texture.needsUpdate = true;
+        };
+        img.onerror = () => {
+            // Tetap gunakan layout teks jika logo gagal dimuat
+        };
+        img.src = logoUrl;
+    }
+
+    return texture;
+}
+
+// Helper: buat tekstur label atap datar
 function createRoofLabelTexture(unitCode, tenantName) {
     if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
@@ -15,7 +114,6 @@ function createRoofLabelTexture(unitCode, tenantName) {
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
 
-    // Kotak background putih semi-transparan dengan border
     ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
     if (ctx.roundRect) {
         ctx.beginPath();
@@ -105,7 +203,6 @@ export default function FloorMesh3D({
             },
             undefined,
             () => {
-                // Fallback jika gambar gagal dimuat
                 setFloorTexture(null);
             }
         );
@@ -118,7 +215,7 @@ export default function FloorMesh3D({
         };
     }, [plan?.image_url]);
 
-    // Bangun geometri 3D Extrude & Bounding Box Collider dengan useMemo
+    // Bangun geometri 3D Extrude & Signboard Billboard dengan useMemo
     const unitGeometries = useMemo(() => {
         return floorUnits
             .filter((u) => Array.isArray(u.polygon_points) && u.polygon_points.length >= 3)
@@ -131,7 +228,6 @@ export default function FloorMesh3D({
                 const zs = pts.map((pt) => (pt[1] - imgH / 2) * SCALE);
 
                 pts.forEach((pt, idx) => {
-                    // Balik sumbu Y koordinat SVG agar selaras dengan Three.js
                     const x = (pt[0] - imgW / 2) * SCALE;
                     const y = -(pt[1] - imgH / 2) * SCALE;
                     if (idx === 0) shape.moveTo(x, y);
@@ -149,10 +245,8 @@ export default function FloorMesh3D({
                 };
 
                 const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                // Putar geometri agar ketebalan naik ke atas (+Y)
                 geometry.rotateX(-Math.PI / 2);
 
-                // Hitung Axis-Aligned Bounding Box untuk collider super-ringan O(1)
                 const minX = Math.min(...xs);
                 const maxX = Math.max(...xs);
                 const minZ = Math.min(...zs);
@@ -163,7 +257,13 @@ export default function FloorMesh3D({
                 const boxCenterX = (minX + maxX) / 2;
                 const boxCenterZ = (minZ + maxZ) / 2;
 
-                const labelTex = createRoofLabelTexture(u.unit_code, u.tenant?.name);
+                const signboardTex = createSignboardTexture(
+                    u.unit_code,
+                    u.tenant?.name,
+                    u.tenant?.logo_url
+                );
+
+                const roofTex = createRoofLabelTexture(u.unit_code, u.tenant?.name);
 
                 return {
                     id: u.id,
@@ -172,7 +272,8 @@ export default function FloorMesh3D({
                     status: u.status,
                     customColor: u.custom_color,
                     geometry,
-                    labelTex,
+                    signboardTex,
+                    roofTex,
                     boxW,
                     boxD,
                     boxCenterX,
@@ -186,7 +287,8 @@ export default function FloorMesh3D({
         return () => {
             unitGeometries.forEach((ug) => {
                 ug.geometry.dispose();
-                if (ug.labelTex) ug.labelTex.dispose();
+                if (ug.signboardTex) ug.signboardTex.dispose();
+                if (ug.roofTex) ug.roofTex.dispose();
             });
         };
     }, [unitGeometries]);
@@ -232,7 +334,7 @@ export default function FloorMesh3D({
                 <meshBasicMaterial color={isActiveFloor ? '#4f46e5' : '#64748b'} />
             </mesh>
 
-            {/* Unit Tenant 3D: Visual Mesh (raycast di-bypass) + Bounding Box Collider O(1) */}
+            {/* Unit Tenant 3D: Visual Extruded Polygon + Invisible Collider + Interactive Billboard Signboard */}
             {unitGeometries.map((ug) => {
                 const isSelected = selectedUnitId === ug.id;
                 const isHovered = hoveredUnitId === ug.id;
@@ -267,7 +369,7 @@ export default function FloorMesh3D({
                             />
                         </mesh>
 
-                        {/* 2. Invisible Bounding Box Collider untuk Raycasting Ringan O(1) */}
+                        {/* 2. Invisible Bounding Box Collider O(1) untuk klik & hover badan unit */}
                         <mesh
                             position={[ug.boxCenterX, UNIT_HEIGHT / 2, ug.boxCenterZ]}
                             userData={{ id: ug.id, code: ug.code }}
@@ -287,8 +389,45 @@ export default function FloorMesh3D({
                             <meshBasicMaterial visible={false} />
                         </mesh>
 
-                        {/* 3. Label Atap Unit Tenant */}
-                        {ug.labelTex && !isUnitDimmed && (
+                        {/* 3. Tiang Penyangga Papan Signboard */}
+                        {!isUnitDimmed && (
+                            <mesh
+                                position={[ug.boxCenterX, UNIT_HEIGHT + 0.5, ug.boxCenterZ]}
+                                raycast={() => null}
+                            >
+                                <boxGeometry args={[0.04, 1.0, 0.04]} />
+                                <meshBasicMaterial color="#64748b" />
+                            </mesh>
+                        )}
+
+                        {/* 4. Interactive Billboard Signboard (Sprite): Selalu menghadap kamera baik Orbit maupun Walk Mode */}
+                        {ug.signboardTex && !isUnitDimmed && (
+                            <sprite
+                                position={[ug.boxCenterX, UNIT_HEIGHT + 1.15, ug.boxCenterZ]}
+                                scale={[2.8, 1.4, 1]}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedUnitId(ug.id);
+                                }}
+                                onPointerOver={(e) => {
+                                    e.stopPropagation();
+                                    setHoveredUnitId(ug.id);
+                                }}
+                                onPointerOut={() => {
+                                    setHoveredUnitId(null);
+                                }}
+                            >
+                                <spriteMaterial
+                                    map={ug.signboardTex}
+                                    transparent={true}
+                                    depthWrite={false}
+                                    opacity={isSelected ? 1 : 0.94}
+                                />
+                            </sprite>
+                        )}
+
+                        {/* 5. Label Atap Datar (Tampak atas pada mode Orbit) */}
+                        {ug.roofTex && !isUnitDimmed && (
                             <mesh
                                 position={[ug.boxCenterX, UNIT_HEIGHT + 0.015, ug.boxCenterZ]}
                                 rotation={[-Math.PI / 2, 0, 0]}
@@ -301,7 +440,7 @@ export default function FloorMesh3D({
                                     ]}
                                 />
                                 <meshBasicMaterial
-                                    map={ug.labelTex}
+                                    map={ug.roofTex}
                                     transparent
                                     depthWrite={false}
                                 />
