@@ -500,6 +500,35 @@ class PermitRequestController extends Controller
             ]));
         }
 
+        $logoPath = public_path('images/logo.png');
+        $logoData = is_file($logoPath)
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            : null;
+
+        $hariTgl = ($permitRequest->request_date ?? $permitRequest->work_start_date ?? now())
+            ->locale('id')->translatedFormat('l, d F Y');
+
+        $types = $permitRequest->activity_types ?? [];
+        $isKerja = in_array('kerja', $types);
+        $isLembur = in_array('lembur', $types);
+        $isBarang = (bool) array_intersect(['masuk_barang', 'keluar_barang'], $types);
+        $isAlat = (bool) array_intersect(['masuk_alat', 'keluar_alat'], $types);
+        $isBukaTutup = (bool) array_intersect(['buka_tutup', 'buka_operasional', 'tutup_operasional'], $types);
+        $isFitout = (bool) array_intersect(['fit_out', 'pull_out', 'renovasi'], $types);
+
+        $startDate = $permitRequest->work_start_date?->locale('id')->translatedFormat('d F Y') ?: '—';
+        $endDate = $permitRequest->work_end_date?->locale('id')->translatedFormat('d F Y') ?: $startDate;
+        $startTime = $permitRequest->work_start_time ? $permitRequest->work_start_time->format('H.i').' WITA' : '—';
+        $endTime = $permitRequest->work_end_time ? $permitRequest->work_end_time->format('H.i').' WITA' : '—';
+
+        $goodsRows = [];
+        foreach ($permitRequest->goods as $g) {
+            $qty = trim(($g->quantity_note ?? '').' '.($g->unit ?? ''));
+            $goodsRows[] = $g->description.($qty !== '' ? " ({$qty})" : '');
+        }
+
+        $tenantPhone = $permitRequest->tenant?->phone ?: ($permitRequest->pic_phone ?: '—');
+
         $pdf = Pdf::loadView('pdf.permit-letter', [
             'permit' => $permitRequest,
             'requestedByLabel' => $requestedByLabel,
@@ -518,6 +547,9 @@ class PermitRequestController extends Controller
             'isKegiatan' => $isKegiatanPdf,
             'kegiatanNameLabel' => $kegiatanNameLabel,
             'securityStep' => $securityStep,
+            'tenancyStep' => $tenancyStep,
+            'bsStep' => $bsStep,
+            'managerStep' => $managerStep,
             'workersPresent' => $permitRequest->workers->isNotEmpty()
                 ? $permitRequest->workers->where('is_present', true)->count()
                 : $permitRequest->ktpPhotos->count(),
@@ -527,6 +559,21 @@ class PermitRequestController extends Controller
             'goodsVerified' => $permitRequest->goods->where('is_verified', true)->count(),
             'goodsTotal' => $permitRequest->goods->count(),
             'scanUrl' => $permitRequest->scanUrl,
+            'logoData' => $logoData,
+            'hariTgl' => $hariTgl,
+            'isKerja' => $isKerja,
+            'isLembur' => $isLembur,
+            'isBarang' => $isBarang,
+            'isAlat' => $isAlat,
+            'isBukaTutup' => $isBukaTutup,
+            'isFitout' => $isFitout,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'startTime' => $startTime,
+            'endTime' => $endTime,
+            'goodsRows' => $goodsRows,
+            'tenantPhone' => $tenantPhone,
+            'workers' => $permitRequest->workers,
         ])->setPaper('a4');
 
         $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);
