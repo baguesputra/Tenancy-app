@@ -23,6 +23,11 @@ class Branch extends Model
         return $this->hasMany(Unit::class);
     }
 
+    public function floorPlans()
+    {
+        return $this->hasMany(FloorPlan::class)->orderBy('floor_order');
+    }
+
     public function tenants()
     {
         return $this->hasMany(Tenant::class);

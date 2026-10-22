@@ -10,12 +10,15 @@ class Unit extends Model
 {
     protected $fillable = [
         'branch_id', 'floor', 'block', 'unit_number',
-        'unit_code', 'size', 'is_active',
+        'unit_code', 'size', 'polygon_points', 'custom_color', 'is_active',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'polygon_points' => 'array',
+        ];
     }
 
     public function branch()

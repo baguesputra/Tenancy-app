@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FloorPlanController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\PermitCheckController;
@@ -115,6 +116,13 @@ Route::put('/password/change', [PasswordChangeController::class, 'update'])->mid
     Route::middleware('can:units.view')->group(function () {
         Route::get('/units/{id}/qr', [UnitQrController::class, 'single'])->name('units.qr');
         Route::get('/units-qr/bulk', [UnitQrController::class, 'bulk'])->name('units.qr.bulk');
+
+        // Denah Lantai (Floor Map View 2D & 3D)
+        Route::get('/floor-plans', [FloorPlanController::class, 'index'])->name('floor-plans.index');
+        Route::get('/floor-plans/editor/{floor?}', [FloorPlanController::class, 'editor'])->name('floor-plans.editor');
+        Route::post('/floor-plans/polygons', [FloorPlanController::class, 'savePolygons'])->name('floor-plans.polygons');
+        Route::post('/floor-plans/upload', [FloorPlanController::class, 'uploadPlan'])->name('floor-plans.upload');
+        Route::post('/floor-plans/parse-cad', [FloorPlanController::class, 'parseCad'])->name('floor-plans.parse-cad');
     });
 
     Route::middleware('can:tenancies.view')->get('/tenancies', [TenancyController::class, 'index'])->name('tenancies.index');

@@ -66,6 +66,11 @@ const menuIcons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a8 8 0 0114-3.5M19 15a8 8 0 01-14 3.5" />
         </svg>
     ),
+    map: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.316a1.125 1.125 0 00-1.006 0L3.622 5.753A1.125 1.125 0 003 6.759v11.928c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+        </svg>
+    ),
 };
 
 // Grup navigasi data-driven: tambah menu baru = tambah satu entri di sini.
@@ -86,6 +91,7 @@ const menuGroups = [
         label: 'Operasional',
         icon: 'building',
         items: [
+            { label: 'Denah Lantai', href: '/floor-plans', permission: 'units.view' },
             { label: 'Sesi Sidak', href: '/inspection-sessions', permission: 'sidak.view' },
             { label: 'Surat Izin', href: '/permit-requests', permission: 'permits.view' },
         ],
