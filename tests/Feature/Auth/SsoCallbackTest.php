@@ -211,4 +211,23 @@ class SsoCallbackTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect();
     }
+
+    public function test_root_auto_redirect_ke_sso(): void
+    {
+        config(['auth.mode' => 'sso']);
+
+        $response = $this->get('/');
+        $response->assertRedirect(route('sso.redirect'));
+    }
+
+    public function test_logout_via_get_berhasil(): void
+    {
+        config(['auth.mode' => 'sso']);
+
+        $user = $this->existingUser(['sso_id' => null]);
+        $response = $this->actingAs($user)->get('/logout');
+
+        $this->assertGuest();
+        $response->assertRedirect();
+    }
 }

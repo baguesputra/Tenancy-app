@@ -41,7 +41,7 @@ return [
         'sp_acs' => env('SAML_SP_ACS_URL', env('SSO_REDIRECT_URI', 'http://localhost:8001/auth/sso/callback')),
         'sp_sls' => env('SAML_SP_SLS_URL') ?: rtrim(env('APP_URL', 'http://localhost:8001'), '/').'/auth/sso/slo',
         'idp_slo' => env('SAML_IDP_SLO_URL'),
-        'sp_name_id_format' => env('SAML_NAME_ID_FORMAT', 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'),
+        'sp_name_id_format' => env('SAML_NAME_ID_FORMAT', 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'),
         'sp_sign_assertions' => env('SAML_SP_SIGN_ASSERTIONS', false),
         'sp_certificate' => env('SAML_SP_CERT'),
         'sp_private_key' => env('SAML_SP_PRIVATE_KEY'),

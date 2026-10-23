@@ -31,16 +31,33 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
-    if (config('auth.mode') === 'sso') {
+
+    if (request()->query('local') === '1' && config('auth.allow_local_login', false)) {
+        return redirect()->route('login', ['local' => 1]);
+    }
+
+    if (config('auth.mode') === 'sso' || config('services.perusahaan.metadata')) {
         return redirect()->route('sso.redirect');
     }
 
     return redirect()->route('login');
 })->name('home');
 
+Route::get('/logout', function () {
+    if (auth()->check()) {
+        return app(LocalLoginController::class)->destroy(request());
+    }
+
+    if (config('auth.mode') === 'sso') {
+        return redirect()->away(config('services.gate.base_url', 'https://gate.appdutamall.com').'/dashboard');
+    }
+
+    return redirect()->route('login');
+})->name('logout.get');
+
 Route::middleware(['auth', 'can:documents.manage'])->prefix('settings')->name('settings.')->group(function () {
-    Route::get('/documents', [App\Http\Controllers\Settings\StaticDocumentController::class, 'index'])->name('documents.index');
-    Route::post('/documents', [App\Http\Controllers\Settings\StaticDocumentController::class, 'store'])->name('documents.store');
+    Route::get('/documents', [StaticDocumentController::class, 'index'])->name('documents.index');
+    Route::post('/documents', [StaticDocumentController::class, 'store'])->name('documents.store');
 });
 
 Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('settings.')->group(function () {
@@ -88,14 +105,15 @@ Route::get('/auth/sso/gagal', function () {
 use App\Http\Controllers\LooController;
 use App\Http\Controllers\LooFitoutController;
 use App\Http\Controllers\LooTrackController;
+use App\Http\Controllers\Settings\StaticDocumentController;
 
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::post('/logout', [LocalLoginController::class, 'destroy'])->name('logout');
-Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
-Route::put('/password/change', [PasswordChangeController::class, 'update'])->middleware('throttle:password-change')->name('password.change.update');
+    Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
+    Route::put('/password/change', [PasswordChangeController::class, 'update'])->middleware('throttle:password-change')->name('password.change.update');
 
     Route::middleware('can:tenants.view')->get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
     Route::middleware('can:tenants.view')->get('/tenant-profiles', [TenantProfileController::class, 'index'])->name('tenant-profiles.index');

@@ -155,6 +155,12 @@ class SsoController extends Controller
         $user = Auth::guard('web')->user();
         if ($user && $user->sso_id) {
             try {
+                Log::info('SSO LogoutRequest initiating', [
+                    'user_id' => $user->id,
+                    'sso_id' => $user->sso_id,
+                    'email' => $user->email,
+                ]);
+
                 // ponytail: full-page ke domain IdP via Inertia::location (XHR tak bisa lintas domain)
                 $tujuan = Socialite::driver('perusahaan')
                     ->logoutRequest($user->sso_id)
@@ -162,6 +168,7 @@ class SsoController extends Controller
 
                 return Inertia::location($tujuan);
             } catch (\Exception $e) {
+                Log::error('SSO LogoutRequest error', ['error' => $e->getMessage()]);
                 report($e);
             }
         }
@@ -177,6 +184,14 @@ class SsoController extends Controller
 
     public function slo(Request $request)
     {
+        Log::info('SSO SLO Request received', [
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'has_SAMLRequest' => $request->has('SAMLRequest'),
+            'has_SAMLResponse' => $request->has('SAMLResponse'),
+            'user_id' => Auth::guard('web')->id(),
+        ]);
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -187,6 +202,7 @@ class SsoController extends Controller
                     ->stateless()
                     ->logoutResponse();
             } catch (\Throwable $e) {
+                Log::error('SSO LogoutResponse generation error', ['error' => $e->getMessage()]);
                 report($e);
             }
         }

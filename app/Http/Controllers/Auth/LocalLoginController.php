@@ -66,7 +66,7 @@ class LocalLoginController extends Controller
 
     public function destroy(Request $request)
     {
-        if (config('auth.mode') === 'sso' && Auth::user()?->sso_id) {
+        if (Auth::user()?->sso_id) {
             return app(SsoController::class)->logout();
         }
 

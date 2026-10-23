@@ -114,6 +114,8 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
-    'mode' => env('AUTH_MODE', 'local'),
+    'mode' => env('AUTH_MODE', 'sso'),
+
+    'allow_local_login' => env('ALLOW_LOCAL_LOGIN', true),
 
 ];
