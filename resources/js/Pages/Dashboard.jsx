@@ -7,6 +7,7 @@ import {
     IconArrowRight, IconRefresh,
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
+import EmptyState from '@/Components/EmptyState';
 
 const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak', loo: 'LOO' };
 
@@ -165,25 +166,30 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                             )}
                         </div>
                         {queue.length === 0 ? (
-                            <div className="px-5 py-10 text-center">
-                                <p className="text-sm font-medium text-gray-800">Antrian kosong</p>
-                                <p className="text-xs text-gray-400 mt-1">Tidak ada pengajuan yang menunggu Anda.</p>
-                                {canSidak ? (
-                                    <Link
-                                        href="/inspection-sessions/current"
-                                        className="inline-flex items-center mt-4 px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-                                    >
-                                        Mulai Sidak
-                                    </Link>
-                                ) : canPermits ? (
-                                    <Link
-                                        href="/permit-requests"
-                                        className="inline-flex items-center mt-4 px-4 py-2 text-sm font-medium text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-                                    >
-                                        Lihat Surat Izin
-                                    </Link>
-                                ) : null}
-                            </div>
+                            <EmptyState
+                                variant="empty"
+                                size="sm"
+                                title="Antrean Kosong"
+                                description="Tidak ada pengajuan yang membutuhkan tindakan Anda saat ini."
+                                action={
+                                    canSidak ? (
+                                        <Link
+                                            href="/inspection-sessions/current"
+                                            className="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-[#0F1E36] rounded-xl hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                        >
+                                            Mulai Sidak
+                                        </Link>
+                                    ) : canPermits ? (
+                                        <Link
+                                            href="/permit-requests"
+                                            className="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-[#0F1E36] rounded-xl hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                        >
+                                            Lihat Surat Izin
+                                        </Link>
+                                    ) : null
+                                }
+                                className="py-6"
+                            />
                         ) : (
                             <ol className="divide-y divide-gray-100">
                                 {queue.map((item, i) => (

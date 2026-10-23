@@ -2,6 +2,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
 import QrScanModal from '@/Components/Scan/QrScanModal';
+import EmptyState from '@/Components/EmptyState';
 import initials from '@/utils/initials';
 
 const menuIcons = {
@@ -426,15 +427,13 @@ function Topbar({ user, onMenuClick, csrfToken }) {
                                 </div>
                                 <div className="max-h-80 overflow-y-auto py-1">
                                     {notifications.length === 0 ? (
-                                        <div className="px-4 py-8 text-center">
-                                            <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400" aria-hidden="true">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                                </svg>
-                                            </span>
-                                            <p className="text-sm font-medium text-gray-700">Belum ada notifikasi</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">Notifikasi baru akan muncul di sini.</p>
-                                        </div>
+                                        <EmptyState
+                                            variant="notification"
+                                            size="sm"
+                                            title="Belum Ada Notifikasi"
+                                            description="Notifikasi baru akan muncul di sini."
+                                            className="py-6"
+                                        />
                                     ) : (
                                         notifications.map((n) => (
                                             <button

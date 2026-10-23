@@ -4,6 +4,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import EmptyState from '@/Components/EmptyState';
 
 export default function Index({ sessions }) {
     const columns = [
@@ -50,8 +51,18 @@ export default function Index({ sessions }) {
                         ))}
                         {sessions.data.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">
-                                    Belum ada riwayat sesi.
+                                <td colSpan={5} className="px-5 py-6">
+                                    <EmptyState
+                                        variant="empty"
+                                        size="md"
+                                        title="Belum Ada Riwayat Sesi Sidak"
+                                        description="Mulai sesi inspeksi lapangan pertama Anda untuk merekam data sidak tenant."
+                                        action={
+                                            <Link href="/inspection-sessions/create">
+                                                <Button className="justify-center !py-2.5">Tambah Sesi</Button>
+                                            </Link>
+                                        }
+                                    />
                                 </td>
                             </tr>
                         )}
@@ -81,12 +92,18 @@ export default function Index({ sessions }) {
                         </Link>
                     ))}
                     {sessions.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">Belum ada riwayat sesi.</p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">Mulai sesi pertama untuk inspeksi lapangan.</p>
-                            <Link href="/inspection-sessions/create">
-                                <Button className="justify-center !py-3 min-h-[48px]">Tambah Sesi</Button>
-                            </Link>
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm">
+                            <EmptyState
+                                variant="empty"
+                                size="sm"
+                                title="Belum Ada Riwayat Sesi"
+                                description="Mulai sesi pertama untuk inspeksi lapangan."
+                                action={
+                                    <Link href="/inspection-sessions/create">
+                                        <Button className="justify-center !py-2.5 w-full">Tambah Sesi</Button>
+                                    </Link>
+                                }
+                            />
                         </div>
                     )}
                 </div>

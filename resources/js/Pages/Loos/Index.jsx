@@ -7,6 +7,7 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
+import EmptyState from '@/Components/EmptyState';
 
 const STATUS_COLORS = {
     draft: 'gray',
@@ -168,7 +169,14 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                         ))}
                         {loos.data.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">Belum ada LOO.</td>
+                                <td colSpan={5} className="px-5 py-6">
+                                    <EmptyState
+                                        variant="data"
+                                        size="md"
+                                        title="Belum Ada Dokumen LOO"
+                                        description="Data Letter of Offer (LOO) belum tersedia pada cabang ini."
+                                    />
+                                </td>
                             </tr>
                         )}
                     </DataTable>
@@ -186,6 +194,16 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                             </div>
                         </Link>
                     ))}
+                    {loos.data.length === 0 && (
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm">
+                            <EmptyState
+                                variant="data"
+                                size="sm"
+                                title="Belum Ada Dokumen LOO"
+                                description="Data Letter of Offer (LOO) belum tersedia."
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

@@ -9,6 +9,7 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
 import FilterBar, { FilterReset } from '@/Components/FilterBar';
+import EmptyState from '@/Components/EmptyState';
 import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding, IconCar, IconChevronDown } from '@/Components/Icons';
 import { PERMIT_CATEGORY_META, PERMIT_SOURCE_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 import { formatRelativeID, formatDateID } from '@/utils/format';
@@ -334,20 +335,30 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                     })}
                     {permits.data.length === 0 && (
                         <tr>
-                            <td colSpan={6} className="px-5 py-12 text-center">
-                                <p className="text-sm font-medium text-gray-700">{locked ? 'Belum ada pengajuan pameran.' : 'Belum ada surat izin ditemukan.'}</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                    {hasFilter
-                                        ? 'Coba ubah kata kunci atau reset filter.'
-                                        : canCreate
-                                            ? (locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.')
-                                            : 'Belum ada data untuk ditampilkan.'}
-                                </p>
-                                {hasFilter && (
-                                    <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
-                                        Reset filter
-                                    </button>
-                                )}
+                            <td colSpan={6} className="px-5 py-6">
+                                <EmptyState
+                                    variant={hasFilter ? 'search' : 'empty'}
+                                    size="md"
+                                    title={hasFilter ? 'Surat Izin Tidak Ditemukan' : (locked ? 'Belum Ada Pengajuan Pameran' : 'Belum Ada Surat Izin')}
+                                    description={
+                                        hasFilter
+                                            ? 'Coba ubah kata kunci pencarian atau reset filter untuk melihat data lainnya.'
+                                            : canCreate
+                                                ? (locked ? 'Klik tombol di bawah untuk membuat pengajuan pameran pertama.' : 'Klik tombol di bawah untuk membuat pengajuan pertama.')
+                                                : 'Belum ada data surat izin untuk ditampilkan.'
+                                    }
+                                    action={
+                                        hasFilter ? (
+                                            <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                                Reset filter
+                                            </button>
+                                        ) : canCreate ? (
+                                            <Link href="/permit-requests/create">
+                                                <Button className="justify-center !py-2.5">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
+                                            </Link>
+                                        ) : null
+                                    }
+                                />
                             </td>
                         </tr>
                     )}
@@ -391,22 +402,30 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         );
                     })}
                     {permits.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">{locked ? 'Belum ada pengajuan pameran.' : 'Belum ada surat izin ditemukan.'}</p>
-                            <p className={`text-xs text-gray-400 mt-1 ${hasFilter || canCreate ? 'mb-4' : ''}`}>
-                                {hasFilter
-                                    ? 'Coba ubah kata kunci atau reset filter.'
-                                    : canCreate
-                                        ? (locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.')
-                                        : 'Belum ada data untuk ditampilkan.'}
-                            </p>
-                            {hasFilter ? (
-                                <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
-                            ) : canCreate ? (
-                                <Link href="/permit-requests/create">
-                                    <Button className="justify-center !py-3 min-h-[48px]">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
-                                </Link>
-                            ) : null}
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm">
+                            <EmptyState
+                                variant={hasFilter ? 'search' : 'empty'}
+                                size="sm"
+                                title={hasFilter ? 'Surat Izin Tidak Ditemukan' : (locked ? 'Belum Ada Pengajuan Pameran' : 'Belum Ada Surat Izin')}
+                                description={
+                                    hasFilter
+                                        ? 'Coba ubah kata kunci atau reset filter.'
+                                        : canCreate
+                                            ? (locked ? 'Klik Ajukan Pameran untuk pengajuan pertama.' : 'Klik Ajukan Atas Nama Tenant untuk pengajuan pertama.')
+                                            : 'Belum ada data untuk ditampilkan.'
+                                }
+                                action={
+                                    hasFilter ? (
+                                        <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline rounded">
+                                            Reset filter
+                                        </button>
+                                    ) : canCreate ? (
+                                        <Link href="/permit-requests/create">
+                                            <Button className="justify-center !py-2.5 w-full">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
+                                        </Link>
+                                    ) : null
+                                }
+                            />
                         </div>
                     )}
                     <div className="bg-white rounded-xl border border-[#E2E5EA]">

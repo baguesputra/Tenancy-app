@@ -7,6 +7,7 @@ import SelectInput from '@/Components/Form/SelectInput';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
+import EmptyState from '@/Components/EmptyState';
 import { formatDateID } from '@/utils/format';
 import initials from '@/utils/initials';
 const statusColor = { draft: 'gray', completed: 'green' };
@@ -210,9 +211,13 @@ export default function Index({ tenants, filters = {}, productCategories = [] })
                         })}
                         {tenants.data.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-5 py-12 text-center">
-                                    <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                                    <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Belum ada data tenant.'}</p>
+                                <td colSpan={4} className="px-5 py-6">
+                                    <EmptyState
+                                        variant={hasFilter ? 'search' : 'empty'}
+                                        size="md"
+                                        title={hasFilter ? 'Tenant Tidak Ditemukan' : 'Belum Ada Tenant'}
+                                        description={hasFilter ? 'Coba ubah kata kunci atau reset filter pencarian.' : 'Belum ada data profil tenant yang terdaftar.'}
+                                    />
                                 </td>
                             </tr>
                         )}
@@ -257,9 +262,13 @@ export default function Index({ tenants, filters = {}, productCategories = [] })
                         );
                     })}
                     {tenants.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                            <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Belum ada data tenant.'}</p>
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm">
+                            <EmptyState
+                                variant={hasFilter ? 'search' : 'empty'}
+                                size="sm"
+                                title={hasFilter ? 'Tenant Tidak Ditemukan' : 'Belum Ada Tenant'}
+                                description={hasFilter ? 'Coba ubah kata kunci atau reset filter pencarian.' : 'Belum ada data tenant.'}
+                            />
                         </div>
                     )}
                     <div className="bg-white rounded-xl border border-[#E2E5EA]">

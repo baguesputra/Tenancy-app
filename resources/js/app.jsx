@@ -19,16 +19,30 @@ class ErrorBoundary extends Component {
     render() {
         if (this.state.error) {
             return (
-                <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-50 px-4 text-center">
-                    <p className="text-sm font-semibold text-gray-900">Terjadi kesalahan saat menampilkan halaman</p>
-                    <p className="text-xs text-gray-500">Muat ulang halaman. Jika berulang, coba lagi beberapa saat lagi.</p>
-                    <button
-                        type="button"
-                        onClick={() => window.location.reload()}
-                        className="rounded-lg bg-[#0F1E36] px-4 py-2 text-xs font-medium text-white hover:bg-[#16294a]"
-                    >
-                        Muat Ulang
-                    </button>
+                <div className="h-screen w-screen overflow-hidden bg-white flex flex-col items-center justify-start pt-12 sm:pt-20 p-6 text-center select-none">
+                    <div className="flex flex-col items-center justify-start text-center max-w-2xl">
+                        <a href="/" className="inline-flex items-center gap-3 mb-4 hover:opacity-85 transition-opacity">
+                            <img src="/images/logo.png" alt="Duta Mall" className="h-9 w-auto object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                            <div className="h-5 w-px bg-slate-300" />
+                            <span className="text-sm font-extrabold text-[#0F1E36] uppercase tracking-wider">Tenant Management System</span>
+                        </a>
+
+                        <div
+                            onClick={() => window.location.reload()}
+                            className="relative inline-flex flex-col items-center justify-center cursor-pointer hover:scale-[1.015] transition-transform select-none"
+                            title="Klik untuk memuat ulang"
+                        >
+                            <img src="/images/errors/500.png" alt="500" className="h-[62vh] max-h-[580px] w-auto aspect-square object-contain pointer-events-none mix-blend-multiply" />
+                            <div
+                                className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 text-4xl sm:text-5xl md:text-6xl font-black text-[#0F172A] uppercase tracking-tight leading-none pointer-events-none whitespace-nowrap"
+                                style={{
+                                    textShadow: '0 1px 0 #CBD5E1, 0 2px 0 #94A3B8, 0 3px 0 #64748B, 0 4px 6px rgba(15, 23, 42, 0.24), 0 8px 16px rgba(15, 23, 42, 0.16)'
+                                }}
+                            >
+                                Error 500
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         }
