@@ -24,16 +24,42 @@ class TenantProfileController extends Controller
 
     public function index(Request $request)
     {
-        $query = Tenant::select(['id', 'branch_id', 'name', 'logo_path', 'tenant_category_id', 'product_category_id', 'is_active'])
-            ->with(['branch:id,name', 'tenantCategory:id,name', 'productCategory:id,name', 'activeTenancy:id,tenant_id,unit_id,status', 'activeTenancy.unit:id,unit_code'])
+        $baseQuery = Tenant::query();
+        $this->branchScope->apply($baseQuery, $request->user());
+        $this->tenantScope->applyView($baseQuery, $request->user());
+
+        $agg = (clone $baseQuery)->toBase()->selectRaw('
+            count(*) as total,
+            sum(is_active = 1) as active,
+            sum(is_active = 0) as inactive
+        ')->first();
+
+        $pendingPermitsQuery = PermitRequest::where('status', 'pending');
+        $this->branchScope->apply($pendingPermitsQuery, $request->user());
+        $this->permitVisibility->applyView($pendingPermitsQuery, $request->user());
+        $pendingPermitsCount = $pendingPermitsQuery->count();
+
+        $query = Tenant::select([
+                'id', 'branch_id', 'name', 'legal_entity_name', 'logo_path',
+                'tenant_category_id', 'product_category_id', 'is_active', 'company_phone', 'company_email',
+            ])
+            ->with([
+                'branch:id,name',
+                'tenantCategory:id,name',
+                'productCategory:id,name',
+                'activeTenancy:id,tenant_id,unit_id,status',
+                'activeTenancy.unit:id,unit_code,floor',
+            ])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('tenants.name', 'like', "%{$request->search}%")
+                    ->orWhere('tenants.legal_entity_name', 'like', "%{$request->search}%")
                     ->orWhere('tenants.company_phone', 'like', "%{$request->search}%")
                     ->orWhereHas('activeTenancy.unit', fn ($u) => $u->where('unit_code', 'like', "%{$request->search}%"));
             }))
             ->when($request->product_category_id, fn ($q) => $q->where('tenants.product_category_id', $request->product_category_id))
             ->when($request->status === 'active', fn ($q) => $q->where('tenants.is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('tenants.is_active', false))
+            ->when($request->status === 'has_pending_permit', fn ($q) => $q->whereHas('permitRequests', fn ($pq) => $this->permitVisibility->applyView($pq->where('status', 'pending'), $request->user())))
             ->withCount([
                 'tenancies',
                 'inspections as inspections_completed_count' => fn ($q) => $q->where('status', 'completed'),
@@ -44,10 +70,20 @@ class TenantProfileController extends Controller
         $this->branchScope->apply($query, $request->user());
         $this->tenantScope->applyView($query, $request->user());
 
+        $total = (int) ($agg->total ?? 0);
+        $active = (int) ($agg->active ?? 0);
+        $inactive = (int) ($agg->inactive ?? 0);
+
         return Inertia::render('TenantProfiles/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
             'filters' => $request->only(['search', 'product_category_id', 'status']),
             'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
+            'summary' => [
+                'total' => $total,
+                'active' => $active,
+                'inactive' => $inactive,
+                'pending_permits' => $pendingPermitsCount,
+            ],
         ]);
     }
 
