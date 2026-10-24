@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Loo;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -53,6 +54,44 @@ class LooSectionService
         }
 
         return $data;
+    }
+
+    /**
+     * Validasi upload baru berdasarkan `accept` + `max_kb` di config.
+     * Hanya field yang benar-benar mengirim file yang divalidasi, sehingga
+     * path lama yang dikirim balik frontend tidak dianggap upload.
+     */
+    public function validateUploads(Request $request, array $config): void
+    {
+        $rules = [];
+
+        foreach ($config['fields'] as $field) {
+            if (! in_array($field['type'], self::FILE_FIELDS, true) || ! isset($field['max_kb'])) {
+                continue;
+            }
+
+            if (! $request->hasFile($field['name'])) {
+                continue;
+            }
+
+            $target = $field['type'] === 'file_multiple' ? $field['name'].'.*' : $field['name'];
+            $rule = ['file', 'max:'.$field['max_kb']];
+
+            $extensions = array_filter(array_map(
+                fn ($ext) => ltrim(trim($ext), '.'),
+                explode(',', $field['accept'] ?? '')
+            ));
+
+            if ($extensions !== []) {
+                $rule[] = 'mimes:'.implode(',', $extensions);
+            }
+
+            $rules[$target] = $rule;
+        }
+
+        if ($rules !== []) {
+            $request->validate($rules);
+        }
     }
 
     /**

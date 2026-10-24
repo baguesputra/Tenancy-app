@@ -29,7 +29,7 @@ export default function FileInput({ error, className = '', loading = false, acce
                             )}
                             {maxSize && (
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Maximum file size: ${maxSize / (1024 * 1024)}MB
+                                    Maximum file size: {maxSize / (1024 * 1024)}MB
                                 </p>
                             )}
                         </>

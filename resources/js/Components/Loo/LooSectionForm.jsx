@@ -4,13 +4,15 @@ import FormField from '@/Components/Form/FormField';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
 import SelectInput from '@/Components/Form/SelectInput';
+import SearchableSelect from '@/Components/Form/SearchableSelect';
 import DateInput from '@/Components/Form/DateInput';
 import FileInput from '@/Components/Form/FileInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 
-function Field({ field, value, error, onChange, options }) {
+function Field({ field, value, error, onChange, options, looId }) {
     const common = { error };
+    const sourceOptions = field.source ? (options?.[field.source] ?? []) : null;
 
     switch (field.type) {
         case 'textarea':
@@ -19,10 +21,32 @@ function Field({ field, value, error, onChange, options }) {
             return (
                 <SelectInput {...common} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
                     <option value="">Pilih...</option>
-                    {(field.options ?? []).map((o) => (
-                        <option key={o} value={o}>{o.replaceAll('_', ' ')}</option>
-                    ))}
+                    {sourceOptions
+                        ? sourceOptions.map((o) => (
+                            <option key={o.id} value={o.id}>{o.name}</option>
+                        ))
+                        : (field.options ?? []).map((o) => (
+                            <option key={o} value={o}>{o.replaceAll('_', ' ')}</option>
+                        ))}
                 </SelectInput>
+            );
+        case 'searchable_select':
+            return (
+                <SearchableSelect
+                    {...common}
+                    value={value ?? ''}
+                    options={(sourceOptions ?? []).map((o) => ({ value: o.id, label: o.name }))}
+                    onChange={(e) => onChange(e.target.value)}
+                    fetchOptions={field.source === 'units' && looId
+                        ? async (q) => {
+                            const res = await fetch(`/loos/${looId}/units?search=${encodeURIComponent(q)}`, {
+                                headers: { Accept: 'application/json' },
+                            });
+                            if (!res.ok) return [];
+                            return (await res.json()).map((o) => ({ value: o.id, label: o.name }));
+                        }
+                        : null}
+                />
             );
         case 'date':
             return <DateInput {...common} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
@@ -87,7 +111,7 @@ function FileField({ field, value, onChange }) {
                     Lihat file saat ini
                 </a>
             )}
-            <FileInput accept={field.accept} onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
+            <FileInput accept={field.accept} maxSize={(field.max_kb ?? 0) * 1024} onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
         </div>
     );
 }
@@ -409,7 +433,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                                         focusMode={focusMode}
                                     />
                                 ) : (
-                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} />
+                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} looId={looId} />
                                 )}
                             </FormField>
                         </div>

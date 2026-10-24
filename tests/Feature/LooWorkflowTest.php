@@ -7,6 +7,7 @@ use App\Models\Loo;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -176,6 +177,111 @@ class LooWorkflowTest extends TestCase
 
         $this->assertSame('accounting_review', $loo->fresh()->status);
         $this->assertSame('accounting', $loo->fresh()->current_stage);
+    }
+
+    public function test_legal_uploads_documents_and_rejects_files_over_five_mb(): void
+    {
+        Storage::fake('public');
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'legal_review', 'current_stage' => 'legal']);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.transition', 'loos.legal_edit']);
+        $this->assertTrue($legal->can('loos.legal_edit'));
+        $this->assertSame($loo->branch_id, $legal->branch_id);
+
+        $files = [
+            'npwp' => UploadedFile::fake()->create('npwp.pdf', 10, 'application/pdf'),
+            'nib' => UploadedFile::fake()->create('nib.jpg', 10, 'image/jpeg'),
+            'sk_pendirian' => UploadedFile::fake()->create('sk.png', 10, 'image/png'),
+            'akta_perubahan_terakhir' => UploadedFile::fake()->create('akta.pdf', 10, 'application/pdf'),
+            'surat_kuasa' => UploadedFile::fake()->create('kuasa.pdf', 10, 'application/pdf'),
+            'ktp' => UploadedFile::fake()->create('ktp.jpg', 10, 'image/jpeg'),
+            'ktp_badan_hukum' => UploadedFile::fake()->create('ktp-badan-hukum.png', 10, 'image/png'),
+        ];
+
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/legalitas", $files + [
+                'entity_name' => 'PT Dokumen',
+                'tgl_sk_pendirian' => '2020-01-15',
+            ])
+            ->assertRedirect();
+
+        $data = $loo->sections()->where('section_key', 'legalitas')->first()->data;
+        foreach (array_keys($files) as $key) {
+            $this->assertStringStartsWith("loos/{$loo->id}/sections/", $data[$key]);
+            Storage::disk('public')->assertExists($data[$key]);
+        }
+
+        $this->actingAs($legal)
+            ->post("/loos/{$loo->id}/sections/legalitas", [
+                'npwp' => UploadedFile::fake()->create('too-large.pdf', 5121, 'application/pdf'),
+            ])
+            ->assertSessionHasErrors('npwp');
+    }
+
+    public function test_tenant_mgmt_section_saves_unit_and_category_to_loo(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'tenant_mgmt_review', 'current_stage' => 'tenant_mgmt']);
+        $user = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_edit']);
+
+        $unit = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '001', 'unit_code' => 'GF-A-001', 'is_active' => true,
+        ]);
+        $category = TenantCategory::firstOrCreate(['name' => 'Anchor']);
+
+        $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
+            'brand_name' => 'Kopi Senja',
+            'trade_name' => 'Senja Coffee',
+            'unit_id' => $unit->id,
+            'tenant_category_id' => $category->id,
+        ])->assertRedirect();
+
+        $loo->refresh();
+        $this->assertSame($unit->id, $loo->unit_id);
+        $this->assertSame($category->id, $loo->tenant_category_id);
+    }
+
+    public function test_tenant_mgmt_rejects_unit_from_other_branch(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'tenant_mgmt_review', 'current_stage' => 'tenant_mgmt']);
+        $user = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.transition', 'loos.tenant_mgmt_edit']);
+
+        $other = Branch::firstOrCreate(['code' => 'OTH'], ['name' => 'Cabang Lain']);
+        $unit = Unit::create([
+            'branch_id' => $other->id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '001', 'unit_code' => 'GF-OTH-001', 'is_active' => true,
+        ]);
+
+        $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
+            'brand_name' => 'Kopi Senja',
+            'unit_id' => $unit->id,
+        ])->assertStatus(422);
+
+        $this->assertNull($loo->fresh()->unit_id);
+    }
+
+    public function test_units_endpoint_searches_units_of_loo_branch(): void
+    {
+        $loo = $this->makeLoo();
+        $user = $this->userWithRole('marketing');
+
+        Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '001', 'unit_code' => 'GF-A-001', 'is_active' => true,
+        ]);
+        $other = Branch::firstOrCreate(['code' => 'OTH'], ['name' => 'Cabang Lain']);
+        Unit::create([
+            'branch_id' => $other->id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '002', 'unit_code' => 'GF-A-002', 'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson("/loos/{$loo->id}/units?search=GF-A")
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['name' => 'GF-A-001']);
     }
 
     public function test_user_cannot_fill_section_without_permission(): void

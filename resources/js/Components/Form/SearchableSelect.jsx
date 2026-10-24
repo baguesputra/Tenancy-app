@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-// ponytail: filter client-side, pindah ke server search saat opsi >1000.
+// Filter client-side untuk opsi kecil; pakai `fetchOptions` untuk pencarian server-side.
 export default function SearchableSelect({
     value,
     onChange,
@@ -12,23 +12,50 @@ export default function SearchableSelect({
     showCount = true,
     className = '',
     name,
+    fetchOptions = null,
 }) {
     const rootRef = useRef(null);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [highlight, setHighlight] = useState(0);
+    const [remote, setRemote] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [picked, setPicked] = useState(null);
 
-    const selected = options.find((o) => o.value == value) ?? null;
+    const fetchRef = useRef(fetchOptions);
+    fetchRef.current = fetchOptions;
 
-    const filtered = useMemo(() => {
+    useEffect(() => {
+        if (!fetchRef.current || !open) return undefined;
+
+        const timer = setTimeout(async () => {
+            setLoading(true);
+            try {
+                setRemote(await fetchRef.current(query.trim()));
+            } finally {
+                setLoading(false);
+            }
+        }, 250);
+
+        return () => clearTimeout(timer);
+    }, [open, query]);
+    const selected = options.find((o) => o.value == value)
+        ?? (picked && picked.value == value ? picked : null)
+        ?? remote.find((o) => o.value == value)
+        ?? null;
+
+    const localFiltered = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return options;
         return options.filter((o) => o.label.toLowerCase().includes(q));
     }, [options, query]);
 
+    const filtered = fetchOptions ? remote : localFiltered;
+
     const emit = (v) => onChange && onChange({ target: { value: v, name } });
 
     const pick = (opt) => {
+        setPicked(opt);
         emit(opt.value);
         setQuery(opt.label);
         setOpen(false);
@@ -124,12 +151,16 @@ export default function SearchableSelect({
                             </button>
                         ))}
                         {filtered.length === 0 && (
-                            <p className="px-3.5 py-4 text-sm text-gray-400 text-center">Tidak ditemukan.</p>
+                            <p className="px-3.5 py-4 text-sm text-gray-400 text-center">
+                                {loading ? 'Mencari...' : 'Tidak ditemukan.'}
+                            </p>
                         )}
                     </div>
                     {showCount && (
                         <div className="border-t border-gray-100 bg-gray-50 px-3.5 py-2 text-xs text-gray-500">
-                            Menampilkan {filtered.length} dari {options.length} data
+                            {fetchOptions
+                                ? `Menampilkan ${filtered.length} hasil${loading ? ' (mencari...)' : ''}`
+                                : `Menampilkan ${filtered.length} dari ${options.length} data`}
                         </div>
                     )}
                 </div>

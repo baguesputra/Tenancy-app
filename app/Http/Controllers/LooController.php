@@ -7,6 +7,7 @@ use App\Models\Loo;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Services\BranchScopeService;
 use App\Services\LooSectionService;
@@ -142,7 +143,13 @@ class LooController extends Controller
             'track' => $track,
             'files' => $this->accessibleFiles($loo, $request->user()),
             'transitions' => $this->allowedTransitions($loo),
-            'options' => ['productCategories' => ProductCategory::orderBy('name')->get(['id', 'name'])],
+            'options' => [
+                'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
+                'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
+                'units' => $loo->unit
+                    ? [['id' => $loo->unit->id, 'name' => $loo->unit->unit_code]]
+                    : [],
+            ],
         ]);
     }
 
@@ -176,6 +183,30 @@ class LooController extends Controller
             'Content-Disposition' => 'inline; filename="'.basename($path).'"',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    /**
+     * Pencarian unit untuk dropdown form section (server-side, maks 50 baris).
+     */
+    public function units(Request $request, Loo $loo)
+    {
+        $this->authorizeAccess($loo, $request);
+
+        $search = trim((string) $request->query('search'));
+
+        $units = Unit::where('branch_id', $loo->branch_id)
+            ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('unit_code', 'like', "%{$search}%")
+                ->orWhere('floor', 'like', "%{$search}%")
+                ->orWhere('block', 'like', "%{$search}%")
+                ->orWhere('unit_number', 'like', "%{$search}%")))
+            ->orderBy('floor')
+            ->orderBy('block')
+            ->orderBy('unit_number')
+            ->limit(50)
+            ->get(['id', 'unit_code']);
+
+        return response()->json($units->map(fn ($u) => ['id' => $u->id, 'name' => $u->unit_code])->values());
     }
 
     public function edit(Loo $loo, Request $request)
@@ -226,6 +257,18 @@ class LooController extends Controller
             $this->sections->assertFitoutDepartmentsAllowed($request->all(), $config, $current?->data ?? [], $editableDepts);
         } else {
             abort_unless($request->user()->can($config['permission']), 403, 'Tidak berwenang mengisi section ini.');
+        }
+
+        $this->sections->validateUploads($request, $config);
+
+        if ($key === 'manajemen_tenant') {
+            $this->assertUnitBelongsToBranch($request, $loo);
+            $request->validate(['tenant_category_id' => 'nullable|exists:tenant_categories,id']);
+
+            $loo->update([
+                'unit_id' => $request->input('unit_id') ?: null,
+                'tenant_category_id' => $request->input('tenant_category_id') ?: null,
+            ]);
         }
 
         $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
@@ -547,6 +590,19 @@ class LooController extends Controller
             ->when(! $user->canViewAllBranches(), fn ($q) => $q->where('branch_id', $user->branch_id))
             ->orderBy('name')
             ->get(['id', 'name']);
+    }
+
+    private function assertUnitBelongsToBranch(Request $request, Loo $loo): void
+    {
+        if (! $request->filled('unit_id')) {
+            return;
+        }
+
+        $exists = Unit::where('id', $request->input('unit_id'))
+            ->where('branch_id', $loo->branch_id)
+            ->exists();
+
+        abort_unless($exists, 422, 'Unit tidak berada di cabang LOO ini.');
     }
 
     private function authorizeAccess(Loo $loo, Request $request): void

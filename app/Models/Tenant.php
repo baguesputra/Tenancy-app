@@ -70,6 +70,10 @@ class Tenant extends Model
         'npwp_file_path',
         'ktp_number',
         'ktp_file_path',
+        'ktp_badan_hukum_file_path',
+
+        // NIB
+        'nib_file_path',
 
         // Akte Pendirian
         'akta_number',
@@ -77,6 +81,7 @@ class Tenant extends Model
         'akta_kemenkeh_number',
         'notaris_name',
         'akta_file_path',
+        'akta_perubahan_file_path',
         'power_of_attorney_file_path',
 
         // Domisili

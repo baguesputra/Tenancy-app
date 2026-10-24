@@ -69,17 +69,17 @@ class LooTenantSyncTest extends TestCase
         $this->fillSection($loo, 'legalitas', [
             'entity_name' => 'PT Senja Abadi',
             'entity_type' => 'PT',
-            'npwp' => '01.234.567.8-901.000',
-            'siup' => 'SIUP-001',
-            'nib' => 'NIB-001',
-            'tdp' => 'TDP-001',
-            'sk_pendirian' => 'AKTA-001',
+            'npwp' => 'loos/1/sections/npwp.pdf',
+            'nib' => 'loos/1/sections/nib.pdf',
+            'sk_pendirian' => 'loos/1/sections/sk.pdf',
             'tgl_sk_pendirian' => '2020-01-15',
-            'notaris_pendirian' => 'Notaris Sinta',
+            'akta_perubahan_terakhir' => 'loos/1/sections/akta-perubahan.pdf',
+            'surat_kuasa' => 'loos/1/sections/surat-kuasa.pdf',
+            'ktp' => 'loos/1/sections/ktp.pdf',
+            'ktp_badan_hukum' => 'loos/1/sections/ktp-badan-hukum.pdf',
             'pic_legal_name' => 'Sinta Legal',
             'pic_legal_phone' => '0812-0000-0001',
             'pic_legal_email' => 'legal@sENJA.test',
-            'authorized_signatory_ktp' => '7371XXXX',
         ]);
 
         $this->fillSection($loo, 'biaya_termin', [
@@ -89,7 +89,6 @@ class LooTenantSyncTest extends TestCase
             'fitout_dp_pct' => 30,
             'area_sqm_loo' => 120,
             'rent_per_sqm' => 375000,
-            'escalation_pct' => 5,
             'contract_start_date' => '2026-10-01',
             'contract_end_date' => '2029-09-30',
         ]);
@@ -97,9 +96,9 @@ class LooTenantSyncTest extends TestCase
         $this->fillSection($loo, 'manajemen_tenant', [
             'brand_name' => 'Kopi Senja',
             'trade_name' => 'Senja Coffee',
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
             'product_categories' => [ProductCategory::firstOrCreate(['name' => 'F&B'])->id],
-            'floor_preference' => 'GF',
-            'zone_preference' => 'Zona A',
+            'unit_id' => $this->unit->id,
             'contact_person_name' => 'Budi Customer',
             'contact_person_phone' => '0812-0000-0002',
             'contact_person_email' => 'budi@sENJA.test',
@@ -150,17 +149,18 @@ class LooTenantSyncTest extends TestCase
 
         $this->assertSame('Kopi Senja', $tenant->name);
         $this->assertSame('PT Senja Abadi', $tenant->legal_entity_name);
-        $this->assertSame('01.234.567.8-901.000', $tenant->npwp_number);
-        $this->assertSame('SIUP-001', $tenant->siup_number);
-        $this->assertSame('NIB-001', $tenant->nib);
-        $this->assertSame('TDP-001', $tenant->tdp_number);
-        $this->assertSame('AKTA-001', $tenant->akta_number);
-        $this->assertSame('Notaris Sinta', $tenant->notaris_name);
-        $this->assertSame('7371XXXX', $tenant->ktp_number);
+        $this->assertSame('loos/1/sections/npwp.pdf', $tenant->npwp_file_path);
+        $this->assertSame('loos/1/sections/nib.pdf', $tenant->nib_file_path);
+        $this->assertSame('loos/1/sections/sk.pdf', $tenant->akta_file_path);
+        $this->assertSame('loos/1/sections/akta-perubahan.pdf', $tenant->akta_perubahan_file_path);
+        $this->assertSame('loos/1/sections/surat-kuasa.pdf', $tenant->power_of_attorney_file_path);
+        $this->assertSame('loos/1/sections/ktp.pdf', $tenant->ktp_file_path);
+        $this->assertSame('loos/1/sections/ktp-badan-hukum.pdf', $tenant->ktp_badan_hukum_file_path);
         $this->assertSame('Sinta Legal', $tenant->legal_pic_name);
         $this->assertSame('Kontraktor Budi', $tenant->fitout_pic_name);
         $this->assertSame('GF', $tenant->floor_map);
-        $this->assertSame('Zona A', $tenant->location_map);
+        $this->assertSame('GF-01', $tenant->location_map);
+        $this->assertSame('Senja Coffee', $tenant->trade_name);
         $this->assertSame($this->branch->id, $tenant->branch_id);
         $this->assertTrue($tenant->is_active);
 
@@ -278,7 +278,7 @@ class LooTenantSyncTest extends TestCase
         $tenant->refresh();
         $this->assertSame('Kopi Senja', $tenant->name, 'nama tidak boleh diubah');
         $this->assertSame('PT Senja Abadi', $tenant->legal_entity_name, 'legal entity tidak boleh diubah');
-        $this->assertSame('01.234.567.8-901.000', $tenant->npwp_number, 'npwp tidak boleh diubah');
+        $this->assertSame('loos/1/sections/npwp.pdf', $tenant->npwp_file_path, 'file npwp tidak boleh diubah');
         $this->assertSame('PIC Baru', $tenant->pic_name, 'PIC boleh diubah');
         $this->assertSame('0899', $tenant->pic_phone);
         $this->assertSame('0898', $tenant->company_phone);
