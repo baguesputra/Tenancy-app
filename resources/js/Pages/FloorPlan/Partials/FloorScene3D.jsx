@@ -17,6 +17,8 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
         setSelectedUnitId,
         setView3DType,
         setCameraMode3D,
+        setBuildingMode,
+        setExplodedGap,
     } = useFloorMapStore();
 
     const [isPointerLocked, setIsPointerLocked] = useState(false);
@@ -77,59 +79,127 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
                 </div>
             )}
 
-            {/* Quick Switcher 3D Controls di Pojok Kanan Atas Viewport */}
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 flex-wrap">
-                {/* Switcher Tipe 3D: Per-Lantai vs Gedung 5 Lantai */}
-                <div className="inline-flex p-1 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-xl shadow-md text-xs font-semibold">
+            {/* Panel kontrol 3D di sudut kanan atas viewport */}
+            <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 max-w-[calc(100%-2rem)]">
+                {/* Cakupan tampilan: per lantai vs gedung utuh */}
+                <div role="group" aria-label="Cakupan tampilan 3D" className="inline-flex p-1 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg shadow-md text-xs font-semibold">
                     <button
                         type="button"
+                        aria-pressed={isSingleFloor}
                         onClick={() => setView3DType('single')}
-                        className={`px-3 py-1.5 rounded-lg transition ${
+                        className={`px-3 py-1.5 rounded-md transition-colors ${
                             isSingleFloor
-                                ? 'bg-indigo-600 text-white shadow-xs'
+                                ? 'bg-[#0369A1] text-white'
                                 : 'text-slate-300 hover:text-white'
                         }`}
                     >
-                        📍 Lantai {activeFloor} Saja
+                        Lantai {activeFloor}
                     </button>
                     <button
                         type="button"
+                        aria-pressed={!isSingleFloor}
                         onClick={() => setView3DType('building')}
-                        className={`px-3 py-1.5 rounded-lg transition ${
+                        className={`px-3 py-1.5 rounded-md transition-colors ${
                             !isSingleFloor
-                                ? 'bg-indigo-600 text-white shadow-xs'
+                                ? 'bg-[#0369A1] text-white'
                                 : 'text-slate-300 hover:text-white'
                         }`}
                     >
-                        🏢 Gedung 5 Lantai
+                        Gedung 5 Lantai
                     </button>
                 </div>
 
-                {/* Switcher Kamera: Orbit vs Mode Jalan (Hanya di mode Lantai Saja) */}
+                {/* Mode kamera (hanya pada tampilan per lantai) */}
                 {isSingleFloor && (
-                    <div className="inline-flex p-1 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-xl shadow-md text-xs font-semibold">
+                    <div role="group" aria-label="Mode kamera" className="inline-flex p-1 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg shadow-md text-xs font-semibold">
                         <button
                             type="button"
+                            aria-pressed={cameraMode3D === 'orbit'}
                             onClick={() => setCameraMode3D('orbit')}
-                            className={`px-3 py-1.5 rounded-lg transition ${
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
                                 cameraMode3D === 'orbit'
-                                    ? 'bg-slate-700 text-white shadow-xs'
+                                    ? 'bg-slate-600 text-white'
                                     : 'text-slate-300 hover:text-white'
                             }`}
                         >
-                            🛰️ Orbit
+                            Orbit
                         </button>
                         <button
                             type="button"
+                            aria-pressed={cameraMode3D === 'walk'}
                             onClick={() => setCameraMode3D('walk')}
-                            className={`px-3 py-1.5 rounded-lg transition ${
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
                                 cameraMode3D === 'walk'
-                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    ? 'bg-emerald-600 text-white'
                                     : 'text-slate-300 hover:text-white'
                             }`}
                         >
-                            🚶 Mode Jalan (FPS)
+                            Mode Jalan
                         </button>
+                    </div>
+                )}
+
+                {/* Bentuk tampilan gedung (hanya pada mode gedung) */}
+                {!isSingleFloor && (
+                    <div role="group" aria-label="Bentuk tampilan gedung" className="inline-flex p-1 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg shadow-md text-xs font-semibold">
+                        <button
+                            type="button"
+                            aria-pressed={buildingMode === 'stacked'}
+                            onClick={() => setBuildingMode('stacked')}
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
+                                buildingMode === 'stacked'
+                                    ? 'bg-slate-600 text-white'
+                                    : 'text-slate-300 hover:text-white'
+                            }`}
+                        >
+                            Gedung Utuh
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={buildingMode === 'exploded'}
+                            onClick={() => setBuildingMode('exploded')}
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
+                                buildingMode === 'exploded'
+                                    ? 'bg-slate-600 text-white'
+                                    : 'text-slate-300 hover:text-white'
+                            }`}
+                        >
+                            Exploded
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={buildingMode === 'isolated'}
+                            onClick={() => setBuildingMode('isolated')}
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
+                                buildingMode === 'isolated'
+                                    ? 'bg-slate-600 text-white'
+                                    : 'text-slate-300 hover:text-white'
+                            }`}
+                        >
+                            Fokus Lantai
+                        </button>
+                    </div>
+                )}
+
+                {/* Jarak renggang (hanya pada mode exploded) */}
+                {!isSingleFloor && buildingMode === 'exploded' && (
+                    <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg px-3 py-1.5 shadow-md">
+                        <label htmlFor="exploded-gap" className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            Jarak
+                        </label>
+                        <input
+                            id="exploded-gap"
+                            type="range"
+                            min="2"
+                            max="12"
+                            step="0.5"
+                            value={explodedGap}
+                            onChange={(e) => setExplodedGap(parseFloat(e.target.value))}
+                            className="w-24 accent-[#38bdf8] cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-300 tabular-nums w-6 text-right" aria-hidden="true">
+                            {explodedGap}
+                        </span>
                     </div>
                 )}
             </div>
@@ -244,7 +314,7 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
             {/* Petunjuk Navigasi di Bagian Bawah */}
             <div className="absolute bottom-3 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
                 {isWalkMode ? (
-                    <div className="pointer-events-auto text-[11px] bg-slate-900/90 backdrop-blur px-3.5 py-2 rounded-xl border border-emerald-500/40 text-slate-300 shadow-lg flex items-center gap-3">
+                    <div className="pointer-events-auto text-[11px] bg-slate-900/90 backdrop-blur px-3.5 py-2 rounded-lg border border-emerald-500/40 text-slate-300 shadow-lg flex items-center gap-3">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                         <div>
                             {isPointerLocked ? (
@@ -257,7 +327,7 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
                                 </span>
                             ) : (
                                 <span className="text-emerald-300 font-semibold">
-                                    🔒 Klik di dalam area denah untuk mengunci mouse &amp; mulai berjalan
+                                    Klik di dalam area denah untuk mengunci mouse &amp; mulai berjalan
                                 </span>
                             )}
                         </div>
@@ -273,9 +343,9 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
                     <button
                         type="button"
                         onClick={() => setCameraMode3D('orbit')}
-                        className="pointer-events-auto px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 shadow-md transition"
+                        className="pointer-events-auto px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold border border-slate-700 shadow-md transition"
                     >
-                        Kembali ke Orbit 🛰️
+                        Kembali ke Orbit
                     </button>
                 )}
             </div>

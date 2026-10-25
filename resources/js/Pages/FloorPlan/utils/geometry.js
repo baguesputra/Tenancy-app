@@ -42,26 +42,39 @@ export const STATUS_COLORS = {
     Aktif: {
         fill: 'rgba(16, 185, 129, 0.55)',
         stroke: '#059669',
-        badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        badgeColor: 'green',
         hex: 0x10b981,
     },
     LOO: {
         fill: 'rgba(245, 158, 11, 0.60)',
         stroke: '#d97706',
-        badge: 'bg-amber-100 text-amber-800 border-amber-200',
+        badgeColor: 'amber',
         hex: 0xf59e0b,
     },
     Fitout: {
         fill: 'rgba(14, 165, 233, 0.55)',
         stroke: '#0284c7',
-        badge: 'bg-sky-100 text-sky-800 border-sky-200',
+        badgeColor: 'blue',
         hex: 0x0ea5e9,
     },
     Kosong: {
         fill: 'rgba(148, 163, 184, 0.38)',
         stroke: '#64748b',
-        badge: 'bg-slate-100 text-slate-700 border-slate-200',
+        badgeColor: 'gray',
         hex: 0x94a3b8,
     },
 };
+
+/**
+ * Label + warna indikator status untuk filter toolbar dan legenda peta.
+ * Satu sumber dengan STATUS_COLORS supaya peta, filter, dan drawer tidak
+ * pernah menampilkan arti warna yang berbeda.
+ */
+export const STATUS_LEGEND = [
+    { key: 'all', label: 'Semua', dot: 'bg-slate-900' },
+    { key: 'Aktif', label: 'Aktif', dot: 'bg-emerald-500' },
+    { key: 'LOO', label: 'LOO', dot: 'bg-amber-500' },
+    { key: 'Fitout', label: 'Fitout', dot: 'bg-sky-500' },
+    { key: 'Kosong', label: 'Kosong', dot: 'bg-slate-400' },
+];
 

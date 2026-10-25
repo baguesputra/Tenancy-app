@@ -19,24 +19,20 @@ export default function TenantDrawer({ units = [] }) {
             onClose={() => setSelectedUnitId(null)}
             title={`Unit ${unit.unit_code}`}
             subtitle={`Lantai ${unit.floor} • Blok ${unit.block || '-'} • No. ${unit.unit_number || '-'}`}
-            size="md"
+            maxWidth="max-w-lg"
         >
-            <div className="space-y-6 text-sm">
+            <div className="space-y-5 text-sm">
                 {/* Status & Size Card */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between">
                     <div>
-                        <div className="text-xs text-slate-500 font-medium">Status Hunian</div>
-                        <div className="mt-1">
-                            <span
-                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusCfg.badge}`}
-                            >
-                                {unit.status}
-                            </span>
+                        <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Status Hunian</div>
+                        <div className="mt-1.5">
+                            <Badge color={statusCfg.badgeColor}>{unit.status}</Badge>
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-xs text-slate-500 font-medium">Luas Area</div>
-                        <div className="mt-1 text-base font-bold text-slate-800">
+                        <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Luas Area</div>
+                        <div className="mt-1.5 text-base font-semibold text-slate-900 tabular-nums">
                             {unit.size ? `${unit.size} m²` : '-'}
                         </div>
                     </div>
@@ -107,23 +103,23 @@ export default function TenantDrawer({ units = [] }) {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex gap-2">
                             <Link
                                 href={`/tenant-profiles/${tenant.id}`}
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition shadow-sm"
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#0F1E36] hover:bg-[#1a2f52] text-white text-xs font-semibold rounded-lg transition-colors"
                             >
                                 Buka Profil Tenant
                             </Link>
                             <Link
                                 href={`/units?search=${unit.unit_code}`}
-                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
+                                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors"
                             >
                                 Kelola Unit
                             </Link>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-8 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                    <div className="text-center py-8 px-4 bg-white border border-dashed border-slate-300 rounded-xl">
                         <div className="w-10 h-10 mx-auto rounded-full bg-slate-200/60 flex items-center justify-center text-slate-400 mb-2">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -136,7 +132,7 @@ export default function TenantDrawer({ units = [] }) {
                         <div className="mt-4">
                             <Link
                                 href={`/units?search=${unit.unit_code}`}
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-[#0369A1] hover:text-[#075985]"
                             >
                                 Buka Detail Master Unit &rarr;
                             </Link>

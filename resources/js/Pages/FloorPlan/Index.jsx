@@ -3,11 +3,14 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import Button from '@/Components/Form/Button';
+import FileInput from '@/Components/Form/FileInput';
 import { useFloorMapStore } from '@/Stores/useFloorMapStore';
+import { IconCube, IconEdit, IconMap, IconSearch, IconUpload, IconX } from '@/Components/Icons';
 import ElevatorNav from './Partials/ElevatorNav';
 import FloorMap2D from './Partials/FloorMap2D';
 import FloorScene3D from './Partials/FloorScene3D';
 import TenantDrawer from './Partials/TenantDrawer';
+import { STATUS_LEGEND } from './utils/geometry';
 
 export default function Index({
     branches = [],
@@ -23,14 +26,6 @@ export default function Index({
         setActiveFloor,
         viewMode,
         setViewMode,
-        view3DType,
-        setView3DType,
-        cameraMode3D,
-        setCameraMode3D,
-        buildingMode,
-        setBuildingMode,
-        explodedGap,
-        setExplodedGap,
         filterStatus,
         setFilterStatus,
         searchQuery,
@@ -47,17 +42,49 @@ export default function Index({
     const currentPlan = floorPlans.find((fp) => fp.floor === activeFloor) || floorPlans[0];
 
     const [showUploadModal, setShowUploadModal] = useState(false);
-    const { data: uploadData, setData: setUploadData, post: postUpload, processing: uploading } = useForm({
+    const [uploadError, setUploadError] = useState('');
+    const { data: uploadData, setData: setUploadData, post: postUpload, processing: uploading, errors, clearErrors } = useForm({
         floor_plan_id: currentPlan?.id || '',
         image: null,
     });
 
+    // Jumlah unit di lantai yang sedang dilihat, dipakai untuk umpan balik hasil filter
+    const floorUnits = units.filter((u) => u.floor === currentPlan?.floor);
+    const query = searchQuery.trim().toLowerCase();
+    const matchingUnits = floorUnits.filter((u) => {
+        const matchesFilter = filterStatus === 'all' || u.status === filterStatus;
+        const matchesSearch =
+            !query ||
+            u.unit_code?.toLowerCase().includes(query) ||
+            u.tenant?.name?.toLowerCase().includes(query);
+        return matchesFilter && matchesSearch;
+    });
+    const hasLocalFilter = filterStatus !== 'all' || query.length > 0;
+
+    const resetFilters = () => {
+        setFilterStatus('all');
+        setSearchQuery('');
+    };
+
+    const occupiedPct = summary.total ? Math.round((summary.occupied / summary.total) * 100) : 0;
+    const kpis = [
+        { key: 'total', label: 'Total Unit', value: summary.total ?? 0 },
+        { key: 'occupied', label: 'Terisi', value: `${occupiedPct}%`, hint: `${summary.occupied ?? 0} unit` },
+        { key: 'loo', label: 'LOO', value: summary.loo ?? 0 },
+        { key: 'fitout', label: 'Fitout', value: summary.fitout ?? 0 },
+        { key: 'vacant', label: 'Kosong', value: summary.vacant ?? 0 },
+    ];
+
+    const openUploadModal = () => {
+        clearErrors();
+        setUploadError('');
+        setUploadData({ floor_plan_id: currentPlan?.id || '', image: null });
+        setShowUploadModal(true);
+    };
+
     const handleUploadSubmit = (e) => {
         e.preventDefault();
-        if (!uploadData.image) {
-            alert('Silakan pilih file denah terlebih dahulu.');
-            return;
-        }
+        setUploadError('');
         postUpload('/floor-plans/upload', {
             forceFormData: true,
             preserveScroll: true,
@@ -66,8 +93,7 @@ export default function Index({
                 setUploadData('image', null);
             },
             onError: (err) => {
-                const msg = Object.values(err).flat().join('\n');
-                alert('Gagal mengunggah denah:\n' + (msg || 'Periksa format file.'));
+                setUploadError(Object.values(err).flat().join(' ') || 'Periksa kembali file denah yang diunggah.');
             },
         });
     };
@@ -77,259 +103,176 @@ export default function Index({
         router.get('/floor-plans', { branch_id: branchId }, { preserveState: true });
     };
 
+    const secondaryAction =
+        'inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]';
+
     return (
         <AppLayout>
-            <Head title="Denah Lantai - Floor Map View" />
+            <Head title="Denah Lantai" />
 
             <div className="space-y-4">
-                {/* Header Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                                Denah Lantai (Floor Map View)
+                {/* Header: identitas halaman + navigasi cabang + aksi utama */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="min-w-0">
+                            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">
+                                Denah Lantai
                             </h1>
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                5 Lantai Terhubung
-                            </span>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Visualisasi spasial unit tenant terhubung data kontrak &amp; okupansi.
+                            </p>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Visualisasi spasial unit tenant mall terhubung data realtime kontrak &amp; okupansi
-                        </p>
+
+                        <div className="flex items-center gap-2 flex-wrap shrink-0">
+                            {canPickBranch && (
+                                <select
+                                    value={activeBranchId}
+                                    onChange={handleBranchChange}
+                                    aria-label="Pilih cabang"
+                                    className="text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F1E36]/20 focus:border-[#0F1E36]"
+                                >
+                                    {branches.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            Cabang: {b.name} ({b.code})
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
+                            <button type="button" onClick={openUploadModal} className={secondaryAction}>
+                                <IconUpload className="w-4 h-4" aria-hidden="true" />
+                                Upload Denah
+                            </button>
+
+                            <Link href={`/floor-plans/editor/${activeFloor}`} className={secondaryAction}>
+                                <IconEdit className="w-4 h-4" aria-hidden="true" />
+                                Editor Poligon &amp; CAD
+                            </Link>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                        {canPickBranch && (
-                            <select
-                                value={activeBranchId}
-                                onChange={handleBranchChange}
-                                className="text-xs font-medium border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 text-slate-800 focus:ring-2 focus:ring-indigo-500"
-                            >
-                                {branches.map((b) => (
-                                    <option key={b.id} value={b.id}>
-                                        Cabang: {b.name} ({b.code})
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-
-                        {/* Upload Denah */}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setUploadData('floor_plan_id', currentPlan?.id || '');
-                                setUploadData('image', null);
-                                setShowUploadModal(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
-                        >
-                            📤 Upload Denah
-                        </button>
-
-                        {/* Link ke Editor Poligon & CAD Tool */}
-                        <Link
-                            href={`/floor-plans/editor/${activeFloor}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Editor Poligon &amp; CAD
-                        </Link>
-                    </div>
+                    {/* Ringkasan okupansi gedung (seluruh lantai cabang terpilih) */}
+                    <dl className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-slate-200 rounded-lg border border-slate-200 overflow-hidden">
+                        {kpis.map((k) => (
+                            <div key={k.key} className="bg-white px-4 py-3">
+                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                                    {k.label}
+                                </dt>
+                                <dd className="mt-1 flex items-baseline gap-1.5">
+                                    <span className="text-xl font-semibold text-slate-900 tabular-nums">{k.value}</span>
+                                    {k.hint && <span className="text-xs text-slate-400">{k.hint}</span>}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
                 </div>
 
-                {/* Toolbar & Filters */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                    {/* Switcher 2D / 3D */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/60">
+                {/* Toolbar: sakelar tampilan, pencarian, dan filter status */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div role="group" aria-label="Mode tampilan denah" className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200">
                             <button
                                 type="button"
+                                aria-pressed={viewMode === '2D'}
                                 onClick={() => setViewMode('2D')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
                                     viewMode === '2D'
-                                        ? 'bg-white text-indigo-700 shadow-xs'
+                                        ? 'bg-white text-slate-900 shadow-sm'
                                         : 'text-slate-600 hover:text-slate-900'
                                 }`}
                             >
-                                🗺️ Denah 2D
+                                <IconMap className="w-4 h-4" aria-hidden="true" />
+                                Denah 2D
                             </button>
                             <button
                                 type="button"
+                                aria-pressed={viewMode === '3D'}
                                 onClick={() => setViewMode('3D')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
                                     viewMode === '3D'
-                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        ? 'bg-white text-slate-900 shadow-sm'
                                         : 'text-slate-600 hover:text-slate-900'
                                 }`}
                             >
-                                🏢 View 3D
+                                <IconCube className="w-4 h-4" aria-hidden="true" />
+                                Tampilan 3D
                             </button>
                         </div>
 
-                        {/* Kontrol Khusus Mode 3D */}
-                        {viewMode === '3D' && (
-                            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 flex-wrap">
-                                {/* Level: Lantai Saja vs Gedung 5 Lantai */}
-                                <div className="inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">
-                                    <button
-                                        type="button"
-                                        onClick={() => setView3DType('single')}
-                                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                                            view3DType === 'single'
-                                                ? 'bg-white font-bold text-indigo-700 shadow-xs'
-                                                : 'text-slate-600 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        📍 Lantai {activeFloor} Saja
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setView3DType('building')}
-                                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                                            view3DType === 'building'
-                                                ? 'bg-white font-bold text-indigo-700 shadow-xs'
-                                                : 'text-slate-600 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        🏢 Gedung 5 Lantai
-                                    </button>
-                                </div>
-
-                                {/* Jika mode Lantai Saja: Pilih Orbit vs Mode Jalan */}
-                                {view3DType === 'single' && (
-                                    <div className="inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">
-                                        <button
-                                            type="button"
-                                            onClick={() => setCameraMode3D('orbit')}
-                                            className={`px-2 py-1 rounded-md text-[11px] ${
-                                                cameraMode3D === 'orbit'
-                                                    ? 'bg-white font-bold text-slate-900 shadow-xs'
-                                                    : 'hover:text-slate-900'
-                                            }`}
-                                        >
-                                            🛰️ Orbit
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCameraMode3D('walk')}
-                                            className={`px-2 py-1 rounded-md text-[11px] ${
-                                                cameraMode3D === 'walk'
-                                                    ? 'bg-emerald-600 font-bold text-white shadow-xs'
-                                                    : 'hover:text-slate-900'
-                                            }`}
-                                        >
-                                            🚶 Mode Jalan
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Jika mode Gedung 5 Lantai: Pilih Bentuk Gedung */}
-                                {view3DType === 'building' && (
-                                    <div className="inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">
-                                        <button
-                                            type="button"
-                                            onClick={() => setBuildingMode('stacked')}
-                                            className={`px-2 py-1 rounded-md text-[11px] ${
-                                                buildingMode === 'stacked'
-                                                    ? 'bg-white font-bold text-slate-900 shadow-xs'
-                                                    : 'hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Gedung Utuh
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setBuildingMode('exploded')}
-                                            className={`px-2 py-1 rounded-md text-[11px] ${
-                                                buildingMode === 'exploded'
-                                                    ? 'bg-white font-bold text-indigo-700 shadow-xs'
-                                                    : 'hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Exploded
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setBuildingMode('isolated')}
-                                            className={`px-2 py-1 rounded-md text-[11px] ${
-                                                buildingMode === 'isolated'
-                                                    ? 'bg-white font-bold text-indigo-700 shadow-xs'
-                                                    : 'hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Fokus Lantai
-                                        </button>
-                                    </div>
-                                )}
-
-                                {view3DType === 'building' && buildingMode === 'exploded' && (
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                                        <span className="text-[10px] text-slate-400">Jarak:</span>
-                                        <input
-                                            type="range"
-                                            min="2"
-                                            max="12"
-                                            step="0.5"
-                                            value={explodedGap}
-                                            onChange={(e) => setExplodedGap(parseFloat(e.target.value))}
-                                            className="w-16 accent-indigo-600 cursor-pointer"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <span className="text-xs text-slate-500">
+                            Lantai <strong className="font-semibold text-slate-700">{activeFloor}</strong>
+                            {currentPlan?.name ? ` · ${currentPlan.name}` : ''}
+                        </span>
                     </div>
 
-                    {/* Filter Status Legend & Search */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {/* Search Input */}
+                    <div className="flex items-center gap-3 flex-wrap">
                         <div className="relative">
+                            <IconSearch
+                                className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                                aria-hidden="true"
+                            />
                             <input
                                 type="text"
                                 placeholder="Cari unit atau tenant..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 pl-8 w-44 sm:w-56 focus:ring-2 focus:ring-indigo-500"
+                                aria-label="Cari unit atau tenant"
+                                className="text-xs bg-white border border-slate-300 rounded-lg pl-9 pr-8 py-2 w-48 sm:w-56 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F1E36]/20 focus:border-[#0F1E36]"
                             />
-                            <svg
-                                className="w-4 h-4 text-slate-400 absolute left-2.5 top-2"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Bersihkan pencarian"
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                >
+                                    <IconX className="w-3.5 h-3.5" aria-hidden="true" />
+                                </button>
+                            )}
                         </div>
 
-                        {/* Status Filters */}
-                        <div className="flex items-center gap-1 text-xs">
-                            {[
-                                { key: 'all', label: 'Semua', count: summary.total },
-                                { key: 'Aktif', label: 'Aktif', count: summary.occupied, dot: 'bg-emerald-500' },
-                                { key: 'LOO', label: 'LOO', count: summary.loo, dot: 'bg-amber-500' },
-                                { key: 'Fitout', label: 'Fitout', count: summary.fitout, dot: 'bg-sky-500' },
-                                { key: 'Kosong', label: 'Kosong', count: summary.vacant, dot: 'bg-slate-400' },
-                            ].map((st) => (
-                                <button
-                                    key={st.key}
-                                    type="button"
-                                    onClick={() => setFilterStatus(st.key)}
-                                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold border transition ${
-                                        filterStatus === st.key
-                                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    {st.dot && <span className={`w-2 h-2 rounded-full ${st.dot}`} />}
-                                    <span>{st.label}</span>
-                                    <span className="text-[10px] opacity-75">({st.count ?? 0})</span>
-                                </button>
-                            ))}
+                        <div role="group" aria-label="Filter status unit" className="flex items-center gap-1 flex-wrap">
+                            {STATUS_LEGEND.map((st) => {
+                                const active = filterStatus === st.key;
+                                return (
+                                    <button
+                                        key={st.key}
+                                        type="button"
+                                        aria-pressed={active}
+                                        onClick={() => setFilterStatus(st.key)}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                                            active
+                                                ? 'bg-[#0F1E36] text-white border-[#0F1E36]'
+                                                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        {st.key !== 'all' && (
+                                            <span className={`w-2 h-2 rounded-full ${st.dot}`} aria-hidden="true" />
+                                        )}
+                                        {st.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
+
+                {/* Umpan balik hasil filter pada lantai aktif */}
+                {hasLocalFilter && (
+                    <div className="flex items-center justify-between gap-2 px-1 text-xs text-slate-500">
+                        <span>
+                            Menampilkan <strong className="font-semibold text-slate-700">{matchingUnits.length}</strong> dari{' '}
+                            {floorUnits.length} unit di Lantai {activeFloor}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="font-semibold text-[#0369A1] hover:text-[#075985] underline underline-offset-2"
+                        >
+                            Bersihkan filter
+                        </button>
+                    </div>
+                )}
 
                 {/* Main Viewport Container */}
                 <div className="relative">
@@ -353,38 +296,37 @@ export default function Index({
                 <Modal
                     open={showUploadModal}
                     onClose={() => setShowUploadModal(false)}
-                    title={`Upload Denah Lantai ${activeFloor} (${currentPlan?.name || ''})`}
+                    title={`Upload Denah Lantai ${activeFloor}${currentPlan?.name ? ` (${currentPlan.name})` : ''}`}
                 >
                     <form onSubmit={handleUploadSubmit} className="space-y-4">
                         <input type="hidden" name="floor_plan_id" value={currentPlan?.id || ''} />
                         <p className="text-xs text-slate-500">
-                            Unggah gambar denah arsitektur format SVG, PNG, JPG, JPEG, atau WebP (maks. 30MB) untuk lantai {activeFloor}. File SVG akan disanitasi otomatis demi keamanan.
+                            Unggah gambar denah arsitektur untuk Lantai {activeFloor}. File SVG akan disanitasi otomatis demi keamanan.
                         </p>
 
-                        <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-center">
-                            <input
-                                type="file"
-                                accept=".svg,.png,.jpg,.jpeg,.webp"
-                                required
-                                onChange={(e) => {
-                                    setUploadData('floor_plan_id', currentPlan?.id || '');
-                                    setUploadData('image', e.target.files[0]);
-                                }}
-                                className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-                            />
-                            {uploadData.image && (
-                                <div className="text-[11px] text-emerald-600 font-semibold mt-2">
-                                    File terpilih: {uploadData.image.name} ({(uploadData.image.size / 1024).toFixed(1)} KB)
-                                </div>
-                            )}
-                        </div>
+                        <FileInput
+                            name="image"
+                            accept=".svg,.png,.jpg,.jpeg,.webp"
+                            maxSize={30 * 1024 * 1024}
+                            file={uploadData.image}
+                            error={errors.image}
+                            onClear={() => setUploadData('image', null)}
+                            onChange={(e) => setUploadData('image', e.target.files?.[0] ?? null)}
+                            hint="Maksimal 30 MB per file."
+                        />
+
+                        {uploadError && !errors.image && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+                                {uploadError}
+                            </div>
+                        )}
 
                         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                             <Button type="button" variant="secondary" onClick={() => setShowUploadModal(false)}>
                                 Batal
                             </Button>
-                            <Button type="submit" disabled={uploading || !uploadData.image}>
-                                {uploading ? 'Mengunggah...' : 'Upload &amp; Simpan'}
+                            <Button type="submit" loading={uploading} disabled={uploading || !uploadData.image}>
+                                {uploading ? 'Mengunggah...' : 'Upload & Simpan'}
                             </Button>
                         </div>
                     </form>
@@ -393,4 +335,3 @@ export default function Index({
         </AppLayout>
     );
 }
-
