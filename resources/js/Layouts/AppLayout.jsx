@@ -1,113 +1,10 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
 import QrScanModal from '@/Components/Scan/QrScanModal';
 import EmptyState from '@/Components/EmptyState';
+import SidebarNav from '@/Components/Nav/SidebarNav';
 import initials from '@/utils/initials';
-
-const menuIcons = {
-    dashboard: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-    ),
-    master: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-        </svg>
-    ),
-    leasing: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-    ),
-    building: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-18v18M6 9h.01M6 12h.01M6 15h.01M12 9h.01M12 12h.01M12 15h.01M18 9h.01M18 12h.01M18 15h.01" />
-        </svg>
-    ),
-    sidak: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-    ),
-    checklist: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-        </svg>
-    ),
-    permit: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-    ),
-    users: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-    ),
-    access: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-        </svg>
-    ),
-    settings: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-    ),
-    portal: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-    ),
-    refresh: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a8 8 0 0114-3.5M19 15a8 8 0 01-14 3.5" />
-        </svg>
-    ),
-    map: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.316a1.125 1.125 0 00-1.006 0L3.622 5.753A1.125 1.125 0 003 6.759v11.928c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-        </svg>
-    ),
-};
-
-// Grup navigasi data-driven: tambah menu baru = tambah satu entri di sini.
-// Menu berupa daftar panjang (bukan domain baru) wajib memakai pola halaman
-// hub/index, bukan entri sidebar baru — sidebar hanya berisi pintu domain.
-const menuGroups = [
-    {
-        key: 'leasing',
-        label: 'Leasing',
-        icon: 'leasing',
-        items: [
-            { label: 'LOO', href: '/loos', permission: 'loos.view' },
-            { label: 'Checklist Operasional', href: '/fitout-checklists', permission: 'loos.view' },
-        ],
-    },
-    {
-        key: 'ops',
-        label: 'Operasional',
-        icon: 'building',
-        items: [
-            { label: 'Denah Lantai', href: '/floor-plans', permission: 'units.view' },
-            { label: 'Sesi Sidak', href: '/inspection-sessions', permission: 'sidak.view' },
-            { label: 'Surat Izin', href: '/permit-requests', permission: 'permits.view' },
-        ],
-    },
-    {
-        key: 'master',
-        label: 'Master Data',
-        icon: 'master',
-        items: [
-            { label: 'Tenant', href: '/tenants', permission: 'tenants.view' },
-            { label: 'Unit', href: '/units', permission: 'units.view' },
-            { label: 'Kategori', href: '/categories', permission: 'categories.view' },
-        ],
-    },
-];
 
 export default function AppLayout({ children }) {
     const { auth } = usePage().props;
@@ -117,214 +14,100 @@ export default function AppLayout({ children }) {
     const permissions = auth.user?.permissions ?? [];
     const can = (perm) => isSuperAdmin || permissions.includes(perm);
 
-    const visibleMasterMenuItems = menuGroups
-        .map((group) => ({
-            ...group,
-            visibleItems: group.items.filter((item) => can(item.permission)),
-        }))
-        .filter((group) => group.visibleItems.length > 0);
-    const isGroupActive = (group) => group.visibleItems.some((item) => currentUrl.startsWith(item.href));
-    const [openGroups, setOpenGroups] = useState(() =>
-        Object.fromEntries(menuGroups.map((group) => [group.key, group.items.some((item) => currentUrl.startsWith(item.href))]))
-    );
-    const toggleGroup = (key) => {
-        if (collapsed) {
-            setCollapsed(false);
-            return;
-        }
-        setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-    };
-    const settingsMenuItems = [
-        { label: 'Manajemen User', href: '/settings/users', icon: menuIcons.users, permission: 'settings.access' },
-        { label: 'Hak Akses', href: '/settings/access-control', icon: menuIcons.access, permission: 'settings.access' },
-        { label: 'Sinkronisasi Gate', href: '/settings/gate', icon: menuIcons.refresh, permission: 'settings.access' },
-        { label: 'Template Inspeksi', href: '/settings/inspection-templates', icon: menuIcons.sidak, permission: 'settings.access' },
-        { label: 'Dokumen Statis', href: '/settings/documents', icon: menuIcons.sidak, permission: 'documents.manage' },
-    ];
-    const visibleSettingsMenuItems = settingsMenuItems.filter((item) => can(item.permission));
-    const isSettingsActive = visibleSettingsMenuItems.some((item) => currentUrl.startsWith(item.href));
-    const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') return false;
         return localStorage.getItem('sidebar-collapsed') === '1';
     });
-
-    useEffect(() => {
-        setMobileNavOpen(false);
-    }, [currentUrl]);
-
-    useEffect(() => {
-        if (!mobileNavOpen) return;
-        const handleKey = (e) => e.key === 'Escape' && setMobileNavOpen(false);
-        document.addEventListener('keydown', handleKey);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.removeEventListener('keydown', handleKey);
-            document.body.style.overflow = '';
-        };
-    }, [mobileNavOpen]);
-
-    useEffect(() => {
-        if (collapsed) {
-            setOpenGroups({});
-            setSettingsOpen(false);
-        }
-    }, [collapsed]);
-
-    const toggleCollapsed = () => {
-        const next = !collapsed;
-        setCollapsed(next);
-        localStorage.setItem('sidebar-collapsed', next ? '1' : '0');
-    };
+    const asideRef = useRef(null);
+    const lastFocusedRef = useRef(null);
 
     const csrfToken = typeof document !== 'undefined'
         ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
         : '';
 
+    const openMobileNav = () => {
+        lastFocusedRef.current = document.activeElement;
+        setMobileNavOpen(true);
+    };
+
+    const closeMobileNav = () => {
+        setMobileNavOpen(false);
+        const previous = lastFocusedRef.current;
+        lastFocusedRef.current = null;
+        if (previous && document.contains(previous)) previous.focus?.();
+    };
+
+    const toggleCollapsed = () => {
+        setCollapsed((prev) => {
+            const next = !prev;
+            localStorage.setItem('sidebar-collapsed', next ? '1' : '0');
+            return next;
+        });
+    };
+
+    // Pindah halaman = navigasi sudah terjadi, drawer mobile tidak diperlukan lagi.
+    useEffect(() => {
+        closeMobileNav();
+    }, [currentUrl]);
+
+    // Drawer mobile diperlakukan sebagai dialog: fokus dipindah ke dalam panel,
+    // Tab terkurung di dalamnya, dan fokus dikembalikan ke pemicu saat ditutup.
+    useEffect(() => {
+        if (!mobileNavOpen) return;
+
+        const node = asideRef.current;
+        node?.querySelector('[data-autofocus]')?.focus();
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeMobileNav();
+                return;
+            }
+            if (e.key !== 'Tab' || !node) return;
+
+            const items = Array.from(node.querySelectorAll('a[href], button:not([disabled])'));
+            if (items.length === 0) return;
+
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            document.body.style.overflow = '';
+        };
+    }, [mobileNavOpen]);
+
     return (
         <div className="min-h-screen bg-[#F7F8FA]">
             {mobileNavOpen && (
-                <div onClick={() => setMobileNavOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-30 lg:hidden" aria-hidden="true" />
+                <div onClick={closeMobileNav} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-30 lg:hidden" aria-hidden="true" />
             )}
 
-            <aside
-                className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0F1E36] transition-all duration-200 print:hidden
-                    ${collapsed ? 'w-[72px]' : 'w-[232px]'}
-                    ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-                aria-label="Navigasi utama"
-            >
-                <div className="shrink-0 border-b border-white/10">
-                    <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
-                        <Link
-                            href="/dashboard"
-                            aria-label="Dashboard"
-                            className={`flex items-center rounded-xl focus-visible:outline-2 focus-visible:outline-white min-h-[40px] ${collapsed ? 'justify-center' : 'gap-2.5 flex-1 min-w-0 px-1'}`}
-                        >
-                            <img src="/images/logo.png" alt="Duta Mall" className="h-8 w-8 object-contain rounded-lg bg-white p-0.5 shrink-0" />
-                            {!collapsed && (
-                                <span className="leading-tight min-w-0">
-                                    <span className="block text-sm font-semibold text-white truncate">Tenant</span>
-                                    <span className="block text-[11px] text-white/50 truncate">{auth.user?.branch?.name ?? 'Semua Cabang'}</span>
-                                </span>
-                            )}
-                        </Link>
-                        {!collapsed && (
-                            <button
-                                onClick={toggleCollapsed}
-                                title="Ciutkan sidebar"
-                                aria-label="Ciutkan sidebar"
-                                className="hidden lg:flex h-10 w-10 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white shrink-0"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        )}
-                    </div>
-                    {collapsed && (
-                        <div className="flex justify-center pb-2">
-                            <button
-                                onClick={toggleCollapsed}
-                                title="Perluas sidebar"
-                                aria-label="Perluas sidebar"
-                                className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white"
-                            >
-                                <svg className="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
-                </div>
+            <SidebarNav
+                asideRef={asideRef}
+                currentUrl={currentUrl}
+                // Drawer mobile selalu tampil penuh walau rail desktop disetel ciut.
+                collapsed={collapsed && !mobileNavOpen}
+                onToggleCollapse={toggleCollapsed}
+                can={can}
+                user={auth.user}
+                mobileNavOpen={mobileNavOpen}
+                onRequestClose={closeMobileNav}
+            />
 
-                <nav className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto" role="navigation">
-                    {!collapsed && <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Menu</p>}
-                    <NavLink href="/dashboard" currentUrl={currentUrl} icon={menuIcons.dashboard} collapsed={collapsed}>
-                        Dashboard
-                    </NavLink>
-                    {can('tenants.view') && (
-                        <NavLink href="/tenant-profiles" currentUrl={currentUrl} icon={menuIcons.users} collapsed={collapsed}>
-                            Profile Tenant
-                        </NavLink>
-                    )}
-
-                    {visibleMasterMenuItems.map((group) => {
-                        const active = isGroupActive(group);
-                        const open = !!openGroups[group.key];
-                        return (
-                            <div key={group.key} className="pt-1">
-                                <button
-                                    onClick={() => toggleGroup(group.key)}
-                                    title={group.label}
-                                    aria-label={group.label}
-                                    aria-expanded={open && !collapsed}
-                                    className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
-                                        ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
-                                        ${active ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                                >
-                                    <span className="flex items-center gap-3">
-                                        <span className="shrink-0" aria-hidden="true">{menuIcons[group.icon]}</span>
-                                        {!collapsed && <span>{group.label}</span>}
-                                    </span>
-                                    {!collapsed && (
-                                        <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    )}
-                                </button>
-
-                                {open && !collapsed && (
-                                    <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
-                                        {group.visibleItems.map((item) => (
-                                            <NavLink key={item.href} href={item.href} currentUrl={currentUrl} small collapsed={false}>
-                                                {item.label}
-                                            </NavLink>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                    {visibleSettingsMenuItems.length > 0 && (
-                        <div className="pt-1">
-                            {!collapsed && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">Pengaturan</p>}
-                            <button
-                                onClick={() => collapsed ? setCollapsed(false) : setSettingsOpen(!settingsOpen)}
-                                title="Pengaturan"
-                                aria-label="Pengaturan"
-                                aria-expanded={settingsOpen && !collapsed}
-                                className={`w-full flex items-center min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white
-                                    ${collapsed ? 'justify-center py-2.5' : 'justify-between py-2.5'}
-                                    ${isSettingsActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                            >
-                                <span className="flex items-center gap-3">
-                                    <span className="shrink-0" aria-hidden="true">{menuIcons.settings}</span>
-                                    {!collapsed && <span>Pengaturan</span>}
-                                </span>
-                                {!collapsed && (
-                                    <svg className={`w-4 h-4 shrink-0 text-white/60 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                )}
-                            </button>
-
-                            {settingsOpen && !collapsed && (
-                                <div className="mt-1 ml-[22px] pl-3 border-l border-white/10 space-y-0.5">
-                                    {visibleSettingsMenuItems.map((item) => (
-                                        <NavLink key={item.href} href={item.href} currentUrl={currentUrl} icon={item.icon} small collapsed={false}>
-                                            {item.label}
-                                        </NavLink>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </nav>
-            </aside>
-
-            <div className={`min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[232px]'}`}>
-                    <Topbar user={auth.user} onMenuClick={() => setMobileNavOpen(true)} csrfToken={csrfToken} />
+            <div className={`min-h-screen flex flex-col transition-[padding] duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[232px]'}`}>
+                <Topbar user={auth.user} onMenuClick={openMobileNav} csrfToken={csrfToken} />
                 <FlashBanner />
                 <div className="flex-1 flex flex-col">{children}</div>
             </div>
@@ -524,29 +307,6 @@ function Topbar({ user, onMenuClick, csrfToken }) {
     );
 }
 
-function NavLink({ href, currentUrl, children, icon, small = false, collapsed = false }) {
-    const isActive = currentUrl === href || currentUrl.startsWith(href + '/') || (href !== '/dashboard' && currentUrl.startsWith(href));
-
-    return (
-        <Link
-            href={href}
-            title={collapsed && typeof children === 'string' ? children : undefined}
-            aria-label={collapsed && typeof children === 'string' ? children : undefined}
-            aria-current={isActive ? 'page' : undefined}
-            className={`relative flex items-center gap-3 px-3 rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-white min-h-[40px]
-                ${small ? 'py-2' : 'py-2.5'}
-                ${collapsed ? 'justify-center' : ''}
-                ${isActive ? 'text-white bg-white/10 font-medium' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-        >
-            {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#FF6B6B] rounded-r-full" aria-hidden="true" />
-            )}
-            {icon && <span className="shrink-0" aria-hidden="true">{icon}</span>}
-            {!collapsed && <span className="truncate">{children}</span>}
-        </Link>
-    );
-}
-
 function FlashBanner() {
     const { flash, errors } = usePage().props;
     const errorMessages = Object.values(errors ?? {}).flat().filter(Boolean);
@@ -580,4 +340,3 @@ function FlashBanner() {
         </div>
     );
 }
-

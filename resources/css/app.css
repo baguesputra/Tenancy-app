@@ -105,6 +105,22 @@
   display: none;
 }
 
+/* Scrollbar tipis untuk rail navigasi gelap */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
 @media print {
   /* Sembunyikan chrome aplikasi saat mencetak: sidebar + topbar. */
   aside,
