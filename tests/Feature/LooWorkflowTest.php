@@ -908,6 +908,118 @@ class LooWorkflowTest extends TestCase
         $this->assertSame($user->name, $postSection->data['checklist']['footer']['gm_name']);
     }
 
+    public function test_store_saves_attachments_with_description(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->userWithRole('marketing');
+
+        $this->actingAs($user)
+            ->post('/loos/store', [
+                'branch_id' => $user->branch_id,
+                'prospective_tenant_name' => 'Toko Baru',
+                'attachments' => [
+                    ['description' => 'NPWP', 'file' => UploadedFile::fake()->create('npwp.pdf', 5, 'application/pdf')],
+                    ['description' => null, 'file' => UploadedFile::fake()->create('denah.png', 5, 'image/png')],
+                ],
+            ])
+            ->assertRedirect();
+
+        $loo = Loo::latest('id')->first();
+
+        $this->assertSame(2, $loo->attachments()->count());
+        $this->assertDatabaseHas('loo_attachments', [
+            'loo_id' => $loo->id,
+            'description' => 'NPWP',
+            'original_name' => 'npwp.pdf',
+            'uploaded_by' => $user->id,
+        ]);
+        $this->assertDatabaseHas('loo_attachments', [
+            'loo_id' => $loo->id,
+            'description' => null,
+            'original_name' => 'denah.png',
+        ]);
+    }
+
+    public function test_update_adds_updates_and_removes_attachments(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->userWithRole('marketing');
+        $loo = $this->makeLoo();
+
+        $keepPath = UploadedFile::fake()->create('keep.pdf', 5, 'application/pdf')
+            ->store("loos/{$loo->id}/attachments", 'local');
+        $keep = $loo->attachments()->create([
+            'path' => $keepPath,
+            'original_name' => 'keep.pdf',
+            'description' => 'Lama',
+            'uploaded_by' => $user->id,
+        ]);
+
+        $dropPath = UploadedFile::fake()->create('drop.pdf', 5, 'application/pdf')
+            ->store("loos/{$loo->id}/attachments", 'local');
+        $drop = $loo->attachments()->create([
+            'path' => $dropPath,
+            'original_name' => 'drop.pdf',
+            'uploaded_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/loos/{$loo->id}", [
+                'branch_id' => $loo->branch_id,
+                'attachments' => [
+                    ['id' => $keep->id, 'description' => 'Keterangan Baru'],
+                    ['description' => 'Baru', 'file' => UploadedFile::fake()->create('baru.pdf', 5, 'application/pdf')],
+                ],
+                'removed_attachments' => [$drop->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('loo_attachments', ['id' => $drop->id]);
+        $this->assertSame('Keterangan Baru', $keep->fresh()->description);
+        $this->assertSame(2, $loo->attachments()->count());
+        Storage::disk('local')->assertMissing($dropPath);
+        $this->assertDatabaseHas('loo_attachments', [
+            'loo_id' => $loo->id,
+            'description' => 'Baru',
+            'original_name' => 'baru.pdf',
+        ]);
+    }
+
+    public function test_cover_only_roles_cannot_open_attachments(): void
+    {
+        Storage::fake('local');
+
+        $loo = $this->makeLoo();
+        $path = UploadedFile::fake()->create('npwp.pdf', 5, 'application/pdf')
+            ->store("loos/{$loo->id}/attachments", 'local');
+        $attachment = $loo->attachments()->create([
+            'path' => $path,
+            'original_name' => 'npwp.pdf',
+            'mime' => 'application/pdf',
+            'uploaded_by' => $loo->marketing_id,
+        ]);
+
+        $tenancy = $this->userWithRole('tenancy_staff');
+        $tenantMgmt = $this->userWithRole('tenant_mgmt');
+        $legal = $this->userWithRole('legal');
+
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}/attachments/{$attachment->id}")->assertForbidden();
+        $this->actingAs($tenantMgmt)->get("/loos/{$loo->id}/attachments/{$attachment->id}")->assertForbidden();
+        $this->actingAs($legal)->get("/loos/{$loo->id}/attachments/{$attachment->id}")->assertOk();
+
+        // Prop attachments disembunyikan dari role cover-only.
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('attachments', 0));
+
+        $this->actingAs($legal)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('attachments', 1)
+                ->where('attachments.0.label', 'npwp.pdf'));
+    }
+
     private function userOnBranch(string $roleName, int $branchId, array $permissions): User
     {
         foreach ($permissions as $p) {

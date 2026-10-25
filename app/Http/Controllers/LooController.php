@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\LooAttachment;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
@@ -51,8 +52,6 @@ class LooController extends Controller
     private const FILE_LABELS = [
         'cover_file' => 'Cover LOO',
         'isi_file' => 'Isi LOO',
-        'loo_letter_file' => 'Surat LOO',
-        'loo_proposal_file' => 'Penawaran LOO',
     ];
 
     // Role ini hanya boleh membuka file Cover LOO.
@@ -100,7 +99,6 @@ class LooController extends Controller
     {
         return Inertia::render('Loos/Create', [
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
-            'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'tenants' => $this->activeTenants($request->user()),
         ]);
     }
@@ -119,6 +117,7 @@ class LooController extends Controller
             'current_stage' => 'marketing',
         ]);
 
+        $this->storeAttachments($request, $loo);
         $this->state->log($loo, $request->user(), 'created');
         $this->notifyLooViewers($loo, $request->user());
 
@@ -139,6 +138,9 @@ class LooController extends Controller
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
             'files' => $this->accessibleFiles($loo, $request->user()),
+            'attachments' => $request->user()->hasAnyRole(self::COVER_ONLY_ROLES)
+                ? []
+                : $this->attachmentRows($loo),
             'progress' => $this->progress->progress($loo),
             'options' => [
                 'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
@@ -183,6 +185,31 @@ class LooController extends Controller
     }
 
     /**
+     * Servis dokumen pendukung (disk private). Role COVER_ONLY_ROLES tidak
+     * berhak membukanya — sama seperti file LOO selain Cover.
+     */
+    public function attachmentFile(Request $request, Loo $loo, LooAttachment $attachment)
+    {
+        $this->authorizeAccess($loo, $request);
+
+        abort_unless($attachment->loo_id === $loo->id, 404);
+        abort_if(
+            $request->user()->hasAnyRole(self::COVER_ONLY_ROLES),
+            403,
+            'Anda tidak berhak membuka dokumen pendukung.'
+        );
+        abort_unless(Storage::disk('local')->exists($attachment->path), 404);
+
+        $mime = $attachment->mime ?: 'application/octet-stream';
+
+        return response(Storage::disk('local')->get($attachment->path), 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.$attachment->original_name.'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /**
      * Pencarian unit untuk dropdown form section (server-side, maks 50 baris).
      */
     public function units(Request $request, Loo $loo)
@@ -214,8 +241,8 @@ class LooController extends Controller
         return Inertia::render('Loos/Create', [
             'loo' => $loo,
             'branches' => Branch::orderBy('name')->get(['id', 'name', 'code']),
-            'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'tenants' => Tenant::where('branch_id', $loo->branch_id)->where('is_active', true)->get(['id', 'name']),
+            'attachments' => $this->attachmentRows($loo),
         ]);
     }
 
@@ -228,6 +255,8 @@ class LooController extends Controller
             ...$this->validated($request),
             ...$this->storeFiles($request, $loo->only(array_keys($this->fileColumns()))),
         ]);
+
+        $this->syncAttachments($request, $loo);
 
         return back()->with('success', 'LOO berhasil diperbarui.');
     }
@@ -361,16 +390,21 @@ class LooController extends Controller
             'tenant_category_id' => 'nullable|exists:tenant_categories,id',
             'prospective_tenant_name' => 'nullable|string|max:255',
             'loo_received_date' => 'nullable|date',
-            'loo_distributor' => 'nullable|string|max:255',
             'cover_file' => 'nullable|file|mimes:pdf|max:10240',
             'isi_file' => 'nullable|file|mimes:pdf|max:10240',
-            'loo_letter_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'loo_proposal_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'attachments' => 'nullable|array',
+            'attachments.*.id' => 'nullable|integer',
+            'attachments.*.description' => 'nullable|string|max:255',
+            'attachments.*.file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'removed_attachments' => 'nullable|array',
+            'removed_attachments.*' => 'integer',
         ]);
 
         $this->assertBranchOwnsTenant($request, $data);
 
-        return collect($data)->except(array_keys($this->fileColumns()))->all();
+        return collect($data)
+            ->except([...array_keys($this->fileColumns()), 'attachments', 'removed_attachments'])
+            ->all();
     }
 
     /**
@@ -403,9 +437,78 @@ class LooController extends Controller
         return [
             'cover_file' => 'cover_file_path',
             'isi_file' => 'isi_file_path',
-            'loo_letter_file' => 'loo_letter_file_path',
-            'loo_proposal_file' => 'loo_proposal_file_path',
         ];
+    }
+
+    /**
+     * Dokumen pendukung: banyak file per LOO, masing-masing boleh punya
+     * keterangan bebas. Disimpan di disk private seperti file LOO utama.
+     */
+    private function storeAttachments(Request $request, Loo $loo): void
+    {
+        foreach ($request->file('attachments', []) as $index => $row) {
+            if (! isset($row['file'])) {
+                continue;
+            }
+
+            $file = $row['file'];
+            $path = $file->store("loos/{$loo->id}/attachments", 'local');
+
+            $loo->attachments()->create([
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+                'description' => $request->input("attachments.{$index}.description") ?: null,
+                'uploaded_by' => $request->user()->id,
+            ]);
+        }
+    }
+
+    /** Hapus yang ditandai, perbarui keterangan, lalu simpan file baru. */
+    private function syncAttachments(Request $request, Loo $loo): void
+    {
+        $removed = $request->input('removed_attachments', []);
+
+        if ($removed !== []) {
+            $loo->attachments()->whereIn('id', $removed)->get()->each(function (LooAttachment $attachment) {
+                Storage::disk('local')->delete($attachment->path);
+                $attachment->delete();
+            });
+        }
+
+        foreach ($request->input('attachments', []) as $index => $row) {
+            $id = $row['id'] ?? null;
+
+            if (! $id) {
+                continue;
+            }
+
+            $loo->attachments()
+                ->whereKey($id)
+                ->update(['description' => $request->input("attachments.{$index}.description") ?: null]);
+        }
+
+        $this->storeAttachments($request, $loo);
+    }
+
+    /** Baris attachment untuk halaman Show/Edit (tanpa path mentah). */
+    private function attachmentRows(Loo $loo): array
+    {
+        return $loo->attachments()
+            ->with('uploader:id,name')
+            ->get()
+            ->map(fn (LooAttachment $attachment) => [
+                'id' => $attachment->id,
+                'label' => $attachment->description ?: $attachment->original_name,
+                'original_name' => $attachment->original_name,
+                'description' => $attachment->description,
+                'type' => $attachment->mime === 'application/pdf' ? 'pdf' : 'image',
+                'uploader' => $attachment->uploader?->name,
+                'created_at' => $attachment->created_at?->toDateString(),
+                'url' => "/loos/{$loo->id}/attachments/{$attachment->id}",
+            ])
+            ->all();
     }
 
     private function storeFiles(Request $request, array $current): array

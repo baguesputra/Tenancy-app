@@ -231,6 +231,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [LooController::class, 'index'])->name('index');
         Route::get('/{loo}', [LooController::class, 'show'])->name('show');
         Route::get('/{loo}/files/{key}', [LooController::class, 'file'])->name('file');
+        Route::get('/{loo}/attachments/{attachment}', [LooController::class, 'attachmentFile'])->name('attachment');
         Route::get('/{loo}/units', [LooController::class, 'units'])->name('units');
     });
 

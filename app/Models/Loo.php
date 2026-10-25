@@ -22,9 +22,6 @@ class Loo extends Model
         'isi_file_path',
         'isi_hash',
         'loo_received_date',
-        'loo_distributor',
-        'loo_letter_file_path',
-        'loo_proposal_file_path',
         'submitted_at',
         'completed_at',
         'cancelled_at',
@@ -71,6 +68,11 @@ class Loo extends Model
     public function sections()
     {
         return $this->hasMany(LooSection::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(LooAttachment::class)->orderBy('id');
     }
 
     public function updateStatus(string $status): bool

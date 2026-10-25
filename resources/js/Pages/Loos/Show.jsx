@@ -40,7 +40,7 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, readOnlySections = {}, canEditLoo = false, canCancel = false, files = [], progress = null, options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, readOnlySections = {}, canEditLoo = false, canCancel = false, files = [], attachments = [], progress = null, options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
     const [cancelModal, setCancelModal] = useState(false);
@@ -166,7 +166,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Informasi LOO</p>
                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                                 <div><dt className="text-gray-500">Tgl Terima LOO</dt><dd className="text-gray-900 font-medium">{loo.loo_received_date ?? '—'}</dd></div>
-                                <div><dt className="text-gray-500">Pendistribusi</dt><dd className="text-gray-900 font-medium">{loo.loo_distributor ?? '—'}</dd></div>
                                 <div><dt className="text-gray-500">Dibuat oleh</dt><dd className="text-gray-900 font-medium">{loo.marketing?.name ?? '—'}</dd></div>
                                 <div><dt className="text-gray-500">Kategori</dt><dd className="text-gray-900 font-medium">{loo.tenantCategory?.name ?? '—'}</dd></div>
                             </dl>
@@ -196,6 +195,40 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                                 {files.length === 0 && <p className="text-sm text-gray-400">Belum ada file.</p>}
                             </div>
                         </div>
+
+                        {/* Dokumen Pendukung */}
+                        {attachments.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                                    Dokumen Pendukung ({attachments.length})
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {attachments.map((a) => (
+                                        <button
+                                            key={a.id}
+                                            type="button"
+                                            onClick={() => setPreview({ url: a.url, label: a.label, type: a.type })}
+                                            className="flex items-center justify-between gap-2 p-3 border rounded-lg hover:bg-gray-50 min-h-11 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block text-sm font-medium text-[#0F1E36] truncate">{a.label}</span>
+                                                <span className="block text-[11px] text-gray-500 truncate">
+                                                    {a.original_name}
+                                                    {a.uploader ? ` · ${a.uploader}` : ''}
+                                                </span>
+                                            </span>
+                                            <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
+                                                Preview
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Form Divisi Tab */}
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
