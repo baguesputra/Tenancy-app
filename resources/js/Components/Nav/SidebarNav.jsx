@@ -135,12 +135,12 @@ export default function SidebarNav({
             role={mobileNavOpen ? 'dialog' : undefined}
             aria-modal={mobileNavOpen ? 'true' : undefined}
             aria-label="Navigasi utama"
-            className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0F1E36] transition-[width,transform] duration-200 print:hidden
+            className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0F1E36] transition-[width,transform] duration-200 print:hidden overflow-visible
                 ${collapsed ? 'w-[72px]' : 'w-[232px]'}
                 ${mobileNavOpen ? 'translate-x-0 visible' : '-translate-x-full max-lg:invisible'} lg:translate-x-0`}
         >
             <div className="shrink-0 border-b border-white/10">
-                <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-1 gap-1' : 'gap-2 px-3'}`}>
+                <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
                     <Link
                         href="/dashboard"
                         aria-label={`Dashboard — ${user?.branch?.name ?? 'Semua Cabang'}`}
@@ -174,20 +174,22 @@ export default function SidebarNav({
                     >
                         <IconX className="h-5 w-5" />
                     </button>
-
-                    {/* Ciut/perluas rail — hanya relevan di layar besar */}
-                    <button
-                        type="button"
-                        onClick={onToggleCollapse}
-                        aria-expanded={!collapsed}
-                        aria-label={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
-                        title={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
-                        className="hidden lg:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white"
-                    >
-                        <IconPanelLeft className="h-5 w-5" />
-                    </button>
                 </div>
             </div>
+
+            {/* Tab ciut/perluas mengambang di tepi rail — hanya layar besar.
+                Posisi `top-16` sejajar batas bawah header; tidak makan ruang
+                header maupun daftar nav, tampil identik saat ciut/expanded. */}
+            <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
+                title={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
+                className="hidden lg:flex absolute top-[52px] -right-3 z-40 h-6 w-6 items-center justify-center rounded-full bg-white border border-[#E2E5EA] text-slate-500 shadow-md hover:text-[#0F1E36] hover:border-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+            >
+                <IconPanelLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
 
             {/* `overflow-visible` saat ciut wajib: flyout diposisikan di luar lebar
                 rail, dan `overflow-y-auto` akan memotongnya (satu sumbu non-visible
