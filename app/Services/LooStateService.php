@@ -44,10 +44,6 @@ class LooStateService
 
             $loo->updateStatus($to);
 
-            // Link tracking publik: mulai hitung 1 bulan sejak terminal
-            // (kecuali sudah diperpanjang lebih lama secara manual).
-            $this->stampTrackExpiry($loo);
-
             $this->log($loo, $actor, 'status_changed', [
                 'from_status' => $from,
                 'to_status' => $to,
@@ -84,10 +80,6 @@ class LooStateService
             $fromStage = $loo->current_stage;
 
             $loo->updateStatus($derived);
-
-            if ($derived === 'completed') {
-                $this->stampTrackExpiry($loo);
-            }
 
             if ($actor) {
                 $this->log($loo, $actor, 'status_changed', [
@@ -134,13 +126,6 @@ class LooStateService
         $this->syncStatus($loo, $actor);
 
         return $section;
-    }
-
-    private function stampTrackExpiry(Loo $loo): void
-    {
-        if ($loo->track_expires_at === null || $loo->track_expires_at->lt(now()->addMonth())) {
-            $loo->forceFill(['track_expires_at' => now()->addMonth()])->save();
-        }
     }
 
     public function log(Loo $loo, User $actor, string $action, array $attrs = [], array $meta = []): LooHistory

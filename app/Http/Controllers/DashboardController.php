@@ -299,14 +299,13 @@ class DashboardController extends Controller
         // LOO events
         if ($canViewLoo) {
             $looQuery = Loo::query()
-                ->select(['id', 'loo_number', 'prospective_tenant_name', 'status', 'loo_received_date', 'submitted_at', 'completed_at', 'cancelled_at', 'track_expires_at', 'branch_id'])
+                ->select(['id', 'loo_number', 'prospective_tenant_name', 'status', 'loo_received_date', 'submitted_at', 'completed_at', 'cancelled_at', 'branch_id'])
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('loo_received_date', [$start->toDateString(), $end->toDateString()])
                         ->orWhereBetween('submitted_at', [$start->toDateString(), $end->toDateString()])
                         ->orWhereBetween('completed_at', [$start->toDateString(), $end->toDateString()])
-                        ->orWhereBetween('cancelled_at', [$start->toDateString(), $end->toDateString()])
-                        ->orWhereBetween('track_expires_at', [$start->toDateString(), $end->toDateString()]);
+                        ->orWhereBetween('cancelled_at', [$start->toDateString(), $end->toDateString()]);
                 })
                 ->limit(200)
                 ->get();
@@ -355,17 +354,6 @@ class DashboardController extends Controller
                         'title' => "LOO {$loo->loo_number} dibatalkan — {$tenantName}",
                         'start' => $loo->cancelled_at?->toDateString(),
                         'end' => $loo->cancelled_at?->toDateString(),
-                        'status' => $loo->status,
-                        'url' => $baseUrl,
-                    ]);
-                }
-                if ($loo->track_expires_at) {
-                    $events->push([
-                        'id' => "loo-track-expired-{$loo->id}",
-                        'type' => 'loo_track_expired',
-                        'title' => "Tracking LOO {$loo->loo_number} expired — {$tenantName}",
-                        'start' => $loo->track_expires_at?->toDateString(),
-                        'end' => $loo->track_expires_at?->toDateString(),
                         'status' => $loo->status,
                         'url' => $baseUrl,
                     ]);

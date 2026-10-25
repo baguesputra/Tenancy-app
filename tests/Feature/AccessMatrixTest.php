@@ -100,7 +100,6 @@ class AccessMatrixTest extends TestCase
         $this->actingAs($viewer)->get('/loos')->assertOk();
         $this->actingAs($viewer)->get('/loos/create')->assertForbidden();
         $this->actingAs($viewer)->get("/loos/{$loo->id}/edit")->assertForbidden();
-        $this->actingAs($viewer)->post("/loos/{$loo->id}/track-extend")->assertForbidden();
         $this->actingAs($bs)->get('/loos')->assertForbidden();
     }
 

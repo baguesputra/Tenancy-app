@@ -117,7 +117,6 @@ class LooController extends Controller
             'loo_number' => Loo::generateLooNumber($branch->code, now()->year),
             'status' => 'draft',
             'current_stage' => 'marketing',
-            'track_token' => Str::random(40),
         ]);
 
         $this->state->log($loo, $request->user(), 'created');
@@ -131,8 +130,6 @@ class LooController extends Controller
         $this->authorizeAccess($loo, $request);
         $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'unit', 'sections.filler', 'history.user']);
 
-        $track = app(LooTrackController::class)->trackShare($loo);
-
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
             'sectionConfigs' => config('loo_sections'),
@@ -140,8 +137,6 @@ class LooController extends Controller
             'visibleSectionKeys' => $this->visibleSectionKeys($loo, $request->user()),
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
-            'canManageTrack' => $this->canManageTrack($loo, $request->user()),
-            'track' => $track,
             'files' => $this->accessibleFiles($loo, $request->user()),
             'progress' => $this->progress->progress($loo),
             'options' => [
@@ -491,11 +486,6 @@ class LooController extends Controller
     private function canCancel(Loo $loo, User $user): bool
     {
         return $loo->marketing_id === $user->id || $user->hasAnyRole(['admin', 'super_admin']);
-    }
-
-    private function canManageTrack(Loo $loo, User $user): bool
-    {
-        return $this->canCancel($loo, $user);
     }
 
     private function options(array $map): array

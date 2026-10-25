@@ -83,14 +83,6 @@ const TYPE_META = {
         hlRing: "ring-indigo-400",
         hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
-    loo_track_expired: {
-        label: "Tracking expired",
-        dot: "bg-gray-400",
-        chip: "bg-gray-50 text-gray-600 border-gray-200",
-        bar: "bg-gray-50 text-gray-600 border-gray-200 border-l-gray-400",
-        hlRing: "ring-gray-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(156,163,175,0.6)]",
-    },
     section_filled: {
         label: "Section diisi",
         dot: "bg-indigo-500",
@@ -117,7 +109,6 @@ const LEGEND_GROUPS = [
     { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
     { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
     { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled", "section_filled", "section_submitted"] },
-    { label: "Expired", dot: "bg-gray-400", types: ["loo_track_expired"] },
 ];
 
 const FILTERS = [

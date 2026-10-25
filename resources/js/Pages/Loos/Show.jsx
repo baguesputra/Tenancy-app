@@ -65,13 +65,11 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, canManageTrack = false, track = null, files = [], progress = null, options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, files = [], progress = null, options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
     const [cancelModal, setCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
-    const [copied, setCopied] = useState(false);
-    const [shareModal, setShareModal] = useState(false);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
 
@@ -121,22 +119,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
         });
     };
 
-    const copyTrackLink = async () => {
-        if (!track?.url) return;
-        try {
-            await navigator.clipboard.writeText(track.url);
-        } catch {
-            const ta = document.createElement('textarea');
-            ta.value = track.url;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-        }
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2000);
-    };
-
     const confirmCancel = () => {
         setSubmitting(true);
         const fd = new FormData();
@@ -168,7 +150,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                         <div className="flex items-center gap-2 shrink-0 flex-wrap">
                             {canEditLoo && loo.status === 'draft' && <Link href={`/loos/${loo.id}/edit`}><Button variant="secondary">Edit</Button></Link>}
                         {fitoutVisible && <Link href={`/loos/${loo.id}/fitout`}><Button variant="secondary">Checklist Fitout</Button></Link>}
-                        {track?.url && <Button variant="secondary" onClick={() => setShareModal(true)}>Bagikan</Button>}
                         {canCancel && !terminal && <Button variant="danger" onClick={() => setCancelModal(true)}>Batalkan</Button>}
                     </div>
                 </div>
@@ -351,56 +332,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                     url={preview?.url ?? ''}
                     type={preview?.type ?? 'image'}
                 />
-
-                {/* Share Modal (link + QR tracking publik) */}
-                <Modal open={shareModal} onClose={() => setShareModal(false)} title="Bagikan ke Tenant">
-                    {track?.url ? (
-                        <div className="space-y-4">
-                            <div className="flex flex-col items-center gap-2">
-                                {track.qr && (
-                                    <img src={track.qr} alt="QR link tracking" className="w-44 h-44 rounded-xl border border-gray-100" />
-                                )}
-                                <div className="w-full rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-center">
-                                    <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Masa berlaku</p>
-                                    <p className="text-sm font-semibold text-amber-900 mt-0.5">
-                                        {track.is_terminal
-                                            ? `Hingga ${track.expires_label ?? '—'}`
-                                            : 'Selama proses berlangsung'}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap justify-center gap-2">
-                                <Button variant="secondary" onClick={copyTrackLink}>
-                                    {copied ? 'Tersalin ✓' : 'Copy link'}
-                                </Button>
-                                <a
-                                    href={`/loos/${loo.id}/track-qr`}
-                                    className="px-3 min-h-10 inline-flex items-center rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]"
-                                >
-                                    Unduh QR
-                                </a>
-                            </div>
-                            {canManageTrack && (
-                                <div className="flex flex-wrap justify-center gap-2 pt-1 border-t border-gray-100 mt-2">
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => router.post(`/loos/${loo.id}/track-extend`, {}, { preserveScroll: true })}
-                                    >
-                                        Perpanjang 1 bulan
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => { if (window.confirm('Buat link baru? Link lama langsung tidak berlaku.')) router.post(`/loos/${loo.id}/track-regenerate`, {}, { preserveScroll: true }); }}
-                                    >
-                                        Buat link baru
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500">Link tracking belum tersedia.</p>
-                    )}
-                </Modal>
 
                 {/* Cancel Modal */}
                 <Modal open={cancelModal} onClose={() => setCancelModal(false)} title="Batalkan LOO?">

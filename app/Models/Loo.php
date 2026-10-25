@@ -29,8 +29,6 @@ class Loo extends Model
         'completed_at',
         'cancelled_at',
         'cancel_reason',
-        'track_token',
-        'track_expires_at',
     ];
 
     protected $casts = [
@@ -38,7 +36,6 @@ class Loo extends Model
         'submitted_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
-        'track_expires_at' => 'datetime',
     ];
 
     public function branch()
