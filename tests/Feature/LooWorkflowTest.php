@@ -587,7 +587,28 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('measurement', $loo->fresh()->status);
     }
 
-    public function test_checklist_pre_saves_items_signature_and_gates_transition(): void
+    public function test_fitout_checklist_pre_config_scope(): void
+    {
+        $pre = config('loo_sections.fitout_checklist_pre.fields');
+        $preChecklist = collect($pre)->firstWhere('type', 'checklist_table');
+
+        $this->assertSame(['legal', 'finance', 'tenancy'], array_column($preChecklist['departments'], 'key'));
+        $this->assertFalse($preChecklist['show_footer']);
+        $this->assertEmpty(collect($pre)->whereIn('name', [
+            'signature_engineering', 'signature_kontraktor', 'signature_tenant', 'signature_gm',
+        ]));
+
+        $post = config('loo_sections.fitout_checklist_post.fields');
+        $postChecklist = collect($post)->firstWhere('type', 'checklist_table');
+
+        $this->assertSame(['legal', 'finance', 'tenancy', 'engineering', 'kontraktor'], array_column($postChecklist['departments'], 'key'));
+        $this->assertArrayNotHasKey('show_footer', $postChecklist);
+        $this->assertNotEmpty(collect($post)->whereIn('name', ['signature_tenant', 'signature_gm']));
+
+        $this->assertSame('Pengukuran Ulang', config('loo_sections.pre_handover.label'));
+    }
+
+    public function test_fitout_checklist_pre_saves_items_signature_and_gates_transition(): void
     {
         Storage::fake('public');
 
@@ -614,8 +635,11 @@ class LooWorkflowTest extends TestCase
                     ],
                     'footer' => ['date' => '2026-10-01', 'tenant_name' => 'Penyewa A', 'gm_name' => 'Deputy GM'],
                     'hantu' => ['items' => ['rahasia' => ['status' => 'Ok']]],
+                    'engineering' => ['items' => ['megger' => ['status' => 'Ok']]],
+                    'kontraktor' => ['items' => ['serah_terima' => ['status' => 'Ok']]],
                 ]),
                 'signature_legal' => UploadedFile::fake()->create('ttd.png', 5, 'image/png'),
+                'signature_tenant' => UploadedFile::fake()->create('ttd-penyewa.png', 5, 'image/png'),
             ])
             ->assertRedirect();
 
@@ -624,10 +648,13 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
         $this->assertNull($section->data['checklist']['finance']['items']['dp_1']['status']);
         $this->assertArrayNotHasKey('hantu', $section->data['checklist']);
+        $this->assertArrayNotHasKey('engineering', $section->data['checklist']);
+        $this->assertArrayNotHasKey('kontraktor', $section->data['checklist']);
+        $this->assertArrayNotHasKey('footer', $section->data['checklist']);
+        $this->assertArrayNotHasKey('signature_tenant', $section->data);
         $this->assertArrayNotHasKey('rahasia', $section->data['checklist']['legal']['items']);
         $this->assertSame('Senin', $section->data['checklist']['legal']['signoff']['day']);
         $this->assertArrayHasKey('dp_1', $section->data['checklist']['finance']['items']);
-        $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
         $this->assertStringStartsWith('loos/', $section->data['signature_legal']);
 
         // finance isi dept-nya; data legal wajib utuh (merge, bukan timpa)
@@ -644,7 +671,7 @@ class LooWorkflowTest extends TestCase
         $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
         $this->assertSame('Ok', $section->data['checklist']['finance']['items']['dp_1']['status']);
         $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
-        $this->assertSame('Penyewa A', $section->data['checklist']['footer']['tenant_name']);
+        $this->assertArrayNotHasKey('footer', $section->data['checklist']);
 
         // tm submit (koordinator) → auto-maju ke fitout
         $this->actingAs($tm)

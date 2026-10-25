@@ -16,7 +16,7 @@ const STAGE_LABELS = {
     measurement: 'Measurement',
     ba_handover: 'BA Handover',
     fitout: 'Fitout',
-    pre_handover: 'Pre-Handover',
+    pre_handover: 'Pengukuran Ulang',
 };
 
 const STAGE_COLORS = {
@@ -49,7 +49,7 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
         { key: 'stage', label: 'Stage LOO' },
         { key: 'pre_fitout', label: 'Sebelum Fitout' },
         { key: 'post_fitout', label: 'Setelah Fitout' },
-        { key: 'pre_handover', label: 'Pre-Handover' },
+        { key: 'pre_handover', label: 'Pengukuran Ulang' },
     ];
 
     return (
@@ -110,9 +110,9 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                             className="w-full sm:w-48"
                         >
                             <option value="">Semua Stage Checklist</option>
-                            <option value="pre_fitout">Sebelum Fitout (BA)</option>
+                            <option value="pre_fitout">Sebelum Fitout</option>
                             <option value="post_fitout">Setelah Fitout</option>
-                            <option value="pre_handover">Pre-Handover</option>
+                            <option value="pre_handover">Pengukuran Ulang</option>
                         </SelectInput>
                         <Button type="submit" variant="secondary">Cari</Button>
                     </div>

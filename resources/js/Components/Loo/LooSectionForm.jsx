@@ -337,28 +337,30 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null, si
                 );
             })}
 
-            <div inert={editableDepartments && editableDepartments.length === 0} className={`border border-[#E2E5EA] rounded-xl p-3 space-y-3 ${editableDepartments && editableDepartments.length === 0 ? 'opacity-70' : ''}`}>
-                <p className="text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">Mengetahui</p>
-                <DateInput
-                    value={v.footer?.date ?? ''}
-                    onChange={(e) => updateFooter({ date: e.target.value })}
-                    aria-label="Tanggal Mengetahui"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <TextInput
-                        value={v.footer?.tenant_name ?? ''}
-                        onChange={(e) => updateFooter({ tenant_name: e.target.value })}
-                        placeholder="Pihak Penyewa"
-                        aria-label="Nama Pihak Penyewa"
+            {field.show_footer !== false && (
+                <div inert={editableDepartments && editableDepartments.length === 0} className={`border border-[#E2E5EA] rounded-xl p-3 space-y-3 ${editableDepartments && editableDepartments.length === 0 ? 'opacity-70' : ''}`}>
+                    <p className="text-xs font-semibold text-[#0F1E36] uppercase tracking-wide">Mengetahui</p>
+                    <DateInput
+                        value={v.footer?.date ?? ''}
+                        onChange={(e) => updateFooter({ date: e.target.value })}
+                        aria-label="Tanggal Mengetahui"
                     />
-                    <TextInput
-                        value={v.footer?.gm_name ?? ''}
-                        onChange={(e) => updateFooter({ gm_name: e.target.value })}
-                        placeholder="Deputy General Manager"
-                        aria-label="Nama Deputy General Manager"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <TextInput
+                            value={v.footer?.tenant_name ?? ''}
+                            onChange={(e) => updateFooter({ tenant_name: e.target.value })}
+                            placeholder="Pihak Penyewa"
+                            aria-label="Nama Pihak Penyewa"
+                        />
+                        <TextInput
+                            value={v.footer?.gm_name ?? ''}
+                            onChange={(e) => updateFooter({ gm_name: e.target.value })}
+                            placeholder="Deputy General Manager"
+                            aria-label="Nama Deputy General Manager"
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

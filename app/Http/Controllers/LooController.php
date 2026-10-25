@@ -274,7 +274,7 @@ class LooController extends Controller
         $data = $this->sections->collect($request->all(), $config, $loo, $current?->data ?? []);
 
         if ($editableDepts !== null) {
-            $data = $this->sections->mergeFitoutDepartments($data, $current?->data ?? [], $editableDepts);
+            $data = $this->sections->mergeFitoutDepartments($data, $current?->data ?? [], $editableDepts, $config);
         }
 
         $section = $this->state->fillSection(

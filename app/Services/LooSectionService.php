@@ -121,19 +121,21 @@ class LooSectionService
      */
     public function assertFitoutDepartmentsAllowed(array $input, array $config, array $current, array $editable): void
     {
-        foreach (self::FITOUT_DEPARTMENT_PERMISSIONS as $dept => $permission) {
-            if (in_array($dept, $editable, true)) {
-                continue;
-            }
-
-            if (($input["signature_{$dept}"] ?? null) instanceof UploadedFile) {
-                abort(403, 'Tidak berwenang mengisi bagian '.ucfirst($dept).'.');
-            }
-        }
-
         $field = collect($config['fields'])->firstWhere('type', 'checklist_table');
         if (! $field) {
             return;
+        }
+
+        foreach ($field['departments'] as $dept) {
+            $key = $dept['key'];
+
+            if (in_array($key, $editable, true)) {
+                continue;
+            }
+
+            if (($input["signature_{$key}"] ?? null) instanceof UploadedFile) {
+                abort(403, 'Tidak berwenang mengisi bagian '.$dept['label'].'.');
+            }
         }
 
         $posted = $this->decode($input['checklist'] ?? []);
@@ -162,31 +164,37 @@ class LooSectionService
      * dikembalikan agar partial-save satu dept tidak menghapus milik lain.
      * Flag approval GM hanya diubah via alur approve, tidak via save biasa.
      */
-    public function mergeFitoutDepartments(array $data, array $current, array $editable): array
+    public function mergeFitoutDepartments(array $data, array $current, array $editable, array $config): array
     {
-        foreach (self::FITOUT_DEPARTMENT_PERMISSIONS as $dept => $permission) {
-            if (in_array($dept, $editable, true)) {
+        $field = collect($config['fields'])->firstWhere('type', 'checklist_table');
+        $departments = $field['departments'] ?? [];
+
+        foreach ($departments as $dept) {
+            $key = $dept['key'];
+            if (in_array($key, $editable, true)) {
                 continue;
             }
 
-            if (isset($current['checklist'][$dept])) {
-                $data['checklist'][$dept] = $current['checklist'][$dept];
+            if (isset($current['checklist'][$key])) {
+                $data['checklist'][$key] = $current['checklist'][$key];
             }
 
-            if (isset($current["signature_{$dept}"])) {
-                $data["signature_{$dept}"] = $current["signature_{$dept}"];
-            }
-        }
-
-        foreach (['date', 'tenant_name', 'gm_name'] as $key) {
-            if (empty($data['checklist']['footer'][$key]) && ! empty($current['checklist']['footer'][$key])) {
-                $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+            if (isset($current["signature_{$key}"])) {
+                $data["signature_{$key}"] = $current["signature_{$key}"];
             }
         }
 
-        foreach (['gm_approved', 'gm_approved_at', 'gm_approved_by'] as $key) {
-            if (isset($current['checklist']['footer'][$key])) {
-                $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+        if (($field['show_footer'] ?? true) !== false) {
+            foreach (['date', 'tenant_name', 'gm_name'] as $key) {
+                if (empty($data['checklist']['footer'][$key]) && ! empty($current['checklist']['footer'][$key])) {
+                    $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+                }
+            }
+
+            foreach (['gm_approved', 'gm_approved_at', 'gm_approved_by'] as $key) {
+                if (isset($current['checklist']['footer'][$key])) {
+                    $data['checklist']['footer'][$key] = $current['checklist']['footer'][$key];
+                }
             }
         }
 
@@ -283,12 +291,14 @@ class LooSectionService
             ];
         }
 
-        $footer = $input['footer'] ?? [];
-        $out['footer'] = [
-            'date' => $footer['date'] ?? null,
-            'tenant_name' => $footer['tenant_name'] ?? null,
-            'gm_name' => $footer['gm_name'] ?? null,
-        ];
+        if (($field['show_footer'] ?? true) !== false) {
+            $footer = $input['footer'] ?? [];
+            $out['footer'] = [
+                'date' => $footer['date'] ?? null,
+                'tenant_name' => $footer['tenant_name'] ?? null,
+                'gm_name' => $footer['gm_name'] ?? null,
+            ];
+        }
 
         return $out;
     }

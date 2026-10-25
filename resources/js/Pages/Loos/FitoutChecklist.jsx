@@ -107,9 +107,14 @@ export default function FitoutChecklist({
         }, 450);
     };
     // Label departemen untuk chip lompat (diambil dari config).
-    const deptLabel = (key) => preConfig?.fields
-        ?.find((f) => f.type === 'checklist_table')
-        ?.departments?.find((d) => d.key === key)?.label ?? key;
+    const deptLabel = (key) => [preConfig, postConfig]
+        .flatMap((c) => c?.fields?.find((f) => f.type === 'checklist_table')?.departments ?? [])
+        .find((d) => d.key === key)?.label ?? key;
+
+    // Departemen yang bisa diisi user, dibatasi ke yang ada di config tab-nya.
+    const deptKeys = (cfg) => (cfg?.fields?.find((f) => f.type === 'checklist_table')?.departments ?? []).map((d) => d.key);
+    const editablePre = (editableDepartments ?? []).filter((d) => deptKeys(preConfig).includes(d));
+    const editablePost = (editableDepartments ?? []).filter((d) => deptKeys(postConfig).includes(d));
 
     // Ringkasan progress per dept (terisi/total item) dari data tersimpan.
     const deptProgress = (config, sectionData) => (config?.fields
@@ -157,6 +162,21 @@ export default function FitoutChecklist({
                 <div className="flex border-b border-gray-200 mb-6 gap-2 overflow-x-auto">
                     <button
                         type="button"
+                        onClick={() => setActiveTab('pre_handover')}
+                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                            activeTab === 'pre_handover'
+                                ? 'border-[#0F1E36] text-[#0F1E36]'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                    >
+                        <span>1. Pengukuran Ulang</span>
+                        <Badge color={preHandoverState === 'submitted' ? 'green' : preHandoverState === 'draft' ? 'amber' : 'gray'} size="sm">
+                            {preHandoverState === 'submitted' ? 'Disubmit' : preHandoverState === 'draft' ? 'Draft' : 'Belum'}
+                        </Badge>
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('pre')}
                         className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                             activeTab === 'pre'
@@ -164,7 +184,7 @@ export default function FitoutChecklist({
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                     >
-                        <span>1. Sebelum Fitout (BA)</span>
+                        <span>2. Sebelum Fitout</span>
                         <Badge color={preState === 'submitted' ? 'green' : preState === 'draft' ? 'amber' : 'gray'} size="sm">
                             {preState === 'submitted' ? 'Disubmit' : preState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
@@ -179,28 +199,13 @@ export default function FitoutChecklist({
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                     >
-                        <span>2. Setelah Fitout</span>
+                        <span>3. Setelah Fitout</span>
                         <Badge color={postState === 'submitted' ? 'green' : postState === 'draft' ? 'amber' : 'gray'} size="sm">
                             {postState === 'submitted' ? 'Disubmit' : postState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
                         {gmApprovedPost && (
                             <span className="text-[10px] text-emerald-600 font-bold">✓ Approved GM</span>
                         )}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('pre_handover')}
-                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                            activeTab === 'pre_handover'
-                                ? 'border-[#0F1E36] text-[#0F1E36]'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                    >
-                        <span>3. Pre-Handover</span>
-                        <Badge color={preHandoverState === 'submitted' ? 'green' : preHandoverState === 'draft' ? 'amber' : 'gray'} size="sm">
-                            {preHandoverState === 'submitted' ? 'Disubmit' : preHandoverState === 'draft' ? 'Draft' : 'Belum'}
-                        </Badge>
                     </button>
                     {(editableDepartments ?? []).length > 0 && (
                         <button
@@ -226,7 +231,7 @@ export default function FitoutChecklist({
                             <div>
                                 <h2 className="text-base font-semibold text-gray-900">Checklist Sebelum Selesai Fit Out</h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Stage BA Handover — Verifikasi kesiapan dokumen, tagihan, dan area sebelum pengerjaan fit out.
+                                    Verifikasi kesiapan dokumen, tagihan, dan area sebelum pengerjaan fit out.
                                 </p>
                             </div>
                             <Badge color={preState === 'submitted' ? 'green' : preState === 'draft' ? 'amber' : 'gray'} size="sm">
@@ -241,13 +246,13 @@ export default function FitoutChecklist({
                                         Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
                                     </p>
                                 )}
-                                {!terminal && canEditPre && (editableDepartments ?? []).length > 0 && (
+                                {!terminal && canEditPre && editablePre.length > 0 && (
                                     <div className="mb-4 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
                                         <p className="text-xs text-blue-800 mb-2">
                                             Anda dapat mengisi bagian di bawah ini. Bagian lain hanya tampil untuk dilihat.
                                         </p>
                                         <div className="flex flex-wrap gap-1.5">
-                                            {(editableDepartments ?? []).map((dept) => (
+                                            {editablePre.map((dept) => (
                                                 <a
                                                     key={dept}
                                                     href={`#fitout_checklist_pre-${dept}`}
@@ -308,13 +313,13 @@ export default function FitoutChecklist({
                                         Mode lihat saja — setiap bagian hanya bisa diisi oleh role yang bersangkutan.
                                     </p>
                                 )}
-                                {!terminal && canEditPost && (editableDepartments ?? []).length > 0 && (
+                                {!terminal && canEditPost && editablePost.length > 0 && (
                                     <div className="mb-4 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
                                         <p className="text-xs text-blue-800 mb-2">
                                             Anda dapat mengisi bagian di bawah ini. Bagian lain hanya tampil untuk dilihat.
                                         </p>
                                         <div className="flex flex-wrap gap-1.5">
-                                            {(editableDepartments ?? []).map((dept) => (
+                                            {editablePost.map((dept) => (
                                                 <a
                                                     key={dept}
                                                     href={`#fitout_checklist_post-${dept}`}
@@ -376,9 +381,9 @@ export default function FitoutChecklist({
                     <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-gray-100">
                             <div>
-                                <h2 className="text-base font-semibold text-gray-900">Pre-Handover Checklist</h2>
+                                <h2 className="text-base font-semibold text-gray-900">Pengukuran Ulang</h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Tahap pemeriksaan akhir sebelum serah terima final & opening.
+                                    Pengukuran ulang & pemeriksaan akhir sebelum serah terima final.
                                 </p>
                             </div>
                             <Badge color={preHandoverState === 'submitted' ? 'green' : preHandoverState === 'draft' ? 'amber' : 'gray'} size="sm">
@@ -407,7 +412,7 @@ export default function FitoutChecklist({
                             </>
                         ) : (
                             <div className="py-8 text-center text-sm text-gray-500">
-                                Section ini baru dapat diisi saat LOO mencapai stage Pre-Handover.
+                                Section ini baru dapat diisi saat LOO mencapai stage Pengukuran Ulang.
                             </div>
                         )}
                     </div>

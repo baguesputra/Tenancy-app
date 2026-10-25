@@ -42,17 +42,36 @@ $fitoutChecklistDepartments = [
     ]],
 ];
 
+// Checklist sebelum fitout hanya 3 departemen, tanpa TTD penyewa/Deputy GM
+// dan tanpa blok "Mengetahui".
+$fitoutChecklistPreDepartments = array_values(array_filter(
+    $fitoutChecklistDepartments,
+    fn (array $d) => in_array($d['key'], ['legal', 'finance', 'tenancy'], true)
+));
+
+$fitoutChecklistSignatureFields = fn (array $departments) => array_map(
+    fn (array $d) => ['name' => 'signature_'.$d['key'], 'type' => 'file', 'label' => 'TTD '.$d['label'], 'accept' => '.png,.jpg,.jpeg'],
+    $departments
+);
+
 $fitoutChecklistFields = array_merge(
     [
         ['name' => 'checklist', 'type' => 'checklist_table', 'label' => 'Checklist Toko', 'departments' => $fitoutChecklistDepartments],
     ],
-    array_map(
-        fn (array $d) => ['name' => 'signature_'.$d['key'], 'type' => 'file', 'label' => 'TTD '.$d['label'], 'accept' => '.png,.jpg,.jpeg'],
-        $fitoutChecklistDepartments
-    ),
+    $fitoutChecklistSignatureFields($fitoutChecklistDepartments),
     [
         ['name' => 'signature_tenant', 'type' => 'file', 'label' => 'TTD Pihak Penyewa', 'accept' => '.png,.jpg,.jpeg'],
         ['name' => 'signature_gm', 'type' => 'file', 'label' => 'TTD Deputy General Manager', 'accept' => '.png,.jpg,.jpeg'],
+        ['name' => 'notes', 'type' => 'textarea', 'label' => 'Catatan'],
+    ]
+);
+
+$fitoutChecklistPreFields = array_merge(
+    [
+        ['name' => 'checklist', 'type' => 'checklist_table', 'label' => 'Checklist Toko', 'departments' => $fitoutChecklistPreDepartments, 'show_footer' => false],
+    ],
+    $fitoutChecklistSignatureFields($fitoutChecklistPreDepartments),
+    [
         ['name' => 'notes', 'type' => 'textarea', 'label' => 'Catatan'],
     ]
 );
@@ -125,7 +144,7 @@ return [
         'label' => 'Checklist Sebelum Fitout',
         'stage' => 'ba_handover',
         'permission' => 'loos.tenant_mgmt_edit',
-        'fields' => $fitoutChecklistFields,
+        'fields' => $fitoutChecklistPreFields,
     ],
     'fitout_checklist_post' => [
         'label' => 'Checklist Setelah Fitout',
@@ -134,7 +153,7 @@ return [
         'fields' => $fitoutChecklistFields,
     ],
     'pre_handover' => [
-        'label' => 'Pre-Handover',
+        'label' => 'Pengukuran Ulang',
         'stage' => 'pre_handover',
         'permission' => 'loos.tenant_mgmt_edit',
         'fields' => [
