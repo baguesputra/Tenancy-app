@@ -1,6 +1,13 @@
 import { Link, router } from "@inertiajs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+    IconChevronDown,
+    IconChevronLeft,
+    IconChevronRight,
+    IconRefresh,
+    IconX,
+} from "@/Components/Icons";
 
 const TYPE_META = {
     permit: {
@@ -9,7 +16,6 @@ const TYPE_META = {
         chip: "bg-blue-50 text-blue-800 border-blue-200",
         bar: "bg-blue-50 text-blue-800 border-blue-200 border-l-blue-500",
         hlRing: "ring-blue-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(59,130,246,0.55)]",
     },
     pameran: {
         label: "Pameran",
@@ -17,7 +23,6 @@ const TYPE_META = {
         chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
         bar: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/25 border-l-[#FF6B6B]",
         hlRing: "ring-[#FF6B6B]",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(255,107,107,0.6)]",
     },
     kegiatan: {
         label: "Kegiatan",
@@ -25,7 +30,6 @@ const TYPE_META = {
         chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
         bar: "bg-emerald-50 text-emerald-800 border-emerald-200 border-l-emerald-500",
         hlRing: "ring-emerald-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(16,185,129,0.55)]",
     },
     contract_start: {
         label: "Kontrak mulai",
@@ -33,7 +37,6 @@ const TYPE_META = {
         chip: "bg-purple-50 text-purple-800 border-purple-200",
         bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
         hlRing: "ring-purple-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(168,85,247,0.55)]",
     },
     contract_end: {
         label: "Kontrak berakhir",
@@ -41,7 +44,6 @@ const TYPE_META = {
         chip: "bg-purple-50 text-purple-800 border-purple-200",
         bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
         hlRing: "ring-purple-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(168,85,247,0.55)]",
     },
     sidak: {
         label: "Sidak",
@@ -49,7 +51,6 @@ const TYPE_META = {
         chip: "bg-amber-50 text-amber-900 border-amber-200",
         bar: "bg-amber-50 text-amber-900 border-amber-200 border-l-amber-500",
         hlRing: "ring-amber-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(245,158,11,0.6)]",
     },
     loo_received: {
         label: "LOO diterima",
@@ -57,7 +58,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_submitted: {
         label: "LOO disubmit",
@@ -65,7 +65,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_completed: {
         label: "LOO selesai",
@@ -73,7 +72,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
@@ -81,7 +79,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     section_filled: {
         label: "Section diisi",
@@ -89,7 +86,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
     section_submitted: {
         label: "Section disubmit",
@@ -97,7 +93,6 @@ const TYPE_META = {
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
         bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
         hlRing: "ring-indigo-400",
-        hlGlow: "shadow-[0_0_10px_2px_rgba(99,102,241,0.55)]",
     },
 };
 
@@ -393,14 +388,29 @@ export default function EventCalendar({
         month: "long",
         year: "numeric",
     });
-    const visibleFilters = FILTERS.filter((f) => {
-        if (f.key === "all" || f.key === "permit") return true;
-        if (f.key === "loo")
-            return allEvents.some((e) => e.type.startsWith("loo_"));
-        if (f.key === "section")
-            return allEvents.some((e) => e.type.startsWith("section_"));
-        return allEvents.some((e) => e.type === f.key);
-    });
+    // Satu pass atas allEvents: hitungan per tombol filter + ketersediaan filter.
+    // Menggantikan N× .filter()/.some() yang sebelumnya jalan tiap render tombol.
+    // Keluarga yang punya event bulan ini — dihitung sekali, bukan tiap render legenda.
+    const { filterCounts, visibleFilters, activeLegendGroups } = useMemo(() => {
+        const counts = { all: allEvents.length, permit: 0, loo: 0, section: 0 };
+        const seen = new Set();
+        for (const e of allEvents) {
+            if (PERMIT_TYPES.includes(e.type)) counts.permit += 1;
+            if (e.type.startsWith("loo_")) counts.loo += 1;
+            else if (e.type.startsWith("section_")) counts.section += 1;
+            if (!PERMIT_TYPES.includes(e.type) && !e.type.startsWith("loo_") && !e.type.startsWith("section_"))
+                counts[e.type] = (counts[e.type] ?? 0) + 1;
+            seen.add(e.type);
+        }
+        const visible = FILTERS.filter((f) => {
+            if (f.key === "all" || f.key === "permit") return true;
+            if (f.key === "loo") return counts.loo > 0;
+            if (f.key === "section") return counts.section > 0;
+            return seen.has(f.key);
+        });
+        const active = LEGEND_GROUPS.filter((g) => g.types.some((t) => seen.has(t)));
+        return { filterCounts: counts, visibleFilters: visible, activeLegendGroups: active };
+    }, [allEvents]);
     const todayKey = dayKey(new Date());
     const currentMonthKey = todayKey.slice(0, 7);
     const viewedMonthKey = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
@@ -412,12 +422,18 @@ export default function EventCalendar({
             ? today
             : cells.findIndex((d) => d.getMonth() === monthIdx);
     })();
-    const dayAriaLabel = (d) =>
-        d.toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-        });
+    // Label aria per sel dihitung sekali per bulan — bukan 42× toLocaleDateString tiap render.
+    const cellAriaLabels = useMemo(
+        () =>
+            cells.map((d) =>
+                d.toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                }),
+            ),
+        [cells],
+    );
 
     useEffect(() => {
         if (!visibleFilters.some((f) => f.key === filter)) {
@@ -429,14 +445,14 @@ export default function EventCalendar({
     return (
         <section
             aria-label="Kalender operasional"
-            className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden"
+            className="mt-4 bg-white rounded-xl border border-[#E2E5EA] overflow-hidden"
         >
-            <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-2.5">
+            <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center gap-2.5">
                 <div className="min-w-0 mr-auto">
                     <div className="relative inline-block" ref={pickerRef}>
                         <h2
                             aria-live="polite"
-                            className="text-sm font-semibold text-gray-900"
+                            className="text-sm font-semibold text-slate-900"
                         >
                             <button
                                 type="button"
@@ -447,45 +463,19 @@ export default function EventCalendar({
                                 aria-expanded={pickerOpen}
                                 aria-haspopup="dialog"
                                 aria-label={`Pilih bulan — sekarang ${monthLabel}`}
-                                className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                             >
                                 <span className="capitalize">{monthLabel}</span>
-                                <svg
-                                    className={`h-3.5 w-3.5 text-gray-400 transition-transform ${pickerOpen ? "rotate-180" : ""}`}
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
+                                <IconChevronDown
+                                    className={`h-3.5 w-3.5 text-slate-400 transition-transform ${pickerOpen ? "rotate-180" : ""}`}
                                     aria-hidden="true"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M19 9l-7 7-7-7"
-                                    />
-                                </svg>
+                                />
                             </button>
                             {navLoading && (
-                                <svg
-                                    className="ml-2 inline-block h-3.5 w-3.5 animate-spin align-middle text-gray-400"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
+                                <IconRefresh
+                                    className="ml-2 inline-block h-3.5 w-3.5 animate-spin align-middle text-slate-400"
                                     aria-hidden="true"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    />
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                                    />
-                                </svg>
+                                />
                             )}
                         </h2>
                         {pickerOpen && (
@@ -499,46 +489,26 @@ export default function EventCalendar({
                                         type="button"
                                         onClick={() => setPickerYear((v) => v - 1)}
                                         aria-label="Tahun sebelumnya"
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
                                     >
-                                        <svg
+                                        <IconChevronLeft
                                             className="h-3.5 w-3.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={2}
                                             aria-hidden="true"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M15 19l-7-7 7-7"
-                                            />
-                                        </svg>
+                                        />
                                     </button>
-                                    <span className="text-xs font-semibold tabular-nums text-gray-900">
+                                    <span className="text-xs font-semibold tabular-nums text-slate-900">
                                         {pickerYear}
                                     </span>
                                     <button
                                         type="button"
                                         onClick={() => setPickerYear((v) => v + 1)}
                                         aria-label="Tahun berikutnya"
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
                                     >
-                                        <svg
+                                        <IconChevronRight
                                             className="h-3.5 w-3.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={2}
                                             aria-hidden="true"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M9 5l7 7-7 7"
-                                            />
-                                        </svg>
+                                        />
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-3 gap-1">
@@ -557,7 +527,7 @@ export default function EventCalendar({
                                                     if (delta !== 0) goMonth(delta);
                                                 }}
                                                 aria-pressed={active}
-                                                className={`rounded-lg px-1 py-1.5 text-[11px] font-medium capitalize transition-colors ${active ? "bg-[#0F1E36] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                                                className={`rounded-lg px-1 py-1.5 text-[11px] font-medium capitalize transition-colors ${active ? "bg-[#0F1E36] text-white" : "text-slate-600 hover:bg-slate-100"}`}
                                             >
                                                 {name}
                                             </button>
@@ -567,15 +537,15 @@ export default function EventCalendar({
                             </div>
                         )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5">
                         {view === "month"
                             ? `${events.length} agenda · klik tanggal untuk detail`
                             : `${events.length} agenda · dikelompokkan per jenis`}
                     </p>
                 </div>
                 <div
-                    className="flex items-center gap-1 bg-gray-100 rounded-full p-1"
-                    role="tablist"
+                    className="flex items-center gap-1 bg-slate-100 rounded-lg p-1"
+                    role="group"
                     aria-label="Tampilan kalender"
                 >
                     {[
@@ -584,13 +554,13 @@ export default function EventCalendar({
                     ].map(([k, label]) => (
                         <button
                             key={k}
-                            role="tab"
-                            aria-selected={view === k}
+                            type="button"
+                            aria-pressed={view === k}
                             onClick={() => {
                                 setView(k);
                                 syncUrl(k, filter);
                             }}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${view === k ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                         >
                             {label}
                         </button>
@@ -600,46 +570,22 @@ export default function EventCalendar({
                     <button
                         onClick={() => goMonth(-1)}
                         aria-label="Bulan sebelumnya"
-                        className="h-9 w-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 min-h-[36px] min-w-[36px]"
+                        className="h-9 w-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 min-h-[36px] min-w-[36px]"
                     >
-                        <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M15 19l-7-7 7-7"
-                            />
-                        </svg>
+                        <IconChevronLeft className="w-4 h-4" aria-hidden="true" />
                     </button>
                     <button
                         onClick={goToday}
-                        className="px-3 h-9 text-xs font-medium rounded-lg text-gray-600 hover:bg-gray-100"
+                        className="px-3 h-9 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100"
                     >
                         Hari ini
                     </button>
                     <button
                         onClick={() => goMonth(1)}
                         aria-label="Bulan berikutnya"
-                        className="h-9 w-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 min-h-[36px] min-w-[36px]"
+                        className="h-9 w-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 min-h-[36px] min-w-[36px]"
                     >
-                        <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M9 5l7 7-7 7"
-                            />
-                        </svg>
+                        <IconChevronRight className="w-4 h-4" aria-hidden="true" />
                     </button>
                 </div>
             </div>
@@ -650,24 +596,7 @@ export default function EventCalendar({
                 aria-label="Filter jenis agenda"
             >
                 {visibleFilters.map((f) => {
-                    let count = 0;
-                    if (f.key === "all") count = allEvents.length;
-                    else if (f.key === "permit")
-                        count = allEvents.filter((e) =>
-                            PERMIT_TYPES.includes(e.type),
-                        ).length;
-                    else if (f.key === "loo")
-                        count = allEvents.filter((e) =>
-                            e.type.startsWith("loo_"),
-                        ).length;
-                    else if (f.key === "section")
-                        count = allEvents.filter((e) =>
-                            e.type.startsWith("section_"),
-                        ).length;
-                    else
-                        count = allEvents.filter(
-                            (e) => e.type === f.key,
-                        ).length;
+                    const count = filterCounts[f.key] ?? 0;
                     return (
                         <button
                             key={f.key}
@@ -676,11 +605,11 @@ export default function EventCalendar({
                                 syncUrl(view, f.key);
                             }}
                             aria-pressed={filter === f.key}
-                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === f.key ? "bg-[#0F1E36] text-white border-[#0F1E36]" : "bg-white text-gray-600 border-[#E2E5EA] hover:bg-gray-50"}`}
+                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === f.key ? "bg-[#0F1E36] text-white border-[#0F1E36]" : "bg-white text-slate-600 border-[#E2E5EA] hover:bg-slate-50"}`}
                         >
                             {f.label}
                             <span
-                                className={`ml-1.5 tabular-nums ${filter === f.key ? "text-white/70" : "text-gray-400"}`}
+                                className={`ml-1.5 tabular-nums ${filter === f.key ? "text-white/70" : "text-slate-400"}`}
                             >
                                 {count}
                             </span>
@@ -695,35 +624,23 @@ export default function EventCalendar({
                     onClick={() => setLegendOpen((o) => !o)}
                     aria-expanded={legendOpen}
                     aria-controls="calendar-legend"
-                    className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                    className="-ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                 >
                     Legenda
-                    <svg
+                    <IconChevronDown
                         className={`h-3 w-3 transition-transform ${legendOpen ? "rotate-180" : ""}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
                         aria-hidden="true"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M19 9l-7 7-7-7"
-                        />
-                    </svg>
+                    />
                 </button>
                 {legendOpen && (
                     <div
                         id="calendar-legend"
                         className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1"
                     >
-                        {LEGEND_GROUPS.filter((g) =>
-                            allEvents.some((e) => g.types.includes(e.type)),
-                        ).map((g) => (
+                        {activeLegendGroups.map((g) => (
                             <span
                                 key={g.label}
-                                className="inline-flex items-center gap-1.5 text-[11px] text-gray-500"
+                                className="inline-flex items-center gap-1.5 text-[11px] text-slate-500"
                             >
                                 <span
                                     className={`w-2 h-2 rounded-full ${g.dot}`}
@@ -751,7 +668,7 @@ export default function EventCalendar({
                         else if (dx > 60) goMonth(-1);
                     }}
                 >
-                    <div className="grid grid-cols-7 text-center text-[11px] font-medium text-gray-400 py-2">
+                    <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
                         {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
                             (d) => (
                                 <span key={d}>{d}</span>
@@ -775,8 +692,8 @@ export default function EventCalendar({
                                     className={`min-h-[52px] sm:min-h-[92px] rounded-xl border p-1 sm:p-1.5 flex flex-col cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${
                                         isSelected
                                             ? "border-[#0F1E36] ring-1 ring-[#0F1E36] bg-[#0F1E36]/[0.03]"
-                                            : "border-gray-100 hover:border-gray-300 hover:bg-gray-50/60"
-                                    } ${inMonth ? "" : "opacity-40"} ${weekend && inMonth ? "bg-gray-50/70" : ""}`}
+                                            : "border-slate-100 hover:border-slate-300 hover:bg-slate-50/60"
+                                    } ${inMonth ? "" : "opacity-40"} ${weekend && inMonth ? "bg-slate-50/70" : ""}`}
                                 >
                                     <button
                                         ref={(el) => (cellRefs.current[i] = el)}
@@ -787,8 +704,8 @@ export default function EventCalendar({
                                         }}
                                         onKeyDown={(e) => onCellKeyDown(e, i)}
                                         aria-pressed={isSelected}
-                                        aria-label={`${dayAriaLabel(d)}, ${dayEvents.length} agenda`}
-                                        className={`self-start inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-gray-400" : "text-gray-700"}`}
+                                        aria-label={`${cellAriaLabels[i]}, ${dayEvents.length} agenda`}
+                                        className={`self-start inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-slate-400" : "text-slate-700"}`}
                                     >
                                         {d.getDate()}
                                     </button>
@@ -804,9 +721,9 @@ export default function EventCalendar({
                                                 return (
                                                     <span
                                                         key={e.id}
-                                                        title={rangeTitle}
-                                                        aria-hidden="true"
-                                                        className={`block rounded-full ${isHl ? `h-2.5 mt-[5px] ${meta.hlGlow}` : "h-1.5 mt-[7px]"} ${meta.dot}`}
+                                                        role="img"
+                                                        aria-label={rangeTitle}
+                                                        className={`block rounded-full ${isHl ? "h-2.5 mt-[5px]" : "h-1.5 mt-[7px]"} ${meta.dot}`}
                                                     />
                                                 );
                                             }
@@ -825,9 +742,9 @@ export default function EventCalendar({
                                                     >
                                                         <span
                                                             aria-hidden="true"
-                                                            className={`${isHl ? `h-2.5 ${meta.hlGlow}` : "h-1.5"} flex-1 rounded-r-full ${meta.dot}`}
+                                                            className={`${isHl ? "h-2.5" : "h-1.5"} flex-1 rounded-r-full ${meta.dot}`}
                                                         />
-                                                        <span className="text-[10px] font-medium text-gray-500 tabular-nums">
+                                                        <span className="text-[10px] font-medium text-slate-500 tabular-nums">
                                                             s/d {endLabel}
                                                         </span>
                                                     </span>
@@ -841,14 +758,14 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-red-50 !text-red-700 !border-red-200" : ""} ${isHl ? `ring-2 ${meta.hlRing} ${meta.hlGlow}` : ""}`}
+                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""} ${isHl ? `ring-2 ${meta.hlRing}` : ""}`}
                                                 >
                                                     {e.title}
                                                 </Link>
                                             );
                                         })}
                                         {extra > 0 && (
-                                            <span className="text-[10px] text-gray-400 font-medium px-1">
+                                            <span className="text-[10px] text-slate-400 font-medium px-1">
                                                 +{extra} lagi
                                             </span>
                                         )}
@@ -865,7 +782,7 @@ export default function EventCalendar({
                                             );
                                         })}
                                         {dayEvents.some(({ e }) => e.urgent) && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                         )}
                                     </div>
                                 </div>
@@ -883,7 +800,7 @@ export default function EventCalendar({
                 >
                     {events.length === 0 ? (
                         <div className="px-4 py-10 text-center">
-                            <p className="text-sm font-medium text-gray-500">
+                            <p className="text-sm font-medium text-slate-500">
                                 Tidak ada agenda bulan ini.
                             </p>
                             {viewedMonthKey !== currentMonthKey && (
@@ -907,17 +824,17 @@ export default function EventCalendar({
                                 return (
                                     <div
                                         key={col.label}
-                                        className="shrink-0 w-72 bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5"
+                                        className="shrink-0 w-72 bg-slate-50/70 border border-slate-100 rounded-xl p-2.5"
                                     >
                                         <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
                                             <span
                                                 className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`}
                                                 aria-hidden="true"
                                             />
-                                            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">
+                                            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
                                                 {col.label}
                                             </span>
-                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-gray-500 border border-gray-200 tabular-nums whitespace-nowrap">
+                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-slate-500 border border-slate-200 tabular-nums whitespace-nowrap">
                                                 {col.items.length}
                                             </span>
                                         </h3>
@@ -932,7 +849,7 @@ export default function EventCalendar({
                                                     toggleCol(col.label)
                                                 }
                                                 aria-expanded={isOpen}
-                                                className="mt-2 w-full rounded-lg py-1.5 text-[11px] font-medium text-gray-500 hover:bg-white hover:text-gray-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                                className="mt-2 w-full rounded-lg py-1.5 text-[11px] font-medium text-slate-500 hover:bg-white hover:text-slate-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                                             >
                                                 {isOpen
                                                     ? "Sembunyikan"
@@ -967,29 +884,29 @@ function DayPanel({ dateKey, events }) {
     const spanCount = events.filter((e) => e.end && e.end !== e.start).length;
     return (
         <div
-            className="mt-3 rounded-xl border border-[#E2E5EA] bg-gray-50/60 p-3"
+            className="mt-3 rounded-xl border border-[#E2E5EA] bg-slate-50/60 p-3"
             aria-live="polite"
         >
-            <p className="text-xs font-semibold text-gray-900 capitalize">
+            <p className="text-xs font-semibold text-slate-900 capitalize">
                 {label} · {events.length} agenda
             </p>
             {spanCount > 0 && (
-                <p className="mt-0.5 text-[11px] text-gray-500">
+                <p className="mt-0.5 text-[11px] text-slate-500">
                     Menyorot {spanCount} event rentang — sel terwarnai dari awal sampai akhir.
                 </p>
             )}
             {events.length === 0 ? (
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-slate-400">
                     Tidak ada agenda hari ini.
                 </p>
             ) : (
                 <div className="mt-2 space-y-3">
                     {groupByFamily(events).map((g) => (
                         <div key={g.label}>
-                            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 mb-1">
+                            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-1">
                                 <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
                                 {g.label}
-                                <span className="font-normal text-gray-400 tabular-nums">{g.items.length}</span>
+                                <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
                             </p>
                             <ul className="space-y-1.5">
                                 {g.items.map((e) => (
@@ -1044,14 +961,14 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                     className="pt-2.5 pb-1 flex justify-center shrink-0"
                     aria-hidden="true"
                 >
-                    <span className="w-10 h-1 rounded-full bg-gray-300" />
+                    <span className="w-10 h-1 rounded-full bg-slate-300" />
                 </div>
-                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 shrink-0">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 shrink-0">
                     <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 capitalize truncate">
+                        <p className="text-sm font-semibold text-slate-900 capitalize truncate">
                             {label}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-slate-400">
                             {events.length} agenda
                             {dateKey ? ` · ${relDay(dateKey)}` : ""}
                         </p>
@@ -1060,75 +977,40 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                         <button
                             onClick={() => onNavigateMonth(-1)}
                             aria-label="Bulan sebelumnya"
-                            className="h-10 w-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px]"
+                            className="h-10 w-10 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 min-h-[44px] min-w-[44px]"
                         >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M15 19l-7-7 7-7"
-                                />
-                            </svg>
+                            <IconChevronLeft className="w-4 h-4" aria-hidden="true" />
                         </button>
                         <button
                             onClick={() => onNavigateMonth(1)}
                             aria-label="Bulan berikutnya"
-                            className="h-10 w-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px]"
+                            className="h-10 w-10 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 min-h-[44px] min-w-[44px]"
                         >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 5l7 7-7 7"
-                                />
-                            </svg>
+                            <IconChevronRight className="w-4 h-4" aria-hidden="true" />
                         </button>
                         <button
                             onClick={onClose}
+                            autoFocus
                             aria-label="Tutup agenda"
-                            className="h-10 w-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px]"
+                            className="h-10 w-10 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 min-h-[44px] min-w-[44px]"
                         >
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
+                            <IconX className="w-5 h-5" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto overscroll-contain p-2 [scrollbar-width:thin]">
                     {events.length === 0 ? (
-                        <p className="px-2 py-8 text-sm text-gray-400 text-center">
+                        <p className="px-2 py-8 text-sm text-slate-400 text-center">
                             Tidak ada agenda hari ini.
                         </p>
                     ) : (
                         <div className="space-y-3 px-1">
                             {groupByFamily(events).map((g) => (
                                 <div key={g.label}>
-                                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 px-1 mb-1">
+                                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 px-1 mb-1">
                                         <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
                                         {g.label}
-                                        <span className="font-normal text-gray-400 tabular-nums">{g.items.length}</span>
+                                        <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
                                     </p>
                                     <ul className="space-y-1">
                                         {g.items.map((e) => (
@@ -1160,13 +1042,13 @@ function AgendaRow({ event: e, span = null }) {
         <li>
             <Link
                 href={e.url}
-                className={`flex items-center gap-2.5 rounded-xl border-l-2 px-2 py-1.5 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} hover:bg-gray-50`}
+                className={`flex items-center gap-2.5 rounded-xl border-l-2 px-2 py-1.5 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} hover:bg-slate-50`}
             >
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs sm:text-sm text-gray-800 group-hover:text-gray-950">
+                    <span className="block truncate text-xs sm:text-sm text-slate-800 group-hover:text-slate-950">
                         {e.title}
                     </span>
-                    <span className="block mt-0.5 text-[11px] text-gray-400">
+                    <span className="block mt-0.5 text-[11px] text-slate-400">
                         {meta.label} · {range}
                         {span ? ` · ${span}` : ""}
                         {` · ${relDay(e.start)}`}
@@ -1174,17 +1056,17 @@ function AgendaRow({ event: e, span = null }) {
                     </span>
                 </span>
                 {span && (
-                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums whitespace-nowrap">
+                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tabular-nums whitespace-nowrap">
                         {span}
                     </span>
                 )}
                 {e.urgent && (
-                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
                         Segera
                     </span>
                 )}
                 {e.status && (
-                    <span className="hidden sm:inline shrink-0 text-[11px] text-gray-400">
+                    <span className="hidden sm:inline shrink-0 text-[11px] text-slate-400">
                         {e.status}
                     </span>
                 )}
@@ -1209,23 +1091,23 @@ function BoardCard({ event: e }) {
                 href={e.url}
                 className={`block rounded-xl border border-[#E2E5EA] border-l-2 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,30,54,0.04)] transition-all group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} ${
                     e.urgent
-                        ? "!border-l-red-400 bg-red-50/40 hover:bg-red-50/70"
-                        : "hover:border-gray-300 hover:shadow-[0_4px_12px_-6px_rgba(15,30,54,0.25)]"
+                        ? "!border-l-rose-400 bg-rose-50/40 hover:bg-rose-50/70"
+                        : "hover:border-slate-300 hover:shadow-[0_4px_12px_-6px_rgba(15,30,54,0.25)]"
                 }`}
             >
-                <span className="line-clamp-2 text-xs sm:text-[13px] font-medium leading-snug text-gray-900 group-hover:text-gray-950">
+                <span className="line-clamp-2 text-xs sm:text-[13px] font-medium leading-snug text-slate-900 group-hover:text-slate-950">
                     {e.title}
                 </span>
-                <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
+                <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
                     <span className="tabular-nums">{range}</span>
-                    <span className="text-gray-300" aria-hidden="true">
+                    <span className="text-slate-300" aria-hidden="true">
                         ·
                     </span>
                     <span>{relDay(e.start)}</span>
                     {e.status && <span>{e.status}</span>}
                 </span>
                 {e.urgent && (
-                    <span className="mt-1.5 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+                    <span className="mt-1.5 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
                         Segera
                     </span>
                 )}

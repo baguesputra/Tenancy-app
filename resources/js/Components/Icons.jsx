@@ -142,6 +142,22 @@ export function IconChevronDown(props) {
     );
 }
 
+export function IconChevronLeft(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+    );
+}
+
+export function IconChevronRight(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+    );
+}
+
 export function IconExternalLink(props) {
     return (
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
