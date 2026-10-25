@@ -207,6 +207,7 @@ export default function FloorScene3D({ floorPlans = [], units = [] }) {
             {/* 3D Canvas Scene */}
             <Canvas
                 shadows
+                dpr={[1, 1.75]}
                 camera={{
                     position: isWalkMode ? [0, 1.6, 5] : [34, 28, 44],
                     fov: isWalkMode ? 65 : 42,

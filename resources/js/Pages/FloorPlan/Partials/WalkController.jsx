@@ -67,7 +67,11 @@ export default function WalkController({ currentPlan, units = [], onLockChange }
     const bounds = useMemo(() => ({ halfW: planeW / 2, halfH: planeH / 2 }), [planeW, planeH]);
 
     // Bounding box unit untuk collision detection cepat
-    const floorUnits = units.filter((u) => u.floor === currentPlan?.floor);
+    const planFloor = currentPlan?.floor;
+    const floorUnits = useMemo(
+        () => units.filter((u) => u.floor === planFloor),
+        [units, planFloor]
+    );
     const boxes = useMemo(() => {
         return floorUnits
             .filter((u) => Array.isArray(u.polygon_points) && u.polygon_points.length >= 3)

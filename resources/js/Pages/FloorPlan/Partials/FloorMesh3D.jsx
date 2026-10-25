@@ -173,7 +173,11 @@ export default function FloorMesh3D({
     const planeW = imgW * SCALE + 4;
     const planeH = imgH * SCALE + 2;
 
-    const floorUnits = units.filter((u) => u.floor === plan?.floor);
+    const planFloor = plan?.floor;
+    const floorUnits = useMemo(
+        () => units.filter((u) => u.floor === planFloor),
+        [units, planFloor]
+    );
 
     // Tekstur denah dasar (JPG/PNG/SVG) untuk mode Per-Lantai
     const [floorTexture, setFloorTexture] = useState(null);

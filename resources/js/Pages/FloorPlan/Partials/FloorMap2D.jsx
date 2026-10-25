@@ -19,6 +19,7 @@ export default function FloorMap2D({ currentPlan, units = [] }) {
     } = useFloorMapStore();
 
     const transformRef = useRef(null);
+    const lastSyncRef = useRef(0);
 
     const width = currentPlan?.image_width || 1000;
     const height = currentPlan?.image_height || 600;
@@ -61,6 +62,13 @@ export default function FloorMap2D({ currentPlan, units = [] }) {
                 wheel={{ step: 0.1 }}
                 doubleClick={{ disabled: true }}
                 onTransformed={(ref, state) => {
+                    const now = performance.now();
+                    // Throttle sinkronisasi 2D -> 3D: target hanya dipakai saat pindah
+                    // ke mode 3D, jadi update tiap frame gesture tidak ada gunanya dan
+                    // hanya memicu re-render seluruh subscriber store per frame.
+                    if (now - lastSyncRef.current < 120) return;
+                    lastSyncRef.current = now;
+
                     const wrapper = transformRef.current?.instance?.wrapperComponent;
                     const vw = wrapper?.clientWidth || 1000;
                     const vh = wrapper?.clientHeight || 620;
