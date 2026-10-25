@@ -135,6 +135,7 @@ class LooController extends Controller
             'sectionConfigs' => config('loo_sections'),
             'canEditSections' => $this->editableSectionKeys($loo, $request->user()),
             'visibleSectionKeys' => $this->visibleSectionKeys($loo, $request->user()),
+            'readOnlySections' => $this->readOnlySections($loo, $request->user()),
             'canEditLoo' => $request->user()->can('loos.create'),
             'canCancel' => $this->canCancel($loo, $request->user()),
             'files' => $this->accessibleFiles($loo, $request->user()),
@@ -468,13 +469,45 @@ class LooController extends Controller
 
     /**
      * Semua tab divisi selalu terlihat semua role (Legal, Accounting,
-     * Tenant Mgmt) agar progress pengisian terpantau — termasuk role
-     * tenant/divisi tunggal. Yang dibatasi hanya kemampuan mengisi
-     * (canEditSections); tab di luar wewenang tampil read-only.
+     * Tenant Mgmt) agar progress pengisian terpantau. Role divisi tenant
+     * (tenancy_staff/tenant_mgmt) tidak mengisi Legal/Accounting, jadi tab
+     * Accounting yang bukan wewenangnya disembunyikan; tab Legal tetap tampil
+     * read-only (lihat `readOnlySections`).
      */
     private function visibleSectionKeys(Loo $loo, User $user): array
     {
-        return ['legalitas', 'biaya_termin', 'manajemen_tenant'];
+        $all = ['legalitas', 'biaya_termin', 'manajemen_tenant'];
+
+        if (! $this->isTenantRole($user)) {
+            return $all;
+        }
+
+        return array_values(array_filter(
+            $all,
+            fn ($key) => ! in_array($key, config('loo.tenant_view.hidden_sections'), true)
+                || $user->can(config("loo_sections.{$key}.permission"))
+        ));
+    }
+
+    /**
+     * Section yang tak boleh diisi tapi boleh DILIHAT sebagian field-nya oleh
+     * role tertentu (mis. role tenant melihat data badan hukum di Legal tanpa
+     * bisa mengubahnya). Bentuk: `[section_key => [nama field, ...]]`.
+     */
+    private function readOnlySections(Loo $loo, User $user): array
+    {
+        if (! $this->isTenantRole($user)) {
+            return [];
+        }
+
+        return collect(config('loo.tenant_view.readonly_sections'))
+            ->reject(fn ($fields, $key) => $user->can(config("loo_sections.{$key}.permission")))
+            ->all();
+    }
+
+    private function isTenantRole(User $user): bool
+    {
+        return $user->hasAnyRole(config('loo.tenant_view.roles'));
     }
 
     /** Header LOO (data umum/file) hanya bisa diubah sebelum pengukuran ulang. */

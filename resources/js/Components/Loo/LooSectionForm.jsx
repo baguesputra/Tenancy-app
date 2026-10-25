@@ -365,12 +365,72 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null, si
     );
 }
 
-export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null, focusMode = false }) {
+/**
+ * Tampilan nilai read-only (tanpa input) untuk sebagian field section —
+ * dipakai mis. role tenant yang boleh melihat data badan hukum Legal tapi
+ * tidak boleh mengisi. Link file tetap bisa diklik.
+ */
+function PreviewField({ field, value }) {
+    if (field.type === 'file') {
+        return (
+            <FormField label={field.label}>
+                {value
+                    ? <a href={`/storage/${value}`} target="_blank" rel="noreferrer" className="text-sm text-[#0F1E36] underline">Lihat file</a>
+                    : <span className="text-sm text-gray-400">—</span>}
+            </FormField>
+        );
+    }
+
+    if (field.type === 'file_multiple') {
+        const list = Array.isArray(value) ? value : [];
+        return (
+            <FormField label={field.label}>
+                {list.length
+                    ? (
+                        <ul className="space-y-1">
+                            {list.map((p) => (
+                                <li key={p}>
+                                    <a href={`/storage/${p}`} target="_blank" rel="noreferrer" className="text-sm text-[#0F1E36] underline">{p.split('/').pop()}</a>
+                                </li>
+                            ))}
+                        </ul>
+                    )
+                    : <span className="text-sm text-gray-400">—</span>}
+            </FormField>
+        );
+    }
+
+    if (field.type === 'checkbox') {
+        return <FormField label={field.label}><span className="text-sm text-gray-900">{value ? 'Ya' : 'Tidak'}</span></FormField>;
+    }
+
+    if (field.type === 'select') {
+        const label = value == null || value === '' ? '—' : String(value).replaceAll('_', ' ');
+        return <FormField label={field.label}><span className="text-sm text-gray-900">{label}</span></FormField>;
+    }
+
+    const text = value == null || value === '' ? '—' : String(value);
+    return <FormField label={field.label}><span className="text-sm text-gray-900 whitespace-pre-line">{text}</span></FormField>;
+}
+
+export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null, focusMode = false, previewFields = null }) {
     const initial = section?.data ?? {};
     const [data, setData] = useState(initial);
     const [files, setFiles] = useState({});
 
     useEffect(() => setData(section?.data ?? {}), [section?.id]);
+
+    // Mode preview: hanya field terpilih, tampil sebagai nilai statis.
+    if (Array.isArray(previewFields)) {
+        const previewList = (config.fields ?? []).filter((f) => previewFields.includes(f.name));
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {previewList.map((field) => (
+                    <PreviewField key={field.name} field={field} value={initial[field.name]} />
+                ))}
+            </div>
+        );
+    }
 
     // Kunci per field: TTD `signature_{dept}` hanya milik dept-nya;
     // field bersama ikut terkunci kalau user tak pegang dept manapun.

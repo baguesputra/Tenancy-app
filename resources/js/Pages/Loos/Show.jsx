@@ -65,7 +65,7 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, files = [], progress = null, options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, readOnlySections = {}, canEditLoo = false, canCancel = false, files = [], progress = null, options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
     const [cancelModal, setCancelModal] = useState(false);
@@ -311,6 +311,15 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                                             options={options}
                                             submitting={submitting}
                                             onSubmit={submitSection(current.key)}
+                                        />
+                                    ) : readOnlySections[current.key] ? (
+                                        <LooSectionForm
+                                            looId={loo.id}
+                                            sectionKey={current.key}
+                                            config={current.cfg}
+                                            section={current.row}
+                                            options={options}
+                                            previewFields={readOnlySections[current.key]}
                                         />
                                     ) : (
                                         <p className="text-sm text-gray-500 py-4 text-center">

@@ -712,7 +712,7 @@ class LooWorkflowTest extends TestCase
         $this->assertSame('setelah_fitout', $loo->fresh()->status);
     }
 
-    public function test_tab_visibility_shows_all_divisions(): void
+    public function test_tab_visibility_and_tenant_readonly_preview(): void
     {
         $loo = $this->makeLoo();
         $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit', 'loos.legal_submit']);
@@ -723,18 +723,40 @@ class LooWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant'])
-                ->where('canEditSections', fn ($s) => $s->contains('legalitas') && ! $s->contains('biaya_termin')));
+                ->where('canEditSections', fn ($s) => $s->contains('legalitas') && ! $s->contains('biaya_termin'))
+                ->where('readOnlySections', []));
 
+        // Tenant Mgmt: tab Accounting disembunyikan, tab Legal tampil read-only
+        // (hanya 4 field badan hukum), Manajemen Tenant tetap bisa diisi.
         $this->actingAs($tenantMgmt)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant'])
-                ->where('canEditSections', fn ($s) => $s->contains('manajemen_tenant') && ! $s->contains('legalitas')));
+                ->where('visibleSectionKeys', ['legalitas', 'manajemen_tenant'])
+                ->where('canEditSections', fn ($s) => $s->contains('manajemen_tenant') && ! $s->contains('legalitas'))
+                ->where('readOnlySections.legalitas', ['entity_name', 'entity_type', 'npwp', 'nib']));
 
         $this->actingAs($admin)->get("/loos/{$loo->id}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant']));
+                ->where('visibleSectionKeys', ['legalitas', 'biaya_termin', 'manajemen_tenant'])
+                ->where('readOnlySections', []));
+    }
+
+    public function test_tenant_role_legal_preview_is_read_only(): void
+    {
+        $loo = $this->makeLoo();
+        $tenancy = $this->userWithRole('tenancy_staff', ['loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit']);
+
+        $this->actingAs($tenancy)->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visibleSectionKeys', ['legalitas', 'manajemen_tenant'])
+                ->where('readOnlySections.legalitas', ['entity_name', 'entity_type', 'npwp', 'nib']));
+
+        // Preview hanya untuk dilihat — server tetap menolak menulis Legal.
+        $this->actingAs($tenancy)
+            ->post("/loos/{$loo->id}/sections/legalitas", ['entity_name' => 'PT X'])
+            ->assertForbidden();
     }
 
     public function test_fitout_department_edit_restricted_per_role(): void

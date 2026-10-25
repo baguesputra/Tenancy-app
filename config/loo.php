@@ -29,4 +29,19 @@ return [
             'requires_approval' => true,
         ],
     ],
+
+    /*
+     * Kebijakan tampilan untuk role divisi tenant (Tenancy & Tenant Mgmt):
+     * mereka mengisi Manajemen Tenant, tidak mengisi Legal/Accounting.
+     * Section `hidden_sections` disembunyikan dari mereka, sedangkan sebagian
+     * field `readonly_sections` tetap boleh DILIHAT (read-only) tanpa bisa
+     * diubah — mis. data badan hukum untuk keperluan kelengkapan tenant.
+     */
+    'tenant_view' => [
+        'roles' => ['tenancy_staff', 'tenant_mgmt'],
+        'hidden_sections' => ['biaya_termin'],
+        'readonly_sections' => [
+            'legalitas' => ['entity_name', 'entity_type', 'npwp', 'nib'],
+        ],
+    ],
 ];
