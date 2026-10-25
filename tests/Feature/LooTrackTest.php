@@ -92,7 +92,7 @@ class LooTrackTest extends TestCase
             ->assertDontSee('Legal Review');
 
         // submitted_at tersimpan sebagai integer (cast timestamp) — halaman tetap OK.
-        $loo->update(['status' => 'legal_review', 'submitted_at' => now()->timestamp]);
+        $loo->update(['status' => 'pengisian_divisi', 'submitted_at' => now()->timestamp]);
         $this->get("/lacak-loo/{$loo->track_token}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page

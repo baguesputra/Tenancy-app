@@ -53,7 +53,12 @@ class LooTenantSyncTest extends TestCase
         $this->actor->assignRole('tenant_mgmt');
     }
 
-    private function makeLoo(string $status = 'pre_handover'): Loo
+    /**
+     * LOO siap approve: semua fase pipeline sudah disubmit, tinggal tunggu
+     * Deputy GM. Section `pre_fitout`/`ba_handover` masih diisi karena
+     * TenantSyncService membacanya untuk data PIC & tanggal.
+     */
+    private function makeLoo(string $status = 'setelah_fitout'): Loo
     {
         $loo = Loo::create([
             'loo_number' => Loo::generateLooNumber('TST', now()->year),
@@ -120,6 +125,14 @@ class LooTenantSyncTest extends TestCase
             'final_inspection_date' => '2026-09-29',
         ]);
 
+        $this->fillSection($loo, 'fitout_checklist_pre', [
+            'checklist' => [],
+        ]);
+
+        $this->fillSection($loo, 'fitout_checklist_post', [
+            'checklist' => [],
+        ]);
+
         return $loo;
     }
 
@@ -136,13 +149,18 @@ class LooTenantSyncTest extends TestCase
         ]);
     }
 
+    /** Selesaikan LOO: approve Deputy GM — satu-satunya pemicu `completed`. */
+    private function complete(Loo $loo): void
+    {
+        $this->actingAs($this->actor)
+            ->post("/loos/{$loo->id}/fitout/approve")
+            ->assertRedirect();
+    }
+
     public function test_completed_loo_creates_tenant_and_tenancy(): void
     {
         $loo = $this->makeLoo();
-
-        $this->actingAs($this->actor)
-            ->post("/loos/{$loo->id}/transition", ['status' => 'completed'])
-            ->assertRedirect();
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $this->assertNotNull($tenant, 'Tenant harus dibuat saat LOO completed');
@@ -181,8 +199,7 @@ class LooTenantSyncTest extends TestCase
     public function test_completed_loo_tidak_buat_akun_portal(): void
     {
         $loo = $this->makeLoo();
-
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $this->assertNotNull($tenant, 'Tenant tetap dibuat saat LOO completed');
@@ -192,8 +209,7 @@ class LooTenantSyncTest extends TestCase
     public function test_completed_loo_creates_contacts(): void
     {
         $loo = $this->makeLoo();
-
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $types = $tenant->contacts()->pluck('type')->all();
@@ -205,9 +221,12 @@ class LooTenantSyncTest extends TestCase
     public function test_sync_is_idempotent(): void
     {
         $loo = $this->makeLoo();
+        $this->complete($loo);
 
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        // Percobaan approve kedua: LOO sudah completed → ditolak, tidak menggandakan.
+        $this->actingAs($this->actor)
+            ->post("/loos/{$loo->id}/fitout/approve")
+            ->assertStatus(422);
 
         $this->assertSame(1, Tenant::where('loo_id', $loo->id)->count());
         $this->assertSame(1, Tenant::where('loo_id', $loo->id)->first()->tenancies()->count());
@@ -228,7 +247,7 @@ class LooTenantSyncTest extends TestCase
         ]);
 
         $loo = $this->makeLoo();
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $old->refresh();
         $this->assertSame('ended', $old->status);
@@ -236,12 +255,10 @@ class LooTenantSyncTest extends TestCase
 
     public function test_sync_skipped_when_loo_not_completed(): void
     {
-        $loo = $this->makeLoo('accounting_review');
+        // Sudah di fase setelah fitout tapi belum di-approve GM → belum completed.
+        $loo = $this->makeLoo();
 
-        $this->actingAs($this->actor)
-            ->post("/loos/{$loo->id}/transition", ['status' => 'tenant_mgmt_review'])
-            ->assertRedirect();
-
+        $this->assertNotSame('completed', $loo->fresh()->status);
         $this->assertDatabaseCount('tenants', 0);
     }
 
@@ -250,7 +267,7 @@ class LooTenantSyncTest extends TestCase
         $loo = $this->makeLoo();
         $loo->update(['unit_id' => null]);
 
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $this->assertNotNull($tenant, 'Tenant tetap dibuat walau unit belum ada');
@@ -260,7 +277,7 @@ class LooTenantSyncTest extends TestCase
     public function test_loo_backed_tenant_only_allows_pic_edit(): void
     {
         $loo = $this->makeLoo();
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $this->assertTrue($tenant->isLooBacked());
@@ -311,7 +328,7 @@ class LooTenantSyncTest extends TestCase
     public function test_loo_backed_tenant_cannot_be_deleted(): void
     {
         $loo = $this->makeLoo();
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
 
@@ -326,13 +343,14 @@ class LooTenantSyncTest extends TestCase
     public function test_sync_only_reads_submitted_sections(): void
     {
         $loo = $this->makeLoo();
-        // Tandai legalitas belum disubmit
-        $loo->sections()->where('section_key', 'legalitas')->update(['is_submitted' => false]);
+        // `pre_fitout` tidak ikut pipeline, jadi LOO tetap bisa completed.
+        // Tapi karena belum disubmit, TenantSyncService harus mengabaikannya.
+        $loo->sections()->where('section_key', 'pre_fitout')->update(['is_submitted' => false]);
 
-        $this->actingAs($this->actor)->post("/loos/{$loo->id}/transition", ['status' => 'completed']);
+        $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
-        $this->assertNull($tenant->legal_entity_name, 'section belum submit tidak boleh ikut tersinkron');
+        $this->assertNull($tenant->fitout_pic_name, 'section belum submit tidak boleh ikut tersinkron');
         $this->assertSame('Kopi Senja', $tenant->name, 'section submit tetap ikut tersinkron');
     }
 }
