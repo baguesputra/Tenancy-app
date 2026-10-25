@@ -16,6 +16,7 @@ import {
     IconHome,
     IconKey,
     IconMap,
+    IconPanelLeft,
     IconRefresh,
     IconSettings,
     IconStorefront,
@@ -139,7 +140,7 @@ export default function SidebarNav({
                 ${mobileNavOpen ? 'translate-x-0 visible' : '-translate-x-full max-lg:invisible'} lg:translate-x-0`}
         >
             <div className="shrink-0 border-b border-white/10">
-                <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
+                <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-1 gap-1' : 'gap-2 px-3'}`}>
                     <Link
                         href="/dashboard"
                         aria-label={`Dashboard — ${user?.branch?.name ?? 'Semua Cabang'}`}
@@ -172,6 +173,18 @@ export default function SidebarNav({
                         className="lg:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white"
                     >
                         <IconX className="h-5 w-5" />
+                    </button>
+
+                    {/* Ciut/perluas rail — hanya relevan di layar besar */}
+                    <button
+                        type="button"
+                        onClick={onToggleCollapse}
+                        aria-expanded={!collapsed}
+                        aria-label={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
+                        title={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
+                        className="hidden lg:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                    >
+                        <IconPanelLeft className="h-5 w-5" />
                     </button>
                 </div>
             </div>
@@ -222,24 +235,6 @@ export default function SidebarNav({
                     </div>
                 )}
             </nav>
-
-            {/* Satu kontrol ciut/perluas (menggantikan dua tombol terpisah) */}
-            <div className="shrink-0 border-t border-white/10 p-2.5">
-                <button
-                    type="button"
-                    onClick={onToggleCollapse}
-                    aria-expanded={!collapsed}
-                    aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
-                    className={`hidden lg:flex w-full items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-white
-                        ${collapsed ? 'justify-center' : 'gap-3'}`}
-                >
-                    <IconChevronDown
-                        className={`h-5 w-5 shrink-0 transition-transform ${collapsed ? '-rotate-90' : 'rotate-90'}`}
-                        aria-hidden="true"
-                    />
-                    {!collapsed && <span>Ciutkan</span>}
-                </button>
-            </div>
         </aside>
     );
 }
