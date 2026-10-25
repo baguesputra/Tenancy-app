@@ -22,8 +22,8 @@ class DashboardController extends Controller
 {
     /** Status LOO yang masih berjalan di pipeline — dipakai kartu dashboard. */
     private const LOO_IN_PROGRESS = [
-        'legal_review', 'accounting_review', 'tenant_mgmt_review',
-        'measurement', 'ba_handover', 'fitout', 'pre_handover',
+        'draft', 'pengisian_divisi', 'pengukuran_ulang',
+        'sebelum_fitout', 'setelah_fitout',
     ];
 
     public function __construct(
@@ -373,7 +373,7 @@ class DashboardController extends Controller
             }
 
             // LooSection events (milestone per divisi)
-            $sectionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant', 'pre_fitout', 'ba_handover', 'fitout_checklist', 'pre_handover'];
+            $sectionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant', 'pre_handover', 'fitout_checklist_pre', 'fitout_checklist_post'];
             $sections = LooSection::whereIn('section_key', $sectionKeys)
                 ->whereHas('loo', function ($q) use ($branchScoped, $user, $start, $end) {
                     $q->when($branchScoped, fn ($qq) => $qq->where('branch_id', $user->branch_id))

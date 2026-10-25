@@ -132,7 +132,11 @@ class LooTrackController extends Controller
             }
         }
 
-        $departments = config('loo_sections.fitout_checklist_pre.fields.0.departments') ?? [];
+        $departments = collect(['fitout_checklist_pre', 'fitout_checklist_post'])
+            ->flatMap(fn ($key) => config("loo_sections.{$key}.fields.0.departments") ?? [])
+            ->unique('key')
+            ->values()
+            ->all();
         foreach (['fitout_checklist_pre', 'fitout_checklist_post'] as $sectionKey) {
             $savedChecklist = $sections->get($sectionKey)?->data['checklist'] ?? [];
             foreach ($departments as $dept) {
@@ -181,11 +185,10 @@ class LooTrackController extends Controller
     private function phaseLabel(string $status): string
     {
         return match ($status) {
-            'draft', 'legal_review', 'accounting_review', 'tenant_mgmt_review' => 'Pengisian Divisi',
-            'measurement' => 'Measurement',
-            'ba_handover' => 'BA Handover',
-            'fitout' => 'Fitout',
-            'pre_handover' => 'Pre-Handover',
+            'draft', 'pengisian_divisi' => 'Pengisian Divisi',
+            'pengukuran_ulang' => 'Pengukuran Ulang',
+            'sebelum_fitout' => 'Sebelum Fitout',
+            'setelah_fitout' => 'Setelah Fitout',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
             default => $status,

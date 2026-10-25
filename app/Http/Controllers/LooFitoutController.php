@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\Loo;
 use App\Services\BranchScopeService;
+use App\Services\LooProgressService;
 use App\Services\LooSectionService;
 use App\Services\LooStateService;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class LooFitoutController extends Controller
         private BranchScopeService $branchScope,
         private LooStateService $state,
         private LooSectionService $sections,
+        private LooProgressService $progress,
     ) {}
 
     public function index(Request $request)
@@ -32,11 +34,11 @@ class LooFitoutController extends Controller
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->checklist_stage, function ($q, $stage) {
                 if ($stage === 'pre_fitout') {
-                    $q->whereIn('current_stage', ['ba_handover', 'fitout']);
+                    $q->where('status', 'sebelum_fitout');
                 } elseif ($stage === 'post_fitout') {
-                    $q->whereIn('current_stage', ['fitout', 'pre_handover']);
+                    $q->whereIn('status', ['setelah_fitout', 'completed']);
                 } elseif ($stage === 'pre_handover') {
-                    $q->where('current_stage', 'pre_handover');
+                    $q->where('status', 'pengukuran_ulang');
                 }
             });
 
@@ -44,8 +46,8 @@ class LooFitoutController extends Controller
 
         $summary = [
             'total' => (clone $query)->count(),
-            'fitout_active' => (clone $query)->whereIn('current_stage', ['ba_handover', 'fitout', 'pre_handover'])->count(),
-            'waiting_gm' => (clone $query)->where('current_stage', 'fitout')->count(),
+            'fitout_active' => (clone $query)->whereIn('status', ['pengukuran_ulang', 'sebelum_fitout', 'setelah_fitout'])->count(),
+            'waiting_gm' => (clone $query)->where('status', 'setelah_fitout')->count(),
             'completed' => (clone $query)->where('status', 'completed')->count(),
         ];
 
@@ -55,8 +57,7 @@ class LooFitoutController extends Controller
             $post = $sections->get('fitout_checklist_post');
             $preHandover = $sections->get('pre_handover');
 
-            $gmApprovedPre = ! empty($pre?->data['footer']['gm_approved']);
-            $gmApprovedPost = ! empty($post?->data['footer']['gm_approved']);
+            $gmApprovedPost = ! empty($post?->data['checklist']['footer']['gm_approved']);
 
             return [
                 'id' => $loo->id,
@@ -69,16 +70,18 @@ class LooFitoutController extends Controller
                 'checklist_pre' => [
                     'exists' => (bool) $pre,
                     'is_submitted' => (bool) $pre?->is_submitted,
-                    'gm_approved' => $gmApprovedPre,
+                    'unlocked' => $this->progress->isSectionUnlocked($loo, 'fitout_checklist_pre'),
                 ],
                 'checklist_post' => [
                     'exists' => (bool) $post,
                     'is_submitted' => (bool) $post?->is_submitted,
                     'gm_approved' => $gmApprovedPost,
+                    'unlocked' => $this->progress->isSectionUnlocked($loo, 'fitout_checklist_post'),
                 ],
                 'pre_handover' => [
                     'exists' => (bool) $preHandover,
                     'is_submitted' => (bool) $preHandover?->is_submitted,
+                    'unlocked' => $this->progress->isSectionUnlocked($loo, 'pre_handover'),
                 ],
                 'created_at' => $loo->created_at?->format('d/m/Y'),
             ];
@@ -108,9 +111,14 @@ class LooFitoutController extends Controller
         $preHandoverConfig = config('loo_sections.pre_handover');
 
         // Semua pemegang `loos.view` bisa melihat; mengisi dibatasi per
-        // departemen, tanpa gate stage (paralel sejak awal).
+        // departemen + gate pipeline (fase terkunci tidak bisa diisi).
         $terminal = in_array($loo->status, ['completed', 'cancelled'], true);
         $editableDepartments = $this->sections->editableFitoutDepartments($request->user());
+
+        $canEditDepartments = ! $terminal && $editableDepartments !== [];
+        $preUnlocked = $this->progress->isSectionUnlocked($loo, 'fitout_checklist_pre');
+        $postUnlocked = $this->progress->isSectionUnlocked($loo, 'fitout_checklist_post');
+        $preHandoverUnlocked = $this->progress->isSectionUnlocked($loo, 'pre_handover');
 
         return Inertia::render('Loos/FitoutChecklist', [
             'loo' => $loo,
@@ -120,11 +128,12 @@ class LooFitoutController extends Controller
             'preConfig' => $preConfig,
             'postConfig' => $postConfig,
             'preHandoverConfig' => $preHandoverConfig,
-            'canEditPre' => ! $terminal && $editableDepartments !== [],
-            'canEditPost' => ! $terminal && $editableDepartments !== [],
-            'canEditPreHandover' => ! $terminal && $request->user()->can('loos.tenant_mgmt_edit'),
+            'progress' => $this->progress->progress($loo),
+            'canEditPre' => $canEditDepartments && $preUnlocked,
+            'canEditPost' => $canEditDepartments && $postUnlocked,
+            'canEditPreHandover' => ! $terminal && $preHandoverUnlocked && $request->user()->can('loos.tenant_mgmt_edit'),
             'editableDepartments' => $editableDepartments,
-            'canGmAcknowledge' => $request->user()->can('loos.fitout_approve'),
+            'canGmAcknowledge' => ! $terminal && $postUnlocked && $request->user()->can('loos.fitout_approve'),
         ]);
     }
 
@@ -132,19 +141,20 @@ class LooFitoutController extends Controller
     {
         $this->authorizeAccess($loo, $request);
         abort_unless($request->user()->can('loos.fitout_approve'), 403, 'Hanya Deputy GM yang bisa approve.');
+        abort_unless($this->progress->isSectionUnlocked($loo, 'fitout_checklist_post'), 422, 'Checklist Setelah Fitout belum dapat di-approve.');
 
-        $sectionKey = $loo->current_stage === 'fitout' ? 'fitout_checklist_post' : 'fitout_checklist_pre';
-        $configKey = "loo_sections.{$sectionKey}";
-        $config = config($configKey);
+        $sectionKey = 'fitout_checklist_post';
+        $config = config("loo_sections.{$sectionKey}");
         abort_unless($config, 404);
 
         $current = $loo->sections()->where('section_key', $sectionKey)->first();
-        $data = $current?->data ?? [];
+        abort_unless($current?->is_submitted, 422, 'Checklist Setelah Fitout harus disubmit dulu sebelum di-approve.');
 
-        $data['footer']['gm_name'] = $request->user()->name;
-        $data['footer']['gm_approved'] = true;
-        $data['footer']['gm_approved_at'] = now()->toIso8601String();
-        $data['footer']['gm_approved_by'] = $request->user()->id;
+        $data = $current->data ?? [];
+        $data['checklist']['footer']['gm_name'] = $request->user()->name;
+        $data['checklist']['footer']['gm_approved'] = true;
+        $data['checklist']['footer']['gm_approved_at'] = now()->toIso8601String();
+        $data['checklist']['footer']['gm_approved_by'] = $request->user()->id;
 
         $this->state->fillSection(
             $loo,

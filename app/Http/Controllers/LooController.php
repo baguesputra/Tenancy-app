@@ -10,6 +10,7 @@ use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\BranchScopeService;
+use App\Services\LooProgressService;
 use App\Services\LooSectionService;
 use App\Services\LooStateService;
 use App\Services\NotificationService;
@@ -25,31 +26,26 @@ class LooController extends Controller
         private BranchScopeService $branchScope,
         private LooStateService $state,
         private LooSectionService $sections,
+        private LooProgressService $progress,
         private NotificationService $notifications,
     ) {}
 
     private const STATUSES = [
         'draft' => 'Draft',
-        'legal_review' => 'Legal Review',
-        'accounting_review' => 'Accounting Review',
-        'tenant_mgmt_review' => 'Tenant Mgmt Review',
-        'measurement' => 'Measurement',
-        'ba_handover' => 'BA Handover',
-        'fitout' => 'Fitout',
-        'pre_handover' => 'Pre-Handover',
+        'pengisian_divisi' => 'Pengisian Divisi',
+        'pengukuran_ulang' => 'Pengukuran Ulang',
+        'sebelum_fitout' => 'Sebelum Fitout',
+        'setelah_fitout' => 'Setelah Fitout',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
     ];
 
     private const STAGES = [
-        'marketing' => 'Marketing',
-        'legal' => 'Legal',
-        'accounting' => 'Accounting',
-        'tenant_mgmt' => 'Tenant Mgmt',
-        'measurement' => 'Measurement',
-        'ba_handover' => 'BA Handover',
-        'fitout' => 'Fitout',
-        'pre_handover' => 'Pre-Handover',
+        'marketing' => 'Pengisian Divisi',
+        'pre_handover' => 'Pengukuran Ulang',
+        'ba_handover' => 'Sebelum Fitout',
+        'fitout' => 'Setelah Fitout',
+        'completed' => 'Completed',
     ];
 
     private const FILE_LABELS = [
@@ -64,7 +60,7 @@ class LooController extends Controller
 
     public function index(Request $request)
     {
-        $query = Loo::with(['branch:id,name', 'tenant:id,name', 'tenantCategory:id,name', 'marketing:id,name'])
+        $query = Loo::with(['branch:id,name', 'tenant:id,name', 'tenantCategory:id,name', 'marketing:id,name', 'sections:id,loo_id,section_key,is_submitted,data,filled_at,submitted_at'])
             ->when($request->search, fn ($q) => $q->where('loo_number', 'like', "%{$request->search}%")
                 ->orWhere('prospective_tenant_name', 'like', "%{$request->search}%"))
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
@@ -76,18 +72,23 @@ class LooController extends Controller
         $summary = (clone $query)
             ->selectRaw('count(*) as total')
             ->selectRaw('sum(status = "draft") as draft')
-            ->selectRaw('sum(status = "legal_review") as legal_review')
-            ->selectRaw('sum(status = "accounting_review") as accounting_review')
-            ->selectRaw('sum(status = "tenant_mgmt_review") as tenant_mgmt_review')
-            ->selectRaw('sum(status = "measurement") as measurement')
-            ->selectRaw('sum(status = "fitout") as fitout')
+            ->selectRaw('sum(status = "pengisian_divisi") as pengisian_divisi')
+            ->selectRaw('sum(status = "pengukuran_ulang") as pengukuran_ulang')
+            ->selectRaw('sum(status = "sebelum_fitout") as sebelum_fitout')
+            ->selectRaw('sum(status = "setelah_fitout") as setelah_fitout')
             ->selectRaw('sum(status = "completed") as completed')
             ->selectRaw('sum(status = "cancelled") as cancelled')
             ->first()
             ->only(array_keys(self::STATUSES));
 
+        $loos = $query->paginate(15)->withQueryString()->through(function (Loo $loo) {
+            $loo->status_detail = $this->progress->summaryLine($loo);
+
+            return $loo;
+        });
+
         return Inertia::render('Loos/Index', [
-            'loos' => $query->paginate(15)->withQueryString(),
+            'loos' => $loos,
             'summary' => $summary,
             'filters' => $request->only(['search', 'status', 'current_stage']),
             'statusOptions' => $this->options(self::STATUSES),
@@ -142,7 +143,7 @@ class LooController extends Controller
             'canManageTrack' => $this->canManageTrack($loo, $request->user()),
             'track' => $track,
             'files' => $this->accessibleFiles($loo, $request->user()),
-            'transitions' => $this->allowedTransitions($loo),
+            'progress' => $this->progress->progress($loo),
             'options' => [
                 'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
                 'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
@@ -212,7 +213,7 @@ class LooController extends Controller
     public function edit(Loo $loo, Request $request)
     {
         $this->authorizeAccess($loo, $request);
-        abort_unless($loo->status === 'draft', 422, 'LOO yang sudah tidak draft tidak bisa diubah.');
+        abort_unless($this->headerEditable($loo), 422, 'LOO yang sudah masuk tahap pengukuran ulang tidak bisa diubah.');
 
         return Inertia::render('Loos/Create', [
             'loo' => $loo,
@@ -225,7 +226,7 @@ class LooController extends Controller
     public function update(Request $request, Loo $loo)
     {
         $this->authorizeAccess($loo, $request);
-        abort_unless($loo->status === 'draft', 422, 'LOO yang sudah tidak draft tidak bisa diubah.');
+        abort_unless($this->headerEditable($loo), 422, 'LOO yang sudah masuk tahap pengukuran ulang tidak bisa diubah.');
 
         $loo->update([
             ...$this->validated($request),
@@ -244,10 +245,16 @@ class LooController extends Controller
         $config = config("loo_sections.{$key}");
         abort_unless($config, 404);
 
+        // Gate pipeline: fase terkunci tidak bisa diisi sampai fase sebelumnya selesai.
+        abort_unless(
+            $this->progress->isSectionUnlocked($loo, $key),
+            422,
+            'Section ini masih terkunci. Selesaikan tahap sebelumnya dulu.'
+        );
+
         $current = $loo->sections()->where('section_key', $key)->first();
 
         // Checklist toko: semua bisa lihat, isi dibatasi per departemen.
-        // Pengisian tanpa gate stage (paralel sejak awal).
         $editableDepts = in_array($key, LooSectionService::FITOUT_CHECKLIST_KEYS, true)
             ? $this->sections->editableFitoutDepartments($request->user())
             : null;
@@ -286,13 +293,6 @@ class LooController extends Controller
             $request->boolean('submit'),
         );
 
-        if ($request->boolean('submit')) {
-            $next = $this->nextStatusIfStageComplete($loo, $config, $request->user());
-            if ($next) {
-                $this->state->transition($loo, $next, $request->user());
-            }
-        }
-
         return back()->with('success', $section->is_submitted
             ? "Section {$config['label']} disubmit."
             : "Section {$config['label']} disimpan.");
@@ -303,16 +303,11 @@ class LooController extends Controller
         $this->authorizeAccess($loo, $request);
 
         $data = $request->validate([
-            'status' => 'required|in:'.implode(',', array_keys(self::STATUSES)),
-            'cancel_reason' => 'nullable|string|max:1000',
+            'status' => 'required|in:cancelled',
+            'cancel_reason' => 'required|string|max:1000',
         ]);
 
-        if ($data['status'] === 'cancelled') {
-            $request->validate(['cancel_reason' => 'required|string|max:1000']);
-            abort_unless($this->canCancel($loo, $request->user()), 403, 'Hanya pembuat LOO atau admin yang bisa membatalkan.');
-        } else {
-            $this->assertCanTransition($loo, $data['status'], $request->user());
-        }
+        abort_unless($this->canCancel($loo, $request->user()), 403, 'Hanya pembuat LOO atau admin yang bisa membatalkan.');
 
         $this->state->transition($loo, $data['status'], $request->user(), array_filter([
             'cancel_reason' => $data['cancel_reason'] ?? null,
@@ -324,7 +319,7 @@ class LooController extends Controller
     public function destroy(Loo $loo, Request $request)
     {
         $this->authorizeAccess($loo, $request);
-        abort_unless($loo->status === 'draft', 422, 'Hanya LOO draft yang bisa dihapus.');
+        abort_unless($this->headerEditable($loo), 422, 'Hanya LOO yang masih tahap pengisian divisi yang bisa dihapus.');
 
         foreach ($this->fileColumns() as $column) {
             if ($loo->{$column}) {
@@ -465,10 +460,12 @@ class LooController extends Controller
             return [];
         }
 
-        // Tanpa gate stage: tiap section bisa diisi pemilik permission-nya
-        // kapan pun (paralel sejak awal).
+        // Terkunci oleh progres: hanya section fase aktif + fase sebelumnya
+        // (yang belum selesai tetap bisa dilengkapi) yang bisa diisi.
+        $unlocked = $this->progress->unlockedSectionKeys($loo);
+
         return collect(config('loo_sections'))
-            ->filter(fn ($cfg) => $user->can($cfg['permission']))
+            ->filter(fn ($cfg, $key) => in_array($key, $unlocked, true) && $user->can($cfg['permission']))
             ->keys()
             ->values()
             ->all();
@@ -485,75 +482,10 @@ class LooController extends Controller
         return ['legalitas', 'biaya_termin', 'manajemen_tenant'];
     }
 
-    private function allowedTransitions(Loo $loo): array
+    /** Header LOO (data umum/file) hanya bisa diubah sebelum pengukuran ulang. */
+    private function headerEditable(Loo $loo): bool
     {
-        $user = request()->user();
-        $required = config("loo.transition_permission.{$loo->status}");
-
-        if (! $required || ! $user->can($required)) {
-            return [];
-        }
-
-        $forward = $this->nextStatusFor($loo);
-
-        return collect(config("loo.transitions.{$loo->status}") ?? [])
-            ->reject(fn ($to) => $to === 'cancelled')
-            ->filter(fn ($to) => $to !== $forward || $this->stageSectionsSubmitted($loo))
-            ->map(fn ($to) => [
-                'value' => $to,
-                'label' => self::STATUSES[$to],
-                'direction' => $to === $forward ? 'forward' : 'back',
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Server-side guard: transisi hanya oleh divisi pemegang status saat ini.
-     * Forward wajib SEMUA section stage aktif sudah disubmit — legal harus
-     * selesai sebelum accounting bisa maju, walau accounting isi duluan.
-     */
-    private function assertCanTransition(Loo $loo, string $to, User $user): void
-    {
-        $required = config("loo.transition_permission.{$loo->status}");
-
-        if ($required) {
-            abort_unless($user->can($required), 403, 'Bukan wewenang divisi Anda untuk stage ini.');
-        }
-
-        if ($to === $this->nextStatusFor($loo)) {
-            abort_unless($this->stageSectionsSubmitted($loo), 422, 'Section stage ini belum disubmit semua.');
-        }
-    }
-
-    /**
-     * Auto-forward setelah submit section: hanya jika section memang milik
-     * stage aktif, semua section stage sudah disubmit, dan actor pemegang
-     * otoritas stage — paralel mengisi tidak pernah melompatkan status.
-     */
-    private function nextStatusIfStageComplete(Loo $loo, array $config, User $user): ?string
-    {
-        $required = config("loo.transition_permission.{$loo->status}");
-
-        if ($config['stage'] !== $loo->current_stage || ! $required || ! $user->can($required)) {
-            return null;
-        }
-
-        return $this->stageSectionsSubmitted($loo) ? $this->nextStatusFor($loo) : null;
-    }
-
-    private function stageSectionsSubmitted(Loo $loo): bool
-    {
-        $keys = collect(config('loo_sections'))
-            ->filter(fn ($cfg) => $cfg['stage'] === $loo->current_stage)
-            ->keys();
-
-        $terkirim = $loo->sections()
-            ->whereIn('section_key', $keys->all())
-            ->where('is_submitted', true)
-            ->pluck('section_key');
-
-        return $keys->diff($terkirim)->isEmpty();
+        return in_array($loo->status, ['draft', 'pengisian_divisi'], true);
     }
 
     private function canCancel(Loo $loo, User $user): bool
@@ -564,19 +496,6 @@ class LooController extends Controller
     private function canManageTrack(Loo $loo, User $user): bool
     {
         return $this->canCancel($loo, $user);
-    }
-
-    /**
-     * Submit section = LOO maju ke stage berikutnya. Forward transition selalu
-     * ditulis pertama di config, jadi ambil entri pertama tanpa `cancelled`.
-     */
-    private function nextStatusFor(Loo $loo): ?string
-    {
-        $forward = collect(config("loo.transitions.{$loo->status}") ?? [])
-            ->reject(fn ($to) => $to === 'cancelled')
-            ->first();
-
-        return $forward;
     }
 
     private function options(array $map): array

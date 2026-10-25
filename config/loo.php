@@ -1,29 +1,32 @@
 <?php
 
 return [
-    'transitions' => [
-        'draft' => ['legal_review', 'cancelled'],
-        'legal_review' => ['accounting_review', 'cancelled'],
-        'accounting_review' => ['tenant_mgmt_review', 'cancelled'],
-        'tenant_mgmt_review' => ['measurement', 'cancelled'],
-        'measurement' => ['ba_handover', 'cancelled'],
-        'ba_handover' => ['fitout', 'cancelled'],
-        'fitout' => ['pre_handover', 'cancelled'],
-        'pre_handover' => ['completed', 'cancelled'],
-        'completed' => [],
-        'cancelled' => [],
-    ],
-
-    // Otoritas transisi: hanya divisi pemegang status saat ini yang boleh
-    // maju dari status itu (tanpa alur mundur). Forward juga wajib section sudah disubmit.
-    'transition_permission' => [
-        'draft' => 'loos.create',
-        'legal_review' => 'loos.legal_submit',
-        'accounting_review' => 'loos.accounting_submit',
-        'tenant_mgmt_review' => 'loos.tenant_mgmt_submit',
-        'measurement' => 'loos.measurement_edit',
-        'ba_handover' => 'loos.tenant_mgmt_edit',
-        'fitout' => 'loos.fitout_approve',
-        'pre_handover' => 'loos.fitout_approve',
+    /*
+     * Pipeline fase LOO. Urutan array ini = urutan gating: fase hanya bisa
+     * diisi kalau seluruh fase sebelumnya sudah selesai. Status LOO
+     * (`loos.status`) dihitung dari posisi di pipeline ini, bukan dari
+     * klik tombol.
+     *
+     * `requires_approval` menandakan fase baru dianggap selesai setelah
+     * di-approve Deputy GM (dipakai fase terakhir).
+     */
+    'pipeline' => [
+        'pengisian_divisi' => [
+            'label' => 'Pengisian Divisi',
+            'sections' => ['legalitas', 'biaya_termin', 'manajemen_tenant'],
+        ],
+        'pengukuran_ulang' => [
+            'label' => 'Pengukuran Ulang',
+            'sections' => ['pre_handover'],
+        ],
+        'sebelum_fitout' => [
+            'label' => 'Sebelum Fitout',
+            'sections' => ['fitout_checklist_pre'],
+        ],
+        'setelah_fitout' => [
+            'label' => 'Setelah Fitout',
+            'sections' => ['fitout_checklist_post'],
+            'requires_approval' => true,
+        ],
     ],
 ];

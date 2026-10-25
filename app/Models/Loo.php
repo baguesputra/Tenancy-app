@@ -102,14 +102,10 @@ class Loo extends Model
     public static function getStageFromStatus(string $status): string
     {
         return match ($status) {
-            'draft' => 'marketing',
-            'legal_review' => 'legal',
-            'accounting_review' => 'accounting',
-            'tenant_mgmt_review' => 'tenant_mgmt',
-            'measurement' => 'measurement',
-            'ba_handover' => 'ba_handover',
-            'fitout' => 'fitout',
-            'pre_handover' => 'pre_handover',
+            'draft', 'pengisian_divisi' => 'marketing',
+            'pengukuran_ulang' => 'pre_handover',
+            'sebelum_fitout' => 'ba_handover',
+            'setelah_fitout' => 'fitout',
             // Status terminal tidak punya stage sendiri.
             'completed', 'cancelled' => 'completed',
             default => 'marketing',
