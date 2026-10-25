@@ -5,6 +5,8 @@ const colorMap = {
     red: { solid: 'bg-red-100 text-red-800', outline: 'border-red-400 text-red-800', soft: 'bg-red-50 text-red-800' },
     blue: { solid: 'bg-blue-100 text-blue-800', outline: 'border-blue-400 text-blue-800', soft: 'bg-blue-50 text-blue-800' },
     amber: { solid: 'bg-amber-100 text-amber-900', outline: 'border-amber-400 text-amber-900', soft: 'bg-amber-50 text-amber-900' },
+    indigo: { solid: 'bg-indigo-100 text-indigo-800', outline: 'border-indigo-400 text-indigo-800', soft: 'bg-indigo-50 text-indigo-800' },
+    cyan: { solid: 'bg-cyan-100 text-cyan-800', outline: 'border-cyan-400 text-cyan-800', soft: 'bg-cyan-50 text-cyan-800' },
     coral: { solid: 'bg-[#FF6B6B]/15 text-[#D64545]', outline: 'border-[#FF6B6B] text-[#D64545]', soft: 'bg-[#FF6B6B]/10 text-[#D64545]' },
 };
 

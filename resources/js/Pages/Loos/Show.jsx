@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
+import LooStatusCard from '@/Components/Loo/LooStatusCard';
 import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 import Modal from '@/Components/Modal';
 
@@ -13,32 +14,6 @@ const STAGE_LABELS = {
     ba_handover: 'Sebelum Fitout',
     fitout: 'Setelah Fitout',
     completed: 'Selesai',
-};
-
-const STATUS_LABELS = {
-    draft: 'Draft',
-    pengisian_divisi: 'Pengisian Divisi',
-    pengukuran_ulang: 'Pengukuran Ulang',
-    sebelum_fitout: 'Sebelum Fitout',
-    setelah_fitout: 'Setelah Fitout',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-};
-
-const STATUS_COLORS = {
-    draft: 'gray',
-    pengisian_divisi: 'blue',
-    pengukuran_ulang: 'indigo',
-    sebelum_fitout: 'cyan',
-    setelah_fitout: 'amber',
-    completed: 'green',
-    cancelled: 'red',
-};
-
-const PHASE_STATE = {
-    done: { color: 'green', label: 'Selesai' },
-    active: { color: 'blue', label: 'Sedang diisi' },
-    locked: { color: 'gray', label: 'Terkunci' },
 };
 
 // Tab form per divisi. Section fitout (pre/post, pre_handover) tidak tampil
@@ -160,56 +135,8 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                         className="order-first lg:order-2 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto space-y-4"
                         aria-label="Sidebar LOO"
                     >
-                        {/* Kartu Status LOO (pipeline + progres per fase) */}
-                        {progress && (
-                            <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status LOO</p>
-                                    <span className="text-xs text-gray-500">LOO diupload {progress.days_since_upload} hari lalu</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Badge color={STATUS_COLORS[progress.status] ?? 'gray'} size="sm">
-                                        {STATUS_LABELS[progress.status] ?? progress.status}
-                                    </Badge>
-                                    {!terminal && <span className="text-sm text-gray-600">{progress.summary}</span>}
-                                </div>
-
-                                <ol className="mt-4 space-y-3">
-                                    {progress.phases.map((phase, i) => {
-                                        const meta = PHASE_STATE[phase.state] ?? PHASE_STATE.locked;
-                                        return (
-                                            <li key={phase.key} className="border-l-2 border-gray-100 pl-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-medium text-gray-900">{i + 1}. {phase.label}</span>
-                                                    <Badge color={meta.color} size="sm">{meta.label}</Badge>
-                                                </div>
-                                                {phase.state === 'active' && (
-                                                    <ul className="mt-2 space-y-1">
-                                                        {phase.sections.map((s) => (
-                                                            <li key={s.key} className="text-xs text-gray-600">
-                                                                <span className="font-medium text-gray-800">{s.label}</span>
-                                                                {' — '}
-                                                                {s.state === 'submitted'
-                                                                    ? 'disubmit'
-                                                                    : s.state === 'draft'
-                                                                        ? `draft, sisa ${s.remaining} field`
-                                                                        : 'belum diisi'}
-                                                                {s.state !== 'none' && s.updated_days_ago != null && (
-                                                                    <span className="text-gray-400"> · diubah {s.updated_days_ago} hari lalu</span>
-                                                                )}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                                {phase.state === 'locked' && (
-                                                    <p className="text-xs text-gray-400 mt-1">Terkunci sampai tahap sebelumnya selesai.</p>
-                                                )}
-                                            </li>
-                                        );
-                                    })}
-                                </ol>
-                            </div>
-                        )}
+                        {/* Kartu Status LOO (stepper pipeline + progres per fase) */}
+                        {progress && <LooStatusCard progress={progress} loo={loo} sectionBadge={SECTION_BADGE} />}
 
                         {/* Kartu Riwayat di Sidebar */}
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
