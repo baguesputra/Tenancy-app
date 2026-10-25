@@ -65,20 +65,6 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
-function StateIcon({ state }) {
-    if (state === 'submitted') {
-        return (
-            <svg className="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z" clipRule="evenodd" />
-            </svg>
-        );
-    }
-    if (state === 'draft') {
-        return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 mx-[3px]" aria-hidden="true" />;
-    }
-    return <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 shrink-0 mx-[3px]" aria-hidden="true" />;
-}
-
 export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, canManageTrack = false, track = null, files = [], progress = null, options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
@@ -188,84 +174,12 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem] items-start">
-                    {/* Sidebar: Progress Per Divisi + Riwayat */}
+                    {/* Sidebar: Status LOO + Riwayat */}
                     <aside
                         className="order-first lg:order-2 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto space-y-4"
                         aria-label="Sidebar LOO"
                     >
-                        {/* Kartu Progress Per Divisi */}
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Progress Per Divisi</p>
-
-                            <div className="mt-3 mb-2">
-                                <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-                                    <span>Section selesai</span>
-                                    <span className="font-medium text-gray-800">{tabRows.filter((r) => r.state === 'submitted').length}/{tabRows.length} disubmit</span>
-                                </div>
-                                <div
-                                    className="h-1.5 rounded-full bg-gray-100"
-                                    role="progressbar"
-                                    aria-valuenow={tabRows.filter((r) => r.state === 'submitted').length}
-                                    aria-valuemin={0}
-                                    aria-valuemax={tabRows.length}
-                                    aria-label="Bagian selesai"
-                                >
-                                    <div
-                                        className="h-1.5 rounded-full bg-[#0F1E36] transition-all duration-300"
-                                        style={{ width: `${tabRows.length ? (tabRows.filter((r) => r.state === 'submitted').length / tabRows.length) * 100 : 0}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            <ul className="mt-3 space-y-1">
-                                {tabRows.map(({ key, label, state }) => {
-                                    const badge = SECTION_BADGE[state];
-                                    const isActive = key === activeTab;
-                                    return (
-                                        <li key={key}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveTab(key)}
-                                                aria-current={isActive ? 'true' : undefined}
-                                                className={`w-full flex items-center gap-2.5 min-h-11 px-2 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${isActive ? 'bg-gray-50 ring-1 ring-[#0F1E36]' : ''}`}
-                                                aria-label={`${label}, ${badge.label}`}
-                                            >
-                                                <StateIcon state={state} />
-                                                <span className="flex-1 min-w-0">
-                                                    <span className="block text-sm font-medium text-gray-900 truncate">{label}</span>
-                                                </span>
-                                                <Badge color={badge.color} size="sm">{badge.label}</Badge>
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-
-                        {/* Kartu Riwayat di Sidebar */}
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                                Riwayat ({loo.history?.length ?? 0})
-                            </p>
-                            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                                {(loo.history ?? []).map((h) => (
-                                    <div key={h.id} className="flex items-start gap-2.5 text-xs">
-                                        <div className="w-2 h-2 rounded-full bg-[#0F1E36] mt-1 shrink-0" aria-hidden="true" />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-gray-900 font-medium truncate">{ACTION_LABELS[h.action] ?? h.action}</p>
-                                            {h.to_status && <p className="text-[11px] text-gray-500 truncate">{h.from_status} → {h.to_status}</p>}
-                                            <p className="text-[11px] text-gray-400 mt-0.5">{new Date(h.created_at).toLocaleString('id-ID')}{h.user ? ` · ${h.user.name}` : ''}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {(loo.history?.length ?? 0) === 0 && <p className="text-xs text-gray-400">Belum ada riwayat.</p>}
-                            </div>
-                        </div>
-                    </aside>
-
-                    {/* Main Column */}
-                    <div className="lg:order-1 min-w-0 space-y-4">
-                        {/* Status & progres pipeline */}
+                        {/* Kartu Status LOO (pipeline + progres per fase) */}
                         {progress && (
                             <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -316,6 +230,29 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                             </div>
                         )}
 
+                        {/* Kartu Riwayat di Sidebar */}
+                        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                                Riwayat ({loo.history?.length ?? 0})
+                            </p>
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                {(loo.history ?? []).map((h) => (
+                                    <div key={h.id} className="flex items-start gap-2.5 text-xs">
+                                        <div className="w-2 h-2 rounded-full bg-[#0F1E36] mt-1 shrink-0" aria-hidden="true" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-gray-900 font-medium truncate">{ACTION_LABELS[h.action] ?? h.action}</p>
+                                            {h.to_status && <p className="text-[11px] text-gray-500 truncate">{h.from_status} → {h.to_status}</p>}
+                                            <p className="text-[11px] text-gray-400 mt-0.5">{new Date(h.created_at).toLocaleString('id-ID')}{h.user ? ` · ${h.user.name}` : ''}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(loo.history?.length ?? 0) === 0 && <p className="text-xs text-gray-400">Belum ada riwayat.</p>}
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Main Column */}
+                    <div className="lg:order-1 min-w-0 space-y-4">
                         {/* Informasi LOO */}
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Informasi LOO</p>
