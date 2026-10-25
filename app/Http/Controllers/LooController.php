@@ -398,6 +398,23 @@ class LooController extends Controller
             'attachments.*.file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'removed_attachments' => 'nullable|array',
             'removed_attachments.*' => 'integer',
+        ], [
+            'branch_id.required' => 'Cabang wajib dipilih.',
+            'cover_file.mimes' => 'Cover LOO harus berupa PDF.',
+            'cover_file.max' => 'Cover LOO maksimal 10 MB.',
+            'isi_file.mimes' => 'Isi LOO harus berupa PDF.',
+            'isi_file.max' => 'Isi LOO maksimal 10 MB.',
+            'attachments.*.file.mimes' => 'Dokumen pendukung harus berupa PDF, JPG, atau PNG.',
+            'attachments.*.file.max' => 'Setiap dokumen pendukung maksimal 10 MB.',
+            'attachments.*.description.max' => 'Keterangan dokumen maksimal 255 karakter.',
+        ], [
+            'branch_id' => 'cabang',
+            'tenant_id' => 'tenant',
+            'prospective_tenant_name' => 'nama tenant baru',
+            'loo_received_date' => 'tanggal terima LOO',
+            'attachments.*.file' => 'dokumen pendukung',
+            'attachments.*.description' => 'keterangan dokumen',
+            'removed_attachments' => 'daftar dokumen yang dihapus',
         ]);
 
         $this->assertBranchOwnsTenant($request, $data);
@@ -503,6 +520,7 @@ class LooController extends Controller
                 'label' => $attachment->description ?: $attachment->original_name,
                 'original_name' => $attachment->original_name,
                 'description' => $attachment->description,
+                'size' => $attachment->size,
                 'type' => $attachment->mime === 'application/pdf' ? 'pdf' : 'image',
                 'uploader' => $attachment->uploader?->name,
                 'created_at' => $attachment->created_at?->toDateString(),

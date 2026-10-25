@@ -1020,6 +1020,52 @@ class LooWorkflowTest extends TestCase
                 ->where('attachments.0.label', 'npwp.pdf'));
     }
 
+    public function test_attachment_validation_uses_indonesian_message(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->userWithRole('marketing');
+
+        $this->actingAs($user)
+            ->post('/loos/store', [
+                'branch_id' => $user->branch_id,
+                'attachments' => [
+                    ['description' => 'Salah tipe', 'file' => UploadedFile::fake()->create('catatan.txt', 5, 'text/plain')],
+                ],
+            ])
+            ->assertSessionHasErrors(['attachments.0.file' => 'Dokumen pendukung harus berupa PDF, JPG, atau PNG.']);
+    }
+
+    public function test_edit_page_exposes_attachment_size_type_and_url(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->userWithRole('marketing');
+        $loo = $this->makeLoo();
+
+        $path = UploadedFile::fake()->create('denah.png', 7, 'image/png')
+            ->store("loos/{$loo->id}/attachments", 'local');
+        $attachment = $loo->attachments()->create([
+            'path' => $path,
+            'original_name' => 'denah.png',
+            'mime' => 'image/png',
+            'size' => 7168,
+            'description' => 'Denah',
+            'uploaded_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get("/loos/{$loo->id}/edit")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Loos/Create')
+                ->has('attachments', 1)
+                ->where('attachments.0.description', 'Denah')
+                ->where('attachments.0.size', 7168)
+                ->where('attachments.0.type', 'image')
+                ->where('attachments.0.url', "/loos/{$loo->id}/attachments/{$attachment->id}"));
+    }
+
     private function userOnBranch(string $roleName, int $branchId, array $permissions): User
     {
         foreach ($permissions as $p) {
