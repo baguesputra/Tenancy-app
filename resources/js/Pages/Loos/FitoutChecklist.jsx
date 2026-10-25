@@ -33,6 +33,16 @@ function DeptProgressRow({ rows = [], editableDepartments = [] }) {
     );
 }
 
+// Pesan untuk fase yang masih terkunci oleh pipeline.
+function LockedNotice({ label }) {
+    return (
+        <div className="py-8 text-center text-sm text-gray-500">
+            <p className="font-medium text-gray-700">🔒 Terkunci</p>
+            <p className="mt-1">{label} baru bisa diisi setelah tahap sebelumnya selesai.</p>
+        </div>
+    );
+}
+
 export default function FitoutChecklist({
     loo,
     preSection = null,
@@ -41,6 +51,7 @@ export default function FitoutChecklist({
     preConfig = null,
     postConfig = null,
     preHandoverConfig = null,
+    progress = null,
     canEditPre = false,
     canEditPost = false,
     canEditPreHandover = false,
@@ -48,11 +59,15 @@ export default function FitoutChecklist({
     canGmAcknowledge = false,
 }) {
     const [submitting, setSubmitting] = useState(false);
-    
-    // Tentukan active tab awal berdasarkan stage saat ini
-    const initialTab = loo.current_stage === 'pre_handover' 
-        ? 'pre_handover' 
-        : (loo.current_stage === 'fitout' ? 'post' : 'pre');
+
+    const phaseState = (key) => progress?.phases?.find((p) => p.key === key)?.state ?? null;
+    const lockedPreHandover = phaseState('pengukuran_ulang') === 'locked';
+    const lockedPre = phaseState('sebelum_fitout') === 'locked';
+    const lockedPost = phaseState('setelah_fitout') === 'locked';
+
+    // Tab awal = fase pertama yang belum terkunci.
+    const lockedMap = { pre_handover: lockedPreHandover, pre: lockedPre, post: lockedPost };
+    const initialTab = ['pre_handover', 'pre', 'post'].find((t) => !lockedMap[t]) ?? 'pre_handover';
     const [activeTab, setActiveTab] = useState(initialTab);
     const [focusMine, setFocusMine] = useState(false);
 
@@ -170,6 +185,7 @@ export default function FitoutChecklist({
                         }`}
                     >
                         <span>1. Pengukuran Ulang</span>
+                        {lockedPreHandover && <span className="text-xs text-gray-400" aria-label="Terkunci">🔒</span>}
                         <Badge color={preHandoverState === 'submitted' ? 'green' : preHandoverState === 'draft' ? 'amber' : 'gray'} size="sm">
                             {preHandoverState === 'submitted' ? 'Disubmit' : preHandoverState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
@@ -185,6 +201,7 @@ export default function FitoutChecklist({
                         }`}
                     >
                         <span>2. Sebelum Fitout</span>
+                        {lockedPre && <span className="text-xs text-gray-400" aria-label="Terkunci">🔒</span>}
                         <Badge color={preState === 'submitted' ? 'green' : preState === 'draft' ? 'amber' : 'gray'} size="sm">
                             {preState === 'submitted' ? 'Disubmit' : preState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
@@ -200,6 +217,7 @@ export default function FitoutChecklist({
                         }`}
                     >
                         <span>3. Setelah Fitout</span>
+                        {lockedPost && <span className="text-xs text-gray-400" aria-label="Terkunci">🔒</span>}
                         <Badge color={postState === 'submitted' ? 'green' : postState === 'draft' ? 'amber' : 'gray'} size="sm">
                             {postState === 'submitted' ? 'Disubmit' : postState === 'draft' ? 'Draft' : 'Belum'}
                         </Badge>
@@ -239,7 +257,9 @@ export default function FitoutChecklist({
                             </Badge>
                         </div>
 
-                        {preConfig ? (
+                        {lockedPre ? (
+                            <LockedNotice label="Checklist Sebelum Fitout" />
+                        ) : preConfig ? (
                             <>
                                 {(terminal || !canEditPre) && (
                                     <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
@@ -306,7 +326,9 @@ export default function FitoutChecklist({
                             </div>
                         </div>
 
-                        {postConfig ? (
+                        {lockedPost ? (
+                            <LockedNotice label="Checklist Setelah Fitout" />
+                        ) : postConfig ? (
                             <>
                                 {(terminal || !canEditPost) && (
                                     <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
@@ -391,7 +413,9 @@ export default function FitoutChecklist({
                             </Badge>
                         </div>
 
-                        {preHandoverConfig ? (
+                        {lockedPreHandover ? (
+                            <LockedNotice label="Pengukuran Ulang" />
+                        ) : preHandoverConfig ? (
                             <>
                                 {(terminal || !canEditPreHandover) && (
                                     <p className="mb-4 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">

@@ -11,48 +11,30 @@ import EmptyState from '@/Components/EmptyState';
 
 const STATUS_COLORS = {
     draft: 'gray',
-    legal_review: 'blue',
-    accounting_review: 'blue',
-    tenant_mgmt_review: 'blue',
-    measurement: 'purple',
-    ba_handover: 'cyan',
-    fitout: 'green',
-    pre_handover: 'indigo',
+    pengisian_divisi: 'blue',
+    pengukuran_ulang: 'indigo',
+    sebelum_fitout: 'cyan',
+    setelah_fitout: 'amber',
     completed: 'green',
     cancelled: 'red',
 };
 
-// Tahap review tiga divisi tampil sebagai satu fase "Pengisian Divisi"
-// (pengisian paralel, bukan antrean berjenjang).
 const STATUS_LABELS = {
     draft: 'Draft',
-    legal_review: 'Pengisian Divisi',
-    accounting_review: 'Pengisian Divisi',
-    tenant_mgmt_review: 'Pengisian Divisi',
-    measurement: 'Measurement',
-    ba_handover: 'BA Handover',
-    fitout: 'Fitout',
-    pre_handover: 'Pre-Handover',
+    pengisian_divisi: 'Pengisian Divisi',
+    pengukuran_ulang: 'Pengukuran Ulang',
+    sebelum_fitout: 'Sebelum Fitout',
+    setelah_fitout: 'Setelah Fitout',
     completed: 'Completed',
     cancelled: 'Cancelled',
 };
 
 const STAGE_LABELS = {
-    marketing: 'Marketing',
-    legal: 'Legal',
-    accounting: 'Accounting',
-    tenant_mgmt: 'Tenant Mgmt',
-    measurement: 'Measurement',
-    ba_handover: 'BA Handover',
-    fitout: 'Fitout',
-    pre_handover: 'Pre-Handover',
-};
-
-// Label singkat untuk opsi filter status review.
-const REVIEW_SHORT = {
-    legal_review: 'Legal',
-    accounting_review: 'Accounting',
-    tenant_mgmt_review: 'Tenant Mgmt',
+    marketing: 'Pengisian Divisi',
+    pre_handover: 'Pengukuran Ulang',
+    ba_handover: 'Sebelum Fitout',
+    fitout: 'Setelah Fitout',
+    completed: 'Completed',
 };
 
 export default function Index({ loos, summary = {}, filters = {}, statusOptions = [], stageOptions = [] }) {
@@ -67,19 +49,19 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
         router.get('/loos', next, { preserveState: true, preserveScroll: true, replace: true });
     };
 
-    // Kartu ringkasan: tiga status review digabung jadi satu fase pengisian.
+    // Kartu ringkasan mengikuti fase pipeline.
     const num = (v) => Number(v ?? 0);
-    const pengisianCount = num(summary.legal_review) + num(summary.accounting_review) + num(summary.tenant_mgmt_review);
     const summaryCards = [
         { key: 'draft', label: 'Draft', count: num(summary.draft), filterValue: 'draft' },
-        { key: 'pengisian', label: 'Pengisian Divisi', count: pengisianCount, filterValue: '' },
-        { key: 'measurement', label: 'Measurement', count: num(summary.measurement), filterValue: 'measurement' },
-        { key: 'fitout', label: 'Fitout', count: num(summary.fitout), filterValue: 'fitout' },
+        { key: 'pengisian_divisi', label: 'Pengisian Divisi', count: num(summary.pengisian_divisi), filterValue: 'pengisian_divisi' },
+        { key: 'pengukuran_ulang', label: 'Pengukuran Ulang', count: num(summary.pengukuran_ulang), filterValue: 'pengukuran_ulang' },
+        { key: 'sebelum_fitout', label: 'Sebelum Fitout', count: num(summary.sebelum_fitout), filterValue: 'sebelum_fitout' },
+        { key: 'setelah_fitout', label: 'Setelah Fitout', count: num(summary.setelah_fitout), filterValue: 'setelah_fitout' },
         { key: 'completed', label: 'Completed', count: num(summary.completed), filterValue: 'completed' },
         { key: 'cancelled', label: 'Dibatalkan', count: num(summary.cancelled), filterValue: 'cancelled' },
     ];
 
-    const statusOptionLabel = (s) => REVIEW_SHORT[s.value] ? `Pengisian – ${REVIEW_SHORT[s.value]}` : s.label;
+    const statusOptionLabel = (s) => s.label;
 
     const columns = [
         { key: 'loo_number', label: 'No. LOO' },
@@ -104,17 +86,8 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-                    {summaryCards.map((s) => s.filterValue === '' ? (
-                        <div
-                            key={s.key}
-                            className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3"
-                            title="Gabungan Legal, Accounting, Tenant Mgmt"
-                        >
-                            <span className="text-xs text-gray-500">{s.label}</span>
-                            <span className="block text-lg font-semibold text-gray-900 mt-0.5 tabular-nums">{s.count}</span>
-                        </div>
-                    ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
+                    {summaryCards.map((s) => (
                         <button
                             key={s.key}
                             onClick={() => updateFilter('status', filters.status === s.filterValue ? '' : s.filterValue)}
@@ -162,6 +135,7 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                                 <td className="px-5 py-3.5 text-gray-600">{loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'}</td>
                                 <td className="px-5 py-3.5">
                                     <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="sm">{STATUS_LABELS[loo.status] ?? loo.status}</Badge>
+                                    {loo.status_detail && <span className="block text-xs text-gray-500 mt-1 max-w-[18rem]">{loo.status_detail}</span>}
                                 </td>
                                 <td className="px-5 py-3.5 text-gray-500 text-sm">{STAGE_LABELS[loo.current_stage] ?? loo.current_stage}</td>
                                 <td className="px-5 py-3.5 text-gray-500">{loo.branch?.name ?? '—'}</td>
@@ -189,6 +163,7 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-gray-900">{loo.loo_number}</p>
                                     <p className="text-xs text-gray-400 mt-0.5 truncate">{loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'}</p>
+                                    {loo.status_detail && <p className="text-[11px] text-gray-500 mt-1">{loo.status_detail}</p>}
                                 </div>
                                 <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="sm">{STATUS_LABELS[loo.status] ?? loo.status}</Badge>
                             </div>

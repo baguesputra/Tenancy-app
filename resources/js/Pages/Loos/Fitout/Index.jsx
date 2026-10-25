@@ -8,26 +8,24 @@ import Pagination from '@/Components/Pagination';
 import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
 
-const STAGE_LABELS = {
-    marketing: 'Pengisian Divisi',
-    legal: 'Pengisian Divisi',
-    accounting: 'Pengisian Divisi',
-    tenant_mgmt: 'Pengisian Divisi',
-    measurement: 'Measurement',
-    ba_handover: 'BA Handover',
-    fitout: 'Fitout',
-    pre_handover: 'Pengukuran Ulang',
+const STATUS_LABELS = {
+    draft: 'Draft',
+    pengisian_divisi: 'Pengisian Divisi',
+    pengukuran_ulang: 'Pengukuran Ulang',
+    sebelum_fitout: 'Sebelum Fitout',
+    setelah_fitout: 'Setelah Fitout',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
 };
 
-const STAGE_COLORS = {
-    marketing: 'blue',
-    legal: 'blue',
-    accounting: 'blue',
-    tenant_mgmt: 'blue',
-    measurement: 'purple',
-    ba_handover: 'cyan',
-    fitout: 'green',
-    pre_handover: 'indigo',
+const STATUS_COLORS = {
+    draft: 'gray',
+    pengisian_divisi: 'blue',
+    pengukuran_ulang: 'indigo',
+    sebelum_fitout: 'cyan',
+    setelah_fitout: 'amber',
+    completed: 'green',
+    cancelled: 'red',
 };
 
 export default function Index({ loos, summary = {}, branches = [], filters = {} }) {
@@ -46,7 +44,7 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
     const columns = [
         { key: 'loo_number', label: 'No. LOO & Tenant' },
         { key: 'branch', label: 'Cabang / Unit' },
-        { key: 'stage', label: 'Stage LOO' },
+        { key: 'stage', label: 'Status LOO' },
         { key: 'pre_fitout', label: 'Sebelum Fitout' },
         { key: 'post_fitout', label: 'Setelah Fitout' },
         { key: 'pre_handover', label: 'Pengukuran Ulang' },
@@ -137,12 +135,14 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 <span className="text-xs text-gray-500 block">Unit: {row.unit_code}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                <Badge color={STAGE_COLORS[row.current_stage] ?? 'gray'} size="sm">
-                                    {STAGE_LABELS[row.current_stage] ?? row.current_stage}
+                                <Badge color={STATUS_COLORS[row.status] ?? 'gray'} size="sm">
+                                    {STATUS_LABELS[row.status] ?? row.status}
                                 </Badge>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                {row.checklist_pre.is_submitted ? (
+                                {!row.checklist_pre.unlocked ? (
+                                    <Badge color="gray" size="sm">Terkunci</Badge>
+                                ) : row.checklist_pre.is_submitted ? (
                                     <Badge color="green" size="sm">Disubmit</Badge>
                                 ) : row.checklist_pre.exists ? (
                                     <Badge color="amber" size="sm">Draft</Badge>
@@ -151,21 +151,27 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 )}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                <div className="space-y-1">
-                                    {row.checklist_post.is_submitted ? (
-                                        <Badge color="green" size="sm">Disubmit</Badge>
-                                    ) : row.checklist_post.exists ? (
-                                        <Badge color="amber" size="sm">Draft</Badge>
-                                    ) : (
-                                        <Badge color="gray" size="sm">Belum diisi</Badge>
-                                    )}
-                                    {row.checklist_post.gm_approved && (
-                                        <span className="block text-[10px] font-semibold text-emerald-600">✓ GM Approved</span>
-                                    )}
-                                </div>
+                                {!row.checklist_post.unlocked ? (
+                                    <Badge color="gray" size="sm">Terkunci</Badge>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {row.checklist_post.is_submitted ? (
+                                            <Badge color="green" size="sm">Disubmit</Badge>
+                                        ) : row.checklist_post.exists ? (
+                                            <Badge color="amber" size="sm">Draft</Badge>
+                                        ) : (
+                                            <Badge color="gray" size="sm">Belum diisi</Badge>
+                                        )}
+                                        {row.checklist_post.gm_approved && (
+                                            <span className="block text-[10px] font-semibold text-emerald-600">✓ GM Approved</span>
+                                        )}
+                                    </div>
+                                )}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                {row.pre_handover.is_submitted ? (
+                                {!row.pre_handover.unlocked ? (
+                                    <Badge color="gray" size="sm">Terkunci</Badge>
+                                ) : row.pre_handover.is_submitted ? (
                                     <Badge color="green" size="sm">Disubmit</Badge>
                                 ) : row.pre_handover.exists ? (
                                     <Badge color="amber" size="sm">Draft</Badge>

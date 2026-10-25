@@ -8,9 +8,37 @@ import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 import Modal from '@/Components/Modal';
 
 const STAGE_LABELS = {
-    marketing: 'Marketing', legal: 'Legal', accounting: 'Accounting',
-    tenant_mgmt: 'Tenant Mgmt', measurement: 'Measurement',
-    ba_handover: 'BA Handover', fitout: 'Fitout', pre_handover: 'Pre-Handover',
+    marketing: 'Pengisian Divisi',
+    pre_handover: 'Pengukuran Ulang',
+    ba_handover: 'Sebelum Fitout',
+    fitout: 'Setelah Fitout',
+    completed: 'Selesai',
+};
+
+const STATUS_LABELS = {
+    draft: 'Draft',
+    pengisian_divisi: 'Pengisian Divisi',
+    pengukuran_ulang: 'Pengukuran Ulang',
+    sebelum_fitout: 'Sebelum Fitout',
+    setelah_fitout: 'Setelah Fitout',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+};
+
+const STATUS_COLORS = {
+    draft: 'gray',
+    pengisian_divisi: 'blue',
+    pengukuran_ulang: 'indigo',
+    sebelum_fitout: 'cyan',
+    setelah_fitout: 'amber',
+    completed: 'green',
+    cancelled: 'red',
+};
+
+const PHASE_STATE = {
+    done: { color: 'green', label: 'Selesai' },
+    active: { color: 'blue', label: 'Sedang diisi' },
+    locked: { color: 'gray', label: 'Terkunci' },
 };
 
 // Tab form per divisi. Section fitout (pre/post, pre_handover) tidak tampil
@@ -51,7 +79,7 @@ function StateIcon({ state }) {
     return <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 shrink-0 mx-[3px]" aria-hidden="true" />;
 }
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, canManageTrack = false, track = null, files = [], transitions = [], options = {} }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, canEditLoo = false, canCancel = false, canManageTrack = false, track = null, files = [], progress = null, options = {} }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
     const [cancelModal, setCancelModal] = useState(false);
@@ -123,20 +151,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
         window.setTimeout(() => setCopied(false), 2000);
     };
 
-    const changeStatus = (status, reason = null) => {
-        if (status === 'cancelled') {
-            setCancelModal(true);
-            return;
-        }
-        setSubmitting(true);
-        const fd = new FormData();
-        fd.append('status', status);
-        router.post(`/loos/${loo.id}/transition`, fd, {
-            preserveScroll: true,
-            onFinish: () => setSubmitting(false),
-        });
-    };
-
     const confirmCancel = () => {
         setSubmitting(true);
         const fd = new FormData();
@@ -170,9 +184,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                         {fitoutVisible && <Link href={`/loos/${loo.id}/fitout`}><Button variant="secondary">Checklist Fitout</Button></Link>}
                         {track?.url && <Button variant="secondary" onClick={() => setShareModal(true)}>Bagikan</Button>}
                         {canCancel && !terminal && <Button variant="danger" onClick={() => setCancelModal(true)}>Batalkan</Button>}
-                        {transitions.filter(t => t.direction === 'forward').map(t => (
-                            <Button key={t.value} onClick={() => changeStatus(t.value)}>Lanjut ke {t.label}</Button>
-                        ))}
                     </div>
                 </div>
 
@@ -254,6 +265,57 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
 
                     {/* Main Column */}
                     <div className="lg:order-1 min-w-0 space-y-4">
+                        {/* Status & progres pipeline */}
+                        {progress && (
+                            <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status LOO</p>
+                                    <span className="text-xs text-gray-500">LOO diupload {progress.days_since_upload} hari lalu</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Badge color={STATUS_COLORS[progress.status] ?? 'gray'} size="sm">
+                                        {STATUS_LABELS[progress.status] ?? progress.status}
+                                    </Badge>
+                                    {!terminal && <span className="text-sm text-gray-600">{progress.summary}</span>}
+                                </div>
+
+                                <ol className="mt-4 space-y-3">
+                                    {progress.phases.map((phase, i) => {
+                                        const meta = PHASE_STATE[phase.state] ?? PHASE_STATE.locked;
+                                        return (
+                                            <li key={phase.key} className="border-l-2 border-gray-100 pl-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-gray-900">{i + 1}. {phase.label}</span>
+                                                    <Badge color={meta.color} size="sm">{meta.label}</Badge>
+                                                </div>
+                                                {phase.state === 'active' && (
+                                                    <ul className="mt-2 space-y-1">
+                                                        {phase.sections.map((s) => (
+                                                            <li key={s.key} className="text-xs text-gray-600">
+                                                                <span className="font-medium text-gray-800">{s.label}</span>
+                                                                {' — '}
+                                                                {s.state === 'submitted'
+                                                                    ? 'disubmit'
+                                                                    : s.state === 'draft'
+                                                                        ? `draft, sisa ${s.remaining} field`
+                                                                        : 'belum diisi'}
+                                                                {s.state !== 'none' && s.updated_days_ago != null && (
+                                                                    <span className="text-gray-400"> · diubah {s.updated_days_ago} hari lalu</span>
+                                                                )}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                                {phase.state === 'locked' && (
+                                                    <p className="text-xs text-gray-400 mt-1">Terkunci sampai tahap sebelumnya selesai.</p>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ol>
+                            </div>
+                        )}
+
                         {/* Informasi LOO */}
                         <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Informasi LOO</p>
