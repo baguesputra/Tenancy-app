@@ -208,7 +208,7 @@ export default function SidebarNav({
                 {settingsItems.length > 0 && (
                     <div className="mt-2 border-t border-white/10">
                         <NavGroup
-                            group={{ ...SETTINGS_GROUP, items: settingsItems }}
+                            group={{ ...SETTINGS_GROUP, visibleItems: settingsItems }}
                             currentUrl={currentUrl}
                             collapsed={collapsed}
                             active={settingsActive}
