@@ -9,7 +9,7 @@ import NumberInput from '@/Components/Form/NumberInput';
 import SelectInput from '@/Components/Form/SelectInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
-import Badge from '@/Components/Badge';
+import EmptyState from '@/Components/EmptyState';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import StatFilter from '@/Components/StatFilter';
@@ -17,6 +17,16 @@ import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
 import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
+
+function StatusPill({ unit }) {
+    if (!unit.is_active) {
+        return <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 tabular-nums">Nonaktif</span>;
+    }
+    if (unit.is_occupied) {
+        return <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 tabular-nums">Terisi</span>;
+    }
+    return <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 tabular-nums">Kosong</span>;
+}
 
 export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
     const [panelOpen, setPanelOpen] = useState(false);
@@ -113,8 +123,8 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
     const stats = [
         { key: '', label: 'Total Unit', value: summary.total, dot: 'bg-[#0F1E36]' },
         { key: 'occupied', label: 'Terisi', value: summary.occupied, dot: 'bg-emerald-500' },
-        { key: 'vacant', label: 'Kosong', value: summary.vacant, dot: 'bg-blue-500' },
-        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, dot: 'bg-gray-400' },
+        { key: 'vacant', label: 'Kosong', value: summary.vacant, dot: 'bg-amber-500' },
+        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, dot: 'bg-slate-400' },
     ];
 
     const columns = [
@@ -138,7 +148,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                 onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
                 aria-label={`Pratinjau QR ${unit.unit_code}`}
                 title="Pratinjau QR"
-                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-gray-400 hover:text-[#0F1E36] hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-slate-400 hover:text-[#0F1E36] hover:bg-slate-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
             >
                 <IconDocument className="w-4 h-4" />
             </button>
@@ -146,7 +156,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                 onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                 aria-label={`Hapus ${unit.unit_code}`}
                 title="Hapus"
-                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
+                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
             >
                 <IconTrash className="w-4 h-4" />
             </button>
@@ -158,8 +168,9 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
-                        <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Master Unit</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{summary.total} unit terdaftar · {summary.occupied} terisi · {summary.vacant} kosong</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Master Data</p>
+                        <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Master Unit</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">{summary.total} unit terdaftar · {summary.occupied} terisi · {summary.vacant} kosong</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                         <a
@@ -170,7 +181,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 setExporting(true);
                                 setTimeout(() => setExporting(false), 10000);
                             }}
-                            className={`inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-lg border transition-colors ${exporting ? 'text-gray-400 bg-gray-50 border-[#E2E5EA] pointer-events-none' : 'text-gray-700 bg-white border-[#E2E5EA] hover:bg-gray-50'}`}
+                            className={`inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-lg border transition-colors ${exporting ? 'text-slate-400 bg-slate-50 border-[#E2E5EA] pointer-events-none' : 'text-slate-700 bg-white border-[#E2E5EA] hover:bg-slate-50'}`}
                         >
                             {exporting ? 'Menyiapkan PDF…' : 'Export QR (ikut filter, maks 50)'}
                         </a>
@@ -182,7 +193,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
 
                 <FilterBar>
                         <div className="relative flex-1">
-                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
                             </svg>
                             <TextInput
@@ -232,37 +243,39 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(unit); } }}
                                 tabIndex={0}
                                 className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                    editingUnit?.id === unit.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'
+                                    editingUnit?.id === unit.id ? 'bg-[#0F1E36]/5' : 'hover:bg-slate-50'
                                 }`}
                             >
-                                <td className="px-5 py-3.5 font-medium text-gray-900 whitespace-nowrap">{unit.unit_code}</td>
-                                <td className="px-5 py-3.5 text-gray-500 text-sm whitespace-nowrap">
+                                <td className="px-5 py-3.5 font-medium text-slate-900 whitespace-nowrap">{unit.unit_code}</td>
+                                <td className="px-5 py-3.5 text-slate-500 text-sm whitespace-nowrap">
                                     Lt. {unit.floor}{unit.block ? ` · Blok ${unit.block}` : ''} · No. {unit.unit_number}
                                 </td>
-                                <td className="px-5 py-3.5 text-gray-500 text-sm whitespace-nowrap">{unit.size ? `${unit.size} m²` : '—'}</td>
-                                <td className="px-5 py-3.5 text-gray-500 text-sm">{unit.active_tenancy?.tenant?.name ?? '—'}</td>
+                                <td className="px-5 py-3.5 text-slate-500 text-sm whitespace-nowrap">{unit.size ? `${unit.size} m²` : '—'}</td>
+                                <td className="px-5 py-3.5 text-slate-500 text-sm">{unit.active_tenancy?.tenant?.name ?? '—'}</td>
                                 <td className="px-5 py-3.5 text-right">
-                                    {!unit.is_active ? (
-                                        <Badge color="gray">Nonaktif</Badge>
-                                    ) : (
-                                        <Badge color={unit.is_occupied ? 'green' : 'blue'}>
-                                            {unit.is_occupied ? 'Terisi' : 'Kosong'}
-                                        </Badge>
-                                    )}
+                                    <StatusPill unit={unit} />
                                 </td>
                                 <td className="px-5 py-3.5">{renderActions(unit)}</td>
                             </tr>
                         ))}
                         {units.data.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="px-5 py-12 text-center">
-                                    <p className="text-sm font-medium text-gray-700">Belum ada unit ditemukan.</p>
-                                    <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}</p>
-                                    {hasFilter && (
-                                        <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline rounded">
-                                            Reset filter
-                                        </button>
-                                    )}
+                                <td colSpan={6} className="px-5 py-6">
+                                    <EmptyState
+                                        variant={hasFilter ? 'search' : 'empty'}
+                                        size="sm"
+                                        title={hasFilter ? 'Tidak ada unit yang cocok.' : 'Belum ada unit.'}
+                                        description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}
+                                        action={hasFilter ? (
+                                            <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                                Reset filter
+                                            </button>
+                                        ) : (
+                                            <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
+                                                Tambah Unit
+                                            </Button>
+                                        )}
+                                    />
                                 </td>
                             </tr>
                         )}
@@ -274,36 +287,30 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         <div
                             key={unit.id}
                             onClick={() => openEdit(unit)}
-                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            className="bg-white rounded-lg border border-[#E2E5EA] p-4 active:bg-slate-50 cursor-pointer"
                         >
                             <div className="flex items-start justify-between gap-2 mb-1.5">
-                                <p className="text-sm font-semibold text-gray-900">{unit.unit_code}</p>
-                                {!unit.is_active ? (
-                                    <Badge color="gray" size="sm">Nonaktif</Badge>
-                                ) : (
-                                    <Badge color={unit.is_occupied ? 'green' : 'blue'} size="sm">
-                                        {unit.is_occupied ? 'Terisi' : 'Kosong'}
-                                    </Badge>
-                                )}
+                                <p className="text-sm font-semibold text-slate-900">{unit.unit_code}</p>
+                                <StatusPill unit={unit} />
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-slate-500">
                                 Lt. {unit.floor}{unit.block ? ` · Blok ${unit.block}` : ''} · No. {unit.unit_number}
                                 {unit.size ? ` · ${unit.size} m²` : ''}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            <p className="text-xs text-slate-500 mt-0.5 truncate">
                                 {unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}
                             </p>
                             <div className="grid grid-cols-2 gap-2 mt-3">
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
-                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-gray-700 bg-gray-100 active:bg-gray-200 transition-colors flex items-center justify-center"
+                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-slate-700 bg-white border border-[#E2E5EA] active:bg-slate-50 transition-colors flex items-center justify-center"
                                 >
                                     Cetak QR
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
-                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-red-50 active:bg-red-100 transition-colors"
+                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-white border border-[#E2E5EA] active:bg-red-50 transition-colors"
                                 >
                                     Hapus
                                 </button>
@@ -311,13 +318,25 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         </div>
                     ))}
                     {units.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">Belum ada unit ditemukan.</p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}</p>
-                            <Button onClick={openCreate} className="justify-center !py-3 min-h-[48px]">Tambah Unit</Button>
+                        <div className="bg-white rounded-lg border border-[#E2E5EA] px-5 py-6">
+                            <EmptyState
+                                variant={hasFilter ? 'search' : 'empty'}
+                                size="sm"
+                                title={hasFilter ? 'Tidak ada unit yang cocok.' : 'Belum ada unit.'}
+                                description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}
+                                action={hasFilter ? (
+                                    <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                        Reset filter
+                                    </button>
+                                ) : (
+                                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="justify-center !py-3 min-h-[48px]">
+                                        Tambah Unit
+                                    </Button>
+                                )}
+                            />
                         </div>
                     )}
-                    <div className="bg-white rounded-xl border border-[#E2E5EA]">
+                    <div className="bg-white rounded-lg border border-[#E2E5EA]">
                         <Pagination meta={units} links={units.links} />
                     </div>
                 </div>
@@ -370,8 +389,8 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         <FormField compact label="Luas Unit (m²)" error={errors.size}>
                             <NumberInput step="0.01" value={data.size} onChange={(e) => setData('size', e.target.value)} />
                         </FormField>
-                        <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
-                            <span className="text-xs font-medium text-gray-700">Status unit</span>
+                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+                            <span className="text-xs font-medium text-slate-700">Status unit</span>
                             <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
                         </div>
                     </FormSection>
