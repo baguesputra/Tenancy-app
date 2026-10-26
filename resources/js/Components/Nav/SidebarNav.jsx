@@ -66,8 +66,8 @@ const SECTIONS = [
     },
 ];
 
-// Pengaturan dipisah dan dipin ke dasar rail supaya tidak ikut tergulir
-// bersama daftar domain.
+// Pengaturan ikut dalam daftar yang sama — bukan dipin di dasar rail, agar
+// seluruh navigasi memakai satu scroll container dan satu ritme seksi.
 const SETTINGS_SECTION = {
     key: 'pengaturan',
     label: 'Pengaturan',
@@ -98,6 +98,9 @@ export default function SidebarNav({
         }))
         .filter((section) => section.visibleItems.length > 0);
     const settingsItems = SETTINGS_SECTION.items.filter((item) => can(item.permission));
+    if (settingsItems.length > 0) {
+        sections.push({ ...SETTINGS_SECTION, visibleItems: settingsItems });
+    }
 
     return (
         <aside
@@ -161,34 +164,22 @@ export default function SidebarNav({
                 <IconPanelLeft className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
 
-            {/* Dua blok: daftar domain (boleh tergulir) + Pengaturan yang dipin
-                di dasar rail. `min-h-0` wajib agar blok atas benar-benar bisa
+            {/* Satu scroll container untuk seluruh navigasi, termasuk
+                Pengaturan. `min-h-0` wajib agar blok ini benar-benar bisa
                 menyusut dan menyerahkan sisa tinggi ke scroll container. */}
-            <div className="flex-1 min-h-0 flex flex-col">
-                <nav className="flex-1 min-h-0 px-2.5 py-3 thin-scrollbar overflow-y-auto">
-                    <div className="space-y-3">
-                        {sections.map((section, index) => (
-                            <NavSection
-                                key={section.key}
-                                section={section}
-                                currentUrl={currentUrl}
-                                collapsed={collapsed}
-                                showDivider={collapsed && index > 0}
-                            />
-                        ))}
-                    </div>
-                </nav>
-
-                {settingsItems.length > 0 && (
-                    <div className="shrink-0 border-t border-white/10 px-2.5 py-2">
+            <nav className="flex-1 min-h-0 px-2.5 py-3 thin-scrollbar overflow-y-auto">
+                <div className="space-y-3">
+                    {sections.map((section, index) => (
                         <NavSection
-                            section={{ ...SETTINGS_SECTION, visibleItems: settingsItems }}
+                            key={section.key}
+                            section={section}
                             currentUrl={currentUrl}
                             collapsed={collapsed}
+                            showDivider={collapsed && index > 0}
                         />
-                    </div>
-                )}
-            </div>
+                    ))}
+                </div>
+            </nav>
         </aside>
     );
 }
