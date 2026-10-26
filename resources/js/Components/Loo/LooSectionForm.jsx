@@ -188,7 +188,7 @@ function Repeater({ field, rows, onChange }) {
     );
 }
 
-function ChecklistTable({ field, value, onChange, editableDepartments = null, signatures = {}, signatureValues = {}, onSignatureChange = null, idPrefix = '', focusMode = false }) {
+function ChecklistTable({ field, value, onChange, editableDepartments = null, signatures = {}, signatureValues = {}, onSignatureChange = null, idPrefix = '' }) {
     const v = value ?? {};
 
     const isDeptEditable = (deptKey) => !editableDepartments || editableDepartments.includes(deptKey);
@@ -234,7 +234,7 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null, si
                         inert={!deptEditable}
                         className={`border border-[#E2E5EA] rounded-xl overflow-hidden scroll-mt-24 ${deptEditable
                             ? ''
-                            : `opacity-70 grayscale cursor-not-allowed${focusMode ? ' opacity-40' : ''}`}`}
+                            : 'opacity-70 grayscale cursor-not-allowed'}`}
                     >
                         <p className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide flex items-center justify-between gap-2 border-b ${deptEditable ? 'bg-emerald-50 text-emerald-900 border-emerald-100' : 'bg-gray-50 text-[#0F1E36] border-gray-100'}`}>
                             <span>{dept.label}</span>
@@ -419,7 +419,7 @@ function PreviewField({ field, value }) {
     return <FormField label={field.label}><span className="text-sm text-gray-900 whitespace-pre-line">{text}</span></FormField>;
 }
 
-export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null, focusMode = false, previewFields = null }) {
+export default function LooSectionForm({ looId, sectionKey, config, section, options, submitting, onSubmit, readOnly = false, editableDepartments = null, previewFields = null }) {
     const initial = section?.data ?? {};
     const [data, setData] = useState(initial);
     const [files, setFiles] = useState({});
@@ -506,7 +506,6 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                                         )}
                                         onSignatureChange={(deptKey, file) => setValue(`signature_${deptKey}`, file)}
                                         idPrefix={sectionKey}
-                                        focusMode={focusMode}
                                     />
                                 ) : (
                                     <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} looId={looId} />

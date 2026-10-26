@@ -202,7 +202,6 @@ function ChecklistPanel({
     editableDepartments = [],
     loo,
     submitting,
-    focusMine,
     onSubmit,
     headerBadges = null,
     footer = null,
@@ -263,7 +262,6 @@ function ChecklistPanel({
                         submitting={submitting}
                         readOnly={Boolean(readOnlyNotice)}
                         editableDepartments={editableDepartments}
-                        focusMode={focusMine}
                         onSubmit={onSubmit}
                     />
                     {footer}
@@ -317,7 +315,6 @@ export default function FitoutChecklist({
         ?? STEPS.find((s) => !lockedOf(s.key))?.key
         ?? 'pre_handover';
     const [activeTab, setActiveTab] = useState(initialTab);
-    const [focusMine, setFocusMine] = useState(false);
 
     const terminal = ['completed', 'cancelled'].includes(loo.status);
 
@@ -465,13 +462,6 @@ export default function FitoutChecklist({
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
                     <div className="min-w-0">
-                        <nav aria-label="Breadcrumb" className="flex items-center gap-2 mb-1 text-xs">
-                            <Link href="/fitout-checklists" className="font-medium text-slate-500 hover:text-slate-900 transition-colors">
-                                Hub Checklist Operasional
-                            </Link>
-                            <span className="text-slate-300" aria-hidden="true">/</span>
-                            <span className="font-medium text-slate-500 truncate tabular-nums">{loo.loo_number}</span>
-                        </nav>
                         <div className="flex items-center gap-2 flex-wrap">
                             <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 truncate">
                                 Checklist Operasional
@@ -520,25 +510,6 @@ export default function FitoutChecklist({
                     prerequisiteFor={prerequisiteFor}
                 />
 
-                {(editableDepartments ?? []).length > 0 && (
-                    <div className="mt-3 flex justify-end">
-                        <button
-                            type="button"
-                            onClick={() => setFocusMine((v) => !v)}
-                            aria-pressed={focusMine}
-                            title="Redupkan ekstra bagian di luar wewenang Anda"
-                            className={`inline-flex items-center gap-1.5 px-3 min-h-9 rounded-full text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${
-                                focusMine
-                                    ? 'bg-[#0F1E36] text-white border-[#0F1E36]'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                            }`}
-                        >
-                            {focusMine && <IconCheck className="w-3.5 h-3.5" aria-hidden="true" />}
-                            Fokus bagian saya
-                        </button>
-                    </div>
-                )}
-
                 <ChecklistPanel
                     step={activeStep}
                     state={stateOf(activeTab)}
@@ -552,7 +523,6 @@ export default function FitoutChecklist({
                     editableDepartments={editableDepartments}
                     loo={loo}
                     submitting={submitting}
-                    focusMine={focusMine}
                     onSubmit={(args, submit) => submitSection(args, submit, activeStep.sectionKey)}
                     headerBadges={activeTab === 'post' && gmApprovedPost ? <Badge color="green" size="sm">Disetujui Deputy GM</Badge> : null}
                     footer={activeTab === 'post' ? gmFooter : null}

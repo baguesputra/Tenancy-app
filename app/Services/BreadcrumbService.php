@@ -27,6 +27,7 @@ class BreadcrumbService
             'loos.index' => [$webHome, self::item('LOO', '/loos')],
             'loos.create' => [$webHome, self::item('LOO', '/loos'), self::item('Tambah')],
             'loos.show' => [$webHome, self::item('LOO', '/loos'), self::item(self::looLabel($request))],
+            'loos.fitout' => [$webHome, self::item('LOO', '/loos'), self::item(self::looLabel($request)), self::item('Checklist Operasional')],
             'categories.index' => [$webHome, self::item('Kategori', '/categories')],
             'sessions.index' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions')],
             'sessions.current' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item('Sesi Berjalan')],
