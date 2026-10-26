@@ -449,6 +449,29 @@ class LooWorkflowTest extends TestCase
         Storage::disk('public')->assertExists($data['ba_serah_terima_ruangan_path']);
     }
 
+    public function test_upload_wins_when_post_and_files_share_the_same_key(): void
+    {
+        // Regresi: FormData bisa mengirim key sama dua kali (string "{}" dari
+        // JSON.stringify(File) + file asli). `$request->all()` menaruh $_POST
+        // paling akhir, jadi tanpa normalisasi field dianggap bukan file.
+        Storage::fake('public');
+        $loo = $this->makeLoo();
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
+        $this->submitDivisions($loo);
+
+        $this->actingAs($tm)->call(
+            'POST',
+            "/loos/{$loo->id}/sections/pre_handover",
+            ['ba_pengukuran_ulang_path' => '{}'],
+            [],
+            ['ba_pengukuran_ulang_path' => UploadedFile::fake()->create('pengukuran.pdf', 10, 'application/pdf')],
+        )->assertSessionHasNoErrors()->assertRedirect();
+
+        $stored = $loo->sections()->where('section_key', 'pre_handover')->first()->data;
+        $this->assertIsString($stored['ba_pengukuran_ulang_path']);
+        Storage::disk('public')->assertExists($stored['ba_pengukuran_ulang_path']);
+    }
+
     public function test_sebelum_fitout_locked_until_pengukuran_ulang_submitted(): void
     {
         $loo = $this->makeLoo();

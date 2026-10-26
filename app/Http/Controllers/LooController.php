@@ -279,6 +279,11 @@ class LooController extends Controller
 
         $current = $loo->sections()->where('section_key', $key)->first();
 
+        // Nama field duplikat (string di $_POST + file di $_FILES): file harus menang.
+        // `$request->all()` menaruh $_POST paling akhir di array_replace_recursive,
+        // sehingga upload bisa terbaca sebagai string "{}" dan gagal rule `file`.
+        $request->replace(array_replace_recursive($request->all(), $request->allFiles()));
+
         // Checklist toko: semua bisa lihat, isi dibatasi per departemen.
         $editableDepts = in_array($key, LooSectionService::FITOUT_CHECKLIST_KEYS, true)
             ? $this->sections->editableFitoutDepartments($request->user())

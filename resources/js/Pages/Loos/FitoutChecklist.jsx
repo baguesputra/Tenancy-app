@@ -78,6 +78,9 @@ export default function FitoutChecklist({
         const fd = new FormData();
         Object.entries(data).forEach(([k, v]) => {
             if (v === null || v === undefined) return;
+            // File sudah ditangani loop `files` di bawah. Kalau ikut di-JSON-kan ke
+            // key yang sama, Laravel memprioritaskan $_POST atas $_FILES → "must be a file".
+            if (v instanceof File || (Array.isArray(v) && v.some((x) => x instanceof File))) return;
             if (typeof v === 'object') fd.append(k, JSON.stringify(v));
             else fd.append(k, v);
         });
