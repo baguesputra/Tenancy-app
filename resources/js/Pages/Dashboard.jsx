@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import {
     IconBuilding, IconDocument, IconClipboard, IconContract,
-    IconArrowRight, IconRefresh,
+    IconArrowRight,
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
 import EmptyState from '@/Components/EmptyState';
@@ -35,7 +35,7 @@ function formatRelativeTime(dateStr) {
 
 export default function Dashboard({ stats, actionNeeded, recentActivity, calendar }) {
     const { auth } = usePage().props;
-    const { refresh, isRefreshing, formattedLastUpdated, setRefreshCallback } = useAutoRefresh(true, 60000);
+    const { setRefreshCallback } = useAutoRefresh(true, 60000);
 
     useEffect(() => {
         setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity'] }));
@@ -59,59 +59,48 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div className="min-w-0">
-                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Ringkasan Operasional</p>
+                        <h1 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                             {getGreeting()}, {auth.user?.name?.split(' ')[0]}
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                            <span className="text-gray-300 mx-2" aria-hidden="true">·</span>
+                            <span className="text-slate-300 mx-2" aria-hidden="true">·</span>
                             {auth.user?.branch?.name ?? 'Semua Cabang'}
                         </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <span className="hidden md:inline text-xs text-gray-400">Diperbarui {formattedLastUpdated}</span>
-                        <button
-                            onClick={refresh}
-                            disabled={isRefreshing}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-[#E2E5EA] rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
-                            aria-label="Muat ulang data"
-                        >
-                            <IconRefresh className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
-                            Segarkan
-                        </button>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                        <span className="text-xs text-slate-400">Data otomatis · tiap 1 menit</span>
                     </div>
                 </div>
 
-                <div className={`mt-5 grid grid-cols-2 ${canLoo ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-3 sm:gap-4`}>
-                    <StatCard
+                <section aria-label="Indikator utama" className={`mt-5 grid grid-cols-2 ${canLoo ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-px bg-[#E2E5EA] rounded-lg border border-[#E2E5EA] overflow-hidden`}>
+                    <KpiCell
                         icon={<IconBuilding className="w-5 h-5" aria-hidden="true" />}
-                        tint="bg-[#0F1E36]/5 text-[#0F1E36]"
                         label="Tenant Aktif"
                         value={stats?.total_tenants ?? 0}
                         hint={`${total} unit dikelola`}
                         href="/tenants"
                     />
-                    <StatCard
+                    <KpiCell
                         icon={<IconDocument className="w-5 h-5" aria-hidden="true" />}
-                        tint="bg-amber-50 text-amber-600"
                         label="Izin Antre"
                         value={stats?.pending_permits ?? 0}
                         hint="Menunggu persetujuan"
                         href="/permit-requests"
                         alert={(stats?.pending_permits ?? 0) > 0}
                     />
-                    <StatCard
+                    <KpiCell
                         icon={<IconClipboard className="w-5 h-5" aria-hidden="true" />}
-                        tint="bg-blue-50 text-blue-600"
                         label="Sesi Sidak Aktif"
                         value={stats?.active_sessions ?? 0}
                         hint="Sedang berjalan"
                         href="/inspection-sessions"
                     />
                     {canLoo && (
-                        <StatCard
+                        <KpiCell
                             icon={<IconContract className="w-5 h-5" aria-hidden="true" />}
-                            tint="bg-amber-50 text-amber-700"
                             label="LOO Diproses"
                             value={stats?.pending_loos ?? 0}
                             hint={`${stats?.total_loos ?? 0} total LOO`}
@@ -119,29 +108,29 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                             alert={(stats?.pending_loos ?? 0) > 0}
                         />
                     )}
-                </div>
+                </section>
 
-                <section aria-label="Okupansi unit" className="mt-4 bg-white rounded-2xl border border-[#E2E5EA] p-5 sm:p-6">
+                <section aria-label="Okupansi unit" className="mt-4 bg-white rounded-lg border border-[#E2E5EA] p-5 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-5">
                         <div className="flex items-center gap-4 min-w-0 flex-1">
-                            <p className="text-4xl sm:text-5xl font-bold font-mono tabular-nums text-gray-900 leading-none">
-                                {percentage}<span className="text-xl text-gray-400">%</span>
+                            <p className="text-4xl sm:text-5xl font-semibold font-mono tabular-nums text-slate-900 leading-none">
+                                {percentage}<span className="text-xl text-slate-400">%</span>
                             </p>
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-900">Tingkat hunian mal</p>
-                                <p className="text-xs text-gray-500 mt-0.5">Target operasional ≥ 85% · {vacant} unit kosong</p>
+                                <p className="text-sm font-semibold text-slate-900">Tingkat hunian mal</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Target operasional ≥ 85% · {vacant} unit kosong</p>
                             </div>
                         </div>
                         <div className="flex-1 w-full">
-                            <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={percentage} aria-valuemin="0" aria-valuemax="100" aria-label={`Okupansi ${percentage} persen`}>
+                            <div className="h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={percentage} aria-valuemin="0" aria-valuemax="100" aria-label={`Okupansi ${percentage} persen`}>
                                 <div
-                                    className={`h-full rounded-full transition-all duration-500 ${percentage >= 85 ? 'bg-emerald-500' : percentage >= 60 ? 'bg-[#0F1E36]' : 'bg-amber-500'}`}
+                                    className="h-full rounded-full bg-[#0F1E36] transition-all duration-500"
                                     style={{ width: `${percentage}%` }}
                                 />
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                                <span><strong className="font-mono tabular-nums text-gray-800">{occupied}</strong> terisi</span>
-                                <span><strong className="font-mono tabular-nums text-gray-800">{vacant}</strong> kosong</span>
+                            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                                <span><strong className="font-mono tabular-nums text-slate-800">{occupied}</strong> terisi</span>
+                                <span><strong className="font-mono tabular-nums text-slate-800">{vacant}</strong> kosong</span>
                                 <Link href="/units" className="font-medium text-[#0F1E36] hover:underline rounded focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
                                     Detail unit
                                 </Link>
@@ -153,14 +142,14 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                 <EventCalendar calendar={calendar} />
 
                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                    <section aria-label="Antrian persetujuan" className="bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                    <section aria-label="Antrian persetujuan" className="bg-white rounded-lg border border-[#E2E5EA] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[#E2E5EA] flex items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-sm font-semibold text-gray-900">Antrian Persetujuan</h2>
-                                <p className="text-xs text-gray-400 mt-0.5">Urut tertua — kerjakan dari atas</p>
+                                <h2 className="text-sm font-semibold text-slate-900">Antrian Persetujuan</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">Urut tertua — kerjakan dari atas</p>
                             </div>
                             {queue.length > 0 && (
-                                <span className="inline-flex items-center min-w-[24px] h-6 px-2 rounded-full bg-[#FF6B6B]/10 text-[#FF6B6B] text-xs font-bold font-mono justify-center">
+                                <span className="inline-flex items-center min-w-[24px] h-6 px-2 rounded-full bg-[#FF6B6B]/10 text-[#D64545] text-xs font-semibold font-mono justify-center">
                                     {queue.length}
                                 </span>
                             )}
@@ -191,28 +180,24 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                                 className="py-6"
                             />
                         ) : (
-                            <ol className="divide-y divide-gray-100">
-                                {queue.map((item, i) => (
+                            <ol className="divide-y divide-[#E2E5EA]">
+                                {queue.map((item) => (
                                     <li key={item.id}>
                                         <Link
                                             href={`/permit-requests/${item.id}`}
-                                            className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
+                                            className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
                                         >
-                                            <span className="flex flex-col items-center gap-1 shrink-0" aria-hidden="true">
-                                                <span className="font-mono text-xs font-bold text-gray-300">{String(i + 1).padStart(2, '0')}</span>
-                                                {i === 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B6B] animate-pulse" />}
-                                            </span>
                                             <span className="flex-1 min-w-0">
-                                                <span className="block font-mono text-sm font-semibold text-gray-900 truncate">{item.permit_number}</span>
-                                                <span className="block text-xs text-gray-400 mt-0.5 truncate">
-                                                    {item.store_name} — <span className="text-gray-600 font-medium">{item.step_label}</span>
+                                                <span className="block font-mono text-sm font-semibold text-slate-900 truncate">{item.permit_number}</span>
+                                                <span className="block text-xs text-slate-400 mt-0.5 truncate">
+                                                    {item.store_name} — <span className="text-slate-600 font-medium">{item.step_label}</span>
                                                     {item.requested_at && <span> · {formatRelativeTime(item.requested_at)}</span>}
                                                 </span>
                                             </span>
-                                            <span className="hidden sm:inline-flex shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                                            <span className="hidden sm:inline-flex shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
                                                 Antre
                                             </span>
-                                            <IconArrowRight className="w-4 h-4 shrink-0 text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all" aria-hidden="true" />
+                                            <IconArrowRight className="w-4 h-4 shrink-0 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" aria-hidden="true" />
                                         </Link>
                                     </li>
                                 ))}
@@ -220,36 +205,34 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         )}
                     </section>
 
-                    <section aria-label="Aktivitas terbaru" className="bg-white rounded-2xl border border-[#E2E5EA] overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                    <section aria-label="Aktivitas terbaru" className="bg-white rounded-lg border border-[#E2E5EA] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[#E2E5EA] flex items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-sm font-semibold text-gray-900">Aktivitas Terbaru</h2>
-                                <p className="text-xs text-gray-400 mt-0.5">Izin · Sidak · Kontrak · LOO</p>
+                                <h2 className="text-sm font-semibold text-slate-900">Aktivitas Terbaru</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">Izin · Sidak · Kontrak · LOO</p>
                             </div>
                             <Link href="/permit-requests" className="text-xs font-medium text-[#0F1E36] hover:underline rounded focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
                                 Semua
                             </Link>
                         </div>
                         {activities.length === 0 ? (
-                            <p className="px-5 py-10 text-sm text-gray-400 text-center">Belum ada aktivitas tercatat.</p>
+                            <p className="px-5 py-10 text-sm text-slate-400 text-center">Belum ada aktivitas tercatat.</p>
                         ) : (
-                            <ul className="divide-y divide-gray-100">
+                            <ul className="divide-y divide-[#E2E5EA]">
                                 {activities.map((item, idx) => (
                                     <li key={`${item.id}-${idx}`}>
                                         <Link
                                             href={item.url}
-                                            className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors group focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
+                                            className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors group focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
                                         >
-                                            <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[11px] font-bold ${typeTint(item.type)}`} aria-hidden="true">
-                                                {(activityLabel[item.type] ?? '?').slice(0, 1)}
-                                            </span>
+                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${typeDot(item.type)}`} aria-hidden="true" />
                                             <span className="flex-1 min-w-0">
-                                                <span className="block text-sm text-gray-800 truncate group-hover:text-gray-950">{item.title}</span>
-                                                <span className="block text-xs text-gray-400 mt-0.5 truncate">
+                                                <span className="block text-sm text-slate-800 truncate group-hover:text-slate-950">{item.title}</span>
+                                                <span className="block text-xs text-slate-400 mt-0.5 truncate">
                                                     {activityLabel[item.type] ?? item.type} · {statusLabel[item.status] ?? item.status} · {formatRelativeTime(item.time)}
                                                 </span>
                                             </span>
-                                            <IconArrowRight className="w-4 h-4 shrink-0 text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all" aria-hidden="true" />
+                                            <IconArrowRight className="w-4 h-4 shrink-0 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" aria-hidden="true" />
                                         </Link>
                                     </li>
                                 ))}
@@ -262,28 +245,28 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
     );
 }
 
-function typeTint(type) {
+function typeDot(type) {
     return {
-        permit: 'bg-blue-50 text-blue-700',
-        inspection: 'bg-emerald-50 text-emerald-700',
-        tenancy: 'bg-purple-50 text-purple-700',
-        loo: 'bg-amber-50 text-amber-700',
-    }[type] ?? 'bg-gray-100 text-gray-500';
+        permit: 'bg-blue-500',
+        inspection: 'bg-emerald-500',
+        tenancy: 'bg-purple-500',
+        loo: 'bg-amber-500',
+    }[type] ?? 'bg-slate-300';
 }
 
-function StatCard({ icon, tint, label, value, hint, href, alert = false }) {
+function KpiCell({ icon, label, value, hint, href, alert = false }) {
     return (
         <Link
             href={href}
-            className="group relative bg-white rounded-2xl border border-[#E2E5EA] p-4 sm:p-5 hover:border-gray-300 hover:shadow-[0_8px_24px_-12px_rgba(15,30,54,0.25)] transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] overflow-hidden"
+            className="group relative bg-white p-4 sm:p-5 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
         >
-            {alert && <span className="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-[#FF6B6B] animate-pulse" aria-label="Perlu perhatian" />}
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tint}`}>
+            {alert && <span className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-label="Perlu perhatian" />}
+            <div className="w-10 h-10 rounded-lg bg-[#0F1E36]/5 text-[#0F1E36] flex items-center justify-center">
                 {icon}
             </div>
-            <p className="mt-3 text-2xl sm:text-[28px] leading-none font-bold font-mono tabular-nums text-gray-900">{value}</p>
-            <p className="mt-1.5 text-[13px] font-medium text-gray-700">{label}</p>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{hint}</p>
+            <p className="mt-3 text-2xl sm:text-[28px] leading-none font-semibold font-mono tabular-nums text-slate-900">{value}</p>
+            <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">{hint}</p>
         </Link>
     );
 }

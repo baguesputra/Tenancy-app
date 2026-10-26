@@ -445,7 +445,7 @@ export default function EventCalendar({
     return (
         <section
             aria-label="Kalender operasional"
-            className="mt-4 bg-white rounded-xl border border-[#E2E5EA] overflow-hidden"
+            className="mt-4 bg-white rounded-lg border border-[#E2E5EA] overflow-hidden"
         >
             <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center gap-2.5">
                 <div className="min-w-0 mr-auto">
@@ -482,7 +482,7 @@ export default function EventCalendar({
                             <div
                                 role="dialog"
                                 aria-label="Pilih bulan"
-                                className="absolute left-0 top-full z-30 mt-1 w-60 rounded-xl border border-[#E2E5EA] bg-white p-2 shadow-lg"
+                                className="absolute left-0 top-full z-30 mt-1 w-60 rounded-lg border border-[#E2E5EA] bg-white p-2 shadow-lg"
                             >
                                 <div className="flex items-center justify-between px-1 pb-1.5">
                                     <button
@@ -605,7 +605,7 @@ export default function EventCalendar({
                                 syncUrl(view, f.key);
                             }}
                             aria-pressed={filter === f.key}
-                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === f.key ? "bg-[#0F1E36] text-white border-[#0F1E36]" : "bg-white text-slate-600 border-[#E2E5EA] hover:bg-slate-50"}`}
+                            className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${filter === f.key ? "bg-[#0F1E36] text-white border-[#0F1E36]" : "bg-white text-slate-600 border-[#E2E5EA] hover:bg-slate-50"}`}
                         >
                             {f.label}
                             <span
