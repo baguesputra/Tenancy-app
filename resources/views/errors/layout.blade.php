@@ -155,7 +155,6 @@
             @endphp
             @if(is_file($logoPath))
                 <img src="/images/logo.png" alt="Duta Mall" class="brand-logo">
-                <div class="brand-divider"></div>
             @endif
             <span class="brand-name">Tenant Management System</span>
         </a>
