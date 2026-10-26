@@ -147,22 +147,39 @@ export default function SidebarNav({
                     >
                         <IconX className="h-5 w-5" />
                     </button>
+
+                    {/* Ciutkan rail — hanya layar besar. Duduk di dalam baris
+                        header, bergaya ghost menyatu dengan rail. */}
+                    {!collapsed && (
+                        <button
+                            type="button"
+                            onClick={onToggleCollapse}
+                            aria-expanded="true"
+                            aria-label="Ciutkan panel navigasi"
+                            title="Ciutkan panel navigasi"
+                            className="hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        >
+                            <IconPanelLeft className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Tab ciut/perluas mengambang di tepi rail — hanya layar besar.
-                Posisi `top-16` sejajar batas bawah header; tidak makan ruang
-                header maupun daftar nav, tampil identik saat ciut/expanded. */}
-            <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-expanded={!collapsed}
-                aria-label={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
-                title={collapsed ? 'Perluas panel navigasi' : 'Ciutkan panel navigasi'}
-                className="hidden lg:flex absolute top-[52px] -right-3 z-40 h-6 w-6 items-center justify-center rounded-md bg-white border border-[#E2E5EA] text-slate-500 shadow-sm hover:text-[#0F1E36] hover:border-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-            >
-                <IconPanelLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+            {/* Perluas rail — hanya layar besar dan saat ciut. Tab putih menempel
+                di tepi luar rail (`-right-3`), dipusatkan di tengah blok header
+                (`top-8 -translate-y-1/2`). */}
+            {collapsed && (
+                <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    aria-expanded="false"
+                    aria-label="Perluas panel navigasi"
+                    title="Perluas panel navigasi"
+                    className="hidden lg:flex absolute top-8 -translate-y-1/2 -right-3 z-40 h-6 w-6 items-center justify-center rounded-md bg-white border border-[#E2E5EA] text-slate-500 shadow-sm hover:text-[#0F1E36] hover:border-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                >
+                    <IconPanelLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
+                </button>
+            )}
 
             {/* Satu scroll container untuk seluruh navigasi, termasuk
                 Pengaturan. `min-h-0` wajib agar blok ini benar-benar bisa

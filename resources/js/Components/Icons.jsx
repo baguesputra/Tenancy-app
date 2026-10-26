@@ -266,7 +266,7 @@ export function IconFileText(props) {
 
 export function IconX(props) {
     return (
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
     );
@@ -330,7 +330,7 @@ export function IconLock(props) {
 
 export function IconPanelLeft(props) {
     return (
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} {...props}>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6zM9.75 3.75v16.5" />
         </svg>
     );
