@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { formatBytes } from '@/utils/format';
 
 function isPdf(name = '') {
@@ -58,7 +58,10 @@ export default function FileInput({
     const kind = hasSelected
         ? (selected[0].type?.includes('pdf') || isPdf(selected[0].name) ? 'pdf' : 'image')
         : (currentFile?.type ?? (isPdf(currentFile?.name) ? 'pdf' : 'image'));
-    const inputId = id ?? props.name ?? undefined;
+    // `id` wajib ada: input dirender di luar label, jadi tanpa id label dropzone
+    // (`htmlFor`) tidak terhubung ke input dan klik tidak membuka dialog file.
+    const autoId = useId();
+    const inputId = id ?? props.name ?? autoId;
 
     const describedBy = [
         hint ? (inputId ? `${inputId}-hint` : null) : null,
