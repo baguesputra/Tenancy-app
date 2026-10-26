@@ -10,6 +10,12 @@ import FileInput from '@/Components/Form/FileInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 
+// Nilai "tersimpan" untuk field prasyarat: string path, array path, atau nilai skalar.
+function hasStoredValue(v) {
+    if (Array.isArray(v)) return v.length > 0;
+    return v !== null && v !== undefined && v !== '';
+}
+
 function Field({ field, value, error, onChange, options, looId }) {
     const common = { error };
     const sourceOptions = field.source ? (options?.[field.source] ?? []) : null;
@@ -434,8 +440,11 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
 
     // Kunci per field: TTD `signature_{dept}` hanya milik dept-nya;
     // field bersama ikut terkunci kalau user tak pegang dept manapun.
+    // `depends_on`: field baru aktif setelah field prasyaratnya TERSIMPAN
+    // (nilai persisted di `initial`, bukan file yang baru dipilih di sesi ini).
     const isFieldLocked = (field) => {
         if (readOnly) return true;
+        if (field.depends_on && !hasStoredValue(initial[field.depends_on])) return true;
         if (!editableDepartments) return false;
         const m = field.name.match(/^signature_(legal|finance|tenancy|engineering|kontraktor)$/);
         if (m) return !editableDepartments.includes(m[1]);
@@ -473,12 +482,17 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                 {(config.fields ?? []).map((field) => {
                     if (hasChecklistTable && DEPT_SIG_RE.test(field.name)) return null;
                     const locked = isFieldLocked(field);
+                    const depLocked = Boolean(field.depends_on) && !hasStoredValue(initial[field.depends_on]);
+                    const depLabel = field.depends_on
+                        ? (config.fields ?? []).find((f) => f.name === field.depends_on)?.label ?? field.depends_on
+                        : null;
                     return (
                         <div key={field.name} inert={locked} className={`${spanClass(field)} ${locked ? 'opacity-70' : ''}`}>
                             <FormField
                                 label={field.label}
                                 error={missingRequired.includes(field) ? 'Wajib diisi.' : null}
                                 required={field.required}
+                                hint={depLocked ? `Aktif setelah "${depLabel}" tersimpan.` : undefined}
                             >
                                 {field.type === 'checklist_table' ? (
                                     <ChecklistTable

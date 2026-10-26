@@ -352,4 +352,37 @@ class LooSectionService
     {
         return isset($input[$name]) && $input[$name] instanceof UploadedFile && $input[$name]->isValid();
     }
+
+    /**
+     * Prasyarat antar-field: field ber-`depends_on` tidak boleh diunggah
+     * sebelum field prasyaratnya tersimpan (guard anti-spoof sisi client).
+     */
+    public function assertDependencies(array $config, array $input, array $existing): void
+    {
+        foreach ($config['fields'] ?? [] as $field) {
+            $dep = $field['depends_on'] ?? null;
+            if (! $dep || ! in_array($field['type'], self::FILE_FIELDS, true)) {
+                continue;
+            }
+
+            $sentUpload = $field['type'] === 'file_multiple'
+                ? collect($input[$field['name']] ?? [])->contains(fn ($f) => $f instanceof UploadedFile)
+                : $this->hasUpload($input, $field['name']);
+
+            if (! $sentUpload) {
+                continue;
+            }
+
+            $prerequisite = $existing[$dep] ?? null;
+            $prerequisiteFilled = is_array($prerequisite) ? $prerequisite !== [] : ! empty($prerequisite);
+
+            $depLabel = collect($config['fields'])->firstWhere('name', $dep)['label'] ?? $dep;
+
+            abort_unless(
+                $prerequisiteFilled,
+                422,
+                "Unggah {$depLabel} dulu sebelum {$field['label']}."
+            );
+        }
+    }
 }

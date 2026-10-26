@@ -405,7 +405,7 @@ export default function FitoutChecklist({
                             <div>
                                 <h2 className="text-base font-semibold text-gray-900">Pengukuran Ulang</h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Pengukuran ulang & pemeriksaan akhir sebelum serah terima final.
+                                    Unggah Berita Acara Pengukuran Ulang, lalu Berita Acara Serah Terima Ruangan setelah yang pertama tersimpan.
                                 </p>
                             </div>
                             <Badge color={preHandoverState === 'submitted' ? 'green' : preHandoverState === 'draft' ? 'amber' : 'gray'} size="sm">

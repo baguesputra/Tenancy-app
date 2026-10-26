@@ -400,16 +400,53 @@ class LooWorkflowTest extends TestCase
 
         // Divisi belum lengkap → Pengukuran Ulang terkunci.
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['final_inspection_date' => '2026-10-01'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", [])
             ->assertStatus(422);
 
         $this->submitDivisions($loo);
 
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['final_inspection_date' => '2026-10-01', 'submit' => '1'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '1'])
             ->assertRedirect();
 
         $this->assertSame('sebelum_fitout', $loo->fresh()->status);
+    }
+
+    public function test_ba_serah_terima_requires_ba_pengukuran_ulang_saved(): void
+    {
+        Storage::fake('public');
+        $loo = $this->makeLoo();
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
+        $this->submitDivisions($loo);
+
+        // BA Serah Terima dikirim tanpa BA Pengukuran Ulang tersimpan → ditolak.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_serah_terima_ruangan_path' => UploadedFile::fake()->create('serah-terima.pdf', 10, 'application/pdf'),
+            ])
+            ->assertStatus(422);
+
+        // Simpan BA Pengukuran Ulang dulu.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_pengukuran_ulang_path' => UploadedFile::fake()->create('pengukuran.pdf', 10, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $stored = $loo->sections()->where('section_key', 'pre_handover')->first()->data;
+        $this->assertNotEmpty($stored['ba_pengukuran_ulang_path']);
+        Storage::disk('public')->assertExists($stored['ba_pengukuran_ulang_path']);
+
+        // Setelah prasyarat tersimpan, BA Serah Terima lolos.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_serah_terima_ruangan_path' => UploadedFile::fake()->create('serah-terima.pdf', 10, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $data = $loo->sections()->where('section_key', 'pre_handover')->first()->data;
+        $this->assertNotEmpty($data['ba_serah_terima_ruangan_path']);
+        Storage::disk('public')->assertExists($data['ba_serah_terima_ruangan_path']);
     }
 
     public function test_sebelum_fitout_locked_until_pengukuran_ulang_submitted(): void
@@ -420,7 +457,7 @@ class LooWorkflowTest extends TestCase
 
         // Pengukuran Ulang baru draft → Sebelum Fitout terkunci.
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['final_inspection_date' => '2026-10-01', 'submit' => '0'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '0'])
             ->assertRedirect();
         $this->assertSame('pengukuran_ulang', $loo->fresh()->status);
 
@@ -430,7 +467,7 @@ class LooWorkflowTest extends TestCase
 
         // Setelah Pengukuran Ulang disubmit, baru terbuka.
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['final_inspection_date' => '2026-10-01', 'submit' => '1'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '1'])
             ->assertRedirect();
 
         $this->actingAs($tm)

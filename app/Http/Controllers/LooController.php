@@ -292,6 +292,7 @@ class LooController extends Controller
         }
 
         $this->sections->validateUploads($request, $config);
+        $this->sections->assertDependencies($config, $request->all(), $current?->data ?? []);
 
         if ($key === 'manajemen_tenant') {
             $this->assertUnitBelongsToBranch($request, $loo);

@@ -122,7 +122,7 @@ class LooTenantSyncTest extends TestCase
         ]);
 
         $this->fillSection($loo, 'pre_handover', [
-            'final_inspection_date' => '2026-09-29',
+            'ba_pengukuran_ulang_path' => 'loos/'.$loo->id.'/sections/pengukuran.pdf',
         ]);
 
         $this->fillSection($loo, 'fitout_checklist_pre', [

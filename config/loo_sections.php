@@ -157,16 +157,8 @@ return [
         'stage' => 'pre_handover',
         'permission' => 'loos.tenant_mgmt_edit',
         'fields' => [
-            ['name' => 'final_inspection_date', 'type' => 'date', 'label' => 'Tgl Final Inspection'],
-            ['name' => 'compliance_certificate_paths', 'type' => 'file_multiple', 'label' => 'Sertifikat Kepatuhan', 'accept' => '.pdf'],
-            ['name' => 'as_built_drawing_path', 'type' => 'file', 'label' => 'Gambar As-Built', 'accept' => '.pdf,.dwg'],
-            ['name' => 'warranty_documents_paths', 'type' => 'file_multiple', 'label' => 'Dokumen Garansi', 'accept' => '.pdf'],
-            ['name' => 'operation_manual_paths', 'type' => 'file_multiple', 'label' => 'Manual Operasional', 'accept' => '.pdf'],
-            ['name' => 'keys_inventory', 'type' => 'textarea', 'label' => 'Inventaris Kunci'],
-            ['name' => 'access_cards_inventory', 'type' => 'textarea', 'label' => 'Inventaris Kartu Akses'],
-            ['name' => 'utility_accounts_transferred', 'type' => 'checkbox', 'label' => 'Akun Utilitas Dialihkan'],
-            ['name' => 'tenant_ready_date', 'type' => 'date', 'label' => 'Tgl Tenant Siap'],
-            ['name' => 'handover_notes', 'type' => 'textarea', 'label' => 'Catatan Handover'],
+            ['name' => 'ba_pengukuran_ulang_path', 'type' => 'file', 'label' => 'Berita Acara Pengukuran Ulang', 'accept' => '.pdf', 'max_kb' => 10240],
+            ['name' => 'ba_serah_terima_ruangan_path', 'type' => 'file', 'label' => 'Berita Acara Serah Terima Ruangan', 'accept' => '.pdf', 'max_kb' => 10240, 'depends_on' => 'ba_pengukuran_ulang_path'],
         ],
     ],
 ];
