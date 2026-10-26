@@ -43,11 +43,35 @@ $fitoutChecklistDepartments = [
 ];
 
 // Checklist sebelum fitout hanya 3 departemen, tanpa TTD penyewa/Deputy GM
-// dan tanpa blok "Mengetahui".
-$fitoutChecklistPreDepartments = array_values(array_filter(
-    $fitoutChecklistDepartments,
-    fn (array $d) => in_array($d['key'], ['legal', 'finance', 'tenancy'], true)
-));
+// dan tanpa blok "Mengetahui". Legal cukup cek LOO; Tenancy mengecek
+// kelengkapan dokumen & gambar kerja — berbeda dari checklist setelah fitout,
+// jadi item di-override di sini (array bersama di atas tidak diubah).
+$preTenancyItems = [
+    'base_drawing' => 'Mengirimkan Base Drawing',
+    'fitout_guide' => 'Menyerahkan Fit Out Guide',
+    'gambar_kerja' => 'Menerima Gambar Kerja',
+    'layout_plan' => 'Layout Plan',
+    'layout_floor' => 'Layout Floor',
+    'ceiling_plan' => 'Ceiling Plan',
+    'lighting_plan' => 'Lighting Plan',
+    'gambar_potongan' => 'Gambar Potongan',
+    'gambar_tampak_shopfront' => 'Gambaran Tampak/Shopfront',
+    'gambar_diffuser_sprinkler' => 'Gambar Diffuser & Sprinkler',
+    'gambar_3d' => 'Gambar 3D',
+    'wiring_diagram' => 'Wiring Diagram',
+];
+
+$fitoutChecklistPreDepartments = array_map(
+    fn (array $d) => match ($d['key']) {
+        'legal' => [...$d, 'items' => ['loo' => 'LOO']],
+        'tenancy' => [...$d, 'items' => $preTenancyItems],
+        default => $d,
+    },
+    array_values(array_filter(
+        $fitoutChecklistDepartments,
+        fn (array $d) => in_array($d['key'], ['legal', 'finance', 'tenancy'], true)
+    ))
+);
 
 $fitoutChecklistSignatureFields = fn (array $departments) => array_map(
     fn (array $d) => ['name' => 'signature_'.$d['key'], 'type' => 'file', 'label' => 'TTD '.$d['label'], 'accept' => '.png,.jpg,.jpeg'],

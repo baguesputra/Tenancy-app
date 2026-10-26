@@ -735,12 +735,26 @@ class LooWorkflowTest extends TestCase
             'signature_engineering', 'signature_kontraktor', 'signature_tenant', 'signature_gm',
         ]));
 
+        // Pre: Legal hanya cek LOO, Tenancy cek kelengkapan dokumen & gambar kerja.
+        $preDepts = collect($preChecklist['departments'])->keyBy('key');
+        $this->assertSame(['loo' => 'LOO'], $preDepts['legal']['items']);
+        $this->assertCount(12, $preDepts['tenancy']['items']);
+        $this->assertSame('Mengirimkan Base Drawing', $preDepts['tenancy']['items']['base_drawing']);
+        $this->assertSame('Wiring Diagram', $preDepts['tenancy']['items']['wiring_diagram']);
+
         $post = config('loo_sections.fitout_checklist_post.fields');
         $postChecklist = collect($post)->firstWhere('type', 'checklist_table');
 
         $this->assertSame(['legal', 'finance', 'tenancy', 'engineering', 'kontraktor'], array_column($postChecklist['departments'], 'key'));
         $this->assertArrayNotHasKey('show_footer', $postChecklist);
         $this->assertNotEmpty(collect($post)->whereIn('name', ['signature_tenant', 'signature_gm']));
+
+        // Post tetap memakai item bersama — jangan ikut berubah saat pre di-override.
+        $postDepts = collect($postChecklist['departments'])->keyBy('key');
+        $this->assertSame(['psm' => 'PSM'], $postDepts['legal']['items']);
+        $this->assertCount(6, $postDepts['tenancy']['items']);
+        $this->assertArrayHasKey('lantai', $postDepts['tenancy']['items']);
+        $this->assertArrayNotHasKey('base_drawing', $postDepts['tenancy']['items']);
 
         $this->assertSame('Pengukuran Ulang', config('loo_sections.pre_handover.label'));
     }
@@ -762,7 +776,7 @@ class LooWorkflowTest extends TestCase
                 'checklist' => json_encode([
                     'legal' => [
                         'items' => [
-                            'psm' => ['status' => 'Ok', 'keterangan' => 'diterima'],
+                            'loo' => ['status' => 'Ok', 'keterangan' => 'diterima'],
                         ],
                         'signoff' => ['day' => 'Senin', 'date' => '2026-10-01', 'name' => 'Legal Satu'],
                     ],
@@ -783,7 +797,7 @@ class LooWorkflowTest extends TestCase
 
         $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
         $this->assertFalse($section->is_submitted);
-        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['loo']['status']);
         $this->assertNull($section->data['checklist']['finance']['items']['dp_1']['status']);
         $this->assertArrayNotHasKey('hantu', $section->data['checklist']);
         $this->assertArrayNotHasKey('engineering', $section->data['checklist']);
@@ -808,7 +822,7 @@ class LooWorkflowTest extends TestCase
 
         $section = $loo->sections()->where('section_key', 'fitout_checklist_pre')->first();
         $this->assertSame('Ok', $section->data['checklist']['finance']['items']['dp_1']['status']);
-        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['psm']['status']);
+        $this->assertSame('Ok', $section->data['checklist']['legal']['items']['loo']['status']);
         $this->assertArrayNotHasKey('footer', $section->data['checklist']);
 
         // tm submit (koordinator) → Sebelum Fitout selesai, maju ke Setelah Fitout
@@ -956,12 +970,12 @@ class LooWorkflowTest extends TestCase
 
         $this->actingAs($tenancy)
             ->post("/loos/{$loo->id}/sections/fitout_checklist_pre", [
-                'checklist' => json_encode(['tenancy' => ['items' => ['lantai' => ['status' => 'Ok']]]]),
+                'checklist' => json_encode(['tenancy' => ['items' => ['base_drawing' => ['status' => 'Ok']]]]),
             ])
             ->assertRedirect();
 
         $this->assertSame('Ok', $loo->sections()->where('section_key', 'fitout_checklist_pre')->first()
-            ->data['checklist']['tenancy']['items']['lantai']['status']);
+            ->data['checklist']['tenancy']['items']['base_drawing']['status']);
 
         // Sekarang buka Setelah Fitout untuk engineering.
         $this->seedSubmitted($loo, 'fitout_checklist_pre', [], $tm);
