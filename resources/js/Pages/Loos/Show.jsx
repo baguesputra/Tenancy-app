@@ -3,27 +3,49 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
-import { IconChevronDown, IconFileText } from '@/Components/Icons';
+import { IconChevronDown, IconCheck, IconFileText } from '@/Components/Icons';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
 import LooStatusCard from '@/Components/Loo/LooStatusCard';
 import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 import Modal from '@/Components/Modal';
-
-const STAGE_LABELS = {
-    marketing: 'Pengisian Divisi',
-    pre_handover: 'Pengukuran Ulang',
-    ba_handover: 'Sebelum Fitout',
-    fitout: 'Setelah Fitout',
-    completed: 'Selesai',
-};
 
 // Tab form per divisi. Section fitout (pre/post, pre_handover) tidak tampil
 // di sini — dikerjakan lewat halaman khusus Checklist Fit Out.
 const DIVISION_TABS = [
     { key: 'legalitas', label: 'Legal' },
     { key: 'biaya_termin', label: 'Accounting' },
-    { key: 'manajemen_tenant', label: 'Tenant Mgmt' },
+    { key: 'manajemen_tenant', label: 'Tenant' },
 ];
+
+// Penanda status section di tab divisi: centang (disubmit), titik (draft),
+// cincin kosong (belum). Bentuk berbeda — bukan hanya warna — plus aria-label
+// agar tetap terbaca screen reader tanpa teks terlihat.
+const SECTION_MARK = {
+    submitted: { label: 'Disubmit' },
+    draft: { label: 'Draft' },
+    none: { label: 'Belum diisi' },
+};
+
+function SectionStatusMark({ state = 'none', onDark = false }) {
+    const meta = SECTION_MARK[state] ?? SECTION_MARK.none;
+
+    return (
+        <span
+            role="img"
+            aria-label={meta.label}
+            title={meta.label}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 shrink-0"
+        >
+            {state === 'submitted' ? (
+                <IconCheck className={`w-3.5 h-3.5 ${onDark ? 'text-emerald-300' : 'text-emerald-600'}`} aria-hidden="true" />
+            ) : state === 'draft' ? (
+                <span className={`w-1.5 h-1.5 rounded-full ${onDark ? 'bg-amber-300' : 'bg-amber-500'}`} aria-hidden="true" />
+            ) : (
+                <span className={`w-2.5 h-2.5 rounded-full border ${onDark ? 'border-slate-400' : 'border-slate-300'}`} aria-hidden="true" />
+            )}
+        </span>
+    );
+}
 
 const SECTION_BADGE = {
     none: { color: 'gray', label: 'Belum diisi' },
@@ -330,7 +352,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                         <div className="bg-white rounded-lg border border-slate-200 p-5">
                             <div className="inline-flex max-w-full rounded-lg border border-slate-200 p-0.5 overflow-x-auto" role="group" aria-label="Form per divisi">
                                 {tabRows.map(({ key, label, state }) => {
-                                    const badge = SECTION_BADGE[state];
                                     const selected = key === activeTab;
                                     return (
                                         <button
@@ -345,7 +366,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                                             }`}
                                         >
                                             {label}
-                                            <Badge color={badge.color} size="sm">{badge.label}</Badge>
+                                            <SectionStatusMark state={state} onDark={selected} />
                                         </button>
                                     );
                                 })}
@@ -353,10 +374,6 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
 
                             {current && (
                                 <div className="mt-4">
-                                    <div className="flex items-center justify-between gap-2 mb-3">
-                                        <p className="text-sm font-medium text-slate-900">{current.cfg.label}</p>
-                                        <span className="text-xs text-slate-500">{STAGE_LABELS[current.cfg.stage] ?? current.cfg.stage}</span>
-                                    </div>
                                     {current.editable && !terminal ? (
                                         <LooSectionForm
                                             looId={loo.id}
