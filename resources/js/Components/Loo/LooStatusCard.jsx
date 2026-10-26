@@ -74,7 +74,7 @@ function SectionRow({ section, badge }) {
                 <span className="text-[10px] text-gray-500 shrink-0">{section.filled}/{section.total} field</span>
             </div>
             {section.state !== 'none' && section.updated_days_ago != null && (
-                <p className="text-[10px] text-gray-400 mt-0.5">diubah {section.updated_days_ago} hari lalu</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">diubah {section.updated_days_ago} hari lalu</p>
             )}
         </li>
     );
@@ -91,10 +91,10 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
     const nextAction = (progress.summary ?? '').replace(/^Menunggu:\s*/, '');
 
     return (
-        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm p-5">
+        <div className="bg-white rounded-lg border border-slate-200 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status LOO</p>
-                <span className="text-xs text-gray-500">diupload {progress.days_since_upload} hari lalu</span>
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Status LOO</p>
+                <span className="text-xs text-slate-500">diupload {progress.days_since_upload} hari lalu</span>
             </div>
 
             {progress.status === 'completed' ? (
@@ -173,7 +173,7 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                     </span>
                                     <div className="min-w-0 flex-1 pb-4">
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-sm ${isActive ? 'font-semibold text-gray-900' : phase.state === 'done' ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
+                                            <span className={`text-sm ${isActive ? 'font-semibold text-slate-900' : phase.state === 'done' ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
                                                 {phase.label}
                                             </span>
                                             <Badge color={meta.color} size="sm">{meta.label}</Badge>
@@ -192,7 +192,7 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                         )}
 
                                         {phase.state === 'locked' && (
-                                            <p className="text-xs text-gray-400 mt-1">Terkunci sampai tahap sebelumnya selesai.</p>
+                                            <p className="text-xs text-slate-500 mt-1">Terkunci sampai tahap sebelumnya selesai.</p>
                                         )}
                                     </div>
                                 </li>
