@@ -320,6 +320,14 @@ export function IconDownload(props) {
     );
 }
 
+export function IconLock(props) {
+    return (
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V7.125a4.5 4.5 0 10-9 0V10.5m-.375 10.5h9.75a1.125 1.125 0 001.125-1.125v-7.5A1.125 1.125 0 0016.875 11.25h-9.75A1.125 1.125 0 006 12.375v7.5A1.125 1.125 0 007.125 21z" />
+        </svg>
+    );
+}
+
 export function IconPanelLeft(props) {
     return (
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} {...props}>
