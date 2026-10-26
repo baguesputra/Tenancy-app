@@ -7,7 +7,7 @@ import FormSection from '@/Components/Form/FormSection';
 import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
 import Button from '@/Components/Form/Button';
-import Badge from '@/Components/Badge';
+import EmptyState from '@/Components/EmptyState';
 import DataTable from '@/Components/DataTable';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
@@ -101,8 +101,9 @@ export default function Index({ tenantCategories = [], productCategories = [] })
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-4">
                     <div>
-                        <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Kategori</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Master Data</p>
+                        <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Kategori</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
                             {tenantCategories.length} kategori tenant · {productCategories.length} kategori produk
                         </p>
                     </div>
@@ -111,7 +112,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                     </Button>
                 </div>
 
-                <div className="bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-1.5 mb-4 grid grid-cols-2 gap-1" role="tablist" aria-label="Jenis kategori">
+                <div className="bg-white rounded-lg border border-[#E2E5EA] p-1.5 mb-4 grid grid-cols-2 gap-1" role="tablist" aria-label="Jenis kategori">
                     {tabs.map((t) => {
                         const count = t.key === 'tenant' ? tenantCategories.length : productCategories.length;
                         const selected = tab === t.key;
@@ -122,20 +123,20 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                 aria-selected={selected}
                                 onClick={() => switchTab(t.key)}
                                 className={`px-4 py-2.5 min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
-                                    selected ? 'bg-[#0F1E36] text-white' : 'text-gray-600 hover:bg-gray-100'
+                                    selected ? 'bg-[#0F1E36] text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                                 }`}
                             >
                                 {t.label}
-                                <span className={`ml-1.5 text-xs tabular-nums ${selected ? 'text-white/70' : 'text-gray-400'}`}>{count}</span>
+                                <span className={`ml-1.5 text-xs tabular-nums ${selected ? 'text-white/70' : 'text-slate-400'}`}>{count}</span>
                             </button>
                         );
                     })}
                 </div>
 
-                <div className="bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 sm:p-4 mb-4">
+                <div className="bg-white rounded-lg border border-[#E2E5EA] p-3 sm:p-4 mb-4">
                     <div className="flex flex-col lg:flex-row gap-3">
                         <form onSubmit={quickAdd} className="flex-1 min-w-0">
-                            <label htmlFor="quick-add-name" className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                            <label htmlFor="quick-add-name" className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                                 Tambah cepat
                             </label>
                             <div className="flex gap-2 mt-1.5">
@@ -153,11 +154,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             </div>
                         </form>
                         <div className="lg:w-64 lg:shrink-0 lg:border-l lg:border-[#E2E5EA] lg:pl-3">
-                            <label htmlFor="search-category" className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                            <label htmlFor="search-category" className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                                 Cari di tab ini
                             </label>
                             <div className="relative mt-1.5">
-                                <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <TextInput
@@ -175,12 +176,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
-                    {filtered.length > 0 && (
-                        <p className="px-5 pt-4 text-xs text-gray-400 tabular-nums" aria-live="polite">
-                            {filtered.length} dari {categories.length} kategori · klik baris untuk edit
-                        </p>
-                    )}
+                {filtered.length > 0 && (
+                    <p className="mb-2 text-xs text-slate-400 tabular-nums" aria-live="polite">
+                        {filtered.length} dari {categories.length} kategori · klik baris untuk edit
+                    </p>
+                )}
                 <div className="hidden sm:block">
                     <DataTable columns={[
                         { key: 'name', label: 'Nama' },
@@ -199,24 +199,24 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                 tabIndex={0}
                                 title="Klik untuk edit"
                                 className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                    editing?.id === cat.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'
+                                    editing?.id === cat.id ? 'bg-[#0F1E36]/5' : 'hover:bg-slate-50'
                                 }`}
                             >
                                 <td className="px-5 py-3.5">
-                                    <p className="font-medium text-gray-900 line-clamp-1">{cat.name}</p>
+                                    <p className="font-medium text-slate-900 line-clamp-1">{cat.name}</p>
                                     {cat.description ? (
-                                        <p className="text-xs text-gray-500 mt-0.5 max-w-md line-clamp-2">{cat.description}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5 max-w-md line-clamp-2">{cat.description}</p>
                                     ) : (
-                                        <p className="text-xs text-gray-400 mt-0.5 italic">Tanpa keterangan</p>
+                                        <p className="text-xs text-slate-400 mt-0.5 italic">Tanpa keterangan</p>
                                     )}
                                 </td>
                                 <td className="px-5 py-3.5">
                                     <span className="inline-flex items-center gap-1.5">
-                                        <Badge color={locked ? 'blue' : 'gray'}>
-                                            <span className="tabular-nums">{used} tenant</span>
-                                        </Badge>
+                                        <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                                            {used} tenant
+                                        </span>
                                         {tab === 'product' && templates > 0 && (
-                                            <Badge color="blue"><span className="tabular-nums">{templates} template</span></Badge>
+                                            <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 tabular-nums">{templates} template</span>
                                         )}
                                     </span>
                                 </td>
@@ -224,7 +224,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     <span className="inline-flex items-center gap-1">
                                         <span
                                             aria-hidden="true"
-                                            className="p-2 inline-flex items-center justify-center rounded-lg text-gray-300 group-hover:text-gray-500 transition-colors"
+                                            className="p-2 inline-flex items-center justify-center rounded-lg text-slate-300 group-hover:text-slate-500 transition-colors"
                                         >
                                             <IconEdit className="w-4 h-4" />
                                         </span>
@@ -233,7 +233,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                             aria-label={locked ? `${cat.name} dipakai ${used} tenant, tidak bisa dihapus` : `Hapus ${cat.name}`}
                                             title={locked ? `Dipakai ${used} tenant — hapus diblokir server` : 'Hapus'}
                                             disabled={locked}
-                                            className="p-2 min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:text-gray-300 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                            className="p-2 min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:text-slate-300 text-slate-400 hover:text-red-600 hover:bg-red-50"
                                         >
                                             <IconTrash className="w-4 h-4" />
                                         </button>
@@ -244,15 +244,13 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                         })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={3} className="px-5 py-12 text-center">
-                                    <p className="text-sm font-medium text-gray-700">
-                                        {search ? 'Tidak ada kategori yang cocok.' : 'Belum ada kategori di tab ini.'}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        {search ? 'Coba kata kunci lain atau tambah baru di atas.' : `Klik Tambah ${tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'} untuk data pertama.`}
-                                    </p>
-                                    <div className="mt-3 flex items-center justify-center gap-2">
-                                        {search ? (
+                                <td colSpan={3} className="px-5 py-6">
+                                    <EmptyState
+                                        variant={search ? 'search' : 'empty'}
+                                        size="sm"
+                                        title={search ? 'Tidak ada kategori yang cocok.' : 'Belum ada kategori di tab ini.'}
+                                        description={search ? 'Coba kata kunci lain atau tambah baru di atas.' : `Klik Tambah ${tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'} untuk data pertama.`}
+                                        action={search ? (
                                             <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
                                                 Reset pencarian
                                             </Button>
@@ -261,12 +259,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                                 Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
                                             </Button>
                                         )}
-                                    </div>
+                                    />
                                 </td>
                             </tr>
                         )}
                     </DataTable>
-                    </div>
                 </div>
 
                 <div className="sm:hidden space-y-2.5">
@@ -277,48 +274,48 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             <div
                                 key={cat.id}
                                 onClick={() => openEdit(cat)}
-                                className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                                className="bg-white rounded-lg border border-[#E2E5EA] p-4 active:bg-slate-50 cursor-pointer"
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">{cat.name}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{cat.description || 'Tanpa keterangan'}</p>
+                                        <p className="text-sm font-semibold text-slate-900 line-clamp-1">{cat.name}</p>
+                                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{cat.description || 'Tanpa keterangan'}</p>
                                     </div>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); askDelete(cat); }}
                                         disabled={used > 0}
                                         aria-label={`Hapus ${cat.name}`}
-                                        className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:text-gray-300 shrink-0"
+                                        className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:text-slate-300 shrink-0"
                                     >
                                         <IconTrash className="w-4 h-4" />
                                     </button>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
-                                    <Badge color={used > 0 ? 'blue' : 'gray'} size="sm"><span className="tabular-nums">{used} tenant</span></Badge>
+                                    <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">{used} tenant</span>
                                     {tab === 'product' && templates > 0 && (
-                                        <Badge color="blue" size="sm"><span className="tabular-nums">{templates} template</span></Badge>
+                                        <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 tabular-nums">{templates} template</span>
                                     )}
                                 </div>
                             </div>
                         );
                     })}
                     {filtered.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">
-                                {search ? 'Tidak ada kategori yang cocok.' : 'Belum ada kategori di tab ini.'}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">
-                                {search ? 'Coba kata kunci lain atau tambah baru di atas.' : `Klik Tambah ${tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'} untuk data pertama.`}
-                            </p>
-                            {search ? (
-                                <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
-                                    Reset pencarian
-                                </Button>
-                            ) : (
-                                <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
-                                    Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
-                                </Button>
-                            )}
+                        <div className="bg-white rounded-lg border border-[#E2E5EA] px-5 py-6">
+                            <EmptyState
+                                variant={search ? 'search' : 'empty'}
+                                size="sm"
+                                title={search ? 'Tidak ada kategori yang cocok.' : 'Belum ada kategori di tab ini.'}
+                                description={search ? 'Coba kata kunci lain atau tambah baru di atas.' : `Klik Tambah ${tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'} untuk data pertama.`}
+                                action={search ? (
+                                    <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
+                                        Reset pencarian
+                                    </Button>
+                                ) : (
+                                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
+                                        Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
+                                    </Button>
+                                )}
+                            />
                         </div>
                     )}
                 </div>
@@ -348,7 +345,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             <Textarea value={data.description} onChange={(e) => setData('description', e.target.value)} rows={3} placeholder="Jelaskan maksud kategori ini…" />
                         </FormField>
                         {editing && (
-                            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                            <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
                                 Dipakai {editing.tenants_count ?? 0} tenant
                                 {tab === 'product' ? ` · ${editing.checklist_templates_count ?? 0} template checklist` : ''}.
                                 Hapus diblokir server selama masih dipakai.
