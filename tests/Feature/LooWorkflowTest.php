@@ -395,6 +395,7 @@ class LooWorkflowTest extends TestCase
 
     public function test_pengukuran_ulang_locked_until_all_divisions_submitted(): void
     {
+        Storage::fake('public');
         $loo = $this->makeLoo();
         $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
 
@@ -405,8 +406,49 @@ class LooWorkflowTest extends TestCase
 
         $this->submitDivisions($loo);
 
+        // Dua berita acara wajib ada sebelum submit.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_pengukuran_ulang_path' => UploadedFile::fake()->create('pengukuran.pdf', 10, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_serah_terima_ruangan_path' => UploadedFile::fake()->create('serah-terima.pdf', 10, 'application/pdf'),
+                'submit' => '1',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('sebelum_fitout', $loo->fresh()->status);
+    }
+
+    public function test_submit_pre_handover_requires_both_berita_acara(): void
+    {
+        Storage::fake('public');
+        $loo = $this->makeLoo();
+        $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
+        $this->submitDivisions($loo);
+
+        // Hanya BA Pengukuran Ulang, lalu submit → BA Serah Terima masih kurang.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_pengukuran_ulang_path' => UploadedFile::fake()->create('pengukuran.pdf', 10, 'application/pdf'),
+            ])
+            ->assertSessionHasNoErrors();
+
         $this->actingAs($tm)
             ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '1'])
+            ->assertSessionHasErrors('ba_serah_terima_ruangan_path');
+
+        $this->assertSame('pengukuran_ulang', $loo->fresh()->status);
+
+        // Lengkapi BA Serah Terima → submit lolos.
+        $this->actingAs($tm)
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_serah_terima_ruangan_path' => UploadedFile::fake()->create('serah-terima.pdf', 10, 'application/pdf'),
+                'submit' => '1',
+            ])
             ->assertRedirect();
 
         $this->assertSame('sebelum_fitout', $loo->fresh()->status);
@@ -474,13 +516,16 @@ class LooWorkflowTest extends TestCase
 
     public function test_sebelum_fitout_locked_until_pengukuran_ulang_submitted(): void
     {
+        Storage::fake('public');
         $loo = $this->makeLoo();
         $tm = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
         $this->submitDivisions($loo);
 
         // Pengukuran Ulang baru draft → Sebelum Fitout terkunci.
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '0'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_pengukuran_ulang_path' => UploadedFile::fake()->create('pengukuran.pdf', 10, 'application/pdf'),
+            ])
             ->assertRedirect();
         $this->assertSame('pengukuran_ulang', $loo->fresh()->status);
 
@@ -490,7 +535,10 @@ class LooWorkflowTest extends TestCase
 
         // Setelah Pengukuran Ulang disubmit, baru terbuka.
         $this->actingAs($tm)
-            ->post("/loos/{$loo->id}/sections/pre_handover", ['submit' => '1'])
+            ->post("/loos/{$loo->id}/sections/pre_handover", [
+                'ba_serah_terima_ruangan_path' => UploadedFile::fake()->create('serah-terima.pdf', 10, 'application/pdf'),
+                'submit' => '1',
+            ])
             ->assertRedirect();
 
         $this->actingAs($tm)

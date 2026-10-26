@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Field bertipe `file` disimpan sebagai string path, `file_multiple` sebagai array path.
@@ -383,6 +384,33 @@ class LooSectionService
                 422,
                 "Unggah {$depLabel} dulu sebelum {$field['label']}."
             );
+        }
+    }
+
+    /**
+     * Field `required` wajib terisi sebelum section disubmit. Hanya dipanggil
+     * saat submit: kalau dipakai untuk draft, field ber-`depends_on` jadi
+     * mustahil dilengkapi (prasyaratnya baru tersimpan setelah draft disimpan).
+     */
+    public function assertRequired(array $config, array $data): void
+    {
+        $errors = [];
+
+        foreach ($config['fields'] ?? [] as $field) {
+            if (! ($field['required'] ?? false)) {
+                continue;
+            }
+
+            $value = $data[$field['name']] ?? null;
+            $filled = is_array($value) ? $value !== [] : ($value !== null && $value !== '');
+
+            if (! $filled) {
+                $errors[$field['name']] = "{$field['label']} wajib diisi sebelum submit.";
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
         }
     }
 }

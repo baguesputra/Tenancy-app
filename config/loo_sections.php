@@ -157,8 +157,8 @@ return [
         'stage' => 'pre_handover',
         'permission' => 'loos.tenant_mgmt_edit',
         'fields' => [
-            ['name' => 'ba_pengukuran_ulang_path', 'type' => 'file', 'label' => 'Berita Acara Pengukuran Ulang', 'accept' => '.pdf', 'max_kb' => 10240],
-            ['name' => 'ba_serah_terima_ruangan_path', 'type' => 'file', 'label' => 'Berita Acara Serah Terima Ruangan', 'accept' => '.pdf', 'max_kb' => 10240, 'depends_on' => 'ba_pengukuran_ulang_path'],
+            ['name' => 'ba_pengukuran_ulang_path', 'type' => 'file', 'label' => 'Berita Acara Pengukuran Ulang', 'accept' => '.pdf', 'max_kb' => 10240, 'required' => true],
+            ['name' => 'ba_serah_terima_ruangan_path', 'type' => 'file', 'label' => 'Berita Acara Serah Terima Ruangan', 'accept' => '.pdf', 'max_kb' => 10240, 'required' => true, 'depends_on' => 'ba_pengukuran_ulang_path'],
         ],
     ],
 ];

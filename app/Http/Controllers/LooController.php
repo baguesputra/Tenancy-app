@@ -315,6 +315,12 @@ class LooController extends Controller
             $data = $this->sections->mergeFitoutDepartments($data, $current?->data ?? [], $editableDepts, $config);
         }
 
+        // Wajib isi hanya digerbang saat submit; draft harus bebas supaya field
+        // ber-`depends_on` bisa dilengkapi bertahap.
+        if ($request->boolean('submit')) {
+            $this->sections->assertRequired($config, $data);
+        }
+
         $section = $this->state->fillSection(
             $loo,
             $key,

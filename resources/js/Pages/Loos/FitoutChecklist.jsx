@@ -299,7 +299,7 @@ export default function FitoutChecklist({
                                     readOnly={terminal || !canEditPre}
                                     editableDepartments={editableDepartments}
                                     focusMode={focusMine}
-                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_pre')}
+                                    onSubmit={(args, submit) => submitSection(args, submit, 'fitout_checklist_pre')}
                                 />
                             </>
                         ) : (
@@ -368,7 +368,7 @@ export default function FitoutChecklist({
                                     readOnly={terminal || !canEditPost}
                                     editableDepartments={editableDepartments}
                                     focusMode={focusMine}
-                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'fitout_checklist_post')}
+                                    onSubmit={(args, submit) => submitSection(args, submit, 'fitout_checklist_post')}
                                 />
                             </>
                         ) : (
@@ -434,7 +434,7 @@ export default function FitoutChecklist({
                                     submitting={submitting}
                                     readOnly={terminal || !canEditPreHandover}
                                     editableDepartments={editableDepartments}
-                                    onSubmit={(args) => submitSection(args, args.submit ?? false, 'pre_handover')}
+                                    onSubmit={(args, submit) => submitSection(args, submit, 'pre_handover')}
                                 />
                             </>
                         ) : (
