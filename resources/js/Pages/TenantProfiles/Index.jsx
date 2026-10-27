@@ -7,7 +7,6 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import EmptyState from '@/Components/EmptyState';
-import StatFilter from '@/Components/StatFilter';
 import { IconClipboard, IconAlert } from '@/Components/Icons';
 import initials from '@/utils/initials';
 
@@ -60,13 +59,13 @@ export default function Index({
             key: 'inactive',
             label: 'Nonaktif',
             value: summary.inactive ?? 0,
-            dot: 'bg-gray-400',
+            dot: 'bg-slate-400',
         },
         {
             key: 'has_pending_permit',
             label: 'Antrean Izin Kerja',
             value: summary.pending_permits ?? 0,
-            dot: (summary.pending_permits ?? 0) > 0 ? 'bg-amber-500' : 'bg-gray-300',
+            dot: (summary.pending_permits ?? 0) > 0 ? 'bg-amber-500' : 'bg-slate-300',
         },
     ];
 
@@ -85,33 +84,55 @@ export default function Index({
                 {/* Header Title */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Master Data</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
                             Profil Tenant
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                             Direktori profil operasional, status unit aktif, riwayat sidak berkala, dan antrean izin kerja tenant.
                         </p>
                     </div>
-                    <div className="text-xs text-gray-500 font-medium">
-                        Menampilkan <span className="text-gray-900 font-semibold">{tenants.data.length}</span> dari{' '}
-                        <span className="text-gray-900 font-semibold">{tenants.total ?? summary.total}</span> tenant
+                    <div className="text-xs text-slate-500 font-medium">
+                        Menampilkan <span className="text-slate-900 font-semibold">{tenants.data.length}</span> dari{' '}
+                        <span className="text-slate-900 font-semibold">{tenants.total ?? summary.total}</span> tenant
                     </div>
                 </div>
 
                 {/* KPI Summary / Quick Filter */}
-                <StatFilter
-                    stats={stats}
-                    activeKey={filters.status ?? ''}
-                    onSelect={(key) => updateFilter('status', filters.status === key ? '' : key)}
-                    columns="grid-cols-2 lg:grid-cols-4"
-                />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-lg border border-[#E2E5EA] bg-[#E2E5EA]">
+                    {stats.map((stat) => {
+                        const isActive = (filters.status ?? '') === stat.key;
+
+                        return (
+                            <button
+                                key={stat.key || 'total'}
+                                type="button"
+                                onClick={() => updateFilter('status', filters.status === stat.key ? '' : stat.key)}
+                                aria-pressed={isActive}
+                                className={`bg-white px-4 py-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                    isActive ? 'bg-slate-50' : 'hover:bg-slate-50/70'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className={`h-2 w-2 rounded-full ${stat.dot}`} aria-hidden="true" />
+                                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        {stat.label}
+                                    </span>
+                                </div>
+                                <span className={`mt-2 block font-mono text-xl font-semibold tabular-nums ${isActive ? 'text-[#0F1E36]' : 'text-slate-900'}`}>
+                                    {stat.value}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
 
                 {/* Filter Toolbar */}
-                <div className="bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3.5">
+                <div className="bg-white rounded-lg border border-[#E2E5EA] p-3.5">
                     <div className="flex flex-col lg:flex-row gap-2.5">
                         <div className="relative flex-1">
                             <svg
-                                className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                 className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -134,7 +155,7 @@ export default function Index({
                             {searchText && (
                                 <button
                                     onClick={() => setSearchText('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 p-1"
+                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 p-1"
                                     aria-label="Hapus kata kunci"
                                 >
                                     ✕
@@ -172,7 +193,7 @@ export default function Index({
                             {hasFilter && (
                                 <button
                                     onClick={resetFilters}
-                                    className="col-span-2 lg:col-span-1 px-3.5 py-2 min-h-[42px] text-xs font-semibold text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0"
+                                     className="col-span-2 lg:col-span-1 px-3.5 py-2 min-h-[42px] text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 border border-slate-200 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0"
                                 >
                                     Reset Filter
                                 </button>
@@ -228,10 +249,10 @@ export default function Index({
                                                 </span>
                                             )}
                                             <div className="min-w-0">
-                                                <span className="block font-semibold text-gray-900 group-hover:text-[#0F1E36] transition-colors truncate text-sm">
+                                                 <span className="block font-semibold text-slate-900 group-hover:text-[#0F1E36] transition-colors truncate text-sm">
                                                     {t.name}
                                                 </span>
-                                                <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate mt-0.5">
+                                                 <div className="flex items-center gap-1.5 text-xs text-slate-500 truncate mt-0.5">
                                                     {t.legal_entity_name ? (
                                                         <span>{t.legal_entity_name}</span>
                                                     ) : t.branch?.name ? (
@@ -239,7 +260,7 @@ export default function Index({
                                                     ) : t.company_phone ? (
                                                         <span>{t.company_phone}</span>
                                                     ) : (
-                                                        <span className="text-gray-400">Profil terdaftar</span>
+                                                         <span className="text-slate-400">Profil terdaftar</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -252,7 +273,7 @@ export default function Index({
                                             {categoryName || 'Tanpa Kategori'}
                                         </span>
                                         {tenantType && tenantType !== categoryName && (
-                                            <span className="block text-[11px] text-gray-400 mt-0.5">
+                                             <span className="block text-[11px] text-slate-400 mt-0.5">
                                                 {tenantType}
                                             </span>
                                         )}
@@ -266,13 +287,13 @@ export default function Index({
                                                     {activeUnit.unit_code}
                                                 </span>
                                                 {activeUnit.floor && (
-                                                    <span className="block text-[11px] text-gray-400 mt-0.5">
+                                                     <span className="block text-[11px] text-slate-400 mt-0.5">
                                                         Lantai {activeUnit.floor}
                                                     </span>
                                                 )}
                                             </div>
                                         ) : (
-                                            <span className="text-xs text-gray-400 italic">
+                                             <span className="text-xs text-slate-400 italic">
                                                 Tanpa unit aktif
                                             </span>
                                         )}
@@ -285,7 +306,7 @@ export default function Index({
                                                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border ${
                                                     completedSidak > 0
                                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                        : 'bg-gray-50 text-gray-500 border-gray-200'
+                                                         : 'bg-slate-50 text-slate-500 border-slate-200'
                                                 }`}
                                                 title={`${completedSidak} sidak selesai`}
                                             >
@@ -295,7 +316,7 @@ export default function Index({
 
                                             {pendingPermits > 0 ? (
                                                 <span
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse"
+                                                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300"
                                                     title={`${pendingPermits} surat izin menunggu persetujuan`}
                                                 >
                                                     <IconAlert className="w-3.5 h-3.5 shrink-0 text-amber-600" />
@@ -303,7 +324,7 @@ export default function Index({
                                                 </span>
                                             ) : (
                                                 <span
-                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-gray-400 border border-transparent"
+                                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-slate-400 border border-transparent"
                                                     title="Tidak ada antrean izin kerja"
                                                 >
                                                     0 Antre
@@ -321,7 +342,7 @@ export default function Index({
 
                                     {/* Direct Action Indicator */}
                                     <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                                        <span className="inline-flex items-center text-xs font-semibold text-gray-400 group-hover:text-[#0F1E36] group-hover:translate-x-0.5 transition-all">
+                                         <span className="inline-flex items-center text-xs font-semibold text-slate-400 group-hover:text-[#0F1E36] group-hover:translate-x-0.5 transition-all">
                                             Detail
                                             <svg
                                                 className="w-4 h-4 ml-0.5"
@@ -383,7 +404,7 @@ export default function Index({
                             <Link
                                 key={t.id}
                                 href={`/tenant-profiles/${t.id}/detail`}
-                                className="block bg-white rounded-xl border border-[#E2E5EA] p-4 shadow-sm hover:border-[#0F1E36]/40 active:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                 className="block bg-white rounded-lg border border-[#E2E5EA] p-4 hover:border-[#0F1E36]/40 active:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                             >
                                 <div className="flex items-center gap-3">
                                     {t.logo_url ? (
@@ -404,37 +425,37 @@ export default function Index({
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-1.5">
-                                            <p className="text-sm font-bold text-gray-900 truncate">
+                                             <p className="text-sm font-bold text-slate-900 truncate">
                                                 {t.name}
                                             </p>
                                             <Badge color={t.is_active ? 'green' : 'gray'} size="sm">
                                                 {t.is_active ? 'Aktif' : 'Nonaktif'}
                                             </Badge>
                                         </div>
-                                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                                         <p className="text-xs text-slate-500 truncate mt-0.5">
                                             {categoryName || 'Tanpa Kategori'}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                 <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
                                     <div className="flex items-center gap-2">
                                         {activeUnit ? (
                                             <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
                                                 {activeUnit.unit_code}
                                             </span>
                                         ) : (
-                                            <span className="text-gray-400 italic text-[11px]">
+                                             <span className="text-slate-400 italic text-[11px]">
                                                 Tanpa unit
                                             </span>
                                         )}
-                                        <span className="text-gray-300">·</span>
-                                        <span className="text-gray-600 font-medium">
+                                         <span className="text-slate-300">·</span>
+                                         <span className="text-slate-600 font-medium">
                                             {completedSidak} sidak
                                         </span>
                                         {pendingPermits > 0 && (
                                             <>
-                                                <span className="text-gray-300">·</span>
+                                                 <span className="text-slate-300">·</span>
                                                 <span className="text-amber-700 font-bold">
                                                     {pendingPermits} izin antre
                                                 </span>
@@ -451,7 +472,7 @@ export default function Index({
                     })}
 
                     {tenants.data.length === 0 && (
-                        <div className="bg-white rounded-xl border border-[#E2E5EA] p-6 shadow-sm">
+                         <div className="bg-white rounded-lg border border-[#E2E5EA] p-6">
                             <EmptyState
                                 variant={hasFilter ? 'search' : 'empty'}
                                 size="sm"
@@ -465,7 +486,7 @@ export default function Index({
                         </div>
                     )}
 
-                    <div className="bg-white rounded-xl border border-[#E2E5EA]">
+                     <div className="bg-white rounded-lg border border-[#E2E5EA]">
                         <Pagination meta={tenants} links={tenants.links} />
                     </div>
                 </div>
