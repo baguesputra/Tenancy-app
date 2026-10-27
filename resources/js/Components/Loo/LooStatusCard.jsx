@@ -1,4 +1,5 @@
 import Badge from '@/Components/Badge';
+import { IconLock } from '@/Components/Icons';
 
 const STATUS_LABELS = {
     draft: 'Draft',
@@ -52,7 +53,11 @@ function StepNode({ state }) {
         );
     }
 
-    return <span className="w-5 h-5 rounded-full border-2 border-gray-200" />;
+    return (
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-slate-400" aria-label="Tahap terkunci">
+            <IconLock className="h-3 w-3" aria-hidden="true" />
+        </span>
+    );
 }
 
 function SectionRow({ section, badge }) {
@@ -122,35 +127,21 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                 </div>
             ) : (
                 <>
-                    <div className="flex items-center justify-between gap-2 mt-3">
-                        <span className="text-sm font-semibold text-gray-900">Tahap {stepNumber} dari {total}</span>
-                        <Badge color={statusColor} size="sm">{statusLabel}</Badge>
+                    <div className="mt-3 rounded-lg border border-[#D9E1EC] bg-slate-50 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Posisi saat ini</p>
+                            <Badge color={statusColor} size="sm">{statusLabel}</Badge>
+                        </div>
+                        <p className="mt-1 text-sm font-semibold text-[#0F1E36]">
+                            Tahap {stepNumber} dari {total}
+                            {progress.phases[activeIndex]?.label ? ` · ${progress.phases[activeIndex].label}` : ''}
+                        </p>
+                        <p className="mt-2 border-t border-slate-200 pt-2 text-xs leading-relaxed text-slate-700">
+                            <span className="font-semibold text-slate-900">Langkah berikutnya: </span>{nextAction}
+                        </p>
                     </div>
 
-                    <div
-                        className="mt-2 grid gap-1"
-                        style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
-                        role="progressbar"
-                        aria-valuemin={0}
-                        aria-valuemax={total}
-                        aria-valuenow={stepNumber}
-                        aria-label={`Tahap ${stepNumber} dari ${total}`}
-                    >
-                        {progress.phases.map((phase) => (
-                            <span
-                                key={phase.key}
-                                className={`h-1.5 rounded-full ${
-                                    phase.state === 'done'
-                                        ? 'bg-emerald-500'
-                                        : phase.state === 'active'
-                                            ? 'bg-blue-500'
-                                            : 'bg-gray-200'
-                                }`}
-                            />
-                        ))}
-                    </div>
-
-                    <ol className="mt-4" aria-label="Tahap LOO">
+                    <ol className="mt-4" aria-label="Urutan tahap LOO">
                         {progress.phases.map((phase, i) => {
                             const meta = PHASE_STATE[phase.state] ?? PHASE_STATE.locked;
                             const isActive = phase.state === 'active';
@@ -159,7 +150,7 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                             return (
                                 <li
                                     key={phase.key}
-                                    className="relative flex gap-3"
+                                    className={`relative flex gap-3 ${phase.state === 'locked' ? 'opacity-60' : ''}`}
                                     aria-current={isActive ? 'step' : undefined}
                                 >
                                     {!isLast && (
@@ -176,7 +167,11 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                             <span className={`text-sm ${isActive ? 'font-semibold text-slate-900' : phase.state === 'done' ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
                                                 {phase.label}
                                             </span>
-                                            <Badge color={meta.color} size="sm">{meta.label}</Badge>
+                                            {phase.state === 'locked' ? (
+                                                <span className="inline-flex items-center" aria-label="Tahap terkunci">
+                                                    <IconLock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                                                </span>
+                                            ) : !isActive ? <Badge color={meta.color} size="sm">{meta.label}</Badge> : null}
                                         </div>
 
                                         {isActive && (
@@ -191,18 +186,12 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                             </ul>
                                         )}
 
-                                        {phase.state === 'locked' && (
-                                            <p className="text-xs text-slate-500 mt-1">Terkunci sampai tahap sebelumnya selesai.</p>
-                                        )}
                                     </div>
                                 </li>
                             );
                         })}
                     </ol>
 
-                    <p className="text-xs text-gray-600 border-t border-gray-100 pt-3">
-                        <span className="font-medium text-gray-800">Langkah berikutnya: </span>{nextAction}
-                    </p>
                 </>
             )}
         </div>
