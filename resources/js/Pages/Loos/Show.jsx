@@ -83,6 +83,16 @@ const ACTION_LABELS = {
     handover_completed: 'Handover selesai', cancelled: 'Dibatalkan',
 };
 
+function formatDate(value) {
+    if (!value) return '—';
+
+    const datePart = String(value).slice(0, 10);
+    const date = new Date(`${datePart}T00:00:00`);
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 // Satu baris dokumen (File LOO maupun Dokumen Pendukung) — dulu markup ini
 // diduplikasi dua kali dengan ikon mata SVG yang sama.
 function FileRow({ label, sub = null, type = 'image', onPreview }) {
@@ -186,7 +196,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
     const progressPct = totalItems > 0 ? Math.round((filledItems / totalItems) * 100) : 0;
 
     const kpis = [
-        { label: 'Tgl Terima LOO', value: loo.loo_received_date ?? '—', small: true },
+        { label: 'Tgl Terima LOO', value: formatDate(loo.loo_received_date), small: true },
         { label: 'Dibuat oleh', value: loo.marketing?.name ?? '—', small: true },
         { label: 'Kategori', value: loo.tenantCategory?.name ?? '—', small: true },
         { label: 'Progres pengisian', value: `${filledItems}/${totalItems}`, hint: `${progressPct}%` },
