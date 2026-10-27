@@ -48,10 +48,10 @@ export default function NavItem({ href, currentUrl, children, icon, collapsed = 
             onBlur={collapsed ? hideTip : undefined}
             className={`group relative flex items-center gap-3 py-2.5 pl-3 pr-2.5 min-h-10 rounded-md text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
                 ${collapsed ? 'justify-center pl-0 pr-0' : ''}
-                ${isActive ? 'text-white bg-white/10 font-medium' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                ${isActive ? 'text-white bg-white/15 font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]' : 'text-white/75 hover:text-white hover:bg-white/[0.08]'}`}
         >
             {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-sm bg-white" aria-hidden="true" />
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-sm bg-white" aria-hidden="true" />
             )}
             {icon && (
                 <span

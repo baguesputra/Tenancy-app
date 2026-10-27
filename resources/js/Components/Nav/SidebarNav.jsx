@@ -216,7 +216,7 @@ function NavSection({ section, currentUrl, collapsed, showDivider = false }) {
                 className={
                     collapsed
                         ? 'sr-only'
-                        : 'px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55'
+                        : 'px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70'
                 }
             >
                 {section.label}
