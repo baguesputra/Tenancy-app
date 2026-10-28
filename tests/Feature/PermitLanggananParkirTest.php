@@ -403,11 +403,23 @@ class PermitLanggananParkirTest extends TestCase
         $props = $res->viewData('page')['props'];
         $this->assertSame(1, $props['summary']['counts']['parkir']);
         $this->assertSame(0, $props['summary']['counts']['tenant']);
+        $this->assertSame(1, $props['summary']['status']['pending']);
+        $this->assertSame(1, $props['summary']['my_turn']);
 
         $row = collect($props['permits']['data'])->firstWhere('id', $permit->id);
         $this->assertNotNull($row);
         $this->assertSame('parkir', $row['category']);
         $this->assertSame(['Langganan Parkir'], $row['activity_labels']);
+
+        $filteredProps = $this->actingAs($staff)->get('/permit-requests?status=completed')->viewData('page')['props'];
+        $this->assertSame(1, $filteredProps['summary']['status']['pending']);
+        $this->assertSame(0, $filteredProps['summary']['status']['completed']);
+
+        $categoryProps = $this->actingAs($staff)->get('/permit-requests?category=parkir')->viewData('page')['props'];
+        $this->assertSame(1, $categoryProps['summary']['filtered_total']);
+        $this->assertSame(1, $categoryProps['summary']['status']['pending']);
+        $this->assertSame(1, $categoryProps['summary']['my_turn']);
+        $this->assertSame(0, $categoryProps['summary']['counts']['tenant']);
     }
 
     public function test_parkir_is_excluded_from_revision_flow(): void

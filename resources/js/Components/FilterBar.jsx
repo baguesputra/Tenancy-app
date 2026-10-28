@@ -1,9 +1,7 @@
 export default function FilterBar({ children }) {
     return (
-        <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-            <div className="flex flex-col lg:flex-row gap-2">
-                {children}
-            </div>
+        <div className="bg-white rounded-xl border border-[#E2E5EA] p-3 mb-4">
+            {children}
         </div>
     );
 }

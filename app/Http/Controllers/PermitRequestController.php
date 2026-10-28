@@ -15,6 +15,7 @@ use App\Services\PermitRequestVisibilityService;
 use App\Services\TenantScopeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -111,7 +112,6 @@ class PermitRequestController extends Controller
         }
 
         $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->activity_type, fn ($q) => $q->where('activity_types', 'like', "%{$request->activity_type}%"))
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
                 ->where('permit_number', 'like', "%{$request->search}%")
@@ -120,14 +120,56 @@ class PermitRequestController extends Controller
 
         $this->visibility->applyView($base, $user);
 
+        $filtered = (clone $base)->when($request->status, fn ($q) => $q->where('status', $request->status));
+        $summaryQuery = $this->applyCategory(clone $base, $isMarketing ? 'pameran' : $request->category);
+        $total = (clone $base)->count();
+        $filteredTotal = (clone $summaryQuery)->count();
+        $statusCounts = (clone $summaryQuery)->reorder()->toBase()
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $isManager = $user->hasRole('manager');
+        $currentApproval = fn ($query) => $query
+            ->where('approvals.status', 'pending')
+            ->whereNotExists(fn ($previous) => $previous
+                ->selectRaw('1')
+                ->from('approvals as previous_approvals')
+                ->whereColumn('previous_approvals.approvable_id', 'approvals.approvable_id')
+                ->where('previous_approvals.approvable_type', PermitRequest::class)
+                ->where('previous_approvals.status', 'pending')
+                ->whereColumn('previous_approvals.order', '<', 'approvals.order'));
+
+        $myTurnQuery = (clone $summaryQuery)->where('status', 'pending')->where(function ($query) use ($currentApproval, $user, $isManager) {
+            if ($isManager) {
+                $query->where(function ($branch) use ($currentApproval, $user) {
+                    $branch->where('permit_requests.branch_id', $user->branch_id)
+                        ->whereHas('approvals', fn ($approval) => $currentApproval($approval)->where('step_key', 'branch_manager'));
+                });
+            }
+
+            $query->orWhere(fn ($department) => $department->whereHas('approvals', fn ($approval) => $currentApproval($approval)
+                ->where('step_key', '!=', 'branch_manager')
+                ->where('department_id', $user->department_id)));
+        });
+
+        $myTurnCount = $myTurnQuery->count();
+
         if ($isMarketing) {
-            $total = (clone $base)->count();
             $summary = [
                 'total' => $total,
+                'filtered_total' => $filteredTotal,
                 'counts' => ['pameran' => $total],
+                'status' => [
+                    'pending' => (int) ($statusCounts['pending'] ?? 0),
+                    'completed' => (int) ($statusCounts['completed'] ?? 0),
+                    'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+                    'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+                ],
+                'my_turn' => $myTurnCount,
             ];
         } else {
-            $agg = (clone $base)->toBase()->selectRaw("
+            $agg = (clone $base)->reorder()->toBase()->selectRaw("
                 count(*) as total,
                 sum(activity_types like '%pameran%') as pameran,
                 sum(activity_types not like '%pameran%' and (activity_types like '%event%' or activity_types like '%meeting_internal%' or activity_types like '%stock_opname%')) as kegiatan,
@@ -139,6 +181,7 @@ class PermitRequestController extends Controller
 
             $summary = [
                 'total' => (int) ($agg->total ?? 0),
+                'filtered_total' => $filteredTotal,
                 'counts' => [
                     'pameran' => (int) ($agg->pameran ?? 0),
                     'kegiatan' => (int) ($agg->kegiatan ?? 0),
@@ -147,13 +190,19 @@ class PermitRequestController extends Controller
                     'tenant' => (int) ($agg->tenant ?? 0),
                     'vendor' => (int) ($agg->vendor ?? 0),
                 ],
+                'status' => [
+                    'pending' => (int) ($statusCounts['pending'] ?? 0),
+                    'completed' => (int) ($statusCounts['completed'] ?? 0),
+                    'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+                    'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+                ],
+                'my_turn' => $myTurnCount,
             ];
         }
 
-        $permits = $this->applyCategory($base, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
+        $permits = $this->applyCategory($filtered, $isMarketing ? 'pameran' : $request->category)->paginate(15)->withQueryString();
 
         $userDepartmentId = $user->department_id;
-        $isManager = $user->hasRole('manager');
         $marketingIds = Role::where('name', 'marketing')->first()?->users()->pluck('users.id')->all() ?? [];
 
         $permits->getCollection()->transform(function (PermitRequest $permit) use ($user, $userDepartmentId, $isManager, $marketingIds) {
@@ -746,7 +795,7 @@ class PermitRequestController extends Controller
             'permit' => $permitRequest,
             'data' => $data,
             'logoData' => $logoData,
-            'requestDate' => $date ? \Illuminate\Support\Carbon::parse($date)->locale('id')->translatedFormat('d F Y') : '—',
+            'requestDate' => $date ? Carbon::parse($date)->locale('id')->translatedFormat('d F Y') : '—',
             'tenancyApproval' => $tenancyApproval,
             'printedAt' => now('Asia/Makassar')->locale('id')->translatedFormat('d F Y, H:i').' WITA',
         ])->setPaper('a4');

@@ -11,7 +11,7 @@ import StepProgressMini from '@/Components/StepProgressMini';
 import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import EmptyState from '@/Components/EmptyState';
 import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding, IconCar, IconChevronDown } from '@/Components/Icons';
-import { PERMIT_CATEGORY_META, PERMIT_SOURCE_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
+import { PERMIT_CATEGORY_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 import { formatRelativeID, formatDateID } from '@/utils/format';
 
 const CATEGORY_ICON = {
@@ -23,6 +23,27 @@ const CATEGORY_ICON = {
 };
 
 const codeOf = (p, cat) => (p.permit_number?.split('/')?.[1]) || cat.code || '—';
+
+const deriveRow = (permit) => {
+    const category = PERMIT_CATEGORY_META[permit.category] ?? PERMIT_CATEGORY_META.vendor;
+    const CategoryIcon = CATEGORY_ICON[category.icon] ?? IconBuilding;
+
+    return {
+        permit,
+        category,
+        CategoryIcon,
+        activities: (permit.activity_labels ?? []).join(' · ') || '—',
+    };
+};
+
+function StatTile({ label, value, className = '' }) {
+    return (
+        <div className={`min-w-0 bg-white px-4 py-3.5 ${className}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+            <span className="mt-2 block font-mono text-xl font-semibold tabular-nums text-slate-900">{value}</span>
+        </div>
+    );
+}
 
 export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
@@ -55,7 +76,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
         router.get('/permit-requests', {}, { preserveScroll: true, replace: true });
     };
 
-    const myTurnCount = permits.data.filter((p) => p.is_my_turn).length;
+    const myTurnCount = summary.my_turn ?? 0;
     const hasFilter = locked ? (filters.search || filters.status) : (filters.search || filters.category || filters.activity_type || filters.status);
     const counts = summary.counts ?? {};
     const activeCategory = filters.category ?? '';
@@ -75,19 +96,12 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
             })),
     ];
 
-    const rows = [...permits.data].sort((a, b) => Number(b.is_my_turn) - Number(a.is_my_turn));
+    const rows = [...permits.data].sort((a, b) => Number(b.is_my_turn) - Number(a.is_my_turn)).map(deriveRow);
 
-    const columns = locked ? [
-        { key: 'number', label: 'Nomor Surat' },
-        { key: 'source', label: 'Sumber' },
-        { key: 'location', label: 'Lokasi / Tenant' },
-        { key: 'date', label: 'Diajukan' },
-        { key: 'progress', label: 'Progress' },
-        { key: 'status', label: 'Status', className: 'text-right' },
-    ] : [
-        { key: 'number', label: 'Nomor Surat' },
-        { key: 'category', label: 'Jenis' },
-        { key: 'location', label: 'Lokasi / Tenant' },
+    const columns = [
+        { key: 'number', label: 'Pengajuan' },
+        { key: 'location', label: 'Tenant / Lokasi' },
+        { key: 'activity', label: 'Aktivitas' },
         { key: 'date', label: 'Diajukan' },
         { key: 'progress', label: 'Progress' },
         { key: 'status', label: 'Status', className: 'text-right' },
@@ -98,73 +112,67 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">{locked ? 'Pengajuan Pameran' : 'Surat Izin'}</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{summary.total} pengajuan{locked ? ' pameran' : ' terdaftar'}</p>
+                        <h1 className="text-2xl font-semibold text-[#0F1E36] tracking-tight">{locked ? 'Pengajuan Pameran' : 'Surat Izin'}</h1>
+                        <p className="text-sm text-slate-500 mt-1">{summary.filtered_total ?? summary.total} pengajuan{activeCategory ? ' pada kategori ini' : ' terdaftar'}</p>
                     </div>
-                    {canCreate && (
-                        <Link href="/permit-requests/create">
-                            <Button>{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
-                        </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {myTurnCount > 0 && (
+                            <span className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-800">
+                                <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                                Tindakan saya <span className="tabular-nums font-semibold">{myTurnCount}</span>
+                            </span>
+                        )}
+                        {canCreate && (
+                            <Link href="/permit-requests/create">
+                                <Button className="min-h-[44px]">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
-                {myTurnCount > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                        <p className="text-sm text-amber-800">
-                            Ada <span className="font-semibold">{myTurnCount}</span> permohonan menunggu tindakan kamu.
-                        </p>
-                    </div>
-                )}
+                <section className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#CBD5E1] bg-[#CBD5E1] sm:grid-cols-4" aria-label="Ringkasan pengajuan">
+                    <StatTile label="Total pengajuan" value={summary.filtered_total ?? summary.total ?? 0} className="border-r border-[#94A3B8]" />
+                    <StatTile label="Menunggu" value={summary.status?.pending ?? 0} />
+                    <StatTile label="Perlu tindakan" value={myTurnCount} />
+                    <StatTile label="Selesai" value={summary.status?.completed ?? 0} />
+                </section>
 
                 <FilterBar>
-                    <div className="w-full space-y-2.5">
+                    <div className="w-full space-y-3">
                         {!locked && (
                             <>
-                                <div className="hidden lg:flex flex-wrap items-center gap-2" role="group" aria-label="Filter jenis izin">
+                                <nav className="-mx-1 overflow-x-auto overscroll-x-contain" aria-label="Kategori surat izin">
+                                <div className="flex min-w-max snap-x snap-mandatory items-center gap-1 border-b border-[#E2E5EA] px-1">
                                     {categoryFilters.map((category) => {
                                         const active = activeCategory === category.key;
                                         const CategoryIcon = category.icon;
 
                                         return (
-                                            <button
+                                            <Link
                                                 key={category.key || 'all'}
-                                                type="button"
-                                                onClick={() => updateFilter('category', active ? '' : category.key)}
-                                                aria-pressed={active}
-                                                className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                href="/permit-requests"
+                                                data={{ ...filters, category: category.key || undefined }}
+                                                preserveState
+                                                preserveScroll
+                                                aria-current={active ? 'page' : undefined}
+                                                className={`inline-flex min-h-[44px] snap-start items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     active
-                                                        ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36] ring-1 ring-[#0F1E36]'
-                                                        : 'border-[#E2E5EA] bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                                        ? 'border-[#0F1E36] text-[#0F1E36]'
+                                                        : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#0F1E36]'
                                                 }`}
                                             >
                                                 {CategoryIcon && <CategoryIcon className={`h-4 w-4 shrink-0 ${category.tint}`} aria-hidden="true" />}
                                                 <span>{category.label}</span>
-                                                <span className={`text-xs tabular-nums ${active ? 'text-[#0F1E36]/70' : 'text-gray-500'}`}>{category.value}</span>
-                                            </button>
+                                                <span className={`text-xs tabular-nums ${active ? 'text-[#0F1E36]/70' : 'text-slate-500'}`} aria-hidden="true">{category.value}</span>
+                                            </Link>
                                         );
                                     })}
                                 </div>
-
-                                <div className="lg:hidden">
-                                    <SelectInput
-                                        value={activeCategory}
-                                        onChange={(e) => updateFilter('category', e.target.value)}
-                                        className="!rounded-xl"
-                                        aria-label="Filter jenis izin"
-                                    >
-                                        <option value="">Semua jenis ({summary.total ?? 0})</option>
-                                        {categoryFilters.filter((category) => category.key).map((category) => (
-                                            <option key={category.key} value={category.key}>
-                                                {category.label} ({category.value})
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </div>
+                                </nav>
                             </>
                         )}
 
-                        <div className="flex flex-col lg:flex-row gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                             <div className="relative flex-1">
                                 <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -173,17 +181,17 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     placeholder="Cari nomor / toko..."
                                     value={searchText}
                                     onChange={(e) => setSearchText(e.target.value)}
-                                    className="!pl-10 !rounded-xl !leading-5"
+                                    className="!min-h-[44px] !pl-10 !rounded-lg !leading-5"
                                     aria-label="Cari nomor atau toko"
                                 />
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
-                                <div className="min-w-[132px] flex-1 lg:w-44 lg:flex-none">
+                            <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                                <div className="min-w-[132px] flex-1 sm:w-44 sm:flex-none">
                                     <SelectInput
                                         value={filters.status ?? ''}
                                         onChange={(e) => updateFilter('status', e.target.value)}
-                                        className="!rounded-xl"
+                                        className="!min-h-[44px] !rounded-lg"
                                         aria-label="Filter status"
                                     >
                                         <option value="">Semua Status</option>
@@ -199,7 +207,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                         onClick={() => setAdvancedOpen((open) => !open)}
                                         aria-expanded={advancedOpen}
                                         aria-controls="permit-activity-filter"
-                                        className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                        className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                             advancedFilterCount > 0
                                                 ? 'border-[#0F1E36] text-[#0F1E36]'
                                                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -229,7 +237,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                         updateFilter('activity_type', '');
                                         setAdvancedOpen(false);
                                     }}
-                                    className="inline-flex items-center gap-1 rounded-full border border-[#E2E5EA] bg-gray-50 px-2.5 py-1 font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                    className="inline-flex min-h-[36px] items-center gap-1 rounded-md border border-[#E2E5EA] bg-gray-50 px-2.5 py-1 font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                                 >
                                     Aktivitas: {activeActivityLabel ?? filters.activity_type}
                                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -247,7 +255,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                         updateFilter('activity_type', e.target.value);
                                         if (!e.target.value) setAdvancedOpen(false);
                                     }}
-                                    className="!rounded-xl lg:max-w-xs"
+                                    className="!min-h-[44px] !rounded-lg sm:max-w-xs"
                                     aria-label="Filter tipe aktivitas"
                                 >
                                     <option value="">Semua Aktivitas</option>
@@ -260,53 +268,34 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
 
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={permits} links={permits.links} />}>
-                    {rows.map((p) => {
-                        const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
-                        const src = PERMIT_SOURCE_META[p.source] ?? PERMIT_SOURCE_META.staff;
-                        const CatIcon = CATEGORY_ICON[cat.icon] ?? IconBuilding;
-                        const extraActivities = (p.activity_labels ?? []).length - 1;
+                    {rows.map(({ permit: p, category: cat, activities }) => {
                         return (
                             <tr
                                 key={p.id}
                                 onClick={() => router.visit(`/permit-requests/${p.id}`)}
-                                className={`group cursor-pointer transition-all ${
+                                className={`group cursor-pointer transition-colors ${
                                     p.is_my_turn ? 'bg-amber-50/40 hover:bg-amber-50/70 hover:shadow-sm' : 'hover:bg-gray-50/80 hover:shadow-sm'
-                                }`}
+                                } ${p.is_my_turn ? 'border-l-2 border-l-amber-400' : ''}`}
                             >
                                 <td className="px-5 py-3.5">
-                                    <span className="flex items-center gap-2 min-w-0">
+                                    <span className="flex min-w-0 items-center gap-2">
                                         <span className="shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#0F1E36]/5 text-[#0F1E36]">
                                             {codeOf(p, cat)}
                                         </span>
                                         <span className="min-w-0">
                                             <span className="block font-semibold text-gray-900 truncate">{p.permit_number}</span>
-                                            {p.is_my_turn && (
-                                                <span className="block text-[10px] font-medium text-amber-600 uppercase tracking-wide">
-                                                    Menunggu Anda
-                                                </span>
-                                            )}
+                                            <span className="block truncate text-[11px] text-slate-500">{cat.label}</span>
                                         </span>
                                     </span>
                                 </td>
-                                {!locked && (
                                 <td className="px-5 py-3.5">
-                                    <span className="flex items-center gap-1.5">
-                                        <CatIcon className={`w-4 h-4 shrink-0 ${cat.tint}`} aria-hidden="true" />
-                                        <span className="text-sm text-gray-900">{cat.label}</span>
-                                    </span>
-                                    <span className="block text-[11px] text-gray-400 mt-0.5">
-                                        via {src.label}{extraActivities > 0 ? ` · +${extraActivities} aktivitas` : ''}
+                                    <span className="block max-w-52 truncate text-sm text-gray-900" title={p.store_name_snapshot}>{p.store_name_snapshot}</span>
+                                    <span className="mt-0.5 block max-w-52 truncate text-[11px] text-gray-400" title={[p.floor_snapshot, p.block_snapshot, p.unit_number_snapshot].filter(Boolean).join(' · ')}>
+                                        {[p.floor_snapshot, p.block_snapshot, p.unit_number_snapshot].filter(Boolean).join(' · ') || 'Lokasi tidak dicantumkan'}
                                     </span>
                                 </td>
-                                )}
-                                {locked && (
                                 <td className="px-5 py-3.5">
-                                    <Badge color="gray" size="sm">{src.label}</Badge>
-                                </td>
-                                )}
-                                <td className="px-5 py-3.5">
-                                    <span className="block text-sm text-gray-900 truncate max-w-52" title={p.store_name_snapshot}>{p.store_name_snapshot}</span>
-                                    <span className="block text-xs text-gray-400 truncate max-w-52" title={(p.activity_labels ?? []).join(' · ') || '—'}>{(p.activity_labels ?? []).join(' · ') || '—'}</span>
+                                    <span className="block max-w-56 truncate text-sm text-gray-800" title={activities}>{activities}</span>
                                 </td>
                                 <td className="px-5 py-3.5">
                                     <span className="text-sm text-gray-600" title={formatDateID(p.request_date)}>{formatRelativeID(p.request_date)}</span>
@@ -320,7 +309,9 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 </td>
                                 <td className="px-5 py-3.5 text-right">
                                     <span className="inline-flex items-center gap-1.5">
-                                        {p.status === 'pending' && p.current_step_label ? (
+                                        {p.is_my_turn ? (
+                                            <Badge color="yellow">Menunggu Anda</Badge>
+                                        ) : p.status === 'pending' && p.current_step_label ? (
                                             <Badge color="yellow">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
                                         ) : (
                                             <Badge color={PERMIT_STATUS_META[p.status]?.color ?? 'gray'}>{PERMIT_STATUS_META[p.status]?.label ?? p.status}</Badge>
@@ -335,7 +326,7 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                     })}
                     {permits.data.length === 0 && (
                         <tr>
-                            <td colSpan={6} className="px-5 py-6">
+                            <td colSpan={columns.length} className="px-5 py-6">
                                 <EmptyState
                                     variant={hasFilter ? 'search' : 'empty'}
                                     size="md"
@@ -366,21 +357,21 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                 </div>
 
                 <div className="sm:hidden space-y-2.5">
-                    {rows.map((p) => {
-                        const cat = PERMIT_CATEGORY_META[p.category] ?? PERMIT_CATEGORY_META.vendor;
-                        const CatIcon = CATEGORY_ICON[cat.icon] ?? IconBuilding;
+                    {rows.map(({ permit: p, category: cat, CategoryIcon: CatIcon, activities }) => {
                         return (
                             <div
                                 key={p.id}
                                 onClick={() => router.visit(`/permit-requests/${p.id}`)}
-                                className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                                className={`bg-white rounded-xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer ${p.is_my_turn ? 'border-l-2 border-l-amber-400' : ''}`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">{p.permit_number}</p>
                                         <p className="text-xs text-gray-400 mt-0.5 truncate">{p.store_name_snapshot} · {formatRelativeID(p.request_date)}</p>
                                     </div>
-                                    {p.status === 'pending' && p.current_step_label ? (
+                                    {p.is_my_turn ? (
+                                        <Badge color="yellow" size="sm">Menunggu Anda</Badge>
+                                    ) : p.status === 'pending' && p.current_step_label ? (
                                         <Badge color="yellow" size="sm">Menunggu {p.current_step_label.replace('Approval ', '')}</Badge>
                                     ) : (
                                         <Badge color={PERMIT_STATUS_META[p.status]?.color ?? 'gray'} size="sm">{PERMIT_STATUS_META[p.status]?.label ?? p.status}</Badge>
@@ -391,13 +382,10 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                         <CatIcon className={`w-3 h-3 ${cat.tint}`} aria-hidden="true" />
                                         {codeOf(p, cat)}
                                     </span>
-                                    <span className="text-xs text-gray-400 truncate">{(p.activity_labels ?? []).join(' · ') || '—'}</span>
-                                    {p.is_my_turn && (
-                                        <span className="ml-auto shrink-0 text-[10px] font-medium text-amber-600 uppercase tracking-wide">
-                                            Menunggu Anda
-                                        </span>
-                                    )}
+                                    <span className="shrink-0 text-xs font-medium text-slate-600">{cat.label}</span>
+                                    <span className="text-xs text-gray-400 truncate">{activities}</span>
                                 </div>
+                                {p.step_progress?.length > 0 && <div className="mt-3"><StepProgressMini steps={p.step_progress} /></div>}
                             </div>
                         );
                     })}
