@@ -31,7 +31,7 @@ class PermitRequestService
         $tenant = isset($data['tenant_id']) ? Tenant::with('activeTenancy.unit')->find($data['tenant_id']) : null;
 
         // Tenant tanpa tenancy aktif belum boleh ajukan izin — kontrak belum aktif.
-        if ($tenant && ! $tenant->activeTenancy) {
+        if ($tenant && ! $tenant->activeTenancy && ! in_array('customer_form', $data['activity_types'] ?? [], true)) {
             throw ValidationException::withMessages([
                 'tenant_id' => 'Tenancy tenant belum aktif, izin belum bisa dibuat.',
             ]);
@@ -70,6 +70,9 @@ class PermitRequestService
             'vehicle_type' => $data['vehicle_type'] ?? null,
             'applicant_name' => $data['applicant_name'] ?? null,
             'applicant_position' => $data['applicant_position'] ?? null,
+            'customer_form_data' => isset($data['customer_company_name']) ? collect($data)
+                ->filter(fn ($value, $key) => str_starts_with($key, 'customer_'))
+                ->all() : null,
             'requested_by_type' => get_class($requestedBy),
             'requested_by_id' => $requestedBy->id,
             'status' => 'pending',
@@ -186,6 +189,14 @@ class PermitRequestService
             return;
         }
 
+        if (in_array('customer_form', $permit->activity_types ?? [], true)) {
+            $this->approvalService->setupSteps($permit, [
+                ['step_key' => 'tenancy', 'label' => 'Approval Tenancy', 'department_id' => $tenancyDeptId],
+            ]);
+
+            return;
+        }
+
         $bsDeptId = $this->departmentResolver->id('bs', $permit->branch_id);
         $securityDeptId = $this->departmentResolver->id('security', $permit->branch_id);
 
@@ -253,6 +264,10 @@ class PermitRequestService
 
     public function revise(PermitRequest $permit, array $data, User $revisedBy): PermitRevision
     {
+        if (in_array('customer_form', $permit->activity_types ?? [], true)) {
+            return $this->reviseCustomerForm($permit, $data, $revisedBy);
+        }
+
         return \DB::transaction(function () use ($permit, $data, $revisedBy) {
             $changes = [];
             foreach (self::REVISABLE as $field) {
@@ -303,6 +318,65 @@ class PermitRequestService
         }, 3);
     }
 
+    private function reviseCustomerForm(PermitRequest $permit, array $data, User $revisedBy): PermitRevision
+    {
+        return \DB::transaction(function () use ($permit, $data, $revisedBy) {
+            $current = $permit->customer_form_data ?? [];
+            $oldRequestDate = $permit->request_date?->format('Y-m-d');
+            $changes = [];
+            foreach ($data as $field => $value) {
+                if (in_array($field, ['reason', 'customer_request_date'], true)) continue;
+                $old = $current[$field] ?? null;
+                $new = $value === '' ? null : $value;
+                if ((string) ($old ?? '') !== (string) ($new ?? '')) {
+                    $changes[$field] = ['old' => $old, 'new' => $new];
+                    $current[$field] = $new;
+                }
+            }
+
+            if ($oldRequestDate !== $data['customer_request_date']) {
+                $changes['customer_request_date'] = [
+                    'old' => $oldRequestDate,
+                    'new' => $data['customer_request_date'],
+                ];
+            }
+            $current['customer_request_date'] = $data['customer_request_date'];
+
+            $permit->update([
+                'customer_form_data' => $current,
+                'request_date' => $data['customer_request_date'],
+                'pic_name' => $data['customer_pic_name'],
+                'pic_phone' => $data['customer_pic_phone'],
+                'store_name_snapshot' => $permit->tenant_id ? $permit->store_name_snapshot : ($current['customer_company_name'] ?? $permit->store_name_snapshot),
+            ]);
+            $revision = $permit->revisions()->create([
+                'revised_by_type' => get_class($revisedBy),
+                'revised_by_id' => $revisedBy->id,
+                'changes' => $changes,
+                'reason' => $data['reason'],
+                'revision_no' => ($permit->revisions()->max('revision_no') ?? 0) + 1,
+            ]);
+
+            $permit->approvals()->where('step_key', 'tenancy')->update([
+                'status' => 'pending', 'approved_by' => null, 'approved_at' => null, 'notes' => null,
+            ]);
+            $this->syncStatus($permit->fresh());
+
+            $tenancyDeptId = $this->departmentResolver->id('tenancy', $permit->branch_id);
+            if ($tenancyDeptId) {
+                $this->notificationService->notifyDepartment(
+                    $tenancyDeptId,
+                    'Revisi Form Data Customer',
+                    "{$permit->permit_number} direvisi oleh {$revisedBy->name}. Alasan: {$data['reason']}",
+                    "/permit-requests/{$permit->id}",
+                    'document'
+                );
+            }
+
+            return $revision;
+        }, 3);
+    }
+
     private function revisionLabel(string $field): string
     {
         return match ($field) {
@@ -310,6 +384,23 @@ class PermitRequestService
             'work_end_date' => 'Tgl selesai',
             'work_end_time' => 'Jam selesai',
             'access_route' => 'Akses',
+            'customer_company_name' => 'Nama perusahaan',
+            'customer_invoice_address' => 'Alamat invoice',
+            'customer_company_phone' => 'Telepon perusahaan',
+            'customer_npwp_number' => 'NPWP',
+            'customer_npwp_name' => 'Nama di NPWP',
+            'customer_npwp_address' => 'Alamat NPWP',
+            'customer_pic_name' => 'Nama PIC',
+            'customer_pic_position' => 'Jabatan PIC',
+            'customer_pic_ktp' => 'No. KTP PIC',
+            'customer_pic_phone' => 'Telepon PIC',
+            'customer_pic_email' => 'Email PIC',
+            'customer_tenant_relation' => 'Hubungan tenant',
+            'customer_billing_description' => 'Keterangan tagihan',
+            'customer_amount' => 'Nominal (di luar PPN)',
+            'customer_city' => 'Kota',
+            'customer_notes' => 'Catatan',
+            'customer_request_date' => 'Tanggal pengajuan',
             default => $field,
         };
     }

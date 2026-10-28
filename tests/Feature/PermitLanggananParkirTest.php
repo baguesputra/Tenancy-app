@@ -139,6 +139,110 @@ class PermitLanggananParkirTest extends TestCase
         $this->assertNull($steps[1]->department_id);
     }
 
+    public function test_customer_form_uses_tc_number_and_single_tenancy_approval(): void
+    {
+        $staff = $this->user('tenancy_staff', 'Tenancy');
+        $payload = [
+            'form_mode' => 'customer',
+            'customer_company_name' => 'PT Contoh Customer',
+            'customer_invoice_address' => 'Jl. Contoh No. 1',
+            'customer_company_phone' => '0511123456',
+            'customer_npwp_number' => '',
+            'customer_npwp_name' => '',
+            'customer_npwp_address' => '',
+            'customer_pic_name' => 'Budi Customer',
+            'customer_pic_position' => 'Manager',
+            'customer_pic_ktp' => '6371010101010001',
+            'customer_pic_phone' => '081234567890',
+            'customer_pic_email' => 'budi@example.test',
+            'customer_tenant_relation' => '',
+            'customer_billing_description' => 'Tagihan administrasi',
+            'customer_amount' => '1500000',
+            'customer_city' => 'Banjarmasin',
+            'customer_notes' => '',
+            'customer_request_date' => '2026-10-20',
+        ];
+
+        $this->actingAs($staff)
+            ->from('/permit-requests/create?mode=customer')
+            ->post('/permit-requests', $payload)
+            ->assertRedirect();
+
+        $permit = PermitRequest::latest('id')->firstOrFail();
+        $this->assertSame(['customer_form'], $permit->activity_types);
+        $this->assertSame('TC', PermitNumberService::codeFor($permit->activity_types));
+        $this->assertSame('PT Contoh Customer', $permit->store_name_snapshot);
+        $this->assertSame('Budi Customer', $permit->pic_name);
+        $this->assertSame('2026-10-20', $permit->request_date->format('Y-m-d'));
+        $this->assertSame(['tenancy'], $permit->approvals()->pluck('step_key')->all());
+        $this->assertSame('Tenancy', $permit->approvals()->first()->department->name);
+        $this->assertSame('1500000', (string) $permit->customer_form_data['customer_amount']);
+
+        $this->actingAs($staff)
+            ->get("/permit-requests/{$permit->id}/pdf")
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_customer_revision_tracks_date_and_resets_tenancy_approval(): void
+    {
+        $staff = $this->user('tenancy_staff', 'Tenancy');
+        $permit = app(PermitRequestService::class)->create([
+            'activity_types' => ['customer_form'],
+            'request_date' => '2026-10-20',
+            'customer_request_date' => '2026-10-20',
+            'customer_company_name' => 'PT Contoh Customer',
+            'customer_pic_name' => 'Budi Customer',
+            'customer_pic_phone' => '081234567890',
+            'customer_amount' => '1500000',
+        ], $staff);
+        $permit->approvals()->first()->update(['status' => 'approved', 'approved_by' => $staff->id, 'approved_at' => now()]);
+        $permit->update(['status' => 'completed']);
+
+        $revisionData = [
+            'customer_company_name' => 'PT Contoh Customer',
+            'customer_invoice_address' => 'Jl. Contoh No. 1',
+            'customer_company_phone' => '0511123456',
+            'customer_pic_name' => 'Budi Customer',
+            'customer_pic_position' => 'Manager',
+            'customer_pic_ktp' => '6371010101010001',
+            'customer_pic_phone' => '081234567890',
+            'customer_pic_email' => 'budi@example.test',
+            'customer_billing_description' => 'Tagihan administrasi',
+            'customer_amount' => '1500000',
+            'customer_city' => 'Banjarmasin',
+            'customer_request_date' => '2026-10-21',
+            'reason' => 'Tanggal pengajuan perlu diperbarui.',
+        ];
+
+        $revision = app(PermitRequestService::class)->revise($permit, $revisionData, $staff);
+
+        $this->assertSame('2026-10-20', $revision->changes['customer_request_date']['old']);
+        $this->assertSame('2026-10-21', $revision->changes['customer_request_date']['new']);
+        $this->assertSame('2026-10-21', $permit->fresh()->request_date->format('Y-m-d'));
+        $this->assertSame('pending', $permit->fresh()->status);
+        $this->assertSame('pending', $permit->approvals()->first()->status);
+    }
+
+    public function test_customer_approval_rejects_user_outside_tenancy_department(): void
+    {
+        $staff = $this->user('tenancy_staff', 'Tenancy');
+        $otherDepartmentStaff = $this->user('tenancy_staff', 'Building Service');
+        $permit = app(PermitRequestService::class)->create([
+            'activity_types' => ['customer_form'],
+            'request_date' => '2026-10-20',
+            'customer_company_name' => 'PT Contoh Customer',
+            'customer_pic_name' => 'Budi Customer',
+            'customer_pic_phone' => '081234567890',
+        ], $staff);
+
+        $this->actingAs($otherDepartmentStaff)
+            ->post("/approvals/{$permit->approvals()->first()->id}/approve")
+            ->assertSessionHasErrors('approval');
+
+        $this->assertSame('pending', $permit->approvals()->first()->fresh()->status);
+    }
+
     public function test_store_parkir_via_http_ignores_standard_permit_fields(): void
     {
         $staff = $this->user('tenancy_staff', 'Tenancy');

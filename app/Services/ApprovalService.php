@@ -72,6 +72,15 @@ class ApprovalService
 
     private function authorizeUserForStep(Approval $approval, User $user): void
     {
+        if ($approval->approvable instanceof PermitRequest
+            && in_array('customer_form', $approval->approvable->activity_types ?? [], true)
+            && (strtolower($approval->step_key) !== 'tenancy'
+                || strtolower($user->department?->name ?? '') !== 'tenancy')) {
+            throw ValidationException::withMessages([
+                'approval' => 'Form Customer Isi Form hanya dapat diproses oleh departemen Tenancy.',
+            ]);
+        }
+
         if ($approval->department_id && $user->department_id !== $approval->department_id) {
             throw ValidationException::withMessages([
                 'approval' => 'Anda tidak berwenang melakukan approval tahap ini.',

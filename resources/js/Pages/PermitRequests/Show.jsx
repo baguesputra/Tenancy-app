@@ -259,6 +259,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
         .filter(Boolean).join(' / ') || '—';
     const isKegiatan = (permit.activity_types ?? []).some((v) => ['event', 'meeting_internal', 'stock_opname'].includes(v));
     const isParkir = (permit.activity_types ?? []).includes('langganan_parkir');
+    const isCustomer = (permit.activity_types ?? []).includes('customer_form');
     const isFitout = (permit.activity_types ?? []).includes('fit_out');
     const isPullout = (permit.activity_types ?? []).includes('pull_out');
     const fitoutDocVariants = [
@@ -274,6 +275,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
         ? { key: 'kegiatan', label: 'Kegiatan Internal', color: 'green' }
         : isParkir
         ? { key: 'parkir', label: 'Parkir Berlangganan', color: 'amber' }
+        : isCustomer
+        ? { key: 'customer', label: 'Customer Isi Form', color: 'violet' }
         : permit.tenant_id
         ? { key: 'tenant', label: 'Tenant', color: 'blue' }
         : { key: 'vendor', label: 'Vendor Rekanan', color: 'amber' };
@@ -300,10 +303,10 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     );
 
     const docSections = [
-        ...(isParkir ? [{
+        ...(isParkir || isCustomer ? [{
             title: 'Surat Izin Resmi',
             items: [
-                { label: 'Formulir Langganan Parkir', description: 'Dokumen permohonan resmi & persetujuan', href: `/permit-requests/${permit.id}/pdf`, icon: docIcon, format: 'PDF' },
+                { label: isCustomer ? 'Customer Isi Form' : 'Formulir Langganan Parkir', description: 'Dokumen permohonan resmi & persetujuan', href: `/permit-requests/${permit.id}/pdf`, icon: docIcon, format: 'PDF' },
             ],
         }] : [{
             title: 'Surat Izin Resmi',
@@ -610,7 +613,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     {/* Kolom Kiri: Dokumen Perizinan (Unified Card dengan Tab Navigation Header) */}
                     <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden print:border-none print:shadow-none">
                         {/* Tab Switcher jika memiliki pekerja & barang (Terintegrasi Langsung pada Header Card) */}
-                        {!isKegiatan && !isParkir && (
+                        {!isKegiatan && !isParkir && !isCustomer && (
                             <div className="border-b border-slate-200/80 bg-slate-50/50 px-4 sm:px-6 print:hidden">
                                 <div className="flex items-center gap-1 sm:gap-3 md:gap-5 overflow-x-auto no-scrollbar -mb-px" role="group" aria-label="Bagian dokumen">
                                     <button
@@ -682,12 +685,12 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                         {/* Card Body: Konten Bagian Dokumen */}
                         <div className="p-5 sm:p-7 space-y-6">
                             {/* SECTION A: Informasi & Spesifikasi Perizinan */}
-                            {(activeTab === 'detail' || activeTab === 'all' || isKegiatan || isParkir) && (
+                            {(activeTab === 'detail' || activeTab === 'all' || isKegiatan || isParkir || isCustomer) && (
                                 <div className={`space-y-6 ${activeTab !== 'detail' && !isKegiatan && !isParkir ? 'print:hidden' : ''}`}>
-                                    {(activeTab === 'all' || isKegiatan || isParkir) ? (
+                                    {(activeTab === 'all' || isKegiatan || isParkir || isCustomer) ? (
                                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                             <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                                                {isParkir ? 'Data Permohonan Parkir Berlangganan' : 'Informasi & Spesifikasi Perizinan'}
+                                                {isParkir ? 'Data Permohonan Parkir Berlangganan' : isCustomer ? 'Data Customer Isi Form' : 'Informasi & Spesifikasi Perizinan'}
                                             </h2>
                                             <span className="text-xs text-slate-400 font-medium font-mono">{permit.permit_number}</span>
                                         </div>
@@ -701,6 +704,26 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     )}
 
                                 {/* Informasi Pokok Pekerjaan */}
+                                {isCustomer ? (
+                                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                        <DetailField label="Nama Perusahaan PT/CV" value={permit.customer_form_data?.customer_company_name} />
+                                        <DetailField label="No. Telp/HP Perusahaan" value={permit.customer_form_data?.customer_company_phone} />
+                                        <DetailField label="Alamat Pengiriman Invoice" value={permit.customer_form_data?.customer_invoice_address} wide />
+                                        <DetailField label="No. NPWP Perusahaan" value={permit.customer_form_data?.customer_npwp_number} />
+                                        <DetailField label="Nama di NPWP" value={permit.customer_form_data?.customer_npwp_name} />
+                                        <DetailField label="Alamat di NPWP" value={permit.customer_form_data?.customer_npwp_address} wide />
+                                        <DetailField label="Nama PIC" value={permit.customer_form_data?.customer_pic_name} />
+                                        <DetailField label="Jabatan" value={permit.customer_form_data?.customer_pic_position} />
+                                        <DetailField label="No. KTP PIC" value={permit.customer_form_data?.customer_pic_ktp} />
+                                        <DetailField label="No. Telp/HP PIC" value={permit.customer_form_data?.customer_pic_phone} />
+                                        <DetailField label="E-mail PIC" value={permit.customer_form_data?.customer_pic_email} />
+                                        <DetailField label="Hubungan Tenant" value={permit.customer_form_data?.customer_tenant_relation || permit.tenant?.name} />
+                                        <DetailField label="Keterangan Tagihan" value={permit.customer_form_data?.customer_billing_description} wide />
+                                        <DetailField label="Nominal (di luar PPN)" value={`Rp ${Number(permit.customer_form_data?.customer_amount || 0).toLocaleString('id-ID')}`} />
+                                        <DetailField label="Kota / Tanggal" value={`${permit.customer_form_data?.customer_city || '—'}, ${formatDateID(permit.request_date)}`} />
+                                        <DetailField label="Catatan" value={permit.customer_form_data?.customer_notes} wide />
+                                    </dl>
+                                ) : (
                                 <div id="info-lokasi" className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 text-sm scroll-mt-24">
                                     <div>
                                         <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
@@ -784,6 +807,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                         </>
                                     )}
                                 </div>
+                                )}
 
                                 {/* Catatan / Ketentuan Khusus */}
                                 {permit.notes && (
@@ -798,7 +822,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 )}
 
                                 {/* Identitas Kontraktor / Vendor Eksternal jika ada */}
-                                {!isParkir && (permit.is_external || permit.contractor_company) && (
+                                {!isParkir && !isCustomer && (permit.is_external || permit.contractor_company) && (
                                     <div className="pt-4 border-t border-slate-100">
                                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
                                             {category.key === 'vendor' ? 'Identitas Vendor Pelaksana' : 'Identitas Kontraktor Pelaksana'}
@@ -825,7 +849,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 )}
 
                                 {/* Departemen Pendamping Teknis jika ada */}
-                                {!isParkir && permit.accompanying_departments?.length > 0 && (
+                                {!isParkir && !isCustomer && permit.accompanying_departments?.length > 0 && (
                                     <div className="pt-4 border-t border-slate-100">
                                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                                             Departemen Pendamping Teknis
@@ -841,7 +865,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                         )}
 
                         {/* SECTION B: Daftar Tenaga Kerja & Verifikasi Identitas (KTP) */}
-                        {!isKegiatan && !isParkir && (activeTab === 'pekerja' || activeTab === 'all') && (
+                        {!isKegiatan && !isParkir && !isCustomer && (activeTab === 'pekerja' || activeTab === 'all') && (
                             <div id="verifikasi" className={`space-y-4 scroll-mt-24 print:block ${activeTab === 'all' ? 'pt-6 border-t border-slate-200/80' : ''}`}>
                                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                     <div>
@@ -1280,7 +1304,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
             />
 
             {/* Modal Kartu Akses QR Digital */}
-            {!isParkir && (
+            {!isParkir && !isCustomer && (
                 <Modal
                     open={qrModalOpen}
                     onClose={() => setQrModalOpen(false)}
@@ -1354,5 +1378,14 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                 </Modal>
             )}
         </AppLayout>
+    );
+}
+
+function DetailField({ label, value, wide = false }) {
+    return (
+        <div className={`min-w-0 border-b border-slate-100 pb-3 ${wide ? 'sm:col-span-2' : ''}`}>
+            <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</dt>
+            <dd className="text-sm font-medium text-slate-900 whitespace-pre-line break-words">{value || '—'}</dd>
+        </div>
     );
 }

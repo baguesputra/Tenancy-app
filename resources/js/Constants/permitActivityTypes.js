@@ -9,6 +9,7 @@ export const ACTIVITY_TYPES = [
     { value: 'pull_out', label: 'Pull Out' },
     { value: 'renovasi', label: 'Renovasi' },
     { value: 'langganan_parkir', label: 'Langganan Parkir' },
+    { value: 'customer_form', label: 'Customer Isi Form' },
     { value: 'pameran', label: 'Pameran / Open Counter', code: 'E&P' },
     { value: 'event', label: 'Event', code: 'EVT' },
     { value: 'meeting_internal', label: 'Meeting Internal', code: 'MTG' },

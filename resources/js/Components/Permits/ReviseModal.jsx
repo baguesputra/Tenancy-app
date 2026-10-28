@@ -8,7 +8,15 @@ import TextInput from '@/Components/Form/TextInput';
 import FormField from '@/Components/Form/FormField';
 import Button from '@/Components/Form/Button';
 
-const FIELD_LABEL = { work_start_date: 'Tgl mulai', work_end_date: 'Tgl selesai', work_end_time: 'Jam selesai', access_route: 'Akses' };
+const FIELD_LABEL = {
+    work_start_date: 'Tgl mulai', work_end_date: 'Tgl selesai', work_end_time: 'Jam selesai', access_route: 'Akses',
+    customer_company_name: 'Nama perusahaan', customer_invoice_address: 'Alamat invoice', customer_company_phone: 'Telepon perusahaan',
+    customer_npwp_number: 'NPWP', customer_npwp_name: 'Nama di NPWP', customer_npwp_address: 'Alamat NPWP',
+    customer_pic_name: 'Nama PIC', customer_pic_position: 'Jabatan PIC', customer_pic_ktp: 'No. KTP PIC',
+    customer_pic_phone: 'Telepon PIC', customer_pic_email: 'Email PIC', customer_tenant_relation: 'Hubungan tenant',
+    customer_billing_description: 'Keterangan tagihan', customer_amount: 'Nominal (di luar PPN)', customer_city: 'Kota',
+    customer_notes: 'Catatan', customer_request_date: 'Tanggal pengajuan',
+};
 
 export function RevisionTimeline({ revisions = [] }) {
     if (!revisions.length) return null;
@@ -18,7 +26,7 @@ export function RevisionTimeline({ revisions = [] }) {
                 <div key={r.id} className="rounded-xl border border-[#E2E5EA] bg-white p-3.5">
                     <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold text-gray-900">Revisi #{r.revision_no}</p>
-                        <p className="text-[11px] text-gray-400">{new Date(r.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-[11px] text-gray-400">{r.revised_by_name ? `${r.revised_by_name} · ` : ''}{new Date(r.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                     <ul className="mt-2 space-y-1 text-xs text-gray-700">
                         {Object.entries(r.changes ?? {}).map(([f, c]) => (
@@ -40,9 +48,14 @@ export function RevisionTimeline({ revisions = [] }) {
 export default function ReviseModal({ open, onClose, permit, postUrl }) {
     const [sending, setSending] = useState(false);
     const [form, setForm] = useState({ work_start_date: '', work_end_date: '', work_end_time: '', access_route: '', reason: '' });
+    const isCustomer = (permit?.activity_types ?? []).includes('customer_form');
 
     useEffect(() => {
         if (open && permit) {
+            if (isCustomer) {
+                setForm({ ...permit.customer_form_data, customer_request_date: (permit.customer_form_data?.customer_request_date ?? permit.request_date ?? '').slice(0, 10), reason: '' });
+                return;
+            }
             setForm({
                 work_start_date: (permit.work_start_date ?? '').slice(0, 10),
                 work_end_date: (permit.work_end_date ?? '').slice(0, 10),
@@ -51,7 +64,7 @@ export default function ReviseModal({ open, onClose, permit, postUrl }) {
                 reason: '',
             });
         }
-    }, [open, permit]);
+    }, [open, permit, isCustomer]);
 
     useEffect(() => {
         if (!open) return;
@@ -87,8 +100,31 @@ export default function ReviseModal({ open, onClose, permit, postUrl }) {
                 </div>
                 <div className="p-5 space-y-3">
                     <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        Revisi mengulang approval Marketing/Keuangan/BS/Security. Tenancy tetap.
+                        {isCustomer ? 'Perubahan dicatat di riwayat dan form dikirim kembali ke Tenancy untuk persetujuan.' : 'Revisi mengulang approval Marketing/Keuangan/BS/Security. Tenancy tetap.'}
                     </p>
+                    {isCustomer ? (
+                        <>
+                            {[
+                                ['customer_company_name', 'Nama Perusahaan PT/CV'], ['customer_invoice_address', 'Alamat Pengiriman Invoice'],
+                                ['customer_company_phone', 'No. Telp/HP Perusahaan'], ['customer_npwp_number', 'No. NPWP Perusahaan'],
+                                ['customer_npwp_name', 'Nama di NPWP'], ['customer_npwp_address', 'Alamat di NPWP'],
+                                ['customer_pic_name', 'Nama PIC'], ['customer_pic_position', 'Jabatan PIC'], ['customer_pic_ktp', 'No. KTP'],
+                                ['customer_pic_phone', 'No. Telp/HP PIC'], ['customer_pic_email', 'E-mail'],
+                                ['customer_tenant_relation', 'Hubungan Tenant'], ['customer_billing_description', 'Keterangan Tagihan'],
+                                ['customer_amount', 'Nominal (di luar PPN)'], ['customer_city', 'Kota'], ['customer_notes', 'Catatan'],
+                            ].map(([field, label]) => (
+                                <FormField key={field} compact label={label}>
+                                    {field.includes('address') || field.includes('description') || field.includes('notes')
+                                        ? <Textarea rows={2} value={form[field] ?? ''} onChange={(e) => setForm({ ...form, [field]: e.target.value })} />
+                                        : <TextInput type={field === 'customer_pic_email' ? 'email' : field === 'customer_amount' ? 'number' : 'text'} value={form[field] ?? ''} onChange={(e) => setForm({ ...form, [field]: e.target.value })} />}
+                                </FormField>
+                            ))}
+                            <FormField compact label="Tanggal Pengajuan" required>
+                                <DateInput value={form.customer_request_date ?? ''} onChange={(e) => setForm({ ...form, customer_request_date: e.target.value })} />
+                            </FormField>
+                        </>
+                    ) : (
+                    <>
                     <div className="grid grid-cols-2 gap-2.5">
                         <FormField compact label="Tgl mulai" required>
                             <DateInput value={form.work_start_date} onChange={(e) => setForm({ ...form, work_start_date: e.target.value })} />
@@ -105,6 +141,8 @@ export default function ReviseModal({ open, onClose, permit, postUrl }) {
                             <TextInput value={form.access_route} onChange={(e) => setForm({ ...form, access_route: e.target.value })} placeholder="cth. Loading dock barat" />
                         </FormField>
                     </div>
+                    </>
+                    )}
                     <FormField compact label="Alasan revisi" required hint="Min. 10 karakter, tampil ke BS & Security.">
                         <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} placeholder="cth. Bongkar panggung mundur karena hujan, tambah 1 hari." />
                     </FormField>

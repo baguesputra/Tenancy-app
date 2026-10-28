@@ -28,12 +28,14 @@ class PermitRequest extends Model
         'status',
         'barcode_token',
         'is_flagged',
+        'customer_form_data',
     ];
 
     protected function casts(): array
     {
         return [
             'activity_types' => 'array',
+            'customer_form_data' => 'array',
             'request_date' => 'date',
             'is_external' => 'boolean',
             'is_flagged' => 'boolean',

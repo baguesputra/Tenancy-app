@@ -4,6 +4,7 @@ export const PERMIT_CATEGORY_META = {
     tenant: { label: 'Tenant', code: 'TC', icon: 'building', tint: 'text-sky-600' },
     vendor: { label: 'Vendor', code: 'TC', icon: 'wrench', tint: 'text-teal-600' },
     parkir: { label: 'Parkir', code: 'TC', icon: 'car', tint: 'text-orange-500' },
+    customer: { label: 'Customer Isi Form', code: 'TC', icon: 'building', tint: 'text-violet-600' },
 };
 
 export const PERMIT_SOURCE_META = {
