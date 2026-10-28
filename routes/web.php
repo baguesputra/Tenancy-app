@@ -16,6 +16,7 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\GateSyncController;
 use App\Http\Controllers\Settings\InspectionTemplateController;
+use App\Http\Controllers\Settings\StaticDocumentController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\TenantCategoryController;
@@ -104,7 +105,6 @@ Route::get('/auth/sso/gagal', function () {
 
 use App\Http\Controllers\LooController;
 use App\Http\Controllers\LooFitoutController;
-use App\Http\Controllers\Settings\StaticDocumentController;
 
 Route::middleware('auth')->group(function () {
 
