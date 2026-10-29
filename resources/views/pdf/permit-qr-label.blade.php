@@ -63,7 +63,9 @@
             <div class="h">PERATURAN KARTU LOADING</div>
             <ol>
                 <li>Kartu loading hanya berlaku untuk izin MASUK BARANG.</li>
-                <li>Waktu masuk barang: 07.30 – 10.00 WITA, 15.00 – 17.00 WITA, 22.00 – 23.00 WITA.</li>
+                @if ($scanWindowSummary)
+                    <li>Akses QR hanya aktif: {{ $scanWindowSummary }} WITA.</li>
+                @endif
                 <li>Masuk barang hanya melalui Lift loading Mall A (Utara/Pos Pagar) dan Lift loading Mall B (Selatan/Pos loading DM2).</li>
                 <li>KELUAR BARANG WAJIB mengurus surat izin ke kantor manajemen.</li>
             </ol>

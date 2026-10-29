@@ -15,12 +15,19 @@ use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PublicScanTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     private function seedTenant(Branch $branch): Tenant
     {
@@ -59,6 +66,7 @@ class PublicScanTest extends TestCase
 
     public function test_guest_bisa_lihat_status_izin_tanpa_login(): void
     {
+        Carbon::setTestNow(Carbon::create(2026, 10, 29, 23, 0, 0, 'Asia/Makassar'));
         $branch = Branch::create(['name' => 'Cabang Test', 'code' => 'TST']);
         $permit = $this->makePermit($this->seedTenant($branch));
         $permit->approvals()->create(['label' => 'Tenancy', 'status' => 'approved', 'order' => 1, 'step_key' => 'tenancy', 'notes' => 'catatan internal rahasia']);

@@ -1331,6 +1331,11 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     <span className="text-[11px] text-slate-400 mt-2 text-center">
                                         Pindai kode QR untuk validasi resmi perizinan di pos pemeriksaan.
                                     </span>
+                                    {share.scan_window && (
+                                        <span className="text-[11px] text-amber-600 mt-1 text-center">
+                                            QR hanya aktif {share.scan_window} WITA.
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">

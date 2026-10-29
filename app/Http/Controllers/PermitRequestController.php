@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermitRequestService;
 use App\Services\PermitRequestVisibilityService;
+use App\Services\PermitScanWindowService;
 use App\Services\TenantScopeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -478,11 +479,14 @@ class PermitRequestController extends Controller
         return [
             'url' => $permitRequest->scan_url,
             'qr' => 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(200)->generate($permitRequest->scan_url)),
+            'scan_window' => $permitRequest->isScanWindowLimited()
+                ? app(PermitScanWindowService::class)->summary()
+                : null,
         ];
     }
 
     /** Unduh kartu QR label (PDF) untuk dicetak dan diberikan ke tenant. */
-    public function qrLabel(PermitRequest $permitRequest, Request $request)
+    public function qrLabel(PermitRequest $permitRequest, Request $request, PermitScanWindowService $scanWindow)
     {
         $user = $request->user();
         abort_unless($this->visibility->canView($user, $permitRequest), 403);
@@ -520,6 +524,7 @@ class PermitRequestController extends Controller
             'expiresLabel' => $permitRequest->expires_at?->translatedFormat('d M Y, H:i').' WITA',
             'isGoods' => $permitRequest->is_goods_permit,
             'logoData' => $logoData,
+            'scanWindowSummary' => $permitRequest->isScanWindowLimited() ? $scanWindow->summary() : null,
         ])->setPaper('a6');
 
         $safeNumber = str_replace(['/', '\\'], '-', $permitRequest->permit_number);

@@ -8,6 +8,7 @@ use App\Models\ScannableCode;
 use App\Models\Unit;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
+use App\Services\PermitScanWindowService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,6 +19,7 @@ class ScanController extends Controller
         string $token,
         InspectionSessionService $sessions,
         InspectionService $inspections,
+        PermitScanWindowService $scanWindow,
     ) {
         $scannable = ScannableCode::with('scannable')
             ->where('token', $token)
@@ -32,14 +34,14 @@ class ScanController extends Controller
 
         return match (get_class($model)) {
             // Dokumen publik: bisa dibuka siapa pun pemegang QR, tanpa login.
-            PermitRequest::class => $this->handlePermit($model),
+            PermitRequest::class => $this->handlePermit($model, $scanWindow),
             Inspection::class => $this->handleInspection($model),
             Unit::class => $this->handleUnit($model, $webUser, $request, $sessions, $inspections),
             default => abort(400, 'Unsupported scannable type'),
         };
     }
 
-    private function handlePermit(PermitRequest $permit)
+    private function handlePermit(PermitRequest $permit, PermitScanWindowService $scanWindow)
     {
         if ($permit->is_expired) {
             $label = $permit->expires_at?->translatedFormat('d M Y, H:i').' WITA';
@@ -49,6 +51,15 @@ class ScanController extends Controller
                 'store_name' => $permit->store_name_snapshot,
                 'expires_label' => $label,
             ])->toResponse(request())->setStatusCode(410);
+        }
+
+        if ($permit->isScanWindowLimited() && ! $scanWindow->isOpen()) {
+            return Inertia::render('Scan/Closed', [
+                'permit_number' => $permit->permit_number,
+                'store_name' => $permit->store_name_snapshot,
+                'next_open_label' => $scanWindow->nextOpenAt()?->translatedFormat('d M Y, H:i').' WITA',
+                'summary' => $scanWindow->summary(),
+            ])->toResponse(request())->setStatusCode(403);
         }
 
         $permit->load(['approvals' => fn ($q) => $q->orderBy('order')]);

@@ -127,6 +127,15 @@ class PermitRequest extends Model
         ));
     }
 
+    /** Permit dari form Umum/Kerja — QR-nya terikat jendela jam akses. */
+    public function isScanWindowLimited(): bool
+    {
+        return empty(array_intersect(
+            ['pameran', 'event', 'meeting_internal', 'stock_opname', 'langganan_parkir', 'customer_form'],
+            $this->activity_types ?? []
+        ));
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
