@@ -15,7 +15,7 @@ import PageHeader from '@/Components/Settings/PageHeader';
 import DataTable from '@/Components/DataTable';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
-import FilterBar, { FilterReset } from '@/Components/FilterBar';
+import { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
@@ -189,57 +189,39 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     </div>
                 </div>
 
-                <FilterBar>
+                <div className="bg-white rounded-xl border border-[#E2E5EA] p-2 mb-4 flex flex-col lg:flex-row gap-2">
                         <div className="relative min-w-0 flex-1">
-                            <label htmlFor="search-tenant" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                                Cari
-                            </label>
-                            <div className="relative mt-1.5">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <TextInput
-                                id="search-tenant"
                                 placeholder="Cari nama tenant..."
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9"
                                 aria-label="Cari nama tenant"
                             />
-                            </div>
                         </div>
-                        <div className="min-w-0">
-                            <label htmlFor="filter-tenant-category" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                                Kategori tenant
-                            </label>
                         <SelectInput
-                            id="filter-tenant-category"
                             value={filters.tenant_category_id ?? ''}
                             onChange={(e) => updateFilter('tenant_category_id', e.target.value)}
-                            className="mt-1.5 lg:w-52"
+                            className="lg:w-48"
                             aria-label="Filter kategori tenant"
                         >
                             <option value="">Semua Kategori Tenant</option>
                             {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </SelectInput>
-                        </div>
-                        <div className="min-w-0">
-                            <label htmlFor="filter-product-category" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                                Kategori produk
-                            </label>
                         <SelectInput
-                            id="filter-product-category"
                             value={filters.product_category_id ?? ''}
                             onChange={(e) => updateFilter('product_category_id', e.target.value)}
-                            className="mt-1.5 lg:w-52"
+                            className="lg:w-48"
                             aria-label="Filter kategori produk"
                         >
                             <option value="">Semua Kategori Produk</option>
                             {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </SelectInput>
-                        </div>
                         {hasFilter && <FilterReset onClick={resetFilters} />}
-                </FilterBar>
+                </div>
 
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={tenants} links={tenants.links} />}>
