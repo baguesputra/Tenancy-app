@@ -410,7 +410,35 @@ class DashboardController extends Controller
 
         return [
             'month' => $month->format('Y-m'),
-            'events' => $events->filter(fn ($e) => $e['start'])->sortBy('start')->values()->all(),
+            'events' => $events
+                ->concat($this->holidayEvents($start, $end))
+                ->filter(fn ($e) => $e['start'])
+                ->sortBy('start')
+                ->values()
+                ->all(),
         ];
+    }
+
+    /** Libur nasional & cuti bersama (config/holidays.php) yang jatuh di rentang bulan. */
+    private function holidayEvents(Carbon $start, Carbon $end): array
+    {
+        $events = [];
+
+        foreach (config('holidays.'.$start->year, []) as $date => $holiday) {
+            if ($date < $start->toDateString() || $date > $end->toDateString()) {
+                continue;
+            }
+
+            $events[] = [
+                'id' => "holiday-{$date}",
+                'type' => $holiday['type'],
+                'title' => $holiday['name'],
+                'start' => $date,
+                'end' => $date,
+                'url' => null,
+            ];
+        }
+
+        return $events;
     }
 }

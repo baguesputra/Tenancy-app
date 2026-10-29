@@ -4,15 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\ProductCategory;
+use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
-use App\Models\Tenancy;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\PermitRequestService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -63,6 +62,27 @@ class DashboardCalendarTest extends TestCase
         $end = $events->firstWhere('type', 'contract_end');
         $this->assertNotNull($end);
         $this->assertTrue($end['urgent']);
+        Carbon::setTestNow();
+    }
+
+    public function test_calendar_contains_national_holidays(): void
+    {
+        Carbon::setTestNow('2026-03-01');
+        $mgr = $this->manager();
+
+        $res = $this->actingAs($mgr)->get('/dashboard?cal_month=2026-03')->assertOk();
+        $holidays = collect($res->viewData('page')['props']['calendar']['events'])
+            ->filter(fn ($e) => in_array($e['type'], ['libur_nasional', 'cuti_bersama'], true));
+
+        $this->assertCount(7, $holidays);
+        $nyepi = $holidays->firstWhere('id', 'holiday-2026-03-19');
+        $this->assertSame('Hari Suci Nyepi (Tahun Baru Saka 1948)', $nyepi['title']);
+        $this->assertNull($nyepi['url']);
+
+        $september = $this->actingAs($mgr)->get('/dashboard?cal_month=2026-09')->assertOk();
+        $this->assertEmpty(collect($september->viewData('page')['props']['calendar']['events'])
+            ->filter(fn ($e) => in_array($e['type'], ['libur_nasional', 'cuti_bersama'], true)));
+
         Carbon::setTestNow();
     }
 

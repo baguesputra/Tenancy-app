@@ -14,85 +14,99 @@ const TYPE_META = {
         label: "Izin Kerja",
         dot: "bg-blue-500",
         chip: "bg-blue-50 text-blue-800 border-blue-200",
-        bar: "bg-blue-50 text-blue-800 border-blue-200 border-l-blue-500",
+        
         hlRing: "ring-blue-400",
     },
     pameran: {
         label: "Pameran",
         dot: "bg-[#FF6B6B]",
         chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
-        bar: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/25 border-l-[#FF6B6B]",
+        
         hlRing: "ring-[#FF6B6B]",
     },
     kegiatan: {
         label: "Kegiatan",
         dot: "bg-emerald-500",
         chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
-        bar: "bg-emerald-50 text-emerald-800 border-emerald-200 border-l-emerald-500",
+        
         hlRing: "ring-emerald-400",
     },
     contract_start: {
         label: "Kontrak mulai",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
-        bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
+        
         hlRing: "ring-purple-400",
     },
     contract_end: {
         label: "Kontrak berakhir",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
-        bar: "bg-purple-50 text-purple-800 border-purple-200 border-l-purple-500",
+        
         hlRing: "ring-purple-400",
     },
     sidak: {
         label: "Sidak",
         dot: "bg-amber-500",
         chip: "bg-amber-50 text-amber-900 border-amber-200",
-        bar: "bg-amber-50 text-amber-900 border-amber-200 border-l-amber-500",
+        
         hlRing: "ring-amber-400",
     },
     loo_received: {
         label: "LOO diterima",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
     },
     loo_submitted: {
         label: "LOO disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
     },
     loo_completed: {
         label: "LOO selesai",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
     },
     section_filled: {
         label: "Section diisi",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
     },
     section_submitted: {
         label: "Section disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        bar: "bg-indigo-50 text-indigo-800 border-indigo-200 border-l-indigo-500",
+        
         hlRing: "ring-indigo-400",
+    },
+    libur_nasional: {
+        label: "Libur nasional",
+        dot: "bg-red-500",
+        chip: "bg-red-50 text-red-800 border-red-200",
+        
+        hlRing: "ring-red-400",
+    },
+    cuti_bersama: {
+        label: "Cuti bersama",
+        dot: "bg-teal-500",
+        chip: "bg-teal-50 text-teal-800 border-teal-200",
+        
+        hlRing: "ring-teal-400",
     },
 };
 
@@ -104,6 +118,7 @@ const LEGEND_GROUPS = [
     { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
     { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
     { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled", "section_filled", "section_submitted"] },
+    { label: "Libur & cuti bersama", dot: "bg-red-500", types: ["libur_nasional", "cuti_bersama"] },
 ];
 
 const FILTERS = [
@@ -115,6 +130,8 @@ const FILTERS = [
     { key: "sidak", label: "Sidak" },
     { key: "loo", label: "LOO" },
     { key: "section", label: "Section" },
+    { key: "libur_nasional", label: "Libur nasional" },
+    { key: "cuti_bersama", label: "Cuti bersama" },
 ];
 
 const PERMIT_TYPES = ["permit", "pameran", "kegiatan"];
@@ -125,6 +142,11 @@ const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
 
 const familyOf = (type) =>
     LEGEND_GROUPS.find((g) => g.types.includes(type)) ?? LEGEND_GROUPS[0];
+
+// Event tanpa url (mis. libur nasional) tetap tampil, tapi bukan link.
+function EventWrap({ href, ...props }) {
+    return href ? <Link href={href} {...props} /> : <span {...props} />;
+}
 
 // Posisi hari ini di dalam rentang event, mis. "Hari 2/5". Null bila bukan rentang.
 function spanDay(e, dateKey) {
@@ -164,6 +186,13 @@ function monthCells(year, monthIdx) {
         days.push(new Date(year, monthIdx, 1 - startOffset + i));
     }
     return days;
+}
+
+function shortDate(k) {
+    return new Date(`${k}T00:00:00`).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+    });
 }
 
 function relDay(start) {
@@ -751,7 +780,7 @@ export default function EventCalendar({
                                                 );
                                             }
                                             return (
-                                                <Link
+                                                <EventWrap
                                                     key={e.id}
                                                     href={e.url}
                                                     onClick={(ev) =>
@@ -761,7 +790,7 @@ export default function EventCalendar({
                                                     className={`block truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""} ${isHl ? `ring-2 ${meta.hlRing}` : ""}`}
                                                 >
                                                     {e.title}
-                                                </Link>
+                                                </EventWrap>
                                             );
                                         })}
                                         {extra > 0 && (
@@ -824,23 +853,23 @@ export default function EventCalendar({
                                 return (
                                     <div
                                         key={col.label}
-                                        className="shrink-0 w-72 bg-slate-50/70 border border-slate-100 rounded-xl p-2.5"
+                                        className="flex w-72 shrink-0 flex-col rounded-xl border border-[#E2E5EA] bg-white"
                                     >
-                                        <h3 className="flex items-center gap-1.5 px-1.5 pb-2">
+                                        <h3 className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
                                             <span
-                                                className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`}
+                                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`}
                                                 aria-hidden="true"
                                             />
                                             <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
                                                 {col.label}
                                             </span>
-                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-slate-500 border border-slate-200 tabular-nums whitespace-nowrap">
+                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 tabular-nums whitespace-nowrap">
                                                 {col.items.length}
                                             </span>
                                         </h3>
-                                        <ul className="space-y-2">
+                                        <ul className="divide-y divide-slate-100">
                                             {visibleItems.map((e) => (
-                                                <BoardCard key={e.id} event={e} />
+                                                <BoardRow key={e.id} event={e} />
                                             ))}
                                         </ul>
                                         {col.items.length > BOARD_PREVIEW && (
@@ -849,7 +878,7 @@ export default function EventCalendar({
                                                     toggleCol(col.label)
                                                 }
                                                 aria-expanded={isOpen}
-                                                className="mt-2 w-full rounded-lg py-1.5 text-[11px] font-medium text-slate-500 hover:bg-white hover:text-slate-800 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                                className="w-full border-t border-slate-100 py-2 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                                             >
                                                 {isOpen
                                                     ? "Sembunyikan"
@@ -908,7 +937,7 @@ function DayPanel({ dateKey, events }) {
                                 {g.label}
                                 <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
                             </p>
-                            <ul className="space-y-1.5">
+                            <ul className="divide-y divide-slate-100">
                                 {g.items.map((e) => (
                                     <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />
                                 ))}
@@ -1012,7 +1041,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                                         {g.label}
                                         <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
                                     </p>
-                                    <ul className="space-y-1">
+                                    <ul className="divide-y divide-slate-100">
                                         {g.items.map((e) => (
                                             <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />
                                         ))}
@@ -1029,89 +1058,70 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
 }
 
 function AgendaRow({ event: e, span = null }) {
-    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
-    const dateLabel = new Date(`${e.start}T00:00:00`).toLocaleDateString(
-        "id-ID",
-        { day: "numeric", month: "short" },
-    );
     const range =
         e.end && e.end !== e.start
-            ? `${dateLabel} – ${new Date(`${e.end}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
-            : dateLabel;
+            ? e.start.slice(0, 7) === e.end.slice(0, 7)
+                ? `${new Date(`${e.start}T00:00:00`).getDate()}–${shortDate(e.end)}`
+                : `${shortDate(e.start)} – ${shortDate(e.end)}`
+            : shortDate(e.start);
+
     return (
         <li>
-            <Link
+            <EventWrap
                 href={e.url}
-                className={`flex items-center gap-2.5 rounded-xl border-l-2 px-2 py-1.5 transition-colors group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} hover:bg-slate-50`}
+                className="flex items-start gap-3 px-2 py-2 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
             >
+                <span className="w-16 shrink-0 pt-px text-[11px] font-medium leading-tight tabular-nums text-slate-400">
+                    {range}
+                </span>
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs sm:text-sm text-slate-800 group-hover:text-slate-950">
+                    <span className="block truncate text-[13px] text-slate-900">
                         {e.title}
                     </span>
-                    <span className="block mt-0.5 text-[11px] text-slate-400">
-                        {meta.label} · {range}
+                    <span className="mt-0.5 block truncate text-[11px] text-slate-400">
+                        {relDay(e.start)}
                         {span ? ` · ${span}` : ""}
-                        {` · ${relDay(e.start)}`}
-                        {e.urgent ? " · H-30" : ""}
+                        {e.status ? ` · ${e.status}` : ""}
                     </span>
                 </span>
-                {span && (
-                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tabular-nums whitespace-nowrap">
-                        {span}
-                    </span>
-                )}
                 {e.urgent && (
-                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
+                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
                         Segera
                     </span>
                 )}
-                {e.status && (
-                    <span className="hidden sm:inline shrink-0 text-[11px] text-slate-400">
-                        {e.status}
-                    </span>
-                )}
-            </Link>
+            </EventWrap>
         </li>
     );
 }
 
-function BoardCard({ event: e }) {
-    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
-    const dateLabel = new Date(`${e.start}T00:00:00`).toLocaleDateString(
-        "id-ID",
-        { day: "numeric", month: "short" },
-    );
+function BoardRow({ event: e }) {
     const range =
         e.end && e.end !== e.start
-            ? `${dateLabel} – ${new Date(`${e.end}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
-            : dateLabel;
+            ? `${shortDate(e.start)} – ${shortDate(e.end)}`
+            : shortDate(e.start);
+
     return (
         <li>
-            <Link
+            <EventWrap
                 href={e.url}
-                className={`block rounded-xl border border-[#E2E5EA] border-l-2 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,30,54,0.04)] transition-all group focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${meta.bar.split(" ").slice(-1)[0]} ${
-                    e.urgent
-                        ? "!border-l-rose-400 bg-rose-50/40 hover:bg-rose-50/70"
-                        : "hover:border-slate-300 hover:shadow-[0_4px_12px_-6px_rgba(15,30,54,0.25)]"
-                }`}
+                className="block px-3 py-2.5 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
             >
-                <span className="line-clamp-2 text-xs sm:text-[13px] font-medium leading-snug text-slate-900 group-hover:text-slate-950">
+                <span className="line-clamp-2 text-[13px] leading-snug text-slate-900">
                     {e.title}
                 </span>
-                <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                    <span className="tabular-nums">{range}</span>
-                    <span className="text-slate-300" aria-hidden="true">
-                        ·
+                <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                    <span className="min-w-0 truncate">
+                        {relDay(e.start)}
+                        {e.status ? ` · ${e.status}` : ""}
                     </span>
-                    <span>{relDay(e.start)}</span>
-                    {e.status && <span>{e.status}</span>}
+                    <span className="shrink-0 tabular-nums">{range}</span>
                 </span>
                 {e.urgent && (
-                    <span className="mt-1.5 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
+                    <span className="mt-1.5 inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
                         Segera
                     </span>
                 )}
-            </Link>
+            </EventWrap>
         </li>
     );
 }
