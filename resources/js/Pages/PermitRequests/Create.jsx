@@ -355,13 +355,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             Jenis pengajuan
                         </p>
                         <div
-                            className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                            className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5"
                             role="group"
                             aria-labelledby="mode-switcher-label"
                         >
                             {[
-                            { value: 'kerja', label: 'Kerja', desc: 'Tenant / vendor' },
-                            { value: 'kegiatan', label: 'Kegiatan', desc: 'Event / meeting / stock opname' },
+                            { value: 'kerja', label: 'Kerja', desc: 'Tenant/vendor' },
+                            { value: 'kegiatan', label: 'Kegiatan', desc: 'Event/meeting/stock' },
                             { value: 'pameran', label: 'Pameran', desc: 'Open counter' },
                             { value: 'parkir', label: 'Parkir', desc: 'Langganan bulanan' },
                             { value: 'customer', label: 'Customer', desc: 'Form diisi customer' },
