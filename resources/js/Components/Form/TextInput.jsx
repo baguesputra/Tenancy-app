@@ -54,7 +54,7 @@ export default function TextInput({ error, className = '', loading = false, clea
     const displayValue = props.value !== undefined ? props.value : value;
 
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <input
                 type={type}
                 value={displayValue}

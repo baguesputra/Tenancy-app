@@ -16,7 +16,7 @@ export default function TimeInput({ error, className = '', loading = false, minT
     };
 
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <TextInput
                 type="time"
                 value={value}

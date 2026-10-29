@@ -138,7 +138,7 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                 </div>
 
                 <div className="bg-white rounded-lg border border-[#E2E5EA] p-2 mb-4 flex flex-col lg:flex-row gap-2">
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                         <TextInput
                             placeholder="Cari no LOO / nama tenant..."
                             value={search}

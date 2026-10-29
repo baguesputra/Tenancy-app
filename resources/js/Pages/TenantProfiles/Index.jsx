@@ -130,7 +130,7 @@ export default function Index({
                 {/* Filter Toolbar */}
                 <div className="bg-white rounded-lg border border-[#E2E5EA] p-3.5">
                     <div className="flex flex-col lg:flex-row gap-2.5">
-                        <div className="relative flex-1">
+                        <div className="relative min-w-0 flex-1">
                             <svg
                                  className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                                 fill="none"
@@ -146,7 +146,7 @@ export default function Index({
                                 />
                             </svg>
                             <TextInput
-                                placeholder="Cari nama tenant / badan usaha / unit / telepon…"
+                                placeholder="Cari nama tenant / badan usaha / unit / telepon..."
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9 min-h-[42px]"
@@ -158,7 +158,7 @@ export default function Index({
                                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 p-1"
                                     aria-label="Hapus kata kunci"
                                 >
-                                    ✕
+                                    <span aria-hidden="true">×</span>
                                 </button>
                             )}
                         </div>

@@ -206,7 +206,7 @@ export default function Index({
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        <div className="relative">
+                        <div className="relative min-w-0 flex-1 sm:flex-none">
                             <IconSearch
                                 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                                 aria-hidden="true"
@@ -217,7 +217,7 @@ export default function Index({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 aria-label="Cari unit atau tenant"
-                                className="text-xs bg-white border border-slate-300 rounded-lg pl-9 pr-8 py-2 w-48 sm:w-56 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F1E36]/20 focus:border-[#0F1E36]"
+                                className="text-xs bg-white border border-slate-300 rounded-lg pl-9 pr-8 py-2 w-full sm:w-56 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F1E36]/20 focus:border-[#0F1E36]"
                             />
                             {searchQuery && (
                                 <button

@@ -1,8 +1,8 @@
 export default function SelectInput({ error, className = '', loading = false, searchable = false, ...props }) {
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <select
-                className={`w-full pl-3.5 pr-${searchable ? '10' : '3.5'} py-2.5 text-sm text-gray-900 bg-white
+                className={`w-full pl-3.5 ${searchable ? 'pr-10' : 'pr-3.5'} py-2.5 text-sm text-gray-900 bg-white
                     border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-0
                     transition-all duration-200 ease-out
                     appearance-none

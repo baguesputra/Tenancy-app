@@ -35,7 +35,7 @@ export default function Textarea({ error, className = '', rows = 3, loading = fa
     const displayValue = props.value !== undefined ? props.value : value;
 
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <textarea
                 ref={textareaRef}
                 rows={rows}

@@ -15,7 +15,7 @@ export default function DateInput({ error, className = '', loading = false, minD
     };
 
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <TextInput
                 type="date"
                 value={value}

@@ -39,7 +39,7 @@ export default function NumberInput({ error, className = '', loading = false, mi
     };
 
     return (
-        <div className="relative">
+        <div className="relative min-w-0">
             <div className="flex items-center">
                 {prefix && (
                     <span className="mr-2 text-gray-500">{prefix}</span>
