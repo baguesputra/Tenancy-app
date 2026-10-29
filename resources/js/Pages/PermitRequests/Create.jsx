@@ -373,10 +373,10 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 type="button"
                                 aria-pressed={active}
                                 onClick={() => { if (!active) router.get('/permit-requests/create', { mode: opt.value }); }}
-                                className={`flex flex-col items-start gap-0.5 rounded-xl border bg-white px-4 py-3 text-left shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                     active
                                         ? 'border-[#0F1E36] bg-[#0F1E36] text-white'
-                                        : 'border-[#C9D0D9] hover:border-[#0F1E36]/50 hover:bg-slate-50'
+                                        : 'border-[#C9D0D9] bg-white hover:border-[#0F1E36]/50 hover:bg-slate-50'
                                 }`}
                             >
                                 <span className={`text-sm font-semibold ${active ? 'text-white' : 'text-slate-900'}`}>{opt.label}</span>
