@@ -137,6 +137,58 @@ class PermitRequestFormTest extends TestCase
             ->assertSessionHasErrors('activity_types.0');
     }
 
+    public function test_tanggal_selesai_maksimal_7_hari_untuk_form_umum(): void
+    {
+        $user = $this->makeUser();
+        $start = Carbon::today()->toDateString();
+
+        $this->actingAs($user)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload([
+                'work_start_date' => $start,
+                'work_end_date' => Carbon::today()->addDays(6)->toDateString(),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload([
+                'work_start_date' => $start,
+                'work_end_date' => Carbon::today()->addDays(7)->toDateString(),
+            ]))
+            ->assertSessionHasErrors('work_end_date');
+
+        $this->actingAs($user)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload([
+                'work_start_date' => Carbon::today()->addDays(3)->toDateString(),
+                'work_end_date' => Carbon::today()->addDays(1)->toDateString(),
+            ]))
+            ->assertSessionHasErrors('work_end_date');
+
+        $this->assertDatabaseCount('permit_requests', 1);
+    }
+
+    public function test_kegiatan_tidak_dibatasi_7_hari(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user)
+            ->from('/permit-requests/create')
+            ->post('/permit-requests', $this->payload([
+                'form_mode' => 'kegiatan',
+                'kegiatan_type' => 'event',
+                'event_name' => 'Launching Produk',
+                'event_area' => 'Atrium Utama',
+                'pic_name' => 'Ibu Mila',
+                'work_start_date' => Carbon::today()->toDateString(),
+                'work_end_date' => Carbon::today()->addDays(10)->toDateString(),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('permit_requests', 1);
+    }
+
     public function test_fit_out_dan_pull_out_tidak_bisa_dipilih_bersamaan(): void
     {
         $user = $this->makeUser();

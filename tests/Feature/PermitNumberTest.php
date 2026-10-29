@@ -325,7 +325,7 @@ class PermitNumberTest extends TestCase
 
         $res = $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
             'work_start_date' => '2026-09-23',
-            'work_end_date' => '2026-09-30',
+            'work_end_date' => '2026-09-29',
             'work_end_time' => '18:00',
             'access_route' => 'Pintu timur',
             'reason' => 'Pekerjaan mundur seminggu karena material telat.',
@@ -333,7 +333,7 @@ class PermitNumberTest extends TestCase
         $res->assertRedirect();
 
         $permit->refresh();
-        $this->assertSame('2026-09-30', $permit->work_end_date->format('Y-m-d'));
+        $this->assertSame('2026-09-29', $permit->work_end_date->format('Y-m-d'));
         $this->assertSame('pending', $permit->approvals()->where('step_key', 'bs')->first()->status);
         $this->assertSame('pending', $permit->approvals()->where('step_key', 'security')->first()->status);
         $this->assertSame('approved', $permit->approvals()->where('step_key', 'tenancy')->first()->status);
@@ -343,7 +343,7 @@ class PermitNumberTest extends TestCase
         $this->assertSame(1, $rev->revision_no);
         $this->assertArrayHasKey('work_end_date', $rev->changes);
         $this->assertSame('Pekerjaan mundur seminggu karena material telat.', $rev->reason);
-        $this->assertTrue($permit->fresh()->expires_at->format('Y-m-d') === '2026-09-30');
+        $this->assertTrue($permit->fresh()->expires_at->format('Y-m-d') === '2026-09-29');
         Carbon::setTestNow();
     }
 
@@ -356,14 +356,14 @@ class PermitNumberTest extends TestCase
 
         $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
             'work_start_date' => '2026-09-23',
-            'work_end_date' => '2026-09-30',
+            'work_end_date' => '2026-09-29',
             'reason' => 'Pekerjaan mundur seminggu.',
         ])->assertStatus(422);
 
         $permit->update(['status' => 'pending']);
         $this->actingAs($staff)->post("/permit-requests/{$permit->id}/revise", [
             'work_start_date' => '2026-09-23',
-            'work_end_date' => '2026-09-30',
+            'work_end_date' => '2026-09-29',
             'reason' => 'Pendek.',
         ])->assertSessionHasErrors('reason');
         Carbon::setTestNow();
@@ -494,7 +494,7 @@ class PermitNumberTest extends TestCase
     {
         return array_merge([
             'work_start_date' => '2026-09-23',
-            'work_end_date' => '2026-09-30',
+            'work_end_date' => '2026-09-29',
             'work_end_time' => '18:00',
             'access_route' => 'Pintu timur',
             'reason' => 'Pekerjaan mundur seminggu karena material telat.',

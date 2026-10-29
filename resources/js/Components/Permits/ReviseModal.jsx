@@ -7,6 +7,9 @@ import Textarea from '@/Components/Form/Textarea';
 import TextInput from '@/Components/Form/TextInput';
 import FormField from '@/Components/Form/FormField';
 import Button from '@/Components/Form/Button';
+import { maxPermitEndDate } from '@/utils/format';
+
+const SPECIAL_ACTIVITY_TYPES = ['pameran', 'event', 'meeting_internal', 'stock_opname', 'langganan_parkir', 'customer_form'];
 
 const FIELD_LABEL = {
     work_start_date: 'Tgl mulai', work_end_date: 'Tgl selesai', work_end_time: 'Jam selesai', access_route: 'Akses',
@@ -49,6 +52,23 @@ export default function ReviseModal({ open, onClose, permit, postUrl }) {
     const [sending, setSending] = useState(false);
     const [form, setForm] = useState({ work_start_date: '', work_end_date: '', work_end_time: '', access_route: '', reason: '' });
     const isCustomer = (permit?.activity_types ?? []).includes('customer_form');
+    const isLimited = !(permit?.activity_types ?? []).some((t) => SPECIAL_ACTIVITY_TYPES.includes(t));
+
+    const handleStartDateChange = (value) => {
+        setForm((prev) => {
+            let end = prev.work_end_date;
+            if (isLimited) {
+                if (!end) {
+                    end = maxPermitEndDate(value) ?? '';
+                } else {
+                    const max = maxPermitEndDate(value);
+                    if (end > max) end = max;
+                    else if (end < value) end = value;
+                }
+            }
+            return { ...prev, work_start_date: value, work_end_date: end };
+        });
+    };
 
     useEffect(() => {
         if (open && permit) {
@@ -127,10 +147,15 @@ export default function ReviseModal({ open, onClose, permit, postUrl }) {
                     <>
                     <div className="grid grid-cols-2 gap-2.5">
                         <FormField compact label="Tgl mulai" required>
-                            <DateInput value={form.work_start_date} onChange={(e) => setForm({ ...form, work_start_date: e.target.value })} />
+                            <DateInput value={form.work_start_date} onChange={(e) => handleStartDateChange(e.target.value)} />
                         </FormField>
-                        <FormField compact label="Tgl selesai" required>
-                            <DateInput value={form.work_end_date} onChange={(e) => setForm({ ...form, work_end_date: e.target.value })} />
+                        <FormField compact label="Tgl selesai" hint={isLimited ? 'Maks. 7 hari' : undefined} required>
+                            <DateInput
+                                value={form.work_end_date}
+                                minDate={isLimited ? form.work_start_date || undefined : undefined}
+                                maxDate={isLimited ? maxPermitEndDate(form.work_start_date) : undefined}
+                                onChange={(e) => setForm({ ...form, work_end_date: e.target.value })}
+                            />
                         </FormField>
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">

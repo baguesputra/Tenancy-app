@@ -34,6 +34,19 @@ export function formatTimeID(value) {
     return `${m[1].padStart(2, '0')}.${m[2]}`;
 }
 
+export const MAX_PERMIT_DAYS = 7;
+
+export function addDaysISO(value, days) {
+    const d = parseDate(value);
+    if (!d) return '';
+    d.setDate(d.getDate() + days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function maxPermitEndDate(start) {
+    return start ? addDaysISO(start, MAX_PERMIT_DAYS - 1) : undefined;
+}
+
 export function formatDateRange(start, end) {
     if (!start) return '—';
     return end && end !== start ? `${formatDateID(start)} s/d ${formatDateID(end)}` : formatDateID(start);

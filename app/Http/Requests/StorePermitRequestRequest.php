@@ -4,9 +4,12 @@ namespace App\Http\Requests;
 
 use App\Services\PermitRequestVisibilityService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 
 class StorePermitRequestRequest extends FormRequest
 {
+    private const MAX_PERMIT_DAYS = 7;
+
     public function authorize(): bool
     {
         $user = $this->user('web');
@@ -31,7 +34,7 @@ class StorePermitRequestRequest extends FormRequest
         $isKegiatan = ! $isExhibition && $this->input('form_mode') === 'kegiatan';
         $isParkir = ! $isExhibition && ! $isKegiatan && $this->input('form_mode') === 'parkir';
         $isCustomerForm = ! $isExhibition && ! $isKegiatan && ! $isParkir && $this->input('form_mode') === 'customer';
-        $isSpecialForm = $isExhibition || $isKegiatan || $isParkir || $isCustomerForm;
+        $isSpecialForm = $this->isSpecialForm();
 
         return [
             'form_mode' => 'nullable|in:umum,kerja,kegiatan,pameran,parkir,customer',
@@ -113,8 +116,35 @@ class StorePermitRequestRequest extends FormRequest
                 if (is_array($types) && in_array('fit_out', $types, true) && in_array('pull_out', $types, true)) {
                     $validator->errors()->add('activity_types', 'Fit Out dan Pull Out hanya bisa dipilih salah satu.');
                 }
+
+                if ($this->isSpecialForm()
+                    || ! $this->filled('work_start_date')
+                    || ! $this->filled('work_end_date')) {
+                    return;
+                }
+
+                try {
+                    $start = Carbon::parse($this->input('work_start_date'));
+                    $end = Carbon::parse($this->input('work_end_date'));
+                } catch (\Throwable) {
+                    return;
+                }
+
+                if ($end->lt($start)) {
+                    $validator->errors()->add('work_end_date', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+                } elseif ($end->gt($start->copy()->addDays(self::MAX_PERMIT_DAYS - 1))) {
+                    $validator->errors()->add('work_end_date', 'Tanggal selesai maksimal '.self::MAX_PERMIT_DAYS.' hari setelah tanggal mulai.');
+                }
             },
         ];
+    }
+
+    private function isSpecialForm(): bool
+    {
+        $user = $this->user('web');
+
+        return ($user && app(PermitRequestVisibilityService::class)->isMarketingLocked($user))
+            || in_array($this->input('form_mode'), ['pameran', 'kegiatan', 'parkir', 'customer'], true);
     }
 
     public function messages(): array

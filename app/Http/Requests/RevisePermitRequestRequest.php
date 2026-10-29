@@ -3,9 +3,14 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 
 class RevisePermitRequestRequest extends FormRequest
 {
+    private const MAX_PERMIT_DAYS = 7;
+
+    private const SPECIAL_ACTIVITY_TYPES = ['pameran', 'event', 'meeting_internal', 'stock_opname', 'langganan_parkir', 'customer_form'];
+
     public function authorize(): bool
     {
         return true;
@@ -43,6 +48,35 @@ class RevisePermitRequestRequest extends FormRequest
             'work_end_time' => 'nullable|date_format:H:i',
             'access_route' => 'nullable|string',
             'reason' => 'required|string|min:10|max:1000',
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function ($validator) {
+                $permit = $this->route('permitRequest');
+                $types = $permit?->activity_types ?? [];
+
+                if (array_intersect($types, self::SPECIAL_ACTIVITY_TYPES)
+                    || ! $this->filled('work_start_date')
+                    || ! $this->filled('work_end_date')) {
+                    return;
+                }
+
+                try {
+                    $start = Carbon::parse($this->input('work_start_date'));
+                    $end = Carbon::parse($this->input('work_end_date'));
+                } catch (\Throwable) {
+                    return;
+                }
+
+                if ($end->lt($start)) {
+                    $validator->errors()->add('work_end_date', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+                } elseif ($end->gt($start->copy()->addDays(self::MAX_PERMIT_DAYS - 1))) {
+                    $validator->errors()->add('work_end_date', 'Tanggal selesai maksimal '.self::MAX_PERMIT_DAYS.' hari setelah tanggal mulai.');
+                }
+            },
         ];
     }
 
