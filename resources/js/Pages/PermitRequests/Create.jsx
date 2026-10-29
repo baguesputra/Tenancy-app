@@ -373,14 +373,14 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 type="button"
                                 aria-pressed={active}
                                 onClick={() => { if (!active) router.get('/permit-requests/create', { mode: opt.value }); }}
-                                className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                className={`flex flex-col items-start gap-0.5 rounded-xl border bg-white px-4 py-3 text-left shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                     active
-                                        ? 'border-[#0F1E36] bg-[#0F1E36] text-white shadow-sm'
-                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        ? 'border-[#0F1E36] bg-[#0F1E36] text-white'
+                                        : 'border-[#C9D0D9] hover:border-[#0F1E36]/50 hover:bg-slate-50'
                                 }`}
                             >
-                                <span className={`text-sm font-semibold ${active ? 'text-white' : 'text-gray-700'}`}>{opt.label}</span>
-                                <span className={`text-[11px] ${active ? 'text-white/70' : 'text-gray-400'}`}>{opt.desc}</span>
+                                <span className={`text-sm font-semibold ${active ? 'text-white' : 'text-slate-900'}`}>{opt.label}</span>
+                                <span className={`text-[11px] ${active ? 'text-white/70' : 'text-slate-500'}`}>{opt.desc}</span>
                             </button>
                             );
                         })}
