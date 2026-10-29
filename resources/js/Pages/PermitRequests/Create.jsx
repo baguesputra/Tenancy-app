@@ -355,16 +355,16 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             Jenis pengajuan
                         </p>
                         <div
-                            className="flex gap-1 overflow-x-auto rounded-xl border border-[#E2E5EA] bg-gray-50 p-1 sm:flex-wrap sm:overflow-visible"
+                            className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
                             role="group"
                             aria-labelledby="mode-switcher-label"
                         >
                             {[
-                            { value: 'kerja', label: 'Kerja (Tenant/Vendor)' },
-                            { value: 'kegiatan', label: 'Kegiatan (Event/Meeting/Stock)' },
-                            { value: 'pameran', label: 'Pameran / Open Counter' },
-                            { value: 'parkir', label: 'Langganan Parkir' },
-                            { value: 'customer', label: 'Customer Isi Form' },
+                            { value: 'kerja', label: 'Kerja', desc: 'Tenant / vendor' },
+                            { value: 'kegiatan', label: 'Kegiatan', desc: 'Event / meeting / stock opname' },
+                            { value: 'pameran', label: 'Pameran', desc: 'Open counter' },
+                            { value: 'parkir', label: 'Parkir', desc: 'Langganan bulanan' },
+                            { value: 'customer', label: 'Customer', desc: 'Form diisi customer' },
                         ].filter((opt) => opt.value !== 'pameran' || canCreatePameran).map((opt) => {
                             const active = isMarketingLocked ? opt.value === 'pameran' : formMode === opt.value;
                             return (
@@ -373,13 +373,14 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 type="button"
                                 aria-pressed={active}
                                 onClick={() => { if (!active) router.get('/permit-requests/create', { mode: opt.value }); }}
-                                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                                className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                     active
-                                        ? 'bg-white font-semibold text-[#0F1E36] shadow-sm ring-1 ring-[#E2E5EA]'
-                                        : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'
+                                        ? 'border-[#0F1E36] bg-[#0F1E36]/5 shadow-sm'
+                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                 }`}
                             >
-                                {opt.label}
+                                <span className={`text-sm font-semibold ${active ? 'text-[#0F1E36]' : 'text-gray-700'}`}>{opt.label}</span>
+                                <span className="text-[11px] text-gray-400">{opt.desc}</span>
                             </button>
                             );
                         })}
