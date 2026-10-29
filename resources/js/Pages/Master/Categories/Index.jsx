@@ -99,7 +99,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 w-full">
                 <PageHeader
                     title="Kategori"
                     description={`${tenantCategories.length} kategori tenant · ${productCategories.length} kategori produk`}
