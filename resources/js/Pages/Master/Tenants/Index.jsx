@@ -11,9 +11,10 @@ import SelectInput from '@/Components/Form/SelectInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import PageHeader from '@/Components/Settings/PageHeader';
 import DataTable from '@/Components/DataTable';
+import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
-import StatFilter from '@/Components/StatFilter';
 import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
@@ -136,10 +137,11 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     };
 
     const stats = [
-        { key: '', label: 'Total Tenant', value: summary.total, dot: 'bg-[#0F1E36]' },
-        { key: 'active', label: 'Aktif', value: summary.active, dot: 'bg-emerald-500' },
-        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, dot: 'bg-gray-400' },
+        { key: 'total', label: 'Total Tenant', value: summary.total, filterValue: null },
+        { key: 'active', label: 'Aktif', value: summary.active, filterValue: 'active' },
+        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, filterValue: 'inactive' },
     ];
+    const activeStatus = filters.status ?? '';
 
     const columns = [
         { key: 'name', label: 'Nama Tenant' },
@@ -152,50 +154,90 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
     return (
         <AppLayout>
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Master Tenant</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{summary.total} tenant terdaftar · {summary.active} aktif</p>
+                <PageHeader
+                    title="Master Tenant"
+                    description={`${summary.total} tenant terdaftar · ${summary.active} aktif`}
+                    actions={
+                        <Link href="/loos">
+                            <Button variant="secondary" iconLeft={<IconPlus className="w-4 h-4" />}>
+                                Tenant baru dari LOO
+                            </Button>
+                        </Link>
+                    }
+                />
+
+                <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden mb-4">
+                    <div role="group" aria-label="Ringkasan tenant" className="grid grid-cols-3 gap-px bg-[#E2E5EA]">
+                        {stats.map((s) => s.filterValue === null ? (
+                            <div key={s.key} className="bg-white p-4">
+                                <p className="text-[11px] uppercase tracking-wider text-slate-500">{s.label}</p>
+                                <p className="mt-1 text-2xl font-mono font-semibold tabular-nums text-slate-900">{s.value}</p>
+                            </div>
+                        ) : (
+                            <div key={s.key} className={`transition-colors ${activeStatus === s.filterValue ? 'bg-[#0F1E36]/5' : 'bg-white'}`}>
+                                <button
+                                    type="button"
+                                    onClick={() => updateFilter('status', activeStatus === s.filterValue ? '' : s.filterValue)}
+                                    aria-pressed={activeStatus === s.filterValue}
+                                    className="block w-full p-4 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    <span className="block text-[11px] uppercase tracking-wider text-slate-500">{s.label}</span>
+                                    <span className="mt-1 block text-2xl font-mono font-semibold tabular-nums text-slate-900">{s.value}</span>
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                    <Link href="/loos" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0F1E36] hover:underline">
-                        <IconPlus className="w-4 h-4" aria-hidden="true" />
-                        Tenant baru dari LOO
-                    </Link>
                 </div>
 
-                <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-3" />
-
                 <FilterBar>
-                        <div className="relative flex-1">
+                        <div className="relative min-w-0 flex-1">
+                            <label htmlFor="search-tenant" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
+                                Cari
+                            </label>
+                            <div className="relative mt-1.5">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <TextInput
+                                id="search-tenant"
                                 placeholder="Cari nama tenant..."
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9"
                                 aria-label="Cari nama tenant"
                             />
+                            </div>
                         </div>
+                        <div className="min-w-0">
+                            <label htmlFor="filter-tenant-category" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
+                                Kategori tenant
+                            </label>
                         <SelectInput
+                            id="filter-tenant-category"
                             value={filters.tenant_category_id ?? ''}
                             onChange={(e) => updateFilter('tenant_category_id', e.target.value)}
-                            className="lg:w-52"
+                            className="mt-1.5 lg:w-52"
                             aria-label="Filter kategori tenant"
                         >
                             <option value="">Semua Kategori Tenant</option>
                             {tenantCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </SelectInput>
+                        </div>
+                        <div className="min-w-0">
+                            <label htmlFor="filter-product-category" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
+                                Kategori produk
+                            </label>
                         <SelectInput
+                            id="filter-product-category"
                             value={filters.product_category_id ?? ''}
                             onChange={(e) => updateFilter('product_category_id', e.target.value)}
-                            className="lg:w-52"
+                            className="mt-1.5 lg:w-52"
                             aria-label="Filter kategori produk"
                         >
                             <option value="">Semua Kategori Produk</option>
                             {productCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </SelectInput>
+                        </div>
                         {hasFilter && <FilterReset onClick={resetFilters} />}
                 </FilterBar>
 
@@ -231,7 +273,6 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                             <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">{tenant.branch?.name ?? '—'}</td>
                             <td className="px-5 py-3.5">
                                 <Badge color={tenant.is_active ? 'green' : 'gray'}>
-                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${tenant.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} aria-hidden="true" />
                                     {tenant.is_active ? 'Aktif' : 'Nonaktif'}
                                 </Badge>
                             </td>
@@ -250,14 +291,18 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                     ))}
                     {tenants.data.length === 0 && (
                         <tr>
-                            <td colSpan={5} className="px-5 py-12 text-center">
-                                <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                                <p className="text-xs text-gray-400 mt-1">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}</p>
-                                {hasFilter && (
-                                    <button onClick={resetFilters} className="mt-3 text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
-                                        Reset filter
-                                    </button>
-                                )}
+                            <td colSpan={5} className="px-5 py-6">
+                                <EmptyState
+                                    variant={hasFilter ? 'search' : 'empty'}
+                                    size="sm"
+                                    title={hasFilter ? 'Tidak ada tenant yang cocok.' : 'Belum ada tenant ditemukan.'}
+                                    description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}
+                                    action={hasFilter ? (
+                                        <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
+                                            Reset filter
+                                        </button>
+                                    ) : undefined}
+                                />
                             </td>
                         </tr>
                     )}
@@ -269,7 +314,7 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                         <div
                             key={tenant.id}
                             onClick={() => canEditRow(tenant) && openEdit(tenant)}
-                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            className="bg-white rounded-xl border border-[#E2E5EA] p-4 active:bg-gray-50 cursor-pointer"
                         >
                             <div className="flex items-center gap-3 min-w-0">
                                 {tenant.logo_url ? (
@@ -291,12 +336,16 @@ export default function Index({ tenants, summary = { total: 0, active: 0, inacti
                         </div>
                     ))}
                     {tenants.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
-                            <p className="text-sm font-medium text-gray-700">Belum ada tenant ditemukan.</p>
-                            <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}</p>
-                            {hasFilter && (
-                                <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
-                            )}
+                        <div className="bg-white rounded-xl border border-[#E2E5EA] px-5 py-6">
+                            <EmptyState
+                                variant={hasFilter ? 'search' : 'empty'}
+                                size="sm"
+                                title={hasFilter ? 'Tidak ada tenant yang cocok.' : 'Belum ada tenant ditemukan.'}
+                                description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Tenant dibuat otomatis dari LOO yang selesai.'}
+                                action={hasFilter ? (
+                                    <button onClick={resetFilters} className="text-sm text-[#0F1E36] font-medium hover:underline rounded">Reset filter</button>
+                                ) : undefined}
+                            />
                         </div>
                     )}
                     <div className="bg-white rounded-xl border border-[#E2E5EA]">
