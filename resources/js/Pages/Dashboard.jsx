@@ -82,6 +82,8 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         value={stats?.total_tenants ?? 0}
                         hint={`${total} unit dikelola`}
                         href="/tenants"
+                        accent="bg-[#0F1E36]"
+                        divider
                     />
                     <KpiCell
                         icon={<IconDocument className="w-5 h-5" aria-hidden="true" />}
@@ -90,6 +92,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         hint="Menunggu persetujuan"
                         href="/permit-requests"
                         alert={(stats?.pending_permits ?? 0) > 0}
+                        accent={(stats?.pending_permits ?? 0) > 0 ? 'bg-[#D64545]' : 'bg-[#0F1E36]'}
                     />
                     <KpiCell
                         icon={<IconClipboard className="w-5 h-5" aria-hidden="true" />}
@@ -97,6 +100,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         value={stats?.active_sessions ?? 0}
                         hint="Sedang berjalan"
                         href="/inspection-sessions"
+                        accent="bg-[#0F1E36]"
                     />
                     {canLoo && (
                         <KpiCell
@@ -106,6 +110,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                             hint={`${stats?.total_loos ?? 0} total LOO`}
                             href="/loos"
                             alert={(stats?.pending_loos ?? 0) > 0}
+                            accent={(stats?.pending_loos ?? 0) > 0 ? 'bg-[#D64545]' : 'bg-[#0F1E36]'}
                         />
                     )}
                 </section>
@@ -254,12 +259,14 @@ function typeDot(type) {
     }[type] ?? 'bg-slate-300';
 }
 
-function KpiCell({ icon, label, value, hint, href, alert = false }) {
+function KpiCell({ icon, label, value, hint, href, alert = false, accent = null, divider = false }) {
     return (
         <Link
             href={href}
             className="group relative bg-white p-4 sm:p-5 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
         >
+            {accent && <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${accent}`} />}
+            {divider && <span aria-hidden="true" className="absolute inset-y-0 right-0 w-px bg-[#C9D0D9]" />}
             {alert && <span className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-label="Perlu perhatian" />}
             <div className="w-10 h-10 rounded-lg bg-[#0F1E36]/5 text-[#0F1E36] flex items-center justify-center">
                 {icon}
