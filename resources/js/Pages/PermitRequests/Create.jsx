@@ -16,7 +16,7 @@ import Badge from '@/Components/Badge';
 import StepIndicator from '@/Components/StepIndicator';
 import StepPanel from '@/Components/StepPanel';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
-import { formatDateRange, formatTimeRange } from '@/utils/format';
+import { formatDateRange, formatTimeRange, maxPermitEndDate } from '@/utils/format';
 
 const STEPS = ['Detail & Kategori', 'Jadwal', 'Pekerja & Barang', 'Pelengkap', 'Review'];
 const KEGIATAN_STEPS = ['Tenant & Kegiatan', 'Jadwal', 'Review'];
@@ -139,6 +139,22 @@ export default function Create({ tenants, departments, isMarketingLocked = false
     const addExhibitionGood = (key) => setData(key, [...data[key], { description: '', quantity_note: '', unit: '' }]);
     const removeExhibitionGood = (key, idx) => setData(key, data[key].filter((_, i) => i !== idx));
 
+    // Form umum/kerja: izin dibatasi 7 hari kalender. End date auto-isi 1 minggu bila kosong, sisanya di-clamp.
+    const handleWorkStartDateChange = (value) => {
+        setData((prev) => {
+            let end = prev.work_end_date;
+            if (!end) {
+                end = maxPermitEndDate(value) ?? '';
+            } else {
+                const max = maxPermitEndDate(value);
+                if (end > max) end = max;
+                else if (end < value) end = value;
+            }
+            return { ...prev, work_start_date: value, work_end_date: end };
+        });
+        setClientErrors((prev) => ({ ...prev, work_start_date: undefined, work_end_date: undefined }));
+    };
+
     const getStepErrors = (s) => {
         const errs = {};
         if (isMarketingLocked) return getMarketingStepErrors(s, errs);
@@ -173,6 +189,8 @@ export default function Create({ tenants, departments, isMarketingLocked = false
             else if (hasBothProjectTypes) errs.activity_types = 'Fit Out dan Pull Out hanya bisa dipilih salah satu.';
             if (!data.work_start_date) errs.work_start_date = 'Tanggal mulai wajib diisi.';
             if (!data.work_end_date) errs.work_end_date = 'Tanggal selesai wajib diisi.';
+            else if (data.work_start_date && data.work_end_date < data.work_start_date) errs.work_end_date = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+            else if (data.work_start_date && data.work_end_date > maxPermitEndDate(data.work_start_date)) errs.work_end_date = 'Tanggal selesai maksimal 7 hari setelah tanggal mulai.';
         }
         if (s === 3) {
             const n = parseInt(data.worker_count, 10);
@@ -320,12 +338,28 @@ export default function Create({ tenants, departments, isMarketingLocked = false
 
     return (
         <AppLayout>
-            <div className="px-6 sm:px-8 py-6 flex-1">
-                <h1 className="text-xl font-semibold text-gray-900 mb-1">{formTitle}</h1>
-                <p className="text-sm text-gray-500 mb-4">{formSubtitle}</p>
+            <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-8 sm:py-6">
+                <div className="mb-5 flex flex-col gap-3 border-b border-[#E2E5EA] pb-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-semibold tracking-tight text-gray-900">{formTitle}</h1>
+                        <p className="mt-0.5 text-sm text-gray-500">{formSubtitle}</p>
+                    </div>
+                    <Button type="button" variant="secondary" onClick={() => router.visit('/permit-requests')} className="shrink-0">
+                        Batal
+                    </Button>
+                </div>
+
                 {canChooseMode && (
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {[
+                    <div className="mb-5">
+                        <p id="mode-switcher-label" className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
+                            Jenis pengajuan
+                        </p>
+                        <div
+                            className="flex gap-1 overflow-x-auto rounded-xl border border-[#E2E5EA] bg-gray-50 p-1 sm:flex-wrap sm:overflow-visible"
+                            role="group"
+                            aria-labelledby="mode-switcher-label"
+                        >
+                            {[
                             { value: 'kerja', label: 'Kerja (Tenant/Vendor)' },
                             { value: 'kegiatan', label: 'Kegiatan (Event/Meeting/Stock)' },
                             { value: 'pameran', label: 'Pameran / Open Counter' },
@@ -337,27 +371,29 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             <button
                                 key={opt.value}
                                 type="button"
+                                aria-pressed={active}
                                 onClick={() => { if (!active) router.get('/permit-requests/create', { mode: opt.value }); }}
-                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
                                     active
-                                        ? 'border-[#0F1E36] bg-[#0F1E36]/5 text-[#0F1E36] shadow-sm'
-                                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-white font-semibold text-[#0F1E36] shadow-sm ring-1 ring-[#E2E5EA]'
+                                        : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'
                                 }`}
                             >
                                 {opt.label}
                             </button>
                             );
                         })}
+                        </div>
                     </div>
                 )}
 
                 <form onSubmit={submit}>
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+                    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                         {/* Kolom kiri — stepper */}
-                        <div>
+                        <div className="min-w-0">
                             <StepIndicator steps={steps} currentStep={step} onSelect={unlocked ? goToStep : null} />
                             {!unlocked && !isMarketingLocked && (
-                                <p className="text-xs text-gray-400 mb-4">Isi langkah 1 sampai valid untuk membuka navigasi maju-mundur.</p>
+                                <p className="mb-4 text-xs text-gray-500">Isi langkah 1 sampai valid untuk membuka navigasi maju-mundur.</p>
                             )}
 
                                 {Object.keys(errors).length > 0 && (
@@ -845,10 +881,15 @@ export default function Create({ tenants, departments, isMarketingLocked = false
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField label="Tanggal Mulai" error={clientErrors.work_start_date} required>
-                                                <DateInput value={data.work_start_date} onChange={(e) => setData('work_start_date', e.target.value)} />
+                                                <DateInput value={data.work_start_date} onChange={(e) => handleWorkStartDateChange(e.target.value)} />
                                             </FormField>
-                                            <FormField label="Tanggal Selesai" error={clientErrors.work_end_date} required>
-                                                <DateInput value={data.work_end_date} onChange={(e) => setData('work_end_date', e.target.value)} />
+                                            <FormField label="Tanggal Selesai" error={clientErrors.work_end_date} hint="Maksimal 7 hari dari tanggal mulai." required>
+                                                <DateInput
+                                                    value={data.work_end_date}
+                                                    minDate={data.work_start_date || undefined}
+                                                    maxDate={maxPermitEndDate(data.work_start_date)}
+                                                    onChange={(e) => setData('work_end_date', e.target.value)}
+                                                />
                                             </FormField>
                                         </div>
 
@@ -1229,35 +1270,42 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                             </StepPanel>
 
                             {/* Navigasi step */}
-                            <div className="sticky bottom-0 z-10 -mx-6 px-6 sm:-mx-8 sm:px-8 py-3 mt-2 bg-[#F7F8FA]/95 backdrop-blur border-t border-[#E2E5EA] lg:static lg:mx-0 lg:px-0 lg:py-0 lg:mt-2 lg:bg-transparent lg:backdrop-blur-none lg:border-0">
-                                <div className="flex gap-2">
-                                {step > 1 && (
-                                    <Button type="button" variant="secondary" onClick={goBack}>
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                        Kembali
-                                    </Button>
-                                )}
-                                <div className="flex-1" />
-                                {step < steps.length ? (
-                                    <Button type="button" onClick={goNext}>
-                                        Lanjut
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </Button>
-                                ) : (
-                                    <Button type="button" disabled={processing} variant="success" onClick={handleAjukan}>
-                                        {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
-                                    </Button>
-                                )}
+                            <div className="sticky bottom-4 z-10 mt-4 rounded-full border border-[#E2E5EA] bg-white/95 py-2 pl-4 pr-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg shadow-gray-900/5 backdrop-blur sm:pl-5 lg:static lg:rounded-xl lg:px-4 lg:shadow-none">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <p className="text-xs tabular-nums text-gray-500">
+                                        <span className="font-semibold text-gray-900">{step}</span>
+                                        <span aria-hidden="true"> / </span>
+                                        <span className="sr-only">dari</span>
+                                        {steps.length}
+                                    </p>
+                                    <span aria-hidden="true" className="h-4 w-px bg-gray-200" />
+                                    {step > 1 && (
+                                        <Button type="button" variant="ghost" onClick={goBack} className="min-h-[44px] px-4">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                            <span className="hidden sm:inline">Kembali</span>
+                                        </Button>
+                                    )}
+                                    <div className="flex-1" />
+                                    {step < steps.length ? (
+                                        <Button type="button" onClick={goNext} className="min-h-[44px] rounded-full lg:rounded-lg">
+                                            Lanjut
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </Button>
+                                    ) : (
+                                        <Button type="button" disabled={processing} onClick={handleAjukan} className="min-h-[44px] rounded-full lg:rounded-lg">
+                                            {processing ? 'Mengirim...' : 'Ajukan Surat Izin'}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Kolom kanan — ringkasan hidup, sticky */}
-                        <div className="lg:sticky lg:top-[72px]">
+                        <div className="min-w-0 lg:sticky lg:top-20">
                             <LiveSummary
                                 data={data}
                                 locationType={locationType}
@@ -1352,13 +1400,13 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
     const deptCount = data.accompanying_department_ids.length;
 
     return (
-        <div className="bg-white rounded-xl border border-[#E2E5EA] p-5">
-            <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-[#1FA24C] animate-pulse" />
-                <h2 className="text-sm font-semibold text-gray-800">Ringkasan Pengajuan</h2>
+        <div className="rounded-xl border border-[#E2E5EA] bg-white p-4">
+            <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-gray-900">Ringkasan Pengajuan</h2>
+                <Badge color="blue" size="sm">Langkah {currentStep}</Badge>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
                 <SummaryItem
                     label="Kategori"
                     value={isMarketingLocked ? 'Pameran / Open Counter' : isKegiatan ? 'Kegiatan' : isParkir ? 'Parkir' : isCustomer ? 'Customer Isi Form' : locationType === 'tenant' ? 'Tenant' : 'Vendor'}
@@ -1464,8 +1512,8 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
                 )}
             </div>
 
-            <div className="mt-5 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 leading-relaxed">
+            <div className="mt-4 border-t border-[#E2E5EA] pt-3">
+                <p className="text-[11px] leading-relaxed text-gray-500">
                     Panel ini otomatis terisi sesuai data yang kamu masukkan di tiap langkah.
                 </p>
             </div>
@@ -1475,16 +1523,19 @@ function LiveSummary({ data, locationType, tenants, currentStep, isMarketingLock
 
 function SummaryItem({ label, value, filled, dim = false }) {
     return (
-        <div className={`flex justify-between items-start gap-3 transition-opacity duration-300 ${dim ? 'opacity-40' : 'opacity-100'}`}>
-            <span className="text-xs text-gray-500 shrink-0 flex items-center gap-1.5">
-                <span aria-hidden="true" className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${filled ? 'bg-[#1FA24C] text-white' : 'bg-gray-100 text-transparent'}`}>
-                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+        <div className="flex items-start justify-between gap-3">
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
+                <span
+                    aria-hidden="true"
+                    className={`flex h-3.5 w-3.5 items-center justify-center rounded-full transition-colors ${filled ? 'bg-[#0F1E36]/10 text-[#0F1E36]' : 'bg-gray-100 text-transparent'}`}
+                >
+                    <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                 </span>
                 {label}
             </span>
-            <span className={`text-xs text-right ${filled ? 'text-gray-900 font-medium' : 'text-gray-300 italic'}`}>
+            <span className={`text-right text-xs ${filled ? 'font-medium text-gray-900' : 'text-gray-400 italic'}`}>
                 {value || 'Belum diisi'}
             </span>
         </div>

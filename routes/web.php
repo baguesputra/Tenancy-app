@@ -16,6 +16,8 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\GateSyncController;
 use App\Http\Controllers\Settings\InspectionTemplateController;
+use App\Http\Controllers\Settings\PermitScanSettingController;
+use App\Http\Controllers\Settings\SettingsHomeController;
 use App\Http\Controllers\Settings\StaticDocumentController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\TenancyController;
@@ -61,6 +63,10 @@ Route::middleware(['auth', 'can:documents.manage'])->prefix('settings')->name('s
     Route::post('/documents', [StaticDocumentController::class, 'store'])->name('documents.store');
 });
 
+Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(function () {
+    Route::get('/', [SettingsHomeController::class, 'show'])->name('index');
+});
+
 Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users', [UserManagementController::class, 'store']);
@@ -82,6 +88,9 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
         Route::post('/gate/sync-karyawan', [GateSyncController::class, 'syncKaryawan'])->name('gate.sync-karyawan');
         Route::post('/gate/jadwal', [GateSyncController::class, 'simpanJadwal'])->name('gate.jadwal');
     });
+
+    Route::get('/permit-scan', [PermitScanSettingController::class, 'index'])->name('permit-scan.index');
+    Route::put('/permit-scan', [PermitScanSettingController::class, 'update'])->name('permit-scan.update');
 });
 
 Route::middleware('guest')->group(function () {

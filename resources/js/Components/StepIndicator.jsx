@@ -1,72 +1,73 @@
 export default function StepIndicator({ steps, currentStep, onSelect = null }) {
-    const pct = steps.length > 1 ? Math.round(((currentStep - 1) / (steps.length - 1)) * 100) : 100;
-
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-xs font-semibold text-gray-500 tabular-nums" aria-live="polite">
-                    Langkah {currentStep} dari {steps.length}
-                </p>
-                <p className="text-xs font-medium text-[#0F1E36] truncate">{steps[currentStep - 1]}</p>
-            </div>
-            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-4" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progres pengisian">
-                <div className="h-full bg-[#0F1E36] rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="flex items-center">
-            {steps.map((label, idx) => {
-                const stepNum = idx + 1;
-                const isCompleted = stepNum < currentStep;
-                const isActive = stepNum === currentStep;
-                const clickable = !!onSelect && stepNum !== currentStep;
+        <div className="mb-6">
+            <p className="sr-only" aria-live="polite">
+                Langkah {currentStep} dari {steps.length}: {steps[currentStep - 1]}
+            </p>
 
-                const badge = (
-                    <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                            isCompleted
-                                ? 'bg-[#1FA24C] text-white'
-                                : isActive
-                                ? 'bg-[#0F1E36] text-white ring-4 ring-[#0F1E36]/10'
-                                : 'bg-gray-100 text-gray-400'
-                        }`}
-                    >
-                        {isCompleted ? (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                        ) : stepNum}
-                    </div>
-                );
-                const caption = (
-                    <span className={`text-[11px] mt-1.5 font-medium whitespace-nowrap ${isActive ? 'text-gray-900' : 'text-gray-400'} ${isActive ? '' : 'hidden sm:block'}`}>
-                        {label}
-                    </span>
-                );
+            <ol aria-label="Langkah pengisian" className="flex items-center">
+                {steps.map((label, idx) => {
+                    const stepNum = idx + 1;
+                    const isCompleted = stepNum < currentStep;
+                    const isActive = stepNum === currentStep;
+                    const clickable = !!onSelect && stepNum !== currentStep;
 
-                return (
-                    <div key={label} className="flex items-center flex-1 last:flex-none">
-                        {clickable ? (
-                            <button
-                                type="button"
-                                onClick={() => onSelect(stepNum)}
-                                aria-label={`Ke langkah ${stepNum}: ${label}`}
-                                className="flex flex-col items-center shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-[#0F1E36] hover:opacity-80 transition-opacity"
-                            >
-                                {badge}
-                                {caption}
-                            </button>
-                        ) : (
-                            <div className="flex flex-col items-center shrink-0">
-                                {badge}
-                                {caption}
-                            </div>
-                        )}
-                        {idx < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-2 transition-colors duration-500 ${isCompleted ? 'bg-[#1FA24C]' : 'bg-gray-200'}`} />
-                        )}
-                    </div>
-                );
-            })}
-            </div>
+                    const badge = (
+                        <span
+                            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none ${
+                                isActive
+                                    ? 'bg-[#0F1E36] text-white ring-4 ring-[#0F1E36]/10'
+                                    : isCompleted
+                                    ? 'bg-white text-[#0F1E36] ring-1 ring-inset ring-[#0F1E36]/40'
+                                    : 'bg-gray-100 text-gray-400'
+                            }`}
+                        >
+                            {isCompleted ? (
+                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            ) : (
+                                stepNum
+                            )}
+                        </span>
+                    );
+
+                    const caption = (
+                        <span className={`mt-1.5 hidden whitespace-nowrap text-[11px] sm:block ${isActive ? 'font-semibold text-gray-900' : 'text-gray-400'}`}>
+                            {label}
+                        </span>
+                    );
+
+                    return (
+                        <li key={label} className={`flex items-center ${idx < steps.length - 1 ? 'flex-1' : ''}`}>
+                            {clickable ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onSelect(stepNum)}
+                                    aria-label={`Ke langkah ${stepNum}: ${label}`}
+                                    className="flex shrink-0 flex-col items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    {badge}
+                                    {caption}
+                                </button>
+                            ) : (
+                                <div className="flex shrink-0 flex-col items-center" aria-current={isActive ? 'step' : undefined}>
+                                    {badge}
+                                    {caption}
+                                </div>
+                            )}
+                            {idx < steps.length - 1 && (
+                                <div
+                                    aria-hidden="true"
+                                    className={`mx-2 h-0.5 flex-1 transition-colors duration-300 motion-reduce:transition-none ${
+                                        isCompleted ? 'bg-[#0F1E36]/40' : 'bg-gray-200'
+                                    }`}
+                                />
+                            )}
+                        </li>
+                    );
+                })}
+            </ol>
         </div>
     );
 }

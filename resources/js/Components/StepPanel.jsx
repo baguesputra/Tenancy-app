@@ -10,7 +10,7 @@ export default function StepPanel({ children, stepKey }) {
     }, [stepKey]);
 
     return (
-        <div className={`transition-all duration-300 ease-out ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}>
+        <div className={`transition-all duration-300 ease-out motion-reduce:transition-none ${show ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0 motion-reduce:translate-y-0'}`}>
             {children}
         </div>
     );
