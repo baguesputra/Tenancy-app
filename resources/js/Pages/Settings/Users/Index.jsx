@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+import SettingsLayout from '@/Layouts/SettingsLayout';
 import { useForm, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import FormField from '@/Components/Form/FormField';
@@ -11,6 +11,8 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import SlideOver from '@/Components/SlideOver';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import PageHeader from '@/Components/Settings/PageHeader';
+import StatTiles from '@/Components/Settings/StatTiles';
 import { IconPlus, IconEdit, IconTrash, IconRefresh } from '@/Components/Icons';
 
 import initials from '@/utils/initials';
@@ -162,9 +164,9 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
     };
 
     const stats = [
-        { key: 'total', label: 'Total User', value: summary.total ?? users.total, dot: 'bg-[#0F1E36]' },
-        { key: 'roles', label: 'Role Tersedia', value: roles.length, dot: 'bg-blue-500' },
-        { key: 'branches', label: 'Cabang', value: branches.length, dot: 'bg-emerald-500' },
+        { key: 'total', label: 'Total User', value: summary.total ?? users.total },
+        { key: 'roles', label: 'Role Tersedia', value: roles.length },
+        { key: 'branches', label: 'Cabang', value: branches.length },
     ];
 
     const columns = [
@@ -176,31 +178,19 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
     ];
 
     return (
-        <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Manajemen User</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">{users.total} user terdaftar · klik baris untuk kelola</p>
-                    </div>
-                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>Tambah User</Button>
-                </div>
+        <SettingsLayout>
+            <div>
+                <PageHeader
+                    title="Manajemen User"
+                    description={`${users.total} user terdaftar · klik baris untuk kelola`}
+                    actions={<Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>Tambah User</Button>}
+                />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                    {stats.map((s) => (
-                        <div key={s.label} className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3">
-                            <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                {s.label}
-                            </span>
-                            <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
-                        </div>
-                    ))}
-                </div>
+                <StatTiles items={stats} />
 
-                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="flex flex-col lg:flex-row gap-2">
-                        <div className="relative flex-1">
+                <div className="sticky top-16 z-10 mb-4 rounded-xl border border-[#E2E5EA] bg-white/95 p-3 shadow-sm backdrop-blur">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="relative min-w-0 sm:col-span-2 lg:col-span-3">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
@@ -212,33 +202,34 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                                 aria-label="Cari nama atau NIP user"
                             />
                         </div>
-                        <SelectInput value={filters.role ?? ''} onChange={(e) => updateFilter('role', e.target.value)} className="lg:w-48" aria-label="Filter role">
+                        <SelectInput value={filters.role ?? ''} onChange={(e) => updateFilter('role', e.target.value)} aria-label="Filter role">
                             <option value="">Semua Role</option>
                             {roles.map((r) => <option key={r} value={r}>{r}</option>)}
                         </SelectInput>
-                        <SelectInput value={filters.branch_id ?? ''} onChange={(e) => updateFilter('branch_id', e.target.value)} className="lg:w-48" aria-label="Filter cabang">
+                        <SelectInput value={filters.branch_id ?? ''} onChange={(e) => updateFilter('branch_id', e.target.value)} aria-label="Filter cabang">
                             <option value="">Semua Cabang</option>
                             {branches.map((b) => <option key={b.id} value={b.id}>{b.company_name ?? b.name}</option>)}
                         </SelectInput>
-                        <SelectInput value={filters.department_id ?? ''} onChange={(e) => updateFilter('department_id', e.target.value)} className="lg:w-48" aria-label="Filter departemen">
+                        <SelectInput value={filters.department_id ?? ''} onChange={(e) => updateFilter('department_id', e.target.value)} aria-label="Filter departemen">
                             <option value="">Semua Departemen</option>
                             {deptOpsiFilter.map((d) => <option key={d.id} value={d.id}>{labelOpsi(departments, d)}</option>)}
                         </SelectInput>
-                        <SelectInput value={filters.division_id ?? ''} onChange={(e) => updateFilter('division_id', e.target.value)} className="lg:w-48" aria-label="Filter divisi">
+                        <SelectInput value={filters.division_id ?? ''} onChange={(e) => updateFilter('division_id', e.target.value)} aria-label="Filter divisi">
                             <option value="">Semua Divisi</option>
                             {divOpsiFilter.map((d) => <option key={d.id} value={d.id}>{labelOpsi(divisions, d)}</option>)}
                         </SelectInput>
-                        <SelectInput value={filters.position_id ?? ''} onChange={(e) => updateFilter('position_id', e.target.value)} className="lg:w-48" aria-label="Filter jabatan">
+                        <SelectInput value={filters.position_id ?? ''} onChange={(e) => updateFilter('position_id', e.target.value)} aria-label="Filter jabatan">
                             <option value="">Semua Jabatan</option>
                             {posOpsiFilter.map((p) => <option key={p.id} value={p.id}>{labelOpsi(positions, p)}</option>)}
                         </SelectInput>
                         {hasFilter && (
-                            <button onClick={resetFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] shrink-0">
+                            <button onClick={resetFilters} className="justify-self-start rounded-lg px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
                                 Reset
                             </button>
                         )}
                     </div>
                 </div>
+                <p aria-live="polite" className="sr-only">{users.total} user ditemukan</p>
 
                 <div className="hidden sm:block">
                 <DataTable columns={columns} footer={<Pagination meta={users} links={users.links} />}>
@@ -246,7 +237,11 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         <tr
                             key={user.id}
                             onClick={() => openEdit(user)}
-                            className={`group cursor-pointer transition-colors ${panel?.user?.id === user.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(user); }
+                            }}
+                            tabIndex={0}
+                            className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${panel?.user?.id === user.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}
                         >
                             <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-3 min-w-0">
@@ -298,7 +293,11 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         <div
                             key={user.id}
                             onClick={() => openEdit(user)}
-                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(user); }
+                            }}
+                            tabIndex={0}
+                            className="cursor-pointer rounded-xl border border-[#E2E5EA] bg-white p-4 active:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                         >
                             <div className="flex items-center gap-3 min-w-0">
                                 {user.photo_url ? (
@@ -323,7 +322,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                         </div>
                     ))}
                     {users.data.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                        <div className="rounded-xl border border-[#E2E5EA] bg-white px-5 py-12 text-center">
                             <p className="text-sm font-medium text-gray-700">Belum ada user ditemukan.</p>
                             <p className="text-xs text-gray-400 mt-1 mb-4">{hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah User untuk data pertama.'}</p>
                             {hasFilter ? (
@@ -522,7 +521,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                     <ConfirmRow label="Role" value={confirmDelete?.roles?.[0]?.name} />
                 </ConfirmModal>
             </div>
-        </AppLayout>
+        </SettingsLayout>
     );
 }
 

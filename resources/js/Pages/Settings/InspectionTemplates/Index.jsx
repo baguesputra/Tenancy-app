@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+import SettingsLayout from '@/Layouts/SettingsLayout';
 import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import SlideOver from '@/Components/SlideOver';
@@ -8,6 +8,7 @@ import TextInput from '@/Components/Form/TextInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
+import PageHeader from '@/Components/Settings/PageHeader';
 import { IconClipboard, IconEdit } from '@/Components/Icons';
 
 const scopeLabel = (section) => {
@@ -68,27 +69,28 @@ export default function Index({ templates = [], productCategories = [] }) {
     };
 
     return (
-        <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-5xl w-full mx-auto">
-                <div className="mb-5">
-                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Form Sidak</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">Satu form untuk semua tenant — section menyesuaikan kategori produk & lantai unit</p>
-                </div>
+        <SettingsLayout>
+            <div>
+                <PageHeader
+                    title="Form Sidak"
+                    description="Satu form untuk semua tenant — section menyesuaikan kategori produk & lantai unit"
+                    meta={templates.length > 0 && <Badge color="green" size="sm">{templates.length} template aktif</Badge>}
+                />
 
                 {templates.length === 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-8 text-center">
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-8 text-center">
                         <p className="text-sm font-semibold text-red-800">Tidak ada template aktif — sidak tidak bisa dibuat.</p>
                         <p className="text-xs text-red-600 mt-1">Aktifkan kembali template lewat seeder atau database.</p>
                     </div>
                 )}
 
+                <div className="space-y-4">
                 {templates.map((t) => (
-                    <div key={t.id} className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm mb-4 overflow-hidden">
-                        <div className="p-4 sm:p-5 flex items-start gap-3">
+                    <section key={t.id} className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                        <div className="flex items-start gap-3 p-4 sm:p-5">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <h2 className="text-base font-semibold text-gray-900">{t.name}</h2>
-                                    <Badge color="green" size="sm">Aktif</Badge>
+                                    <h3 className="text-base font-semibold text-gray-900">{t.name}</h3>
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-2">
                                     {(t.product_categories ?? []).map((c) => (
@@ -100,7 +102,7 @@ export default function Index({ templates = [], productCategories = [] }) {
                                 type="button"
                                 onClick={() => openTplEdit(t)}
                                 aria-label="Edit template"
-                                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
                             >
                                 <IconEdit className="w-4 h-4" />
                             </button>
@@ -116,9 +118,11 @@ export default function Index({ templates = [], productCategories = [] }) {
                                             type="button"
                                             onClick={() => toggleSection(s.id)}
                                             aria-expanded={open}
-                                            className="w-full flex items-center gap-2.5 px-4 sm:px-5 py-3 text-left hover:bg-gray-50/70 transition-colors min-h-[52px]"
+                                            className="flex w-full items-center gap-2.5 px-4 sm:px-5 py-3 text-left transition-colors hover:bg-gray-50/70 min-h-[52px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                                         >
-                                            <span className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
+                                            <svg className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                            </svg>
                                             <span className="flex-1 min-w-0">
                                                 <span className="block text-sm font-medium text-gray-800 truncate">{s.name}</span>
                                                 <span className="block text-[11px] text-gray-400 mt-0.5">{scopeLabel(s)} · {count} item</span>
@@ -155,8 +159,9 @@ export default function Index({ templates = [], productCategories = [] }) {
                                 );
                             })}
                         </div>
-                    </div>
+                    </section>
                 ))}
+                </div>
             </div>
 
             <SlideOver
@@ -232,6 +237,6 @@ export default function Index({ templates = [], productCategories = [] }) {
                     </FormSection>
                 </form>
             </SlideOver>
-        </AppLayout>
+        </SettingsLayout>
     );
 }

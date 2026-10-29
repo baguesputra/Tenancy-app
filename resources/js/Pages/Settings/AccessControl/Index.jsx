@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+import SettingsLayout from '@/Layouts/SettingsLayout';
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import FormSection from '@/Components/Form/FormSection';
@@ -8,6 +8,8 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import SlideOver from '@/Components/SlideOver';
+import PageHeader from '@/Components/Settings/PageHeader';
+import StatTiles from '@/Components/Settings/StatTiles';
 import { IconEdit } from '@/Components/Icons';
 
 import initials from '@/utils/initials';
@@ -143,9 +145,9 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
     const selectedCount = selected.length;
 
     const stats = [
-        { label: 'Total Role', value: roles.length, dot: 'bg-[#0F1E36]' },
-        { label: 'Total Permission', value: permissions.length, dot: 'bg-blue-500' },
-        { label: 'Modul', value: groups.length, dot: 'bg-emerald-500' },
+        { label: 'Total Role', value: roles.length },
+        { label: 'Total Permission', value: permissions.length },
+        { label: 'Modul', value: groups.length },
     ];
 
     const columns = [
@@ -155,27 +157,17 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
     ];
 
     return (
-        <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                <div className="mb-5">
-                    <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hak Akses</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">Atur permission per role · Super Admin selalu akses penuh · klik baris untuk kelola</p>
-                </div>
+        <SettingsLayout>
+            <div>
+                <PageHeader
+                    title="Hak Akses"
+                    description="Atur permission per role · Super Admin selalu akses penuh · klik baris untuk kelola"
+                />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                    {stats.map((s) => (
-                        <div key={s.label} className="text-left bg-white rounded-xl border border-[#E2E5EA] px-4 py-3">
-                            <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-                                {s.label}
-                            </span>
-                            <span className="block text-xl font-semibold text-gray-900 mt-1 tabular-nums">{s.value}</span>
-                        </div>
-                    ))}
-                </div>
+                <StatTiles items={stats} />
 
-                <div className="sticky top-14 z-10 bg-white rounded-xl border border-[#E2E5EA] shadow-sm p-3 mb-4">
-                    <div className="relative">
+                <div className="sticky top-16 z-10 mb-4 rounded-xl border border-[#E2E5EA] bg-white/95 p-3 shadow-sm backdrop-blur">
+                    <div className="relative min-w-0">
                         <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -198,7 +190,11 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                             <tr
                                 key={role.id}
                                 onClick={() => openPanel(role)}
-                                className={`group cursor-pointer transition-colors ${panelRoleId === role.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(role); }
+                                }}
+                                tabIndex={0}
+                                className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${panelRoleId === role.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}
                             >
                                 <td className="px-5 py-3.5">
                                     <div className="flex items-center gap-3 min-w-0">
@@ -252,7 +248,11 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                         <div
                             key={role.id}
                             onClick={() => openPanel(role)}
-                            className="bg-white rounded-2xl border border-[#E2E5EA] p-4 shadow-sm active:bg-gray-50 cursor-pointer"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(role); }
+                            }}
+                            tabIndex={0}
+                            className="cursor-pointer rounded-xl border border-[#E2E5EA] bg-white p-4 active:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                         >
                             <div className="flex items-center gap-3 min-w-0">
                                 <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
@@ -270,7 +270,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                         </div>
                     ))}
                     {filteredRoles.length === 0 && (
-                        <div className="bg-white rounded-2xl border border-[#E2E5EA] px-5 py-12 text-center">
+                        <div className="rounded-xl border border-[#E2E5EA] bg-white px-5 py-12 text-center">
                             <p className="text-sm text-gray-400">Tidak ada role yang cocok.</p>
                         </div>
                     )}
@@ -470,7 +470,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                     )}
                 </SlideOver>
             </div>
-        </AppLayout>
+        </SettingsLayout>
     );
 }
 

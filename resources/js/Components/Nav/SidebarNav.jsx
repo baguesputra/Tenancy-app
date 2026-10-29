@@ -1,22 +1,19 @@
 import { Link } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import NavItem from './NavItem';
 import {
     IconClipboard,
     IconClipboardCheck,
-    IconClipboardList,
     IconContract,
     IconDocument,
     IconDoor,
-    IconFileText,
     IconHome,
     IconKey,
     IconMap,
     IconPanelLeft,
-    IconRefresh,
     IconStorefront,
     IconTag,
     IconUserCircle,
-    IconUsers,
     IconX,
 } from '@/Components/Icons';
 
@@ -72,11 +69,7 @@ const SETTINGS_SECTION = {
     key: 'pengaturan',
     label: 'Pengaturan',
     items: [
-        { label: 'Manajemen User', href: '/settings/users', permission: 'settings.access', icon: <IconUsers className="h-4 w-4" /> },
-        { label: 'Hak Akses', href: '/settings/access-control', permission: 'settings.access', icon: <IconKey className="h-4 w-4" /> },
-        { label: 'Sinkronisasi Gate', href: '/settings/gate', permission: 'settings.access', icon: <IconRefresh className="h-4 w-4" /> },
-        { label: 'Template Inspeksi', href: '/settings/inspection-templates', permission: 'settings.access', icon: <IconClipboardList className="h-4 w-4" /> },
-        { label: 'Dokumen Statis', href: '/settings/documents', permission: 'documents.manage', icon: <IconFileText className="h-4 w-4" /> },
+        { label: 'Pengaturan', href: '/settings', anyPermission: ['settings.access', 'documents.manage'], icon: <IconKey className="h-4 w-4" /> },
     ],
 };
 
@@ -94,13 +87,23 @@ export default function SidebarNav({
     const sections = SECTIONS
         .map((section) => ({
             ...section,
-            visibleItems: section.items.filter((item) => !item.permission || can(item.permission)),
+            visibleItems: section.items.filter((item) => item.anyPermission
+                ? item.anyPermission.some((p) => can(p))
+                : !item.permission || can(item.permission)),
         }))
         .filter((section) => section.visibleItems.length > 0);
     const settingsItems = SETTINGS_SECTION.items.filter((item) => can(item.permission));
     if (settingsItems.length > 0) {
         sections.push({ ...SETTINGS_SECTION, visibleItems: settingsItems });
     }
+
+    const navRef = useRef(null);
+
+    // Layout ikut remount tiap pindah halaman, jadi scroll container kembali ke
+    // atas. Bawa item aktif ke tampilan lagi tanpa menggeser bila sudah terlihat.
+    useEffect(() => {
+        navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest' });
+    }, [currentUrl]);
 
     return (
         <aside
@@ -184,7 +187,7 @@ export default function SidebarNav({
             {/* Satu scroll container untuk seluruh navigasi, termasuk
                 Pengaturan. `min-h-0` wajib agar blok ini benar-benar bisa
                 menyusut dan menyerahkan sisa tinggi ke scroll container. */}
-            <nav className="flex-1 min-h-0 px-2.5 py-3 thin-scrollbar overflow-y-auto">
+            <nav ref={navRef} className="flex-1 min-h-0 px-2.5 py-3 thin-scrollbar overflow-y-auto">
                 <div className="space-y-3">
                     {sections.map((section, index) => (
                         <NavSection

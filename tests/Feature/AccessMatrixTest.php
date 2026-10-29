@@ -7,6 +7,7 @@ use App\Models\Loo;
 use App\Models\TenantCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -113,5 +114,19 @@ class AccessMatrixTest extends TestCase
         $this->actingAs($settingsOnly)->put("/settings/access-control/{$roleId}", ['permissions' => []])->assertForbidden();
         $this->actingAs($userAdmin)->get('/settings/users')->assertOk();
         $this->actingAs($userAdmin)->put("/settings/access-control/{$roleId}", ['permissions' => ['settings.access', 'users.manage']])->assertRedirect();
+    }
+
+    public function test_settings_index_menampilkan_hub_sesuai_izin(): void
+    {
+        $settingsOnly = $this->makeUser('settings_entry', ['settings.access']);
+        $docOnly = $this->makeUser('doc_entry', ['documents.manage']);
+        $none = $this->makeUser('no_settings', []);
+
+        $this->actingAs($settingsOnly)->get('/settings')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Settings/Home'));
+
+        $this->actingAs($docOnly)->get('/settings')->assertOk();
+        $this->actingAs($none)->get('/settings')->assertForbidden();
     }
 }
