@@ -52,10 +52,32 @@ class UnitController extends Controller
         $occupied = (int) ($agg->occupied ?? 0);
         $vacant = $total - $occupied - $inactive;
 
-        $query = (clone $base)
+        $located = (clone $base)
             ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
             ->when($request->block, fn ($q) => $q->where('block', $request->block))
-            ->when($request->unit_number, fn ($q) => $q->where('unit_number', $request->unit_number))
+            ->when($request->unit_number, fn ($q) => $q->where('unit_number', $request->unit_number));
+
+        // Ringkasan per lantai untuk header grup di tabel — sengaja tanpa filter status
+        // supaya meter okupansi tetap menggambarkan kondisi lantai, bukan hasil saring.
+        $floorSummary = (clone $located)->reorder()->toBase()
+            ->leftJoin('tenancies', function ($j) {
+                $j->on('tenancies.unit_id', '=', 'units.id')
+                    ->where('tenancies.status', '=', 'active');
+            })
+            ->groupBy('units.floor')
+            ->orderBy('units.floor')
+            ->selectRaw('units.floor as floor, count(distinct units.id) as total, count(distinct case when units.is_active = 0 then units.id end) as inactive, count(distinct tenancies.id) as occupied')
+            ->get()
+            ->map(fn ($row) => [
+                'floor' => $row->floor,
+                'total' => (int) $row->total,
+                'occupied' => (int) $row->occupied,
+                'inactive' => (int) $row->inactive,
+                'vacant' => (int) $row->total - (int) $row->occupied - (int) $row->inactive,
+            ])
+            ->values();
+
+        $query = (clone $located)
             ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
             ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
@@ -82,6 +104,7 @@ class UnitController extends Controller
                 'inactive' => $inactive,
             ],
             'filters' => $request->only(['search', 'status', 'floor', 'block', 'unit_number']),
+            'floorSummary' => $floorSummary,
             'floors' => $floors,
             'blocks' => $blocks,
             'unitNumbers' => $unitNumbers,

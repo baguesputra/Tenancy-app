@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { useForm, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SlideOver from '@/Components/SlideOver';
 import FormField from '@/Components/Form/FormField';
 import FormSection from '@/Components/Form/FormSection';
@@ -9,26 +9,95 @@ import NumberInput from '@/Components/Form/NumberInput';
 import SelectInput from '@/Components/Form/SelectInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
-import EmptyState from '@/Components/EmptyState';
-import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
-import StatFilter from '@/Components/StatFilter';
-import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
-import { IconPlus, IconEdit, IconTrash, IconDocument } from '@/Components/Icons';
+import { IconPlus, IconEdit, IconTrash, IconQr, IconDownload, IconDoor, IconSearch } from '@/Components/Icons';
 
-function StatusPill({ unit }) {
-    if (!unit.is_active) {
-        return <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 tabular-nums">Nonaktif</span>;
-    }
-    if (unit.is_occupied) {
-        return <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 tabular-nums">Terisi</span>;
-    }
-    return <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 tabular-nums">Kosong</span>;
+function StatusLabel({ unit }) {
+    const map = !unit.is_active
+        ? { dot: 'bg-slate-300', text: 'text-slate-400', label: 'Nonaktif' }
+        : unit.is_occupied
+            ? { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Terisi' }
+            : { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Kosong' };
+
+    return (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-medium">
+            <span className={`h-1.5 w-1.5 rounded-full ${map.dot}`} aria-hidden="true" />
+            <span className={map.text}>{map.label}</span>
+        </span>
+    );
 }
 
-export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
+function OccupancyMeter({ total, occupied, className = '' }) {
+    const pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+    return (
+        <span className={`inline-flex items-center gap-2 ${className}`}>
+            <span className="h-1 w-20 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+                <span className="block h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+            </span>
+            <span className="text-[11px] font-medium tabular-nums text-slate-500">{pct}%</span>
+        </span>
+    );
+}
+
+function SummaryStrip({ summary, activeStatus, onSelect }) {
+    const cells = [
+        { key: '', label: 'Total Unit', value: summary.total },
+        { key: 'occupied', label: 'Terisi', value: summary.occupied },
+        { key: 'vacant', label: 'Kosong', value: summary.vacant },
+        { key: 'inactive', label: 'Nonaktif', value: summary.inactive },
+    ];
+
+    return (
+        <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E2E5EA] bg-[#E2E5EA] sm:grid-cols-4">
+            {cells.map((cell) => {
+                const active = activeStatus === cell.key;
+                return (
+                    <button
+                        key={cell.label}
+                        type="button"
+                        onClick={() => onSelect(cell.key)}
+                        aria-pressed={active}
+                        className={`px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${active ? 'bg-slate-50 shadow-[inset_0_-2px_0_0_#0F1E36]' : 'bg-white hover:bg-slate-50/60'}`}
+                    >
+                        <span className={`block text-[11px] font-medium uppercase tracking-wider ${active ? 'text-[#0F1E36]' : 'text-slate-400'}`}>
+                            {cell.label}
+                        </span>
+                        <span className={`mt-1 block text-xl font-semibold tabular-nums ${active ? 'text-[#0F1E36]' : 'text-slate-900'}`}>
+                            {cell.value}
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function UnitsEmpty({ filtered, onReset, onCreate }) {
+    return (
+        <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E2E5EA] text-slate-400" aria-hidden="true">
+                {filtered ? <IconSearch className="h-5 w-5" /> : <IconDoor className="h-5 w-5" />}
+            </span>
+            <p className="mt-3 text-sm font-medium text-slate-900">
+                {filtered ? 'Tidak ada unit yang cocok' : 'Belum ada unit'}
+            </p>
+            <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
+                {filtered ? 'Ubah kata kunci atau reset filter untuk melihat unit lain.' : 'Tambahkan unit pertama untuk mulai mencatat okupansi.'}
+            </p>
+            <button
+                type="button"
+                onClick={filtered ? onReset : onCreate}
+                className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-[#0F1E36] px-4 text-xs font-semibold text-[#0F1E36] transition-colors hover:bg-[#0F1E36] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+            >
+                {filtered ? 'Reset filter' : 'Tambah Unit'}
+            </button>
+        </div>
+    );
+}
+
+export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, floorSummary = [], filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
     const [exporting, setExporting] = useState(false);
@@ -120,59 +189,88 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
         router.get('/units', {}, { preserveScroll: true, replace: true });
     };
 
-    const stats = [
-        { key: '', label: 'Total Unit', value: summary.total, dot: 'bg-[#0F1E36]' },
-        { key: 'occupied', label: 'Terisi', value: summary.occupied, dot: 'bg-emerald-500' },
-        { key: 'vacant', label: 'Kosong', value: summary.vacant, dot: 'bg-amber-500' },
-        { key: 'inactive', label: 'Nonaktif', value: summary.inactive, dot: 'bg-slate-400' },
-    ];
-
-    const columns = [
-        { key: 'code', label: 'Kode Unit' },
-        { key: 'location', label: 'Lokasi' },
-        { key: 'size', label: 'Luas' },
-        { key: 'tenant', label: 'Tenant Saat Ini' },
-        { key: 'status', label: 'Status', className: 'text-right' },
-        { key: 'actions', label: '', className: 'w-20' },
-    ];
-
     const qrParams = new URLSearchParams(
         Object.fromEntries(Object.entries({ search: filters.search, status: filters.status, floor: filters.floor, block: filters.block, unit_number: filters.unit_number }).filter(([, v]) => v))
     ).toString();
     const bulkQrHref = `/units-qr/bulk${qrParams ? `?${qrParams}` : ''}`;
 
+    // Lantai sudah jadi header grup, jadi urutan baris dari server (floor, block, unit_number)
+    // cukup dipotong per perubahan nilai floor.
+    const groups = useMemo(() => {
+        const result = [];
+        units.data.forEach((unit) => {
+            const last = result[result.length - 1];
+            if (last && last.floor === unit.floor) last.items.push(unit);
+            else result.push({ floor: unit.floor, items: [unit] });
+        });
+        return result;
+    }, [units.data]);
+
+    const floorStats = useMemo(() => Object.fromEntries(floorSummary.map((row) => [row.floor, row])), [floorSummary]);
+
+    const statsFor = (group) => floorStats[group.floor] ?? {
+        total: group.items.length,
+        occupied: group.items.filter((u) => u.is_active && u.is_occupied).length,
+        vacant: group.items.filter((u) => u.is_active && !u.is_occupied).length,
+        inactive: group.items.filter((u) => !u.is_active).length,
+    };
+
+    const occupancyPct = summary.total > 0 ? Math.round((summary.occupied / summary.total) * 100) : 0;
+
     const renderActions = (unit) => (
-        <div className="flex gap-1 justify-end">
+        <div className="flex justify-end gap-1">
             <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
                 aria-label={`Pratinjau QR ${unit.unit_code}`}
                 title="Pratinjau QR"
-                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-slate-400 hover:text-[#0F1E36] hover:bg-slate-100 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#0F1E36] focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
             >
-                <IconDocument className="w-4 h-4" />
+                <IconQr className="h-4 w-4" />
             </button>
             <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
                 aria-label={`Hapus ${unit.unit_code}`}
                 title="Hapus"
-                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-2 focus-visible:outline-red-500"
+                className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-500"
             >
-                <IconTrash className="w-4 h-4" />
+                <IconTrash className="h-4 w-4" />
             </button>
         </div>
     );
 
+    const renderLocation = (unit) => (
+        <>
+            <span className="block text-slate-700">
+                {unit.block ? `Blok ${unit.block} · ` : ''}No. {unit.unit_number}
+            </span>
+            {canPickBranch && unit.branch?.name && (
+                <span className="block text-[11px] text-slate-400">{unit.branch.name}</span>
+            )}
+        </>
+    );
+
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
+            <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-8 sm:py-6">
+                <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                     <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Master Data</p>
-                        <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Master Unit</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">{summary.total} unit terdaftar · {summary.occupied} terisi · {summary.vacant} kosong</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Master Data</p>
+                        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">Master Unit</h1>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            <p className="text-sm text-slate-500">
+                                {summary.total} unit · {summary.occupied} terisi · {summary.vacant} kosong
+                            </p>
+                            <span className="inline-flex items-center gap-2">
+                                <span className="h-1 w-24 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+                                    <span className="block h-full rounded-full bg-emerald-500" style={{ width: `${occupancyPct}%` }} />
+                                </span>
+                                <span className="text-[11px] font-medium tabular-nums text-slate-500">{occupancyPct}% okupansi</span>
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                         <a
                             href={bulkQrHref}
                             target="_blank"
@@ -181,21 +279,23 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 setExporting(true);
                                 setTimeout(() => setExporting(false), 10000);
                             }}
-                            className={`inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-lg border transition-colors ${exporting ? 'text-slate-400 bg-slate-50 border-[#E2E5EA] pointer-events-none' : 'text-slate-700 bg-white border-[#E2E5EA] hover:bg-slate-50'}`}
+                            className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${exporting ? 'pointer-events-none border-slate-100 bg-slate-50 text-slate-400' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
                         >
-                            {exporting ? 'Menyiapkan PDF…' : 'Export QR (ikut filter, maks 50)'}
+                            <IconDownload className="h-4 w-4" aria-hidden="true" />
+                            {exporting ? 'Menyiapkan PDF…' : 'Export QR'}
                         </a>
-                        <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2.5 min-h-[44px]">Tambah Unit</Button>
+                        <Button onClick={openCreate} iconLeft={<IconPlus className="h-4 w-4" />} className="min-h-[44px] !py-2.5">
+                            Tambah Unit
+                        </Button>
                     </div>
                 </div>
 
-                <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} />
+                <SummaryStrip summary={summary} activeStatus={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} />
 
-                <FilterBar>
+                <div className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                    <div className="flex flex-col gap-2 border-b border-[#E2E5EA] p-2.5 sm:p-3 lg:flex-row">
                         <div className="relative flex-1">
-                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
-                            </svg>
+                            <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
                             <TextInput
                                 placeholder="Cari kode / nomor unit…"
                                 value={searchText}
@@ -204,141 +304,175 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 aria-label="Cari unit"
                             />
                         </div>
-                        <SelectInput
-                            value={filters.floor ?? ''}
-                            onChange={(e) => updateFilter('floor', e.target.value, ['block', 'unit_number'])}
-                            className="lg:w-40"
-                            aria-label="Filter lantai"
-                        >
-                            <option value="">Semua Lantai</option>
-                            {floors.map((f) => <option key={f} value={f}>Lt. {f}</option>)}
-                        </SelectInput>
-                        <SelectInput
-                            value={filters.block ?? ''}
-                            onChange={(e) => updateFilter('block', e.target.value, ['unit_number'])}
-                            className="lg:w-40"
-                            aria-label="Filter blok"
-                        >
-                            <option value="">Semua Blok</option>
-                            {blocks.map((b) => <option key={b} value={b}>Blok {b}</option>)}
-                        </SelectInput>
-                        <SelectInput
-                            value={filters.unit_number ?? ''}
-                            onChange={(e) => updateFilter('unit_number', e.target.value)}
-                            className="lg:w-40"
-                            aria-label="Filter nomor unit"
-                        >
-                            <option value="">Semua Nomor</option>
-                            {unitNumbers.map((n) => <option key={n} value={n}>No. {n}</option>)}
-                        </SelectInput>
-                        {hasFilter && <FilterReset onClick={resetFilters} />}
-                </FilterBar>
-
-                <div className="hidden sm:block">
-                    <DataTable columns={columns} footer={<Pagination meta={units} links={units.links} />}>
-                        {units.data.map((unit) => (
-                            <tr
-                                key={unit.id}
-                                onClick={() => openEdit(unit)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(unit); } }}
-                                tabIndex={0}
-                                className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                    editingUnit?.id === unit.id ? 'bg-[#0F1E36]/5' : 'hover:bg-slate-50'
-                                }`}
+                        <div className="grid grid-cols-3 gap-2">
+                            <SelectInput
+                                value={filters.floor ?? ''}
+                                onChange={(e) => updateFilter('floor', e.target.value, ['block', 'unit_number'])}
+                                className="lg:w-36"
+                                aria-label="Filter lantai"
                             >
-                                <td className="px-5 py-3.5 font-medium text-slate-900 whitespace-nowrap">{unit.unit_code}</td>
-                                <td className="px-5 py-3.5 text-slate-500 text-sm whitespace-nowrap">
-                                    Lt. {unit.floor}{unit.block ? ` · Blok ${unit.block}` : ''} · No. {unit.unit_number}
-                                </td>
-                                <td className="px-5 py-3.5 text-slate-500 text-sm whitespace-nowrap">{unit.size ? `${unit.size} m²` : '—'}</td>
-                                <td className="px-5 py-3.5 text-slate-500 text-sm">{unit.active_tenancy?.tenant?.name ?? '—'}</td>
-                                <td className="px-5 py-3.5 text-right">
-                                    <StatusPill unit={unit} />
-                                </td>
-                                <td className="px-5 py-3.5">{renderActions(unit)}</td>
-                            </tr>
-                        ))}
-                        {units.data.length === 0 && (
-                            <tr>
-                                <td colSpan={6} className="px-5 py-6">
-                                    <EmptyState
-                                        variant={hasFilter ? 'search' : 'empty'}
-                                        size="sm"
-                                        title={hasFilter ? 'Tidak ada unit yang cocok.' : 'Belum ada unit.'}
-                                        description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}
-                                        action={hasFilter ? (
-                                            <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
-                                                Reset filter
-                                            </button>
-                                        ) : (
-                                            <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
-                                                Tambah Unit
-                                            </Button>
-                                        )}
-                                    />
-                                </td>
-                            </tr>
-                        )}
-                    </DataTable>
-                </div>
-
-                <div className="sm:hidden space-y-2.5">
-                    {units.data.map((unit) => (
-                        <div
-                            key={unit.id}
-                            onClick={() => openEdit(unit)}
-                            className="bg-white rounded-lg border border-[#E2E5EA] p-4 active:bg-slate-50 cursor-pointer"
-                        >
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                                <p className="text-sm font-semibold text-slate-900">{unit.unit_code}</p>
-                                <StatusPill unit={unit} />
-                            </div>
-                            <p className="text-xs text-slate-500">
-                                Lt. {unit.floor}{unit.block ? ` · Blok ${unit.block}` : ''} · No. {unit.unit_number}
-                                {unit.size ? ` · ${unit.size} m²` : ''}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                {unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}
-                            </p>
-                            <div className="grid grid-cols-2 gap-2 mt-3">
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
-                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-slate-700 bg-white border border-[#E2E5EA] active:bg-slate-50 transition-colors flex items-center justify-center"
-                                >
-                                    Cetak QR
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
-                                    className="py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-red-600 bg-white border border-[#E2E5EA] active:bg-red-50 transition-colors"
-                                >
-                                    Hapus
-                                </button>
-                            </div>
+                                <option value="">Semua Lantai</option>
+                                {floors.map((f) => <option key={f} value={f}>Lt. {f}</option>)}
+                            </SelectInput>
+                            <SelectInput
+                                value={filters.block ?? ''}
+                                onChange={(e) => updateFilter('block', e.target.value, ['unit_number'])}
+                                className="lg:w-36"
+                                aria-label="Filter blok"
+                            >
+                                <option value="">Semua Blok</option>
+                                {blocks.map((b) => <option key={b} value={b}>Blok {b}</option>)}
+                            </SelectInput>
+                            <SelectInput
+                                value={filters.unit_number ?? ''}
+                                onChange={(e) => updateFilter('unit_number', e.target.value)}
+                                className="lg:w-36"
+                                aria-label="Filter nomor unit"
+                            >
+                                <option value="">Semua Nomor</option>
+                                {unitNumbers.map((n) => <option key={n} value={n}>No. {n}</option>)}
+                            </SelectInput>
                         </div>
-                    ))}
-                    {units.data.length === 0 && (
-                        <div className="bg-white rounded-lg border border-[#E2E5EA] px-5 py-6">
-                            <EmptyState
-                                variant={hasFilter ? 'search' : 'empty'}
-                                size="sm"
-                                title={hasFilter ? 'Tidak ada unit yang cocok.' : 'Belum ada unit.'}
-                                description={hasFilter ? 'Coba ubah kata kunci atau reset filter.' : 'Klik Tambah Unit untuk data pertama.'}
-                                action={hasFilter ? (
-                                    <button onClick={resetFilters} className="text-sm font-semibold text-[#0F1E36] hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] rounded">
-                                        Reset filter
-                                    </button>
-                                ) : (
-                                    <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="justify-center !py-3 min-h-[48px]">
-                                        Tambah Unit
-                                    </Button>
-                                )}
-                            />
+                        {hasFilter && (
+                            <button
+                                type="button"
+                                onClick={resetFilters}
+                                className="min-h-[44px] shrink-0 rounded-lg px-3 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                Reset
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="hidden overflow-x-auto sm:block">
+                        <table className="w-full text-sm">
+                            <caption className="sr-only">Daftar unit per lantai</caption>
+                            <thead className="bg-slate-50">
+                                <tr className="border-b border-[#E2E5EA]">
+                                    <th scope="col" className="px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Kode Unit</th>
+                                    <th scope="col" className="px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Lokasi</th>
+                                    <th scope="col" className="px-5 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-slate-500">Luas</th>
+                                    <th scope="col" className="px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">Tenant Saat Ini</th>
+                                    <th scope="col" className="px-5 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-slate-500">Status</th>
+                                    <th scope="col" className="w-20 px-5 py-2.5"><span className="sr-only">Aksi</span></th>
+                                </tr>
+                            </thead>
+                            {groups.map((group) => {
+                                const stats = statsFor(group);
+                                return (
+                                    <tbody key={group.floor} className="divide-y divide-[#E2E5EA]">
+                                        <tr className="bg-slate-50/70">
+                                            <th scope="colgroup" colSpan={6} className="px-5 py-2">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Lantai {group.floor}</span>
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="text-[11px] tabular-nums text-slate-400">{stats.total} unit</span>
+                                                        <OccupancyMeter total={stats.total} occupied={stats.occupied} />
+                                                    </span>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                        {group.items.map((unit) => (
+                                            <tr
+                                                key={unit.id}
+                                                onClick={() => openEdit(unit)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(unit); } }}
+                                                tabIndex={0}
+                                                className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                                                    editingUnit?.id === unit.id ? 'bg-[#0F1E36]/[0.04]' : 'hover:bg-slate-50/70'
+                                                }`}
+                                            >
+                                                <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-slate-900">{unit.unit_code}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 text-sm">{renderLocation(unit)}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 text-right text-sm tabular-nums text-slate-600">{unit.size ? `${unit.size} m²` : '—'}</td>
+                                                <td className="px-5 py-3.5 text-sm text-slate-600">{unit.active_tenancy?.tenant?.name ?? <span className="text-slate-300">—</span>}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 text-right"><StatusLabel unit={unit} /></td>
+                                                <td className="px-5 py-3.5">{renderActions(unit)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                );
+                            })}
+                            {units.data.length === 0 && (
+                                <tbody>
+                                    <tr>
+                                        <td colSpan={6}>
+                                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            )}
+                        </table>
+                    </div>
+
+                    {units.last_page > 1 && (
+                        <div className="hidden border-t border-[#E2E5EA] sm:block">
+                            <Pagination meta={units} links={units.links} />
                         </div>
                     )}
-                    <div className="bg-white rounded-lg border border-[#E2E5EA]">
-                        <Pagination meta={units} links={units.links} />
+
+                    <div className="divide-y divide-[#E2E5EA] sm:hidden">
+                        {groups.map((group) => {
+                            const stats = statsFor(group);
+                            return (
+                                <section key={group.floor}>
+                                    <div className="flex items-center justify-between gap-3 bg-slate-50/70 px-4 py-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Lantai {group.floor}</span>
+                                        <span className="flex items-center gap-2">
+                                            <span className="text-[11px] tabular-nums text-slate-400">{stats.total} unit</span>
+                                            <OccupancyMeter total={stats.total} occupied={stats.occupied} />
+                                        </span>
+                                    </div>
+                                    {group.items.map((unit) => (
+                                        <div
+                                            key={unit.id}
+                                            onClick={() => openEdit(unit)}
+                                            className="cursor-pointer border-t border-[#E2E5EA] px-4 py-3.5 hover:bg-slate-50/70 active:bg-slate-50"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-semibold tabular-nums text-slate-900">{unit.unit_code}</p>
+                                                <StatusLabel unit={unit} />
+                                            </div>
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {renderLocation(unit)}
+                                            </p>
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <p className="truncate text-xs text-slate-500">{unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}</p>
+                                                <span className="shrink-0 text-xs tabular-nums text-slate-400">{unit.size ? `${unit.size} m²` : '—'}</span>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
+                                                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-slate-700 transition-colors active:bg-slate-50"
+                                                >
+                                                    <IconQr className="h-4 w-4" aria-hidden="true" />
+                                                    Cetak QR
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
+                                                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-red-600 transition-colors active:bg-red-50"
+                                                >
+                                                    <IconTrash className="h-4 w-4" aria-hidden="true" />
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </section>
+                            );
+                        })}
+                        {units.data.length === 0 && (
+                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} />
+                        )}
                     </div>
+
+                    {units.last_page > 1 && (
+                        <div className="border-t border-[#E2E5EA] sm:hidden">
+                            <Pagination meta={units} links={units.links} />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -347,7 +481,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                 onClose={closePanel}
                 title={editingUnit ? 'Edit Unit' : 'Tambah Unit'}
                 subtitle={editingUnit ? editingUnit.unit_code : 'Lengkapi lokasi dan identitas unit'}
-                icon={editingUnit ? <IconEdit className="w-4 h-4" /> : <IconPlus className="w-4 h-4" />}
+                icon={editingUnit ? <IconEdit className="h-4 w-4" /> : <IconPlus className="h-4 w-4" />}
                 footer={
                     <div className="flex gap-2">
                         <Button type="button" variant="secondary" onClick={closePanel} className="shrink-0">Batal</Button>
