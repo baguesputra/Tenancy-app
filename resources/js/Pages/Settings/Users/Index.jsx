@@ -11,6 +11,7 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import SlideOver from '@/Components/SlideOver';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import { FilterReset } from '@/Components/FilterBar';
 import PageHeader from '@/Components/Settings/PageHeader';
 import StatTiles from '@/Components/Settings/StatTiles';
 import { IconPlus, IconEdit, IconTrash, IconRefresh } from '@/Components/Icons';
@@ -223,9 +224,7 @@ export default function Index({ users, filters = {}, summary = { total: 0 }, rol
                             {posOpsiFilter.map((p) => <option key={p.id} value={p.id}>{labelOpsi(positions, p)}</option>)}
                         </SelectInput>
                         {hasFilter && (
-                            <button onClick={resetFilters} className="justify-self-start rounded-lg px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                                Reset
-                            </button>
+                            <FilterReset onClick={resetFilters} />
                         )}
                     </div>
                 </div>

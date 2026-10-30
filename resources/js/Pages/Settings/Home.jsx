@@ -15,8 +15,11 @@ export default function Home() {
 
     return (
         <SettingsLayout>
-            <div className="w-full max-w-3xl">
-                <h2 className="sr-only">Modul pengaturan</h2>
+            <div className="w-full">
+                <div className="mb-5 border-b border-[#E2E5EA] pb-4">
+                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">Modul Pengaturan</h2>
+                    <p className="mt-0.5 text-sm text-gray-500">Pilih modul di bawah untuk mengelola data dan konfigurasi.</p>
+                </div>
 
                 <div className="space-y-6">
                     {GROUPS.map((group) => {
@@ -31,7 +34,7 @@ export default function Home() {
                                         <Link
                                             key={item.href}
                                             href={item.href}
-                                            className="group flex min-h-[76px] items-start gap-3 rounded-xl border border-[#E2E5EA] bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                            className="group flex h-full min-h-[76px] items-start gap-3 rounded-xl border border-[#E2E5EA] bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                                         >
                                             <span
                                                 aria-hidden="true"
@@ -41,7 +44,7 @@ export default function Home() {
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
-                                                <span className="mt-0.5 block text-xs leading-relaxed text-gray-500">{item.description}</span>
+                                                <span className="mt-0.5 block text-xs leading-relaxed text-gray-500 line-clamp-2">{item.description}</span>
                                             </span>
                                             <IconChevronRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 transition-colors group-hover:text-gray-500" aria-hidden="true" />
                                         </Link>

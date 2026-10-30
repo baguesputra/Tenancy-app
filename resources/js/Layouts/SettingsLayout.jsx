@@ -33,9 +33,12 @@ export default function SettingsLayout({ children }) {
 
                                     return (
                                         <div key={group} className="contents lg:block">
-                                            <p className="hidden px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 lg:block">
+                                            <p className="hidden shrink-0 items-center whitespace-nowrap px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 lg:block" aria-hidden="true">
                                                 {group}
                                             </p>
+                                            <span className="flex shrink-0 items-center whitespace-nowrap px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 lg:hidden" aria-hidden="true">
+                                                {group}
+                                            </span>
                                             {groupItems.map((item) => {
                                                 const active = url === item.href || url.startsWith(`${item.href}/`);
 
