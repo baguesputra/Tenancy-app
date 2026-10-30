@@ -114,7 +114,7 @@ class PermitLanggananParkirTest extends TestCase
         ], $overrides);
     }
 
-    public function test_parkir_uses_tc_number_and_supervisor_manager_chain(): void
+    public function test_parkir_uses_prk_number_and_supervisor_manager_chain(): void
     {
         $staff = $this->user('tenancy_staff', 'Tenancy');
         $tenant = $this->tenant($this->branch());
@@ -125,8 +125,8 @@ class PermitLanggananParkirTest extends TestCase
         );
 
         $this->assertSame(['langganan_parkir'], $permit->activity_types);
-        $this->assertSame('TC', PermitNumberService::codeFor($permit->activity_types));
-        $this->assertStringContainsString('/TC/', $permit->permit_number);
+        $this->assertSame('PRK', PermitNumberService::codeFor($permit->activity_types));
+        $this->assertStringContainsString('/PRK/', $permit->permit_number);
         $this->assertSame('DA 1234 AB', $permit->vehicle_plate);
         $this->assertSame('mobil', $permit->vehicle_type);
         $this->assertSame('Siti Pemohon', $permit->applicant_name);
@@ -139,7 +139,7 @@ class PermitLanggananParkirTest extends TestCase
         $this->assertNull($steps[1]->department_id);
     }
 
-    public function test_customer_form_uses_tc_number_and_single_tenancy_approval(): void
+    public function test_customer_form_uses_cst_number_and_single_tenancy_approval(): void
     {
         $staff = $this->user('tenancy_staff', 'Tenancy');
         $payload = [
@@ -170,7 +170,8 @@ class PermitLanggananParkirTest extends TestCase
 
         $permit = PermitRequest::latest('id')->firstOrFail();
         $this->assertSame(['customer_form'], $permit->activity_types);
-        $this->assertSame('TC', PermitNumberService::codeFor($permit->activity_types));
+        $this->assertSame('CST', PermitNumberService::codeFor($permit->activity_types));
+        $this->assertStringContainsString('/CST/', $permit->permit_number);
         $this->assertSame('PT Contoh Customer', $permit->store_name_snapshot);
         $this->assertSame('Budi Customer', $permit->pic_name);
         $this->assertSame('2026-10-20', $permit->request_date->format('Y-m-d'));

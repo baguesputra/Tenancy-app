@@ -120,6 +120,33 @@ class PermitNumberTest extends TestCase
         $this->assertSame('TC', PermitNumberService::codeFor(['kerja']));
     }
 
+    public function test_code_for_uses_dedicated_codes_for_parkir_and_customer(): void
+    {
+        $this->assertSame('PRK', PermitNumberService::codeFor(['langganan_parkir']));
+        $this->assertSame('CST', PermitNumberService::codeFor(['customer_form']));
+        // Seri TC tetap untuk form kerja, termasuk saat digabung tipe lain.
+        $this->assertSame('TC', PermitNumberService::codeFor(['kerja', 'lembur', 'masuk_barang']));
+        // Kegiatan & pameran menang atas kode form khusus.
+        $this->assertSame('EVT', PermitNumberService::codeFor(['event', 'langganan_parkir']));
+        $this->assertSame('E&P', PermitNumberService::codeFor(['pameran', 'customer_form']));
+    }
+
+    public function test_parkir_and_customer_get_separate_number_series(): void
+    {
+        Carbon::setTestNow('2026-10-01');
+        $staff = $this->staff();
+        $service = app(PermitRequestService::class);
+
+        $kerja = $service->create($this->payload(['kerja']), $staff);
+        $parkir = $service->create($this->payload(['langganan_parkir']), $staff);
+        $customer = $service->create($this->payload(['customer_form']), $staff);
+
+        $this->assertSame('001/TC/X/26', $kerja->permit_number);
+        $this->assertSame('001/PRK/X/26', $parkir->permit_number);
+        $this->assertSame('001/CST/X/26', $customer->permit_number);
+        Carbon::setTestNow();
+    }
+
     public function test_sequential_numbers_unique_per_code(): void
     {
         Carbon::setTestNow('2026-09-22');
