@@ -89,7 +89,7 @@ export default function AppLayout({ children }) {
     }, [mobileNavOpen]);
 
     return (
-        <div className="min-h-screen bg-[#F7F8FA]">
+        <div className="min-h-screen bg-slate-50">
             {mobileNavOpen && (
                 <div onClick={closeMobileNav} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-30 lg:hidden" aria-hidden="true" />
             )}

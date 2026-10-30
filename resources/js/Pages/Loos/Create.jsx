@@ -372,7 +372,7 @@ export default function Create({ loo = null, branches, tenants, attachments = []
                             </div>
 
                             {/* Aksi: sticky di layar kecil agar selalu terjangkau */}
-                            <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t border-[#E2E5EA] bg-[#F7F8FA]/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+                            <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t border-[#E2E5EA] bg-slate-50/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
                                 <div className="flex justify-end gap-2">
                                     <Link href={isEdit ? `/loos/${loo.id}` : '/loos'}>
                                         <Button variant="secondary" type="button">Batal</Button>

@@ -50,7 +50,7 @@ export default function SlideOver({ open, onClose, title, subtitle, icon, childr
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 bg-[#F7F8FA]">
+                <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
                     {children}
                 </div>
 
