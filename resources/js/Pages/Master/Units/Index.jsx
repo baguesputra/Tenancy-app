@@ -13,6 +13,7 @@ import Pagination from '@/Components/Pagination';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
 import { IconPlus, IconEdit, IconTrash, IconQr, IconDownload, IconDoor, IconSearch } from '@/Components/Icons';
+import useCan from '@/hooks/useCan';
 
 function StatusLabel({ unit }) {
     const map = !unit.is_active
@@ -74,7 +75,7 @@ function SummaryStrip({ summary, activeStatus, onSelect }) {
     );
 }
 
-function UnitsEmpty({ filtered, onReset, onCreate }) {
+function UnitsEmpty({ filtered, onReset, onCreate, canCreate }) {
     return (
         <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E2E5EA] text-slate-400" aria-hidden="true">
@@ -86,18 +87,25 @@ function UnitsEmpty({ filtered, onReset, onCreate }) {
             <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
                 {filtered ? 'Ubah kata kunci atau reset filter untuk melihat unit lain.' : 'Tambahkan unit pertama untuk mulai mencatat okupansi.'}
             </p>
-            <button
-                type="button"
-                onClick={filtered ? onReset : onCreate}
-                className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-[#0F1E36] px-4 text-xs font-semibold text-[#0F1E36] transition-colors hover:bg-[#0F1E36] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-            >
-                {filtered ? 'Reset filter' : 'Tambah Unit'}
-            </button>
+            {(filtered || canCreate) && (
+                <button
+                    type="button"
+                    onClick={filtered ? onReset : onCreate}
+                    className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border border-[#0F1E36] px-4 text-xs font-semibold text-[#0F1E36] transition-colors hover:bg-[#0F1E36] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                >
+                    {filtered ? 'Reset filter' : 'Tambah Unit'}
+                </button>
+            )}
         </div>
     );
 }
 
 export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, floorSummary = [], filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
+    const { can } = useCan();
+    const canCreate = can('units.create');
+    const canEdit = can('units.edit');
+    const canDelete = can('units.delete');
+    const canWrite = canCreate || canEdit;
     const [panelOpen, setPanelOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
     const [exporting, setExporting] = useState(false);
@@ -129,6 +137,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
     };
 
     const openEdit = (unit) => {
+        if (!canEdit) return;
         setEditingUnit(unit);
         setData({
             floor: unit.floor,
@@ -228,15 +237,17 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
             >
                 <IconQr className="h-4 w-4" />
             </button>
-            <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
-                aria-label={`Hapus ${unit.unit_code}`}
-                title="Hapus"
-                className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-500"
-            >
-                <IconTrash className="h-4 w-4" />
-            </button>
+            {canDelete && (
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
+                    aria-label={`Hapus ${unit.unit_code}`}
+                    title="Hapus"
+                    className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-500"
+                >
+                    <IconTrash className="h-4 w-4" />
+                </button>
+            )}
         </div>
     );
 
@@ -284,9 +295,11 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                             <IconDownload className="h-4 w-4" aria-hidden="true" />
                             {exporting ? 'Menyiapkan PDF…' : 'Export QR'}
                         </a>
-                        <Button onClick={openCreate} iconLeft={<IconPlus className="h-4 w-4" />} className="min-h-[44px] !py-2.5">
-                            Tambah Unit
-                        </Button>
+                        {canCreate && (
+                            <Button onClick={openCreate} iconLeft={<IconPlus className="h-4 w-4" />} className="min-h-[44px] !py-2.5">
+                                Tambah Unit
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -377,9 +390,9 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                 key={unit.id}
                                                 onClick={() => openEdit(unit)}
                                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(unit); } }}
-                                                tabIndex={0}
-                                                className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${
-                                                    editingUnit?.id === unit.id ? 'bg-[#0F1E36]/[0.04]' : 'hover:bg-slate-50/70'
+                                                tabIndex={canEdit ? 0 : -1}
+                                                className={`transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                                                    editingUnit?.id === unit.id ? 'bg-[#0F1E36]/[0.04]' : canEdit ? 'cursor-pointer hover:bg-slate-50/70' : ''
                                                 }`}
                                             >
                                                 <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-slate-900">{unit.unit_code}</td>
@@ -397,7 +410,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                 <tbody>
                                     <tr>
                                         <td colSpan={6}>
-                                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} />
+                                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} canCreate={canCreate} />
                                         </td>
                                     </tr>
                                 </tbody>
@@ -427,7 +440,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                         <div
                                             key={unit.id}
                                             onClick={() => openEdit(unit)}
-                                            className="cursor-pointer border-t border-[#E2E5EA] px-4 py-3.5 hover:bg-slate-50/70 active:bg-slate-50"
+                                            className={`border-t border-[#E2E5EA] px-4 py-3.5 ${canEdit ? 'cursor-pointer hover:bg-slate-50/70 active:bg-slate-50' : ''}`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-semibold tabular-nums text-slate-900">{unit.unit_code}</p>
@@ -440,7 +453,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                 <p className="truncate text-xs text-slate-500">{unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}</p>
                                                 <span className="shrink-0 text-xs tabular-nums text-slate-400">{unit.size ? `${unit.size} m²` : '—'}</span>
                                             </div>
-                                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                            <div className={`mt-3 grid gap-2 ${canDelete ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); setQrUnit(unit); }}
@@ -449,14 +462,16 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                     <IconQr className="h-4 w-4" aria-hidden="true" />
                                                     Cetak QR
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
-                                                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-red-600 transition-colors active:bg-red-50"
-                                                >
-                                                    <IconTrash className="h-4 w-4" aria-hidden="true" />
-                                                    Hapus
-                                                </button>
+                                                {canDelete && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); askDelete(unit); }}
+                                                        className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-red-600 transition-colors active:bg-red-50"
+                                                    >
+                                                        <IconTrash className="h-4 w-4" aria-hidden="true" />
+                                                        Hapus
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -464,7 +479,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                             );
                         })}
                         {units.data.length === 0 && (
-                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} />
+                            <UnitsEmpty filtered={hasFilter} onReset={resetFilters} onCreate={openCreate} canCreate={canCreate} />
                         )}
                     </div>
 

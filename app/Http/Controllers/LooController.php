@@ -135,7 +135,7 @@ class LooController extends Controller
             'canEditSections' => $this->editableSectionKeys($loo, $request->user()),
             'visibleSectionKeys' => $this->visibleSectionKeys($loo, $request->user()),
             'readOnlySections' => $this->readOnlySections($loo, $request->user()),
-            'canEditLoo' => $request->user()->can('loos.create'),
+            'canEditLoo' => $request->user()->can('loos.edit'),
             'canCancel' => $this->canCancel($loo, $request->user()),
             'files' => $this->accessibleFiles($loo, $request->user()),
             'attachments' => $request->user()->hasAnyRole(self::COVER_ONLY_ROLES)

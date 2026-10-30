@@ -60,6 +60,43 @@ class AuditRbac extends Command
             $unused->each(fn ($p) => $this->line("  ⚠ {$p->name}"));
         }
 
+        // 5. Route `can:` tanpa permission terdaftar di DB (typo/gagal seed)
+        $this->line('');
+        $this->info('5. Route can: tanpa permission terdaftar:');
+        $routeFile = file_get_contents(base_path('routes/web.php'));
+        preg_match_all("/can:([a-z_0-9.]+)/", $routeFile, $m);
+        $routePerms = array_unique($m[1] ?? []);
+        $registered = Permission::pluck('name')->all();
+        // super_admin bypass total via Gate::before — bukan permission.
+        $missing = array_diff($routePerms, $registered, ['super_admin']);
+        if ($missing === []) {
+            $this->line('  Semua can: route terdaftar ✓');
+        } else {
+            foreach ($missing as $name) {
+                $this->line("  ⚠ {$name}");
+            }
+        }
+
+        // 6. Frontend can('...') tanpa permission terdaftar (tombol tak pernah tampil)
+        $this->line('');
+        $this->info('6. Frontend can() tanpa permission terdaftar:');
+        $jsPerms = [];
+        foreach (glob(resource_path('js/**/*.jsx')) ?: [] as $file) {
+            $src = file_get_contents($file);
+            if (preg_match_all("/can\(['\"]([a-z_0-9.]+)['\"]\)/", $src, $mm)) {
+                $jsPerms = array_merge($jsPerms, $mm[1]);
+            }
+        }
+        $jsPerms = array_unique($jsPerms);
+        $missingJs = array_diff($jsPerms, $registered);
+        if ($missingJs === []) {
+            $this->line('  Semua can() frontend terdaftar ✓');
+        } else {
+            foreach ($missingJs as $name) {
+                $this->line("  ⚠ {$name}");
+            }
+        }
+
         $this->line('');
         $this->info('Audit selesai.');
     }

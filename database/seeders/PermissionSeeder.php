@@ -22,22 +22,22 @@ class PermissionSeeder extends Seeder
             'gate.sync',
             // LOO workflow
             'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
-            'loos.legal_edit', 'loos.legal_submit',
-            'loos.accounting_edit', 'loos.accounting_submit',
-            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
-            'loos.measurement_edit', 'loos.termin_manage',
+            'loos.legal_edit',
+            'loos.accounting_edit',
+            'loos.tenant_mgmt_edit',
             'loos.engineering_edit',
-            'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
+            'loos.fitout_approve', 'loos.transition',
         ];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Cabut permission mati (tanpa route): tenants.create, tenancies.create,
+        // Cabut permission mati (tanpa route/gate): tenants.create, tenancies.create,
         // documents.manage (diganti settings.documents), settings.access (dipecah
-        // per modul), sidak.create (dipecah manage/answer).
-        Permission::whereIn('name', ['tenants.create', 'tenancies.create', 'documents.manage', 'settings.access', 'sidak.create'])->delete();
+        // per modul), sidak.create (dipecah manage/answer), loos.*_submit +
+        // measurement/termin/dashboard (gate-nya tak pernah ada).
+        Permission::whereIn('name', ['tenants.create', 'tenancies.create', 'documents.manage', 'settings.access', 'sidak.create', 'loos.legal_submit', 'loos.accounting_submit', 'loos.tenant_mgmt_submit', 'loos.measurement_edit', 'loos.termin_manage', 'loos.dashboard'])->delete();
 
         $this->assignRolePermissions('admin', [
             'tenants.view', 'tenants.edit', 'tenants.delete',
@@ -50,12 +50,11 @@ class PermissionSeeder extends Seeder
             'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents',
             'gate.sync',
             'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
-            'loos.legal_edit', 'loos.legal_submit',
-            'loos.accounting_edit', 'loos.accounting_submit',
-            'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit',
-            'loos.measurement_edit', 'loos.termin_manage',
+            'loos.legal_edit',
+            'loos.accounting_edit',
+            'loos.tenant_mgmt_edit',
             'loos.engineering_edit',
-            'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
+            'loos.fitout_approve', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('manager', [
@@ -65,7 +64,7 @@ class PermissionSeeder extends Seeder
             'categories.view',
             'sidak.view', 'sidak.manage', 'sidak.answer',
             'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
-            'loos.view', 'loos.dashboard', 'loos.transition',
+            'loos.view', 'loos.transition',
             'loos.fitout_approve',
         ]);
 
@@ -77,7 +76,7 @@ class PermissionSeeder extends Seeder
             'sidak.view', 'sidak.manage', 'sidak.answer',
             'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'settings.documents',
-            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('bs_staff', [
@@ -103,30 +102,28 @@ class PermissionSeeder extends Seeder
 
         $this->assignRolePermissions('finance_staff', [
             'permits.view', 'permits.approve', 'permits.inspect',
-            'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
-            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
+            'loos.view', 'loos.accounting_edit', 'loos.transition',
         ]);
 
         // Legal: gabungan legal_staff + legal_manager (dulu identik).
         $this->assignRolePermissions('legal', [
-            'loos.view', 'loos.legal_edit', 'loos.legal_submit', 'loos.transition',
+            'loos.view', 'loos.legal_edit', 'loos.transition',
         ]);
 
         // Accounting: gabungan accounting_staff + accounting_manager.
         $this->assignRolePermissions('accounting', [
-            'loos.view', 'loos.create', 'loos.accounting_edit', 'loos.accounting_submit',
-            'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
+            'loos.view', 'loos.create', 'loos.accounting_edit', 'loos.transition',
         ]);
 
         // Tenant Management: gabungan tenant_mgmt_staff + tenant_mgmt_manager (dulu identik).
         $this->assignRolePermissions('tenant_mgmt', [
             'settings.documents',
-            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.transition',
         ]);
 
-        // GM: approval fitout + monitoring dashboard
+        // GM: approval fitout + monitoring
         $this->assignRolePermissions('gm_approval', [
-            'loos.view', 'loos.fitout_approve', 'loos.dashboard', 'loos.transition',
+            'loos.view', 'loos.fitout_approve', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('staff', []);

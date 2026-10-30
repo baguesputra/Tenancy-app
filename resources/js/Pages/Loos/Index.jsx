@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import Button from '@/Components/Form/Button';
 import DataTable from '@/Components/DataTable';
@@ -8,6 +8,7 @@ import { FilterReset } from '@/Components/FilterBar';
 import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
 import EmptyState from '@/Components/EmptyState';
+import useCan from '@/hooks/useCan';
 
 const STATUS_LABELS = {
     draft: 'Draft',
@@ -44,9 +45,8 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
         if (searchTimer.current) clearTimeout(searchTimer.current);
     }, []);
 
-    const { auth } = usePage().props;
-    const canCreate = auth.user?.roles?.includes('super_admin')
-        || (auth.user?.permissions ?? []).includes('loos.create');
+    const { can } = useCan();
+    const canCreate = can('loos.create');
 
     const updateFilter = (key, value) => {
         const next = { ...filters, [key]: value || undefined };

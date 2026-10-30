@@ -12,6 +12,7 @@ import DataTable from '@/Components/DataTable';
 import PageHeader from '@/Components/Settings/PageHeader';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
+import useCan from '@/hooks/useCan';
 
 const tabs = [
     { key: 'tenant', label: 'Kategori Tenant', prefix: 'tenant-categories' },
@@ -19,6 +20,8 @@ const tabs = [
 ];
 
 export default function Index({ tenantCategories = [], productCategories = [] }) {
+    const { can } = useCan();
+    const canManage = can('categories.manage');
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const [tab, setTab] = useState(params.get('tab') === 'product' ? 'product' : 'tenant');
     const [search, setSearch] = useState('');
@@ -45,6 +48,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
     useEffect(() => { setSearch(''); setQuickName(''); }, [tab]);
 
     const openCreate = () => {
+        if (!canManage) return;
         setEditing(null);
         reset();
         clearErrors();
@@ -52,6 +56,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
     };
 
     const openEdit = (cat) => {
+        if (!canManage) return;
         setEditing(cat);
         setData({ name: cat.name, description: cat.description ?? '' });
         clearErrors();
@@ -104,9 +109,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                     title="Kategori"
                     description={`${tenantCategories.length} kategori tenant · ${productCategories.length} kategori produk`}
                     actions={
-                        <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>
-                            Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
-                        </Button>
+                        canManage && (
+                            <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />}>
+                                Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
+                            </Button>
+                        )
                     }
                 />
 
@@ -166,6 +173,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             <label htmlFor="quick-add-name" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
                                 Tambah cepat
                             </label>
+                            {canManage && (
                             <div className="mt-1.5 flex gap-2">
                                 <TextInput
                                     id="quick-add-name"
@@ -179,13 +187,14 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     Tambah
                                 </Button>
                             </div>
+                            )}
                         </form>
                     </div>
                 </div>
 
                 {filtered.length > 0 && (
                     <p className="mb-2 text-xs text-slate-400 tabular-nums" aria-live="polite">
-                        {filtered.length} dari {categories.length} kategori · klik baris untuk edit
+                        {filtered.length} dari {categories.length} kategori{canManage ? ' · klik baris untuk edit' : ''}
                     </p>
                 )}
                 <div className="hidden sm:block">
@@ -203,10 +212,10 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                 key={cat.id}
                                 onClick={() => openEdit(cat)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(cat); } }}
-                                tabIndex={0}
-                                title="Klik untuk edit"
-                                className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                    editing?.id === cat.id ? 'bg-[#0F1E36]/5' : 'hover:bg-slate-50'
+                                tabIndex={canManage ? 0 : -1}
+                                title={canManage ? 'Klik untuk edit' : undefined}
+                                className={`group transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                    editing?.id === cat.id ? 'bg-[#0F1E36]/5' : canManage ? 'cursor-pointer hover:bg-slate-50' : ''
                                 }`}
                             >
                                 <td className="px-5 py-3.5">
@@ -228,6 +237,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     </span>
                                 </td>
                                 <td className="px-5 py-3.5 text-right">
+                                    {canManage && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); askDelete(cat); }}
                                         aria-label={locked ? `${cat.name} dipakai ${used} tenant, tidak bisa dihapus` : `Hapus ${cat.name}`}
@@ -237,6 +247,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     >
                                         <IconTrash className="w-4 h-4" />
                                     </button>
+                                    )}
                                 </td>
                             </tr>
                             );
@@ -253,11 +264,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                             <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
                                                 Reset pencarian
                                             </Button>
-                                        ) : (
+                                        ) : canManage ? (
                                             <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
                                                 Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
                                             </Button>
-                                        )}
+                                        ) : null}
                                     />
                                 </td>
                             </tr>
@@ -273,13 +284,14 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                             <div
                                 key={cat.id}
                                 onClick={() => openEdit(cat)}
-                                className="bg-white rounded-xl border border-[#E2E5EA] p-4 active:bg-slate-50 cursor-pointer"
+                                className={`bg-white rounded-xl border border-[#E2E5EA] p-4 ${canManage ? 'active:bg-slate-50 cursor-pointer' : ''}`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-900 line-clamp-1">{cat.name}</p>
                                         <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{cat.description || 'Tanpa keterangan'}</p>
                                     </div>
+                                    {canManage && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); askDelete(cat); }}
                                         disabled={used > 0}
@@ -288,6 +300,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     >
                                         <IconTrash className="w-4 h-4" />
                                     </button>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
                                     <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">{used} tenant</span>
@@ -309,11 +322,11 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                                     <Button variant="secondary" onClick={() => setSearch('')} className="!py-2 text-xs">
                                         Reset pencarian
                                     </Button>
-                                ) : (
+                                ) : canManage ? (
                                     <Button onClick={openCreate} iconLeft={<IconPlus className="w-4 h-4" />} className="!py-2 text-xs">
                                         Tambah {tab === 'tenant' ? 'Kategori Tenant' : 'Kategori Produk'}
                                     </Button>
-                                )}
+                                ) : null}
                             />
                         </div>
                     )}
