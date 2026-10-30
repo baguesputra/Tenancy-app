@@ -7,18 +7,11 @@ import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
+import EmptyState from '@/Components/EmptyState';
 import SlideOver from '@/Components/SlideOver';
 import PageHeader from '@/Components/Settings/PageHeader';
 import StatTiles from '@/Components/Settings/StatTiles';
 import { IconEdit } from '@/Components/Icons';
-
-import initials from '@/utils/initials';
-const roleColor = (role) => {
-    if (role === 'super_admin' || role === 'admin') return 'red';
-    if (role === 'manager') return 'blue';
-    if (role?.endsWith('_staff')) return 'green';
-    return 'gray';
-};
 
 export default function Index({ roles = [], permissions = [], groups = [], authRoles = [], protectedPermissions = [], tenantCategories = [], masterScopes = {} }) {
     const { errors } = usePage().props;
@@ -161,7 +154,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
             <div>
                 <PageHeader
                     title="Hak Akses"
-                    description="Atur permission per role · Super Admin selalu akses penuh · klik baris untuk kelola"
+                    description="Kelola permission per role · Super Admin selalu memiliki akses penuh · pilih baris untuk mengatur"
                 />
 
                 <StatTiles items={stats} />
@@ -194,21 +187,16 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(role); }
                                 }}
                                 tabIndex={0}
-                                className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${panelRoleId === role.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}
+                                className={`group cursor-pointer transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${panelRoleId === role.id ? 'bg-[#0F1E36]/[0.04]' : 'hover:bg-slate-50/70'}`}
                             >
                                 <td className="px-5 py-3.5">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                            {initials(role.name)}
+                                    <span className="block min-w-0">
+                                        <span className="flex items-center gap-2 font-medium text-gray-900">
+                                            <span className="truncate">{role.name}</span>
+                                            {authRoles.includes(role.name) && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">Role Anda</span>}
                                         </span>
-                                        <span className="min-w-0">
-                                            <span className="block font-medium text-gray-900 truncate">
-                                                {role.name}
-                                                {authRoles.includes(role.name) && <span className="ml-2 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">Role Anda</span>}
-                                            </span>
-                                            <span className="block text-xs text-gray-400 truncate">{role.users_count ?? 0} user</span>
-                                        </span>
-                                    </div>
+                                        <span className="block text-xs text-gray-400 truncate mt-0.5">{role.users_count ?? 0} user</span>
+                                    </span>
                                 </td>
                                 <td className="px-5 py-3.5">
                                     {modules.length > 0 ? (
@@ -228,15 +216,15 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                     )}
                                 </td>
                                 <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                                    <Badge color={role.permissions.length > 0 ? 'blue' : 'gray'}>{role.permissions.length} akses</Badge>
+                                    <Badge color="gray">{role.permissions.length} akses</Badge>
                                 </td>
                             </tr>
                         );
                     })}
                     {filteredRoles.length === 0 && (
                         <tr>
-                            <td colSpan={3} className="px-5 py-12 text-center text-sm text-gray-400">
-                                Tidak ada role yang cocok.
+                            <td colSpan={3} className="px-5 py-6">
+                                <EmptyState variant="search" size="sm" title="Tidak ada role yang cocok" description="Ubah kata kunci pencarian." />
                             </td>
                         </tr>
                     )}
@@ -252,26 +240,23 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(role); }
                             }}
                             tabIndex={0}
-                            className="cursor-pointer rounded-xl border border-[#E2E5EA] bg-white p-4 active:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                            className="cursor-pointer rounded-xl border border-[#E2E5EA] bg-white p-4 active:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                         >
                             <div className="flex items-center gap-3 min-w-0">
-                                <span className="w-10 h-10 rounded-full bg-[#0F1E36] text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                    {initials(role.name)}
-                                </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">
-                                        {role.name}
-                                        {authRoles.includes(role.name) && <span className="ml-2 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">Role Anda</span>}
+                                    <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                                        <span className="truncate">{role.name}</span>
+                                        {authRoles.includes(role.name) && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">Role Anda</span>}
                                     </p>
-                                    <p className="text-xs text-gray-400 truncate">{role.users_count ?? 0} user · {role.permissions.length} akses</p>
+                                    <p className="text-xs text-gray-400 truncate mt-0.5">{role.users_count ?? 0} user · {role.permissions.length} akses</p>
                                 </div>
-                                <Badge color={role.permissions.length > 0 ? 'blue' : 'gray'} size="sm">{role.permissions.length}</Badge>
+                                <Badge color="gray" size="sm">{role.permissions.length}</Badge>
                             </div>
                         </div>
                     ))}
                     {filteredRoles.length === 0 && (
-                        <div className="rounded-xl border border-[#E2E5EA] bg-white px-5 py-12 text-center">
-                            <p className="text-sm text-gray-400">Tidak ada role yang cocok.</p>
+                        <div className="rounded-xl border border-[#E2E5EA] bg-white px-5 py-6">
+                            <EmptyState variant="search" size="sm" title="Tidak ada role yang cocok" description="Ubah kata kunci pencarian." />
                         </div>
                     )}
                 </div>
@@ -299,19 +284,10 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                 >
                     {panelRole && (
                         <>
-                            <div className="bg-white rounded-xl border border-[#E2E5EA] p-4 mb-3 shadow-sm">
-                                <div className="flex items-center gap-4">
-                                    <span className="w-20 h-20 rounded-2xl bg-[#0F1E36] text-white text-xl font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
-                                        {initials(panelRole.name)}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-base font-semibold text-gray-900 truncate">{panelRole.name}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5">{panelRole.users_count ?? 0} user · {selectedCount}/{permissions.length} akses dipilih</p>
-                                        <div className="mt-1.5">
-                                            <Badge color={roleColor(panelRole.name)}>{panelRole.name}</Badge>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div className="rounded-xl border border-[#E2E5EA] bg-white p-4 mb-3 shadow-sm">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">Role</p>
+                                <p className="mt-1 text-base font-semibold text-gray-900 truncate">{panelRole.name}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{panelRole.users_count ?? 0} user · {selectedCount}/{permissions.length} akses dipilih</p>
                             </div>
 
                             {errors.permissions && (
@@ -445,7 +421,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                         </div>
                                         <div className="space-y-1">
                                             {group.permissions.map((perm) => (
-                                                <div key={perm} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${isLocked(perm) ? 'bg-amber-50/60' : 'hover:bg-gray-50'}`}>
+                                                <div key={perm} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${isLocked(perm) ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
                                                     <Checkbox
                                                         label={perm}
                                                         checked={selected.includes(perm)}
