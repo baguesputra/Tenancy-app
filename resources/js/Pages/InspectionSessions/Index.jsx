@@ -5,8 +5,11 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import EmptyState from '@/Components/EmptyState';
+import useCan from '@/hooks/useCan';
 
 export default function Index({ sessions }) {
+    const { can } = useCan();
+    const canManage = can('sidak.manage');
     const columns = [
         { key: 'date', label: 'Tanggal' },
         { key: 'pic', label: 'PIC' },
@@ -23,9 +26,11 @@ export default function Index({ sessions }) {
                         <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Riwayat Sesi Sidak</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{sessions.total} sesi tercatat</p>
                     </div>
-                    <Link href="/inspection-sessions/create" className="w-full sm:w-auto">
-                        <Button className="w-full sm:w-auto justify-center !py-3 min-h-[48px]">Tambah Sesi</Button>
-                    </Link>
+                    {canManage && (
+                        <Link href="/inspection-sessions/create" className="w-full sm:w-auto">
+                            <Button className="w-full sm:w-auto justify-center !py-3 min-h-[48px]">Tambah Sesi</Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="hidden sm:block">
@@ -58,9 +63,11 @@ export default function Index({ sessions }) {
                                         title="Belum Ada Riwayat Sesi Sidak"
                                         description="Mulai sesi inspeksi lapangan pertama Anda untuk merekam data sidak tenant."
                                         action={
-                                            <Link href="/inspection-sessions/create">
-                                                <Button className="justify-center !py-2.5">Tambah Sesi</Button>
-                                            </Link>
+                                            canManage && (
+                                                <Link href="/inspection-sessions/create">
+                                                    <Button className="justify-center !py-2.5">Tambah Sesi</Button>
+                                                </Link>
+                                            )
                                         }
                                     />
                                 </td>
@@ -99,9 +106,11 @@ export default function Index({ sessions }) {
                                 title="Belum Ada Riwayat Sesi"
                                 description="Mulai sesi pertama untuk inspeksi lapangan."
                                 action={
-                                    <Link href="/inspection-sessions/create">
-                                        <Button className="justify-center !py-2.5 w-full">Tambah Sesi</Button>
-                                    </Link>
+                                    canManage && (
+                                        <Link href="/inspection-sessions/create">
+                                            <Button className="justify-center !py-2.5 w-full">Tambah Sesi</Button>
+                                        </Link>
+                                    )
                                 }
                             />
                         </div>

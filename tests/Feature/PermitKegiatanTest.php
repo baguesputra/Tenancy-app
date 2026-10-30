@@ -42,13 +42,13 @@ class PermitKegiatanTest extends TestCase
 
     private function staff(): User
     {
-        foreach (['permits.view', 'permits.create'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise'] as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
         $dept = Department::firstOrCreate(['name' => 'Tenancy']);
         $role = Role::firstOrCreate(['name' => 'tenancy_staff', 'guard_name' => 'web']);
-        $role->syncPermissions(['permits.view', 'permits.create']);
+        $role->syncPermissions(['permits.view', 'permits.create', 'permits.revise']);
         $user = User::create([
             'name' => 'Staff', 'email' => 'staff'.uniqid().'@t.id',
             'employee_number' => 'STF-'.uniqid(),

@@ -26,11 +26,11 @@ class PermitNumberTest extends TestCase
 
     private function staff(): User
     {
-        foreach (['permits.view', 'permits.create'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'manager']);
-        $role->syncPermissions(['permits.view', 'permits.create']);
+        $role->syncPermissions(['permits.view', 'permits.create', 'permits.revise']);
         $staff = User::create([
             'name' => 'Mgr', 'email' => 'mgr@t.id',
             'employee_number' => 'MGR-1', 'branch_id' => null,
@@ -67,11 +67,11 @@ class PermitNumberTest extends TestCase
 
     private function marketingStaff(): User
     {
-        foreach (['permits.view', 'permits.create'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'marketing']);
-        $role->syncPermissions(['permits.view', 'permits.create']);
+        $role->syncPermissions(['permits.view', 'permits.create', 'permits.revise']);
         $staff = User::create([
             'name' => 'Mkt', 'email' => 'mkt@t.id',
             'employee_number' => 'MKT-1', 'branch_id' => null,
@@ -398,10 +398,10 @@ class PermitNumberTest extends TestCase
 
     private function marketingManager(): User
     {
-        foreach (['permits.view', 'permits.create', 'permits.approve'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise', 'permits.approve'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
-        Role::firstOrCreate(['name' => 'manager'])->syncPermissions(['permits.view', 'permits.create', 'permits.approve']);
+        Role::firstOrCreate(['name' => 'manager'])->syncPermissions(['permits.view', 'permits.create', 'permits.revise', 'permits.approve']);
         $dept = Department::firstOrCreate(['name' => 'Marketing']);
         $pos = Position::firstOrCreate(['name' => 'Manager'], ['department_id' => $dept->id]);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
@@ -500,10 +500,10 @@ class PermitNumberTest extends TestCase
 
     private function tenancyStaff(): User
     {
-        foreach (['permits.view', 'permits.create'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
-        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['permits.view', 'permits.create']);
+        Role::firstOrCreate(['name' => 'tenancy_staff'])->syncPermissions(['permits.view', 'permits.create', 'permits.revise']);
         $mktDept = Department::firstOrCreate(['name' => 'Marketing']);
         $dept = Department::firstOrCreate(['name' => 'Tenancy']);
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);

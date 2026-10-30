@@ -183,7 +183,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
     });
 
-    Route::middleware('can:sidak.create')->group(function () {
+    Route::middleware('can:sidak.manage')->group(function () {
         // PENTING: route ini HARUS di atas '/inspection-sessions/{session}'
         Route::get('/inspection-sessions/current', [InspectionSessionController::class, 'current'])->name('sessions.current');
         Route::get('/inspection-sessions/create', [InspectionSessionController::class, 'create'])->name('sessions.create');
@@ -192,6 +192,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
         Route::post('/inspection-sessions/{session}/scan', [InspectionSessionController::class, 'scan'])->name('sessions.scan');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
+    });
+
+    Route::middleware('can:sidak.answer')->group(function () {
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
         Route::post('/inspections/{inspection}/extra-photos', [InspectionController::class, 'storeExtraPhoto'])->name('inspections.storeExtraPhoto');
         Route::delete('/inspection-extra-photos/{photo}', [InspectionController::class, 'destroyExtraPhoto'])->name('inspections.destroyExtraPhoto');
@@ -223,17 +226,20 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/penitipan-barang', [PermitRequestController::class, 'penitipanBarang'])->name('permit-requests.penitipan-barang');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}/qr-label', [PermitRequestController::class, 'qrLabel'])->name('permit-requests.qr-label');
     Route::middleware('can:permits.view')->get('/permit-requests/{permitRequest}', [PermitRequestController::class, 'show'])->name('permit-requests.show');
-    Route::middleware('can:permits.create')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
+    Route::middleware('can:permits.revise')->post('/permit-requests/{permitRequest}/revise', [PermitRequestController::class, 'revise'])->name('permit-requests.revise');
 
-    Route::middleware('can:permits.approve')->group(function () {
-        Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
-        Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
+    Route::middleware('can:permits.inspect')->group(function () {
         Route::post('/permit-workers/{worker}/toggle', [PermitCheckController::class, 'toggleWorker'])->name('permit-workers.toggle');
         Route::post('/permit-workers/{worker}/note', [PermitCheckController::class, 'updateWorkerNote'])->name('permit-workers.note');
         Route::post('/permit-goods/{good}/verify', [PermitCheckController::class, 'verifyGood'])->name('permit-goods.verify');
         Route::post('/permit-requests/{permitRequest}/ktp-photos', [PermitCheckController::class, 'uploadKtp'])->name('permit-ktp.store');
         Route::delete('/permit-ktp-photos/{photo}', [PermitCheckController::class, 'deleteKtp'])->name('permit-ktp.destroy');
         Route::post('/permit-requests/{permitRequest}/complete-security-check', [PermitCheckController::class, 'completeSecurityCheck'])->name('permit-requests.completeSecurityCheck');
+    });
+
+    Route::middleware('can:permits.approve')->group(function () {
+        Route::post('/approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+        Route::post('/approvals/{approval}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
     });
 
     // LOO — Tenant Management System

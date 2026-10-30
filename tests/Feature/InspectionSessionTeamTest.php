@@ -49,7 +49,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_store_creates_session_with_pic_and_team(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $bs = $this->makeUser('Building Service');
         $eng = $this->makeUser('Engineering');
         $sec = $this->makeUser('Security');
@@ -77,7 +77,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_pic_snapshot_immutable_when_user_renamed(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $bs = $this->makeUser('Building Service');
         $oldName = $creator->name;
 
@@ -93,7 +93,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_store_rejects_invalid_participants(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $marketing = $this->makeUser('Marketing');
         $otherBranch = Branch::create(['name' => 'Luar', 'code' => 'LUAR']);
         $outsider = $this->makeUser('Security', $otherBranch);
@@ -123,7 +123,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_update_participants_while_in_progress(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $bs = $this->makeUser('Building Service');
         $sec = $this->makeUser('Security');
 
@@ -141,7 +141,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_update_participants_rejected_when_completed(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $bs = $this->makeUser('Building Service');
         $sec = $this->makeUser('Security');
 
@@ -160,7 +160,7 @@ class InspectionSessionTeamTest extends TestCase
 
     public function test_create_page_groups_staff_by_department(): void
     {
-        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.create']);
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
         $bs = $this->makeUser('Building Service');
 
         $res = $this->actingAs($creator)->get('/inspection-sessions/create');

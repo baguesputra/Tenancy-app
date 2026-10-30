@@ -33,7 +33,7 @@ class PermitLanggananParkirTest extends TestCase
         config(['permit.enabled' => true]);
         Carbon::setTestNow(Carbon::create(2026, 10, 20, 10, 0, 0, 'Asia/Makassar'));
 
-        foreach (['permits.view', 'permits.create', 'permits.approve'] as $permission) {
+        foreach (['permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect'] as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
     }
@@ -64,7 +64,7 @@ class PermitLanggananParkirTest extends TestCase
         ]);
 
         $roleModel = Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        $roleModel->syncPermissions(['permits.view', 'permits.create', 'permits.approve']);
+        $roleModel->syncPermissions(['permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect']);
         $user->assignRole($role);
 
         return $user;

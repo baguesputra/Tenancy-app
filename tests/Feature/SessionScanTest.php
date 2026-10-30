@@ -29,7 +29,7 @@ class SessionScanTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    private function makeStaff(Branch $branch, array $perms = ['sidak.view', 'sidak.create']): User
+    private function makeStaff(Branch $branch, array $perms = ['sidak.view', 'sidak.manage', 'sidak.answer']): User
     {
         foreach ($perms as $p) {
             Permission::firstOrCreate(['name' => $p]);

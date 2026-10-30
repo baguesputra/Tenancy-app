@@ -10,6 +10,7 @@ import FitoutStatementModal from '@/Components/Permits/FitoutStatementModal';
 import DropdownMenu from '@/Components/DropdownMenu';
 import { IconAlert, IconCheck, IconDocument, IconDownload, IconQr, IconTrash, IconX } from '@/Components/Icons';
 import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from '@/utils/format';
+import useCan from '@/hooks/useCan';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
 const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red', cancelled: 'gray' };
@@ -113,6 +114,7 @@ function ApprovalActionBox({
 
 export default function Show({ permit, can_revise, can_cancel, share, docFiles = {}, doc_files = {} }) {
     const activeDocFiles = docFiles && Object.keys(docFiles).length ? docFiles : doc_files;
+    const { can } = useCan();
 
     const [rejectingId, setRejectingId] = useState(null);
     const [reason, setReason] = useState('');
@@ -223,7 +225,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     };
 
     const securityStep = permit.approvals?.find((a) => a.step_key === 'security');
-    const canCompleteSecurityCheck = securityStep?.status === 'pending'
+    const canCompleteSecurityCheck = can('permits.inspect')
+        && securityStep?.status === 'pending'
         && securityStep?.department_id === permit.currentUserDepartmentId;
 
     const isLegacyWorkers = workers.length > 0;
@@ -297,6 +300,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
             (currentStep.step_key !== 'tenant_manager' || permit.can_approve_tenant_manager)
         )
     );
+    // Tombol aksi hanya bila punya permission; indikator tahapan tetap pakai isMyTurn mentah.
+    const canTakeApprovalAction = isMyTurn && can('permits.approve');
 
     const docIcon = (
         <IconDocument className="w-4 h-4 text-slate-400" aria-hidden="true" />
@@ -594,7 +599,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     <div className="lg:hidden print:hidden">
                         <ApprovalActionBox
                             permit={permit}
-                            isMyTurn={isMyTurn}
+                            isMyTurn={canTakeApprovalAction}
                             currentStep={currentStep}
                             rejectingId={rejectingId}
                             setRejectingId={setRejectingId}
@@ -1165,7 +1170,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                             {/* Aksi persetujuan + cek fisik: di desktop tampil di sini, di mobile di atas dokumen */}
                             <div className="hidden lg:block">
                                 <ApprovalActionBox
-                                    isMyTurn={isMyTurn}
+                                    isMyTurn={canTakeApprovalAction}
                                     currentStep={currentStep}
                                     rejectingId={rejectingId}
                                     setRejectingId={setRejectingId}

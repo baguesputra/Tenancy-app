@@ -26,11 +26,11 @@ class InspectionExtraPhotoTest extends TestCase
 
     private function makeStaff(Branch $branch): User
     {
-        foreach (['sidak.view', 'sidak.create'] as $p) {
+        foreach (['sidak.view', 'sidak.manage', 'sidak.answer'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'inspector']);
-        $role->syncPermissions(['sidak.view', 'sidak.create']);
+        $role->syncPermissions(['sidak.view', 'sidak.manage', 'sidak.answer']);
 
         return tap(User::create([
             'name' => 'Inspector',

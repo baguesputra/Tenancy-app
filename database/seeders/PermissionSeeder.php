@@ -15,8 +15,8 @@ class PermissionSeeder extends Seeder
             'units.view', 'units.create', 'units.edit', 'units.delete',
             'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view', 'categories.manage',
-            'sidak.view', 'sidak.create',
-            'permits.view', 'permits.create', 'permits.approve',
+            'sidak.view', 'sidak.manage', 'sidak.answer',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'users.manage',
             'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents',
             'gate.sync',
@@ -35,16 +35,17 @@ class PermissionSeeder extends Seeder
         }
 
         // Cabut permission mati (tanpa route): tenants.create, tenancies.create,
-        // documents.manage (diganti settings.documents), settings.access (dipecah per modul).
-        Permission::whereIn('name', ['tenants.create', 'tenancies.create', 'documents.manage', 'settings.access'])->delete();
+        // documents.manage (diganti settings.documents), settings.access (dipecah
+        // per modul), sidak.create (dipecah manage/answer).
+        Permission::whereIn('name', ['tenants.create', 'tenancies.create', 'documents.manage', 'settings.access', 'sidak.create'])->delete();
 
         $this->assignRolePermissions('admin', [
             'tenants.view', 'tenants.edit', 'tenants.delete',
             'units.view', 'units.create', 'units.edit', 'units.delete',
             'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view', 'categories.manage',
-            'sidak.view', 'sidak.create',
-            'permits.view', 'permits.create', 'permits.approve',
+            'sidak.view', 'sidak.manage', 'sidak.answer',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'users.manage',
             'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents',
             'gate.sync',
@@ -62,8 +63,8 @@ class PermissionSeeder extends Seeder
             'units.view', 'units.create', 'units.edit', 'units.delete',
             'tenancies.view', 'tenancies.edit', 'tenancies.delete',
             'categories.view',
-            'sidak.view', 'sidak.create',
-            'permits.view', 'permits.create', 'permits.approve',
+            'sidak.view', 'sidak.manage', 'sidak.answer',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'loos.view', 'loos.dashboard', 'loos.transition',
             'loos.fitout_approve',
         ]);
@@ -73,19 +74,19 @@ class PermissionSeeder extends Seeder
             'units.view', 'units.create', 'units.edit',
             'tenancies.view', 'tenancies.edit',
             'categories.view',
-            'sidak.view', 'sidak.create',
-            'permits.view', 'permits.create', 'permits.approve',
+            'sidak.view', 'sidak.manage', 'sidak.answer',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'settings.documents',
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('bs_staff', [
-            'permits.view', 'permits.approve',
+            'permits.view', 'permits.approve', 'permits.inspect',
         ]);
 
         $this->assignRolePermissions('security_staff', [
-            'sidak.view', 'sidak.create',
-            'permits.view', 'permits.approve',
+            'sidak.view', 'sidak.answer',
+            'permits.view', 'permits.approve', 'permits.inspect',
         ]);
 
         $this->assignRolePermissions('engineering_staff', [
@@ -96,12 +97,12 @@ class PermissionSeeder extends Seeder
         // Marketing: gabungan marketing_staff (permits+tenants) + marketing_loo_input (loos).
         $this->assignRolePermissions('marketing', [
             'tenants.view', 'tenants.edit',
-            'permits.view', 'permits.create', 'permits.approve',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve',
             'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
         ]);
 
         $this->assignRolePermissions('finance_staff', [
-            'permits.view', 'permits.approve',
+            'permits.view', 'permits.approve', 'permits.inspect',
             'loos.view', 'loos.accounting_edit', 'loos.accounting_submit',
             'loos.measurement_edit', 'loos.termin_manage', 'loos.transition',
         ]);

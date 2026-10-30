@@ -427,7 +427,8 @@ class PermitRequestController extends Controller
 
         return Inertia::render('PermitRequests/Show', [
             'permit' => $permitRequest,
-            'can_revise' => ($this->isCustomerForm($permitRequest)
+            'can_revise' => $user->can('permits.revise')
+                && ($this->isCustomerForm($permitRequest)
                     ? in_array($permitRequest->status, ['pending', 'completed'], true)
                     : $permitRequest->status === 'pending' && ! $this->isParkirForm($permitRequest))
                 && $this->canManageForm($user, $permitRequest),

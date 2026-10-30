@@ -8,6 +8,7 @@ import {
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
 import EmptyState from '@/Components/EmptyState';
+import useCan from '@/hooks/useCan';
 
 const activityLabel = { permit: 'Izin', inspection: 'Sidak', tenancy: 'Kontrak', loo: 'LOO' };
 
@@ -35,6 +36,7 @@ function formatRelativeTime(dateStr) {
 
 export default function Dashboard({ stats, actionNeeded, recentActivity, calendar }) {
     const { auth } = usePage().props;
+    const { can } = useCan();
     const { setRefreshCallback } = useAutoRefresh(true, 60000);
 
     useEffect(() => {
@@ -50,9 +52,9 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
     const total = occupied + vacant;
     const percentage = total > 0 ? Math.round((occupied / total) * 100) : 0;
 
-    const canSidak = auth.user?.permissions?.includes('sidak.create') || auth.user?.roles?.includes('super_admin');
-    const canPermits = auth.user?.permissions?.includes('permits.view') || auth.user?.roles?.includes('super_admin');
-    const canLoo = auth.user?.permissions?.includes('loos.view') || auth.user?.roles?.includes('super_admin');
+    const canSidak = can('sidak.manage') || can('sidak.answer');
+    const canPermits = can('permits.view');
+    const canLoo = can('loos.view');
 
     return (
         <AppLayout>

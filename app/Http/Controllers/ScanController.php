@@ -162,7 +162,7 @@ class ScanController extends Controller
             return redirect()->route('login');
         }
 
-        if ($webUser->can('sidak.create')) {
+        if ($webUser->can('sidak.manage')) {
             $tenancy = $unit->activeTenancy;
             abort_unless($tenancy && $tenancy->tenant, 404, 'Unit kosong, tidak ada tenant aktif.');
 

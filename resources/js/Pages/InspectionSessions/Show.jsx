@@ -7,6 +7,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import QrScanModal from '@/Components/Scan/QrScanModal';
+import useCan from '@/hooks/useCan';
 
 const filters = [
     { key: 'all', label: 'Semua' },
@@ -18,11 +19,13 @@ const filters = [
 import initials from '@/utils/initials';
 
 export default function Show({ session, availableTenants, staffByDepartment = {} }) {
+    const { can } = useCan();
     const [search, setSearch] = useState('');
     const [adding, setAdding] = useState(false);
     const [filter, setFilter] = useState('all');
     const [scanOpen, setScanOpen] = useState(false);
     const isLocked = session.status !== 'in_progress';
+    const canManage = !isLocked && can('sidak.manage');
 
     const participants = session.participants ?? [];
     const teamByDept = useMemo(() => {
@@ -124,7 +127,7 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                             <div className="h-full bg-emerald-400 rounded-full transition-all" style={{ width: `${progress}%` }} />
                         </div>
                     </div>
-                    {!isLocked && (
+                    {canManage && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                             <Button
                                 variant="success"
@@ -153,7 +156,7 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                     <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-gray-100">
                         <div className="flex items-center justify-between gap-2">
                             <h2 className="text-sm font-semibold text-gray-900">Tim Sidak ({participants.length})</h2>
-                            {!isLocked && !editingTeam && (
+                            {!isLocked && !editingTeam && can('sidak.manage') && (
                                 <button
                                     type="button"
                                     onClick={() => { setTeamIds(participants.map((p) => p.user_id)); setEditingTeam(true); }}
@@ -291,7 +294,7 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                     )}
                 </div>
 
-                {!isLocked && (
+                {canManage && (
                     <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
                         <div className="px-4 sm:px-5 pt-4 pb-3">
                             <h2 className="text-sm font-semibold text-gray-900">Tambah Manual</h2>

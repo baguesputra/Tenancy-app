@@ -39,7 +39,7 @@ class ScanRedirectTest extends TestCase
         // guest scan unit -> redirect ke login staff (QR unit untuk operasional)
         $this->get("/scan/{$token}")->assertRedirect(route('login'));
 
-        // staff tanpa sidak.create -> units.index (bukan scan lagi)
+        // staff tanpa sidak.manage -> units.index (bukan scan lagi)
         foreach (['sidak.view', 'units.view'] as $p) { Permission::create(['name' => $p]); }
         $role = Role::create(['name' => 'staff']);
         $role->givePermissionTo(['sidak.view', 'units.view']);
@@ -48,8 +48,8 @@ class ScanRedirectTest extends TestCase
 
         $this->actingAs($staff)->get("/scan/{$token}")->assertRedirect(route('units.index'));
 
-        // staff sidak.create tapi unit kosong -> 404 jelas, bukan loop
-        $role->givePermissionTo(Permission::create(['name' => 'sidak.create']));
+        // staff sidak.manage tapi unit kosong -> 404 jelas, bukan loop
+        $role->givePermissionTo(Permission::create(['name' => 'sidak.manage']));
         Tenancy::query()->delete();
         $this->actingAs($staff)->get("/scan/{$token}")->assertNotFound();
     }

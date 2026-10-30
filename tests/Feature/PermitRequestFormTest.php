@@ -43,7 +43,7 @@ class PermitRequestFormTest extends TestCase
 
     private function makeUser(array $roles = ['tenancy_staff']): User
     {
-        foreach (['permits.view', 'permits.create', 'permits.approve'] as $p) {
+        foreach (['permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect'] as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
         $branch = Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test']);
@@ -58,7 +58,7 @@ class PermitRequestFormTest extends TestCase
         ]);
         foreach ($roles as $role) {
             $r = Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-            $r->syncPermissions(['permits.view', 'permits.create', 'permits.approve']);
+            $r->syncPermissions(['permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect']);
             $user->assignRole($role);
         }
 

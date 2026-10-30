@@ -55,11 +55,11 @@ class InspectionSaveJsonTest extends TestCase
             'order' => 1,
         ]);
 
-        foreach (['sidak.view', 'sidak.create'] as $p) {
+        foreach (['sidak.view', 'sidak.manage', 'sidak.answer'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'inspector']);
-        $role->syncPermissions(['sidak.view', 'sidak.create']);
+        $role->syncPermissions(['sidak.view', 'sidak.manage', 'sidak.answer']);
         $staff = User::create([
             'name' => 'Inspector', 'email' => 'insp@t.id',
             'employee_number' => 'INSP-1', 'branch_id' => $branch->id,

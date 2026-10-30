@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\PermitRequest;
 use App\Models\TenantCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,12 +69,12 @@ class AccessMatrixTest extends TestCase
     public function test_matriks_permit_requests(): void
     {
         $tenancy = $this->makeUser('tenancy_staff', [
-            'tenants.view', 'tenancies.view', 'sidak.view', 'sidak.create',
-            'permits.view', 'permits.create', 'permits.approve',
+            'sidak.view', 'sidak.manage', 'sidak.answer',
+            'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
         $marketing = $this->makeUser('marketing', [
-            'tenants.view', 'permits.view', 'permits.create', 'permits.approve',
+            'tenants.view', 'permits.view', 'permits.create', 'permits.revise', 'permits.approve',
             'loos.view', 'loos.create', 'loos.edit', 'loos.transition',
         ]);
         $bs = $this->makeUser('bs_staff', ['permits.view', 'permits.approve']);
@@ -102,6 +103,41 @@ class AccessMatrixTest extends TestCase
         $this->actingAs($viewer)->get('/loos/create')->assertForbidden();
         $this->actingAs($viewer)->get("/loos/{$loo->id}/edit")->assertForbidden();
         $this->actingAs($bs)->get('/loos')->assertForbidden();
+    }
+
+    public function test_matriks_revise_dan_inspect_terpisah(): void
+    {
+        // Tanpa permission baru: 403 dari middleware (gerbang pertama).
+        // Dengan permission: lolos middleware ke guard bisnis di controller/service.
+        $reviser = $this->makeUser('reviser_only', ['permits.view', 'permits.create', 'permits.revise']);
+
+        $permit = PermitRequest::create([
+            'permit_number' => 'PRW-TST-'.uniqid(),
+            'activity_types' => ['kerja'],
+            'request_date' => '2026-10-20',
+            'branch_id' => Branch::firstOrCreate(['code' => 'TST'], ['name' => 'Cabang Test'])->id,
+            'store_name_snapshot' => 'Area X',
+            'requested_by_type' => User::class,
+            'requested_by_id' => $reviser->id,
+            'barcode_token' => 'TOK-'.uniqid(),
+            'status' => 'pending',
+        ]);
+
+        // Role tanpa permits.revise: ditolak middleware walau payload valid.
+        $noPerms = $this->makeUser('no_new_perms', ['permits.view']);
+        $this->actingAs($noPerms)->post("/permit-requests/{$permit->id}/revise", [
+            'work_start_date' => '2026-10-21',
+            'work_end_date' => '2026-10-22',
+            'reason' => 'Jadwal mundur karena material telat.',
+        ])->assertForbidden();
+
+        // Role dengan permits.revise tapi bukan tenancy_staff: lolos middleware,
+        // ditolak guard kepemilikan form (bukti dua lapis bekerja independen).
+        $this->actingAs($reviser)->post("/permit-requests/{$permit->id}/revise", [
+            'work_start_date' => '2026-10-21',
+            'work_end_date' => '2026-10-22',
+            'reason' => 'Jadwal mundur karena material telat.',
+        ])->assertForbidden();
     }
 
     public function test_users_manage_wajib_untuk_kelola_user(): void

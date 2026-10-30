@@ -1,5 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
+import useCan from '@/hooks/useCan';
 import { useEffect, useState } from 'react';
 import TextInput from '@/Components/Form/TextInput';
 import SelectInput from '@/Components/Form/SelectInput';
@@ -48,9 +49,8 @@ function StatTile({ label, value, className = '' }) {
 export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
     const [advancedOpen, setAdvancedOpen] = useState(Boolean(filters.activity_type));
-    const { auth } = usePage().props;
-    const canCreate = auth?.user?.roles?.includes('super_admin')
-        || (auth?.user?.permissions ?? []).includes('permits.create');
+    const { can } = useCan();
+    const canCreate = can('permits.create');
     const locked = !!categoryLocked;
 
     useEffect(() => {

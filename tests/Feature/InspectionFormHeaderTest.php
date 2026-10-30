@@ -57,11 +57,11 @@ class InspectionFormHeaderTest extends TestCase
             'employee_number' => 'INSP-1', 'branch_id' => $branch->id,
             'password' => bcrypt('x'),
         ]);
-        foreach (['sidak.view', 'sidak.create'] as $p) {
+        foreach (['sidak.view', 'sidak.manage', 'sidak.answer'] as $p) {
             Permission::firstOrCreate(['name' => $p]);
         }
         $role = Role::firstOrCreate(['name' => 'inspector']);
-        $role->syncPermissions(['sidak.view', 'sidak.create']);
+        $role->syncPermissions(['sidak.view', 'sidak.manage', 'sidak.answer']);
         $user->assignRole('inspector');
         $session = InspectionSession::create([
             'branch_id' => $branch->id, 'user_id' => $user->id,
