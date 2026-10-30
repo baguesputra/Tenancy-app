@@ -31,9 +31,9 @@ class InspectionTemplateSettingsTest extends TestCase
     private function admin(): User
     {
         $branch = Branch::create(['name' => 'Cabang Test', 'code' => 'TST']);
-        Permission::firstOrCreate(['name' => 'settings.access']);
+        Permission::firstOrCreate(['name' => 'settings.templates']);
         $role = Role::firstOrCreate(['name' => 'admin']);
-        $role->syncPermissions(['settings.access']);
+        $role->syncPermissions(['settings.templates']);
         $user = User::create([
             'name' => 'Admin', 'email' => 'admin@t.id',
             'employee_number' => 'ADM-1', 'branch_id' => $branch->id,

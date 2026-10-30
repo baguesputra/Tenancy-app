@@ -12,7 +12,7 @@ use Spatie\Permission\Models\Role;
 
 class AccessControlController extends Controller
 {
-    private const SELF_PROTECTED = ['settings.access', 'users.manage'];
+    private const SELF_PROTECTED = ['users.manage'];
 
     private const GROUP_LABELS = [
         'tenants' => 'Tenant',

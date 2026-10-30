@@ -18,8 +18,7 @@ class PermissionSeeder extends Seeder
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
             'users.manage',
-            'settings.access',
-            'documents.manage',
+            'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents',
             'gate.sync',
             // LOO workflow
             'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
@@ -35,8 +34,9 @@ class PermissionSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Cabut permission mati (tanpa route): tenants.create, tenancies.create.
-        Permission::whereIn('name', ['tenants.create', 'tenancies.create'])->delete();
+        // Cabut permission mati (tanpa route): tenants.create, tenancies.create,
+        // documents.manage (diganti settings.documents), settings.access (dipecah per modul).
+        Permission::whereIn('name', ['tenants.create', 'tenancies.create', 'documents.manage', 'settings.access'])->delete();
 
         $this->assignRolePermissions('admin', [
             'tenants.view', 'tenants.edit', 'tenants.delete',
@@ -46,8 +46,7 @@ class PermissionSeeder extends Seeder
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
             'users.manage',
-            'settings.access',
-            'documents.manage',
+            'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents',
             'gate.sync',
             'loos.view', 'loos.create', 'loos.edit', 'loos.delete',
             'loos.legal_edit', 'loos.legal_submit',
@@ -76,7 +75,7 @@ class PermissionSeeder extends Seeder
             'categories.view',
             'sidak.view', 'sidak.create',
             'permits.view', 'permits.create', 'permits.approve',
-            'documents.manage',
+            'settings.documents',
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 
@@ -120,7 +119,7 @@ class PermissionSeeder extends Seeder
 
         // Tenant Management: gabungan tenant_mgmt_staff + tenant_mgmt_manager (dulu identik).
         $this->assignRolePermissions('tenant_mgmt', [
-            'documents.manage',
+            'settings.documents',
             'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
         ]);
 

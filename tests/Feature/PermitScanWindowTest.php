@@ -158,8 +158,8 @@ class PermitScanWindowTest extends TestCase
     public function test_setting_disimpan_dan_divalidasi(): void
     {
         $branch = Branch::create(['name' => 'Cabang Test', 'code' => 'TST']);
-        Permission::firstOrCreate(['name' => 'settings.access']);
-        Role::firstOrCreate(['name' => 'admin'])->syncPermissions(['settings.access']);
+        Permission::firstOrCreate(['name' => 'settings.permit_scan']);
+        Role::firstOrCreate(['name' => 'admin'])->syncPermissions(['settings.permit_scan']);
         $admin = User::create([
             'name' => 'Admin', 'email' => 'admin@t.id',
             'employee_number' => 'ADM-1', 'branch_id' => $branch->id,

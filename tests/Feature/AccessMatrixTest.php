@@ -106,27 +106,38 @@ class AccessMatrixTest extends TestCase
 
     public function test_users_manage_wajib_untuk_kelola_user(): void
     {
-        $settingsOnly = $this->makeUser('settings_only', ['settings.access']);
-        $userAdmin = $this->makeUser('user_admin', ['settings.access', 'users.manage']);
+        $templatesOnly = $this->makeUser('templates_only', ['settings.templates']);
+        $userAdmin = $this->makeUser('user_admin', ['users.manage']);
         $roleId = Role::where('name', 'user_admin')->firstOrFail()->id;
 
-        $this->actingAs($settingsOnly)->get('/settings/users')->assertForbidden();
-        $this->actingAs($settingsOnly)->put("/settings/access-control/{$roleId}", ['permissions' => []])->assertForbidden();
+        $this->actingAs($templatesOnly)->get('/settings/users')->assertForbidden();
+        $this->actingAs($templatesOnly)->put("/settings/access-control/{$roleId}", ['permissions' => []])->assertForbidden();
         $this->actingAs($userAdmin)->get('/settings/users')->assertOk();
-        $this->actingAs($userAdmin)->put("/settings/access-control/{$roleId}", ['permissions' => ['settings.access', 'users.manage']])->assertRedirect();
+        $this->actingAs($userAdmin)->put("/settings/access-control/{$roleId}", ['permissions' => ['users.manage']])->assertRedirect();
     }
 
     public function test_settings_index_menampilkan_hub_sesuai_izin(): void
     {
-        $settingsOnly = $this->makeUser('settings_entry', ['settings.access']);
-        $docOnly = $this->makeUser('doc_entry', ['documents.manage']);
+        $templatesOnly = $this->makeUser('settings_entry', ['settings.templates']);
+        $docOnly = $this->makeUser('doc_entry', ['settings.documents']);
         $none = $this->makeUser('no_settings', []);
 
-        $this->actingAs($settingsOnly)->get('/settings')
+        $this->actingAs($templatesOnly)->get('/settings')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('Settings/Home'));
 
         $this->actingAs($docOnly)->get('/settings')->assertOk();
         $this->actingAs($none)->get('/settings')->assertForbidden();
+    }
+
+    public function test_settings_modul_terisolasi_per_permission(): void
+    {
+        $templatesOnly = $this->makeUser('templates_iso', ['settings.templates']);
+
+        $this->actingAs($templatesOnly)->get('/settings/inspection-templates')->assertOk();
+        $this->actingAs($templatesOnly)->get('/settings/gate')->assertForbidden();
+        $this->actingAs($templatesOnly)->get('/settings/permit-scan')->assertForbidden();
+        $this->actingAs($templatesOnly)->get('/settings/documents')->assertForbidden();
+        $this->actingAs($templatesOnly)->get('/settings/access-control')->assertForbidden();
     }
 }

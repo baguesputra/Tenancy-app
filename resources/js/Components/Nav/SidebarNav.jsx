@@ -69,7 +69,7 @@ const SETTINGS_SECTION = {
     key: 'pengaturan',
     label: 'Pengaturan',
     items: [
-        { label: 'Pengaturan', href: '/settings', anyPermission: ['settings.access', 'documents.manage'], icon: <IconKey className="h-4 w-4" /> },
+        { label: 'Pengaturan', href: '/settings', anyPermission: ['users.manage', 'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents'], icon: <IconKey className="h-4 w-4" /> },
     ],
 };
 

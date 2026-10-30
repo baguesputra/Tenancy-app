@@ -13,7 +13,7 @@ class SettingsHomeController extends Controller
     public function show(Request $request): Response
     {
         abort_unless(
-            $request->user()->canAny(['users.manage', 'settings.access', 'documents.manage']),
+            $request->user()->canAny(['users.manage', 'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents']),
             403
         );
 

@@ -217,7 +217,7 @@ class StaticDocumentTest extends TestCase
     public function test_upload_butuh_izin_documents_manage_dan_menimpa_file_lama(): void
     {
         Storage::fake('local');
-        $user = $this->makeUser(['documents.manage']);
+        $user = $this->makeUser(['settings.documents']);
         $tanpaIzin = $this->makeUser();
 
         $this->actingAs($tanpaIzin)->post('/settings/documents', [])->assertForbidden();

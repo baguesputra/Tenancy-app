@@ -25,10 +25,10 @@ class GateSyncTest extends TestCase
 
     private function admin(): User
     {
-        Permission::firstOrCreate(['name' => 'settings.access']);
+        Permission::firstOrCreate(['name' => 'settings.gate']);
         Permission::firstOrCreate(['name' => 'gate.sync']);
         $role = Role::firstOrCreate(['name' => 'admin']);
-        $role->syncPermissions(['settings.access', 'gate.sync']);
+        $role->syncPermissions(['settings.gate', 'gate.sync']);
         $user = User::firstOrCreate(
             ['employee_number' => 'ADM-1'],
             [

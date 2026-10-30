@@ -58,7 +58,7 @@ Route::get('/logout', function () {
     return redirect()->route('login');
 })->name('logout.get');
 
-Route::middleware(['auth', 'can:documents.manage'])->prefix('settings')->name('settings.')->group(function () {
+Route::middleware(['auth', 'can:settings.documents'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/documents', [StaticDocumentController::class, 'index'])->name('documents.index');
     Route::post('/documents', [StaticDocumentController::class, 'store'])->name('documents.store');
 });
@@ -67,21 +67,27 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
     Route::get('/', [SettingsHomeController::class, 'show'])->name('index');
 });
 
-Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('settings.')->group(function () {
-    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserManagementController::class, 'store']);
-    Route::put('/users/{id}', [UserManagementController::class, 'update']);
-    Route::delete('/users/{id}', [UserManagementController::class, 'destroy']);
+Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(function () {
+    Route::middleware('can:users.manage')->group(function () {
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserManagementController::class, 'store']);
+        Route::put('/users/{id}', [UserManagementController::class, 'update']);
+        Route::delete('/users/{id}', [UserManagementController::class, 'destroy']);
 
-    Route::get('/access-control', [AccessControlController::class, 'index'])->name('access-control.index');
-    Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
-    Route::put('/access-control/{role}/scopes', [AccessControlController::class, 'updateScopes'])->name('access-control.scopes');
+        Route::get('/access-control', [AccessControlController::class, 'index'])->name('access-control.index');
+        Route::put('/access-control/{role}', [AccessControlController::class, 'update']);
+        Route::put('/access-control/{role}/scopes', [AccessControlController::class, 'updateScopes'])->name('access-control.scopes');
+    });
 
-    Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
-    Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
-    Route::put('/inspection-items/{item}', [InspectionTemplateController::class, 'updateItem'])->name('inspection-items.update');
+    Route::middleware('can:settings.templates')->group(function () {
+        Route::get('/inspection-templates', [InspectionTemplateController::class, 'index'])->name('inspection-templates.index');
+        Route::put('/inspection-templates/{template}', [InspectionTemplateController::class, 'update'])->name('inspection-templates.update');
+        Route::put('/inspection-items/{item}', [InspectionTemplateController::class, 'updateItem'])->name('inspection-items.update');
+    });
 
-    Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
+    Route::middleware('can:settings.gate')->group(function () {
+        Route::get('/gate', [GateSyncController::class, 'index'])->name('gate.index');
+    });
     Route::middleware('can:gate.sync')->group(function () {
         Route::post('/gate/sync', [GateSyncController::class, 'syncSemua'])->name('gate.sync');
         Route::post('/gate/sync-master', [GateSyncController::class, 'syncMaster'])->name('gate.sync-master');
@@ -89,8 +95,10 @@ Route::middleware(['auth', 'can:settings.access'])->prefix('settings')->name('se
         Route::post('/gate/jadwal', [GateSyncController::class, 'simpanJadwal'])->name('gate.jadwal');
     });
 
-    Route::get('/permit-scan', [PermitScanSettingController::class, 'index'])->name('permit-scan.index');
-    Route::put('/permit-scan', [PermitScanSettingController::class, 'update'])->name('permit-scan.update');
+    Route::middleware('can:settings.permit_scan')->group(function () {
+        Route::get('/permit-scan', [PermitScanSettingController::class, 'index'])->name('permit-scan.index');
+        Route::put('/permit-scan', [PermitScanSettingController::class, 'update'])->name('permit-scan.update');
+    });
 });
 
 Route::middleware('guest')->group(function () {
