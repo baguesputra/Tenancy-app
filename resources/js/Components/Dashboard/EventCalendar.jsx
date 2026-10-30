@@ -372,12 +372,13 @@ export default function EventCalendar({
         [byDay, selected],
     );
 
-    // Event rentang yang menyentuh tanggal terpilih — sel-selnya disorot
-    // dari awal sampai akhir agar batas event langsung kelihatan.
+    // Event rentang yang punya chip di tanggal terpilih — hanya itu yang disorot.
+    // Sebelumnya semua rentang yang sekadar "lewat" ikut masuk, sehingga
+    // ring-nya muncul di tanggal lain yang tidak diklik user.
     const highlightIds = useMemo(() => {
         const set = new Set();
-        (byDay[selected] ?? []).forEach(({ e }) => {
-            if (e.end && e.end !== e.start) set.add(e.id);
+        (byDay[selected] ?? []).forEach(({ e, seg }) => {
+            if (seg !== "middle" && e.end && e.end !== e.start) set.add(e.id);
         });
         return set;
     }, [byDay, selected]);
@@ -873,8 +874,14 @@ export default function EventCalendar({
                             const k = dayKey(d);
                             const inMonth = d.getMonth() === monthIdx;
                             const dayEvents = byDay[k] ?? [];
-                            const shown = dayEvents.slice(0, MAX_CHIPS);
-                            const extra = dayEvents.length - shown.length;
+                            // Opsi C: hari tengah rentang tidak menggambar apa pun.
+                            // Hanya awal & akhir yang tampil, jadi slot chip tidak
+                            // lagi dimakan bar tanpa identitas.
+                            const visibleEvents = dayEvents.filter(
+                                ({ seg }) => seg !== "middle",
+                            );
+                            const shown = visibleEvents.slice(0, MAX_CHIPS);
+                            const extra = visibleEvents.length - shown.length;
                             const isToday = k === todayKey;
                             const isSelected = k === selected;
                             const weekend = i % 7 >= 5;
@@ -910,39 +917,15 @@ export default function EventCalendar({
                                             const isHl = highlightIds.has(e.id);
                                             const urgent = !!e.urgent;
                                             const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
-                                            if (seg === "middle") {
-                                                return (
-                                                    <span
-                                                        key={e.id}
-                                                        role="img"
-                                                        aria-label={rangeTitle}
-                                                        className={`block rounded-full ${isHl ? "h-2.5 mt-[5px]" : "h-1.5 mt-[7px]"} ${meta.dot}`}
-                                                    />
-                                                );
-                                            }
-                                            if (seg === "end") {
-                                                const endLabel = new Date(
-                                                    `${e.end}T00:00:00`,
-                                                ).toLocaleDateString("id-ID", {
-                                                    day: "numeric",
-                                                    month: "short",
-                                                });
-                                                return (
-                                                    <span
-                                                        key={e.id}
-                                                        title={rangeTitle}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <span
-                                                            aria-hidden="true"
-                                                            className={`${isHl ? "h-2.5" : "h-1.5"} flex-1 rounded-r-full ${meta.dot}`}
-                                                        />
-                                                        <span className="text-[10px] font-medium text-slate-500 tabular-nums">
-                                                            s/d {endLabel}
-                                                        </span>
-                                                    </span>
-                                                );
-                                            }
+                                            // Rentang: judul selalu ikut agar penanda
+                                            // akhir tidak terbaca sebagai milik kegiatan
+                                            // lain yang kebetulan lewat di hari itu.
+                                            const isRange = !!e.end && e.end !== e.start;
+                                            const dateNote = isRange
+                                                ? seg === "end"
+                                                    ? `s/d ${shortDate(e.end)}`
+                                                    : `→ ${shortDate(e.end)}`
+                                                : "";
                                             return (
                                                 <EventWrap
                                                     key={e.id}
@@ -951,9 +934,16 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`block truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""} ${isHl ? `ring-2 ${meta.hlRing}` : ""}`}
+                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""} ${isHl ? `ring-2 ${meta.hlRing}` : ""}`}
                                                 >
-                                                    {e.title}
+                                                    <span className="min-w-0 truncate">
+                                                        {e.title}
+                                                    </span>
+                                                    {dateNote && (
+                                                        <span className="ml-auto shrink-0 pl-1 text-[9px] font-normal tabular-nums opacity-70">
+                                                            {dateNote}
+                                                        </span>
+                                                    )}
                                                 </EventWrap>
                                             );
                                         })}
@@ -964,7 +954,7 @@ export default function EventCalendar({
                                         )}
                                     </div>
                                     <div className="mt-1 flex sm:hidden items-center justify-start gap-0.5 flex-wrap min-h-[6px]">
-                                        {dayEvents.slice(0, 4).map(({ e }) => {
+                                        {visibleEvents.slice(0, 4).map(({ e }) => {
                                             const m = TYPE_META[e.type] ?? TYPE_META.permit;
                                             const isHl = highlightIds.has(e.id);
                                             return (
@@ -1074,7 +1064,11 @@ function DayPanel({ dateKey, events }) {
         day: "numeric",
         month: "long",
     });
-    const spanCount = events.filter((e) => e.end && e.end !== e.start).length;
+    // Hanya rentang yang chip-nya benar-benar tampil hari ini, sejalan dengan
+    // highlight di grid.
+    const spanCount = events.filter(
+        (e) => e.end && e.end !== e.start && (e.start === dateKey || e.end === dateKey),
+    ).length;
     return (
         <div
             className="mt-3 rounded-xl border border-[#E2E5EA] bg-slate-50/60 p-3"
@@ -1085,7 +1079,7 @@ function DayPanel({ dateKey, events }) {
             </p>
             {spanCount > 0 && (
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                    Menyorot {spanCount} event rentang — sel terwarnai dari awal sampai akhir.
+                    Menyorot {spanCount} event rentang — awal & akhirnya ditandai.
                 </p>
             )}
             {events.length === 0 ? (
