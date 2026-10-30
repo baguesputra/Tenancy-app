@@ -315,8 +315,12 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         : data.contractor_company || '—';
     const nomorHint = isMarketingLocked
         ? 'kode E&P'
-        : (isKegiatan || isParkir || isCustomer)
-        ? (isKegiatan && kegiatanMeta ? `kode ${kegiatanMeta.code}` : 'kode TC')
+        : isKegiatan
+        ? (kegiatanMeta ? `kode ${kegiatanMeta.code}` : 'kode EVT/MTG/STO')
+        : isParkir
+        ? 'kode PRK'
+        : isCustomer
+        ? 'kode CST'
         : (data.activity_types.includes('pameran') ? 'kode E&P' : 'kode TC');
     const workerCount = parseInt(data.worker_count, 10) || 0;
     const fmtGood = (g) => [(g.description ?? '').trim(), [(g.quantity_note ?? '').trim(), (g.unit ?? '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
@@ -331,9 +335,9 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         : isKegiatan
         ? 'Mode kegiatan — nomor EVT/MTG/STO otomatis, approval Tenancy › Manager Tenant'
         : isParkir
-        ? 'Mode parkir — nomor TC otomatis, approval Supervisor Tenant › Manager Cabang'
+        ? 'Mode parkir — nomor PRK otomatis, approval Supervisor Tenant › Manager Cabang'
         : isCustomer
-        ? 'Mode Customer Isi Form — nomor TC otomatis, approval Tenancy'
+        ? 'Mode Customer Isi Form — nomor CST otomatis, approval Tenancy'
         : 'Mode kerja — nomor TC otomatis, approval Tenancy › Building Service › Security';
 
     return (
@@ -1243,7 +1247,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
 
                                         <FormSection title="Detail Pengajuan" action={<UbahButton step={4} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Nomor Surat" value="Otomatis saat diajukan" />
+                                                <ReviewRow label="Nomor Surat" value={`Otomatis saat diajukan (${nomorHint})`} />
                                                 <ReviewRow label="Penanggung Jawab" value={[data.pic_name, data.pic_phone].filter(Boolean).join(' — ') || '—'} />
                                                 <ReviewRow label="Persetujuan Manager" value={data.needs_manager_approval ? 'Ya — Tenancy → Manager Tenant → BS → Security' : 'Tidak'} />
                                                 {locationType !== 'vendor' && data.is_external && (
@@ -1332,7 +1336,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                     <ConfirmRow label="Kategori" value={categoryLabel} />
                     <ConfirmRow label="Lokasi" value={locationDetail} />
                     {isKegiatan && <ConfirmRow label="Kegiatan" value={kegiatanMeta ? `${kegiatanMeta.label} — ${data.event_name}` : null} />}
-                     <ConfirmRow label="Nomor" value={isMarketingLocked ? 'Otomatis (E&P)' : isKegiatan ? `Otomatis (${nomorHint})` : (isParkir || isCustomer) ? 'Otomatis (kode TC)' : 'Otomatis saat diajukan'} />
+                     <ConfirmRow label="Nomor" value={isMarketingLocked ? 'Otomatis (E&P)' : (isKegiatan || isParkir || isCustomer) ? `Otomatis (${nomorHint})` : 'Otomatis saat diajukan'} />
                     {isCustomer ? (
                         <>
                             <ConfirmRow label="Perusahaan" value={data.customer_company_name} />

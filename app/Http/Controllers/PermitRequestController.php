@@ -88,8 +88,8 @@ class PermitRequestController extends Controller
         ['value' => 'event', 'label' => 'Event', 'code' => 'EVT'],
         ['value' => 'meeting_internal', 'label' => 'Meeting Internal', 'code' => 'MTG'],
         ['value' => 'stock_opname', 'label' => 'Stock Opname', 'code' => 'STO'],
-        ['value' => 'langganan_parkir', 'label' => 'Langganan Parkir'],
-        ['value' => 'customer_form', 'label' => 'Customer Isi Form'],
+        ['value' => 'langganan_parkir', 'label' => 'Langganan Parkir', 'code' => 'PRK'],
+        ['value' => 'customer_form', 'label' => 'Customer Isi Form', 'code' => 'CST'],
     ];
 
     private const KEGIATAN_TYPES = ['event', 'meeting_internal', 'stock_opname'];

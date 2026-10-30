@@ -3,8 +3,8 @@ export const PERMIT_CATEGORY_META = {
     kegiatan: { label: 'Kegiatan', code: null, icon: 'calendar', tint: 'text-indigo-500' },
     tenant: { label: 'Tenant', code: 'TC', icon: 'building', tint: 'text-sky-600' },
     vendor: { label: 'Vendor', code: 'TC', icon: 'wrench', tint: 'text-teal-600' },
-    parkir: { label: 'Parkir', code: 'TC', icon: 'car', tint: 'text-orange-500' },
-    customer: { label: 'Customer Isi Form', code: 'TC', icon: 'building', tint: 'text-violet-600' },
+    parkir: { label: 'Parkir', code: 'PRK', icon: 'car', tint: 'text-orange-500' },
+    customer: { label: 'Customer Isi Form', code: 'CST', icon: 'building', tint: 'text-violet-600' },
 };
 
 export const PERMIT_SOURCE_META = {

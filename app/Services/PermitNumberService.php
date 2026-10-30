@@ -16,6 +16,14 @@ class PermitNumberService
         'stock_opname' => 'STO',
     ];
 
+    // Form parkir & customer punya seri nomor sendiri agar tidak bercampur dengan TC.
+    public const FORM_CODES = [
+        'langganan_parkir' => 'PRK',
+        'customer_form' => 'CST',
+    ];
+
+    public const DEFAULT_CODE = 'TC';
+
     public static function codeFor(array $activityTypes): string
     {
         if (in_array('pameran', $activityTypes)) {
@@ -26,8 +34,13 @@ class PermitNumberService
                 return $code;
             }
         }
+        foreach (self::FORM_CODES as $type => $code) {
+            if (in_array($type, $activityTypes)) {
+                return $code;
+            }
+        }
 
-        return 'TC';
+        return self::DEFAULT_CODE;
     }
 
     public function next(array $activityTypes, ?Carbon $date = null): string
