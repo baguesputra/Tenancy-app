@@ -17,6 +17,7 @@ import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
 import { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
+import useCan from '@/hooks/useCan';
 import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
 
 import initials from '@/utils/initials';
@@ -25,9 +26,7 @@ const emptyContact = { name: '', position: '', phone: '', email: '', type: '' };
 
 export default function Index({ tenants, summary = { total: 0, active: 0, inactive: 0 }, tenantCategories = [], productCategories = [], filters = {}, branches = [], canPickBranch, tenantScope = {} }) {
     const { auth } = usePage().props;
-    const permissions = auth.user?.permissions ?? [];
-    const isSuperAdmin = auth.user?.roles?.includes('super_admin');
-    const can = (perm) => isSuperAdmin || permissions.includes(perm);
+    const { can } = useCan();
     const canEdit = can('tenants.edit');
     const canDelete = can('tenants.delete');
     const editOwnOnlyIds = (tenantScope.editOwnOnlyCategoryIds ?? null)?.map(String) ?? null;

@@ -1,5 +1,6 @@
 import SettingsLayout from '@/Layouts/SettingsLayout';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
+import useCan from '@/hooks/useCan';
 import { useState } from 'react';
 import SelectInput from '@/Components/Form/SelectInput';
 import FormSection from '@/Components/Form/FormSection';
@@ -30,10 +31,8 @@ function sumber(log) {
 }
 
 export default function Index({ gateStatus, summary = {}, companies = [], branches = [], history = [], setting = {} }) {
-    const { auth } = usePage().props;
-    const permissions = auth.user?.permissions ?? [];
-    const isSuperAdmin = auth.user?.roles?.includes('super_admin');
-    const canSync = isSuperAdmin || permissions.includes('gate.sync');
+    const { can } = useCan();
+    const canSync = can('gate.sync');
 
     const form = useForm({ company_id: '', limit: '', dry_run: false });
     const jadwal = useForm({

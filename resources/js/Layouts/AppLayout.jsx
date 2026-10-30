@@ -2,6 +2,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import Breadcrumbs from '@/Components/Breadcrumbs';
 import QrScanModal from '@/Components/Scan/QrScanModal';
+import useCan from '@/hooks/useCan';
 import EmptyState from '@/Components/EmptyState';
 import SidebarNav from '@/Components/Nav/SidebarNav';
 import initials from '@/utils/initials';
@@ -10,9 +11,7 @@ export default function AppLayout({ children }) {
     const { auth } = usePage().props;
     const currentUrl = usePage().url;
 
-    const isSuperAdmin = auth.user?.roles?.includes('super_admin');
-    const permissions = auth.user?.permissions ?? [];
-    const can = (perm) => isSuperAdmin || permissions.includes(perm);
+    const { can } = useCan();
 
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {

@@ -1,16 +1,14 @@
 import AppLayout from '@/Layouts/AppLayout';
 import SettingsIcon from '@/Components/Settings/SettingsIcon';
+import useCan from '@/hooks/useCan';
 import { SETTINGS_ITEMS } from '@/Components/Settings/settingsItems';
 import { Link, usePage } from '@inertiajs/react';
 
 const GROUPS = ['Pengguna & Akses', 'Operasional & Dokumen'];
 
 export default function SettingsLayout({ children }) {
-    const { auth } = usePage().props;
-    const url = usePage().url;
-    const permissions = auth.user?.permissions ?? [];
-    const isSuperAdmin = auth.user?.roles?.includes('super_admin');
-    const can = (permission) => isSuperAdmin || permissions.includes(permission);
+    const { url } = usePage();
+    const { can } = useCan();
     const items = SETTINGS_ITEMS.filter((item) => can(item.permission));
 
     return (
