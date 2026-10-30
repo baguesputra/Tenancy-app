@@ -71,7 +71,7 @@ class AccessMatrixTest extends TestCase
         $tenancy = $this->makeUser('tenancy_staff', [
             'sidak.view', 'sidak.manage', 'sidak.answer',
             'permits.view', 'permits.create', 'permits.revise', 'permits.approve', 'permits.inspect',
-            'loos.view', 'loos.tenant_mgmt_edit', 'loos.tenant_mgmt_submit', 'loos.transition',
+            'loos.view', 'loos.tenant_mgmt_edit', 'loos.transition',
         ]);
         $marketing = $this->makeUser('marketing', [
             'tenants.view', 'permits.view', 'permits.create', 'permits.revise', 'permits.approve',
@@ -103,6 +103,34 @@ class AccessMatrixTest extends TestCase
         $this->actingAs($viewer)->get('/loos/create')->assertForbidden();
         $this->actingAs($viewer)->get("/loos/{$loo->id}/edit")->assertForbidden();
         $this->actingAs($bs)->get('/loos')->assertForbidden();
+    }
+
+    public function test_matriks_units_categories_sidak(): void
+    {
+        $unitWriter = $this->makeUser('unit_writer', ['units.view', 'units.create', 'units.edit']);
+        $unitViewer = $this->makeUser('unit_viewer', ['units.view']);
+        $catManager = $this->makeUser('cat_manager', ['categories.view', 'categories.manage']);
+        $catViewer = $this->makeUser('cat_viewer', ['categories.view']);
+        $answerer = $this->makeUser('answerer', ['sidak.view', 'sidak.answer']);
+
+        // Units: viewer boleh lihat, tidak boleh create/update/delete.
+        $this->actingAs($unitViewer)->get('/units')->assertOk();
+        $this->actingAs($unitViewer)->get('/units/create')->assertForbidden();
+        $this->actingAs($unitWriter)->get('/units/create')->assertOk();
+
+        // Categories: viewer boleh lihat, manage ditolak.
+        $this->actingAs($catViewer)->get('/categories')->assertOk();
+        $this->actingAs($catViewer)->post('/tenant-categories', ['name' => 'X'])->assertForbidden();
+        $this->actingAs($catManager)->post('/tenant-categories', ['name' => 'Kaos '.$this->rand()])->assertRedirect();
+
+        // Sidak: answerer boleh buka index sesi, tidak boleh buat sesi.
+        $this->actingAs($answerer)->get('/inspection-sessions')->assertOk();
+        $this->actingAs($answerer)->get('/inspection-sessions/create')->assertForbidden();
+    }
+
+    private function rand(): string
+    {
+        return substr(md5(uniqid('', true)), 0, 6);
     }
 
     public function test_matriks_revise_dan_inspect_terpisah(): void
