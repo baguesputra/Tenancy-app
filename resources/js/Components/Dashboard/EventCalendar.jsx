@@ -31,6 +31,20 @@ const TYPE_META = {
         
         hlRing: "ring-emerald-400",
     },
+    parkir: {
+        label: "Parkir",
+        dot: "bg-orange-500",
+        chip: "bg-orange-50 text-orange-800 border-orange-200",
+        
+        hlRing: "ring-orange-400",
+    },
+    customer: {
+        label: "Customer Isi Form",
+        dot: "bg-violet-500",
+        chip: "bg-violet-50 text-violet-800 border-violet-200",
+        
+        hlRing: "ring-violet-400",
+    },
     contract_start: {
         label: "Kontrak mulai",
         dot: "bg-purple-500",
@@ -115,6 +129,8 @@ const LEGEND_GROUPS = [
     { label: "Izin Kerja", dot: "bg-blue-500", types: ["permit"] },
     { label: "Pameran", dot: "bg-[#FF6B6B]", types: ["pameran"] },
     { label: "Kegiatan", dot: "bg-emerald-500", types: ["kegiatan"] },
+    { label: "Parkir", dot: "bg-orange-500", types: ["parkir"] },
+    { label: "Customer Isi Form", dot: "bg-violet-500", types: ["customer"] },
     { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
     { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
     { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled", "section_filled", "section_submitted"] },
@@ -126,6 +142,9 @@ const FILTERS = [
     { key: "permit", label: "Izin" },
     { key: "pameran", label: "Pameran" },
     { key: "kegiatan", label: "Kegiatan" },
+    { key: "parkir", label: "Parkir" },
+    { key: "customer", label: "Customer" },
+    { key: "contract_start", label: "Kontrak mulai" },
     { key: "contract_end", label: "Kontrak berakhir" },
     { key: "sidak", label: "Sidak" },
     { key: "loo", label: "LOO" },
@@ -134,7 +153,25 @@ const FILTERS = [
     { key: "cuti_bersama", label: "Cuti bersama" },
 ];
 
-const PERMIT_TYPES = ["permit", "pameran", "kegiatan"];
+const PERMIT_TYPES = ["permit", "pameran", "kegiatan", "parkir", "customer"];
+
+// Status permit/LOO/kontrak tampil berlabel Indonesia, bukan nilai mentah DB.
+const STATUS_LABEL = {
+    pending: "Menunggu",
+    completed: "Selesai",
+    rejected: "Ditolak",
+    cancelled: "Dibatalkan",
+    draft: "Draft",
+    active: "Aktif",
+    ended: "Berakhir",
+    terminated: "Diakhiri",
+    in_progress: "Berjalan",
+    pengisian_divisi: "Pengisian divisi",
+    sebelum_fitout: "Sebelum fitout",
+    setelah_fitout: "Setelah fitout",
+    pengukuran_ulang: "Pengukuran ulang",
+};
+const statusLabel = (s) => STATUS_LABEL[s] ?? s;
 
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
     new Date(2026, i, 1).toLocaleDateString("id-ID", { month: "long" }),
@@ -381,6 +418,9 @@ export default function EventCalendar({
     const goMonth = (delta) => {
         const d = new Date(year, monthIdx + delta, 1);
         const mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        // Tanggal terpilih bisa tertinggal di bulan lain setelah navigasi;
+        // panel harian akan menampilkan hari yang tidak terlihat di grid.
+        if (selected.slice(0, 7) !== mm) setSelected(`${mm}-01`);
         router.get("/dashboard", visitData(mm), {
             preserveState: true,
             preserveScroll: true,
@@ -476,16 +516,19 @@ export default function EventCalendar({
     // Menggantikan N× .filter()/.some() yang sebelumnya jalan tiap render tombol.
     // Keluarga yang punya event bulan ini — dihitung sekali, bukan tiap render legenda.
     const { filterCounts, visibleFilters, activeLegendGroups } = useMemo(() => {
-        const counts = { all: allEvents.length, permit: 0, loo: 0, section: 0 };
+        const counts = { all: allEvents.length, loo: 0, section: 0 };
         const seen = new Set();
         for (const e of allEvents) {
-            if (PERMIT_TYPES.includes(e.type)) counts.permit += 1;
+            // Hitung tiap tipe individual DULU — sebelumnya pameran/kegiatan
+            // tertelan ke `permit` sehingga dropdown selalu menampilkan 0.
+            counts[e.type] = (counts[e.type] ?? 0) + 1;
             if (e.type.startsWith("loo_")) counts.loo += 1;
             else if (e.type.startsWith("section_")) counts.section += 1;
-            if (!PERMIT_TYPES.includes(e.type) && !e.type.startsWith("loo_") && !e.type.startsWith("section_"))
-                counts[e.type] = (counts[e.type] ?? 0) + 1;
             seen.add(e.type);
         }
+        // "Izin" = gabungan seluruh form izin; jumlahkan setelah loop agar tipe
+        // `permit` sendiri tidak terhitung dua kali.
+        counts.permit = PERMIT_TYPES.reduce((sum, t) => sum + (counts[t] ?? 0), 0);
         const visible = FILTERS.filter((f) => {
             if (f.key === "all" || f.key === "permit") return true;
             if (f.key === "loo") return counts.loo > 0;
@@ -1202,7 +1245,7 @@ function AgendaRow({ event: e, span = null }) {
                     <span className="mt-0.5 block truncate text-[11px] text-slate-400">
                         {relDay(e.start)}
                         {span ? ` · ${span}` : ""}
-                        {e.status ? ` · ${e.status}` : ""}
+                        {e.status ? ` · ${statusLabel(e.status)}` : ""}
                     </span>
                 </span>
                 {e.urgent && (
@@ -1233,7 +1276,7 @@ function BoardRow({ event: e }) {
                 <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
                     <span className="min-w-0 truncate">
                         {relDay(e.start)}
-                        {e.status ? ` · ${e.status}` : ""}
+                        {e.status ? ` · ${statusLabel(e.status)}` : ""}
                     </span>
                     <span className="shrink-0 tabular-nums">{range}</span>
                 </span>

@@ -202,16 +202,23 @@ class DashboardController extends Controller
         }
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
-        $warnFrom = now()->toDateString();
-        $warnTo = now()->addDays(30)->toDateString();
+
+        // Jendela "segera" hanya relevan untuk bulan berjalan. Bila user membuka
+        // bulan lain, jangan suntikkan kontrak dari bulan ini ke tampilan itu.
+        $isCurrentMonth = $month->isSameMonth(now());
+        $warnFrom = $isCurrentMonth ? now()->toDateString() : null;
+        $warnTo = $isCurrentMonth ? now()->addDays(30)->toDateString() : null;
 
         $permitQuery = $this->permitVisibility->applyView(
             PermitRequest::query()
-                ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id', 'event_name'])
+                ->select(['id', 'permit_number', 'store_name_snapshot', 'activity_types', 'status', 'request_date', 'work_start_date', 'work_end_date', 'branch_id', 'event_name', 'vehicle_plate'])
                 ->where(fn ($q) => $q
                     ->whereBetween('work_start_date', [$start->toDateString(), $end->toDateString()])
                     ->orWhereBetween('work_end_date', [$start->toDateString(), $end->toDateString()])
-                    ->orWhere(fn ($w) => $w->where('work_start_date', '<=', $start->toDateString())->where(fn ($x) => $x->whereNull('work_end_date')->orWhere('work_end_date', '>=', $end->toDateString())))),
+                    ->orWhere(fn ($w) => $w->where('work_start_date', '<=', $start->toDateString())->where(fn ($x) => $x->whereNull('work_end_date')->orWhere('work_end_date', '>=', $end->toDateString())))
+                    // Form parkir & customer tidak punya rentang kerja; tanggal
+                    // acaranya adalah request_date.
+                    ->orWhere(fn ($r) => $r->whereNull('work_start_date')->whereBetween('request_date', [$start->toDateString(), $end->toDateString()]))),
             $user
         )->latest('work_start_date')->limit(200);
 
@@ -224,6 +231,13 @@ class DashboardController extends Controller
                 $type = 'kegiatan';
                 $kind = in_array('event', $types) ? 'Event' : (in_array('meeting_internal', $types) ? 'Meeting' : 'Stock Opname');
                 $title = "{$kind}: {$p->store_name_snapshot}".($p->event_name ? " — {$p->event_name}" : '')." ({$p->permit_number})";
+            } elseif (in_array('langganan_parkir', $types)) {
+                $type = 'parkir';
+                $plate = $p->vehicle_plate ? " — {$p->vehicle_plate}" : '';
+                $title = "Parkir: {$p->store_name_snapshot}{$plate} ({$p->permit_number})";
+            } elseif (in_array('customer_form', $types)) {
+                $type = 'customer';
+                $title = "Customer: {$p->store_name_snapshot} ({$p->permit_number})";
             } else {
                 $type = 'permit';
                 $title = "{$p->permit_number} — {$p->store_name_snapshot}";
@@ -245,10 +259,10 @@ class DashboardController extends Controller
                 ->where(fn ($q) => $q
                     ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
                     ->orWhereBetween('end_date', [$start->toDateString(), $end->toDateString()])
-                    ->orWhere(fn ($w) => $w->whereBetween('end_date', [$warnFrom, $warnTo])))
+                    ->when($warnFrom !== null, fn ($w) => $w->orWhere(fn ($x) => $x->whereBetween('end_date', [$warnFrom, $warnTo]))))
                 ->when($branchScoped, fn ($q) => $q->whereHas('unit', fn ($u) => $u->where('branch_id', $user->branch_id)))
                 ->latest('end_date')
-                ->limit(100)
+                ->limit(500)
                 ->get();
 
             foreach ($tenancies as $t) {
@@ -268,7 +282,9 @@ class DashboardController extends Controller
                     'start' => $t->end_date?->toDateString(),
                     'end' => $t->end_date?->toDateString(),
                     'status' => $t->status,
-                    'urgent' => $t->end_date && $t->end_date->toDateString() >= $warnFrom && $t->end_date->toDateString() <= $warnTo,
+                    'urgent' => $warnFrom !== null && $t->end_date
+                        && $t->end_date->toDateString() >= $warnFrom
+                        && $t->end_date->toDateString() <= $warnTo,
                     'url' => '/tenancies',
                 ]);
             }
@@ -382,6 +398,24 @@ class DashboardController extends Controller
                 $tenantName = $loo->prospective_tenant_name ?? 'Tenant prospektif';
                 $baseUrl = "/loos/{$loo->id}";
                 $label = $section->section_label ?? $section->section_key;
+
+                // Isi & submit di detik yang sama = satu tindakan, bukan dua agenda.
+                $sameInstant = $section->filled_at && $section->submitted_at
+                    && $section->filled_at->equalTo($section->submitted_at);
+
+                if ($sameInstant) {
+                    $events->push([
+                        'id' => "loo-section-submitted-{$section->id}",
+                        'type' => 'section_submitted',
+                        'title' => "{$label} diisi & disubmit — LOO {$loo->loo_number} ({$tenantName})",
+                        'start' => $section->submitted_at?->toDateString(),
+                        'end' => $section->submitted_at?->toDateString(),
+                        'status' => $loo->status,
+                        'url' => $baseUrl,
+                    ]);
+
+                    continue;
+                }
 
                 if ($section->filled_at) {
                     $events->push([

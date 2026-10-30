@@ -38,7 +38,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
     const { setRefreshCallback } = useAutoRefresh(true, 60000);
 
     useEffect(() => {
-        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity'] }));
+        setRefreshCallback(() => router.reload({ only: ['stats', 'actionNeeded', 'recentActivity', 'calendar'] }));
     }, [setRefreshCallback]);
 
     const byOldest = (a, b) => new Date(a.requested_at ?? a.time ?? 0) - new Date(b.requested_at ?? b.time ?? 0);
