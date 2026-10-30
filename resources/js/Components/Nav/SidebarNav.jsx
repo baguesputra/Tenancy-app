@@ -117,10 +117,11 @@ export default function SidebarNav({
         >
             <div className="shrink-0 border-b border-white/10">
                 <div className={`flex items-center h-16 ${collapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
+                    <span className={collapsed ? 'group relative flex' : 'contents'}>
                     <Link
                         href="/dashboard"
                         aria-label={`Dashboard — ${user?.branch?.name ?? 'Semua Cabang'}`}
-                        className={`group relative flex items-center rounded-md min-h-[40px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
+                        className={`relative flex items-center rounded-md min-h-[40px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
                             ${collapsed ? 'justify-center' : 'gap-2.5 flex-1 min-w-0 px-1'}`}
                     >
                         <img src="/images/logo.png" alt="" className="h-8 w-8 object-contain rounded-md bg-white p-0.5 shrink-0" />
@@ -130,15 +131,24 @@ export default function SidebarNav({
                                 <span className="block text-[11px] text-white/55 truncate">{user?.branch?.name ?? 'Semua Cabang'}</span>
                             </span>
                         )}
-                        {collapsed && (
-                            <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-[#E2E5EA] bg-white px-2.5 py-1.5 text-xs font-medium text-[#0F1E36] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-                            >
-                                {user?.branch?.name ?? 'Semua Cabang'}
-                            </span>
-                        )}
                     </Link>
+
+                    {collapsed && (
+                        /* Perluas rail — hanya layar besar dan saat ciut. Muncul
+                            menutupi logo saat kursor mengarah ke area logo
+                            (`group-hover`), bukan tab di tepi rail. */
+                        <button
+                            type="button"
+                            onClick={onToggleCollapse}
+                            aria-expanded="false"
+                            aria-label="Perluas panel navigasi"
+                            title="Perluas panel navigasi"
+                            className="absolute inset-0 hidden items-center justify-center rounded-md bg-[#0F1E36]/90 text-white/70 opacity-0 transition-opacity duration-150 hover:text-white focus-visible:text-white group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto pointer-events-none lg:flex focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
+                        >
+                            <IconPanelLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
+                        </button>
+                    )}
+                    </span>
 
                     {/* Tutup drawer — hanya relevan di layar kecil */}
                     <button
@@ -167,22 +177,6 @@ export default function SidebarNav({
                     )}
                 </div>
             </div>
-
-            {/* Perluas rail — hanya layar besar dan saat ciut. Tab putih menempel
-                di tepi luar rail (`-right-3`), dipusatkan di tengah blok header
-                (`top-8 -translate-y-1/2`). */}
-            {collapsed && (
-                <button
-                    type="button"
-                    onClick={onToggleCollapse}
-                    aria-expanded="false"
-                    aria-label="Perluas panel navigasi"
-                    title="Perluas panel navigasi"
-                    className="hidden lg:flex absolute top-8 -translate-y-1/2 -right-3 z-40 h-6 w-6 items-center justify-center rounded-md bg-white border border-[#E2E5EA] text-slate-500 shadow-sm hover:text-[#0F1E36] hover:border-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-                >
-                    <IconPanelLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
-                </button>
-            )}
 
             {/* Satu scroll container untuk seluruh navigasi, termasuk
                 Pengaturan. `min-h-0` wajib agar blok ini benar-benar bisa
