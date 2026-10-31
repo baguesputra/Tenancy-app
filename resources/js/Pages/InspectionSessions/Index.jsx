@@ -37,7 +37,7 @@ export default function Index({ sessions }) {
                     </div>
                 </div>
 
-                <div className="hidden sm:block [&>div]:shadow-none">
+                <div className="hidden sm:block [&>div]:border-b-0 [&>div]:shadow-none">
                     <DataTable columns={columns}>
                         {sessions.data.map((session) => (
                             <tr
