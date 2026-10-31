@@ -372,9 +372,9 @@ export default function EventCalendar({
         [byDay, selected],
     );
 
-    // Event rentang yang punya chip di tanggal terpilih — hanya itu yang disorot.
-    // Sebelumnya semua rentang yang sekadar "lewat" ikut masuk, sehingga
-    // ring-nya muncul di tanggal lain yang tidak diklik user.
+    // Rentang yang punya chip di tanggal terpilih: chip itu diangkat (desktop)
+    // dan dot-nya dibesarkan (mobile). Sebelumnya semua rentang yang sekadar
+    // "lewat" ikut masuk, jadi sorotan nyasar ke tanggal yang tidak diklik user.
     const highlightIds = useMemo(() => {
         const set = new Set();
         (byDay[selected] ?? []).forEach(({ e, seg }) => {
@@ -926,6 +926,25 @@ export default function EventCalendar({
                                                     ? `s/d ${shortDate(e.end)}`
                                                     : `→ ${shortDate(e.end)}`
                                                 : "";
+                                            // Bentuk ujung rentang selalu beda — awal
+                                            // membulat di kiri, akhir di kanan — supaya
+                                            // arah rentang terbaca tanpa perlu klik.
+                                            const shape = !isRange
+                                                ? ""
+                                                : seg === "end"
+                                                  ? "rounded-l-md rounded-r-full"
+                                                  : "rounded-l-full rounded-r-md";
+                                            // Elevasi hanya untuk rentang yang tanggalnya
+                                            // sedang dipilih: klik = chip terangkat dan
+                                            // sedikit membesar ke arah sisi tumbuhnya.
+                                            const lift =
+                                                isRange && isHl
+                                                    ? `relative z-10 -translate-y-1 scale-[1.05] shadow-lg hover:shadow-xl ${
+                                                          seg === "end"
+                                                              ? "origin-right"
+                                                              : "origin-left"
+                                                      }`
+                                                    : "hover:shadow-sm";
                                             return (
                                                 <EventWrap
                                                     key={e.id}
@@ -934,7 +953,7 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium hover:shadow-sm transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${seg === "start" ? "rounded-full" : ""} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""} ${isHl ? `ring-2 ${meta.hlRing}` : ""}`}
+                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${shape} ${lift} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""}`}
                                                 >
                                                     <span className="min-w-0 truncate">
                                                         {e.title}
@@ -1064,10 +1083,13 @@ function DayPanel({ dateKey, events }) {
         day: "numeric",
         month: "long",
     });
-    // Hanya rentang yang chip-nya benar-benar tampil hari ini, sejalan dengan
-    // highlight di grid.
+    // Hanya rentang yang chip-nya benar-benar tampil di tanggal terpilih,
+    // sejalan dengan yang diangkat di grid.
     const spanCount = events.filter(
-        (e) => e.end && e.end !== e.start && (e.start === dateKey || e.end === dateKey),
+        (e) =>
+            e.end &&
+            e.end !== e.start &&
+            (e.start === dateKey || e.end === dateKey),
     ).length;
     return (
         <div
@@ -1079,7 +1101,7 @@ function DayPanel({ dateKey, events }) {
             </p>
             {spanCount > 0 && (
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                    Menyorot {spanCount} event rentang — awal & akhirnya ditandai.
+                    Awal & akhir {spanCount} event rentang diangkat di kalender.
                 </p>
             )}
             {events.length === 0 ? (
