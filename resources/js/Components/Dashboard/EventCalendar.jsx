@@ -934,17 +934,28 @@ export default function EventCalendar({
                                                 : seg === "end"
                                                   ? "rounded-l-md rounded-r-full"
                                                   : "rounded-l-full rounded-r-md";
-                                            // Elevasi hanya untuk rentang yang tanggalnya
-                                            // sedang dipilih: klik = chip terangkat dan
-                                            // sedikit membesar ke arah sisi tumbuhnya.
-                                            const lift =
-                                                isRange && isHl
-                                                    ? `relative z-10 -translate-y-1 scale-[1.05] shadow-lg hover:shadow-xl ${
-                                                          seg === "end"
-                                                              ? "origin-right"
-                                                              : "origin-left"
-                                                      }`
-                                                    : "hover:shadow-sm";
+                                            // Elevasi + warna solid hanya untuk rentang
+                                            // yang tanggalnya sedang dipilih: klik = chip
+                                            // terangkat, membesar ke sisi tumbuhnya, dan
+                                            // berubah warna — hijau awal, merah akhir —
+                                            // supaya kedua ujungnya kontras dan terbaca
+                                            // sebagai sepasang. Warna jenis/urgent tetap
+                                            // berlaku di luar keadaan itu.
+                                            const popped = isRange && isHl;
+                                            const lift = popped
+                                                ? `relative z-10 -translate-y-1 scale-[1.05] shadow-lg hover:shadow-xl ${
+                                                      seg === "end"
+                                                          ? "origin-right"
+                                                          : "origin-left"
+                                                  }`
+                                                : "hover:shadow-sm";
+                                            const tone = !popped
+                                                ? urgent
+                                                    ? "!bg-rose-50 !text-rose-700 !border-rose-200"
+                                                    : meta.chip
+                                                : seg === "end"
+                                                  ? "!bg-rose-700 !text-white !border-rose-800"
+                                                  : "!bg-emerald-700 !text-white !border-emerald-800";
                                             return (
                                                 <EventWrap
                                                     key={e.id}
@@ -953,13 +964,19 @@ export default function EventCalendar({
                                                         ev.stopPropagation()
                                                     }
                                                     title={rangeTitle}
-                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${shape} ${lift} ${meta.chip} ${urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : ""}`}
+                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${shape} ${lift} ${tone}`}
                                                 >
                                                     <span className="min-w-0 truncate">
                                                         {e.title}
                                                     </span>
                                                     {dateNote && (
-                                                        <span className="ml-auto shrink-0 pl-1 text-[9px] font-normal tabular-nums opacity-70">
+                                                        <span
+                                                            className={`ml-auto shrink-0 pl-1 text-[9px] font-normal tabular-nums ${
+                                                                popped
+                                                                    ? "opacity-90"
+                                                                    : "opacity-70"
+                                                            }`}
+                                                        >
                                                             {dateNote}
                                                         </span>
                                                     )}
@@ -1101,7 +1118,8 @@ function DayPanel({ dateKey, events }) {
             </p>
             {spanCount > 0 && (
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                    Awal & akhir {spanCount} event rentang diangkat di kalender.
+                    Awal & akhir {spanCount} event rentang diangkat di kalender —
+                    hijau awal, merah akhir.
                 </p>
             )}
             {events.length === 0 ? (
