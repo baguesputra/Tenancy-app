@@ -196,7 +196,10 @@ class DashboardController extends Controller
         $canViewLoo = $user->can('loos.view');
 
         try {
-            $month = Carbon::createFromFormat('Y-m', $monthInput)->startOfMonth();
+            // Prefix `!` wajib: tanpa itu hari/tanggal diwarisi dari waktu
+            // sekarang, jadi minta "2026-11" di tanggal 31 jadi 2026-11-31 dan
+            // meluber ke Desember.
+            $month = Carbon::createFromFormat('!Y-m', $monthInput)->startOfMonth();
         } catch (\Throwable $e) {
             $month = now()->startOfMonth();
         }

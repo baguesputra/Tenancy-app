@@ -249,4 +249,24 @@ class DashboardCalendarTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_calendar_month_does_not_overflow_on_day_31(): void
+    {
+        // `createFromFormat('Y-m', ...)` tanpa prefix `!` mewarisi tanggal dari
+        // waktu sekarang. Di tanggal 31, minta November menghasilkan 2026-11-31
+        // yang meluber ke 1 Desember, dan Februari meluber ke Maret.
+        Carbon::setTestNow('2026-10-31');
+        $mgr = $this->manager();
+
+        foreach (['2026-11', '2026-02', '2026-09', '2026-12'] as $month) {
+            $res = $this->actingAs($mgr)->get("/dashboard?cal_month={$month}")->assertOk();
+            $this->assertSame(
+                $month,
+                $res->viewData('page')['props']['calendar']['month'],
+                "cal_month={$month} seharusnya tetap {$month}",
+            );
+        }
+
+        Carbon::setTestNow();
+    }
 }
