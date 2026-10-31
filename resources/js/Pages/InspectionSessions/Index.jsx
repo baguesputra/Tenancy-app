@@ -3,7 +3,6 @@ import { Link, router } from '@inertiajs/react';
 import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
-import Pagination from '@/Components/Pagination';
 import EmptyState from '@/Components/EmptyState';
 import useCan from '@/hooks/useCan';
 
@@ -125,9 +124,7 @@ export default function Index({ sessions }) {
                     )}
                 </div>
 
-                <div className="mt-3 rounded-xl border border-[#E2E5EA] bg-white shadow-sm">
-                    <Pagination meta={sessions} links={sessions.links} />
-                </div>
+
             </div>
         </AppLayout>
     );
