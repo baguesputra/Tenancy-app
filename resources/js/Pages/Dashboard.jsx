@@ -61,19 +61,17 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Ringkasan Operasional</p>
-                        <h1 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                             {getGreeting()}, {auth.user?.name?.split(' ')[0]}
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1">
-                            {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                            <span className="text-slate-300 mx-2" aria-hidden="true">·</span>
-                            {auth.user?.branch?.name ?? 'Semua Cabang'}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                            <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden="true" />
+                            <span>{auth.user?.branch?.name ?? 'Semua Cabang'}</span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                        <span className="text-xs text-slate-400">Data otomatis · tiap 1 menit</span>
+                        <span className="text-xs text-slate-400">Data otomatis, diperbarui tiap 1 menit</span>
                     </div>
                 </div>
 
@@ -195,10 +193,10 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                                             className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
                                         >
                                             <span className="flex-1 min-w-0">
-                                                <span className="block font-mono text-sm font-semibold text-slate-900 truncate">{item.permit_number}</span>
-                                                <span className="block text-xs text-slate-400 mt-0.5 truncate">
-                                                    {item.store_name} — <span className="text-slate-600 font-medium">{item.step_label}</span>
-                                                    {item.requested_at && <span> · {formatRelativeTime(item.requested_at)}</span>}
+                                                <span className="block truncate font-mono text-sm font-semibold text-slate-900">{item.permit_number}</span>
+                                                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+                                                    <span className="truncate">{item.store_name}</span><span className="hidden h-3 w-px bg-slate-200 sm:block" aria-hidden="true" /><span className="text-slate-600">{item.step_label}</span>
+                                                    {item.requested_at && <span>{formatRelativeTime(item.requested_at)}</span>}
                                                 </span>
                                             </span>
                                             <span className="hidden sm:inline-flex shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
@@ -274,7 +272,7 @@ function KpiCell({ icon, label, value, hint, href, alert = false, accent = null,
                 {icon}
             </div>
             <p className="mt-3 text-2xl sm:text-[28px] leading-none font-semibold font-mono tabular-nums text-slate-900">{value}</p>
-            <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+            <p className="mt-1.5 text-xs font-semibold text-slate-500">{label}</p>
             <p className="text-xs text-slate-400 mt-0.5 truncate">{hint}</p>
         </Link>
     );
