@@ -167,7 +167,7 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                                         <div className="flex gap-2 pt-1"><Button type="button" variant="secondary" onClick={() => setEditingTeam(false)} className="flex-1 justify-center">Batal</Button><Button type="button" variant="success" disabled={savingTeam} onClick={saveTeam} className="flex-1 justify-center">{savingTeam ? 'Menyimpan...' : 'Simpan'}</Button></div>
                                     </div>
                                 )}
-                                {!isLocked && !editingTeam && can('sidak.manage') && <button type="button" onClick={() => { setTeamIds(participants.map((p) => p.user_id)); setEditingTeam(true); }} className="mt-5 min-h-10 w-full rounded-lg border border-[#DED4C4] px-3 text-sm font-medium text-[#6D6258] hover:bg-[#F8F2EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#287A52]">Ubah tim</button>}
+                                {!isLocked && !editingTeam && can('sidak.manage') && <button type="button" onClick={() => { setTeamIds(participants.map((p) => p.user_id)); setEditingTeam(true); }} className="mt-5 min-h-10 w-full rounded-lg border border-[#DED4C4] px-3 text-sm font-medium text-[#6D6258] hover:bg-[#0F1E36]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36]">Ubah tim</button>}
                             </div>
                         </section>
 
