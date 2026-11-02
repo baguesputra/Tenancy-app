@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChecklistItem;
 use App\Models\Inspection;
 use App\Models\InspectionExtraPhoto;
+use App\Models\InspectionPhoto;
 use App\Models\ScannableCode;
 use App\Services\InspectionService;
 use Illuminate\Http\Request;
@@ -176,6 +177,22 @@ class InspectionController extends Controller
         }
 
         return back()->with('answer', $payload);
+    }
+
+    public function destroyAnswerPhoto(InspectionPhoto $photo, Request $request)
+    {
+        $inspection = $photo->answer->inspection;
+        $this->authorizeAccess($inspection, $request);
+        abort_unless($inspection->session->status === 'in_progress', 422, 'Sesi ini sudah ditandai selesai dan tidak bisa diubah lagi.');
+
+        Storage::disk('public')->delete($photo->path);
+        $photo->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['deleted' => true]);
+        }
+
+        return back()->with('success', 'Foto dihapus.');
     }
 
     public function complete(Inspection $inspection, Request $request)

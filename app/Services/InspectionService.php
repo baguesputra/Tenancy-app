@@ -119,12 +119,6 @@ class InspectionService
         $answer->note = $note;
         $answer->save();
 
-        // Kalau jawaban sekarang positif (atau bukan lagi option_negative),
-        // foto lama yang menempel jadi tidak relevan — hapus otomatis
-        if ($item->type === 'binary_choice' && $value !== $item->option_negative) {
-            $this->clearPhotos($answer);
-        }
-
         if ($photo) {
             $this->attachPhoto($answer, $photo);
         }
@@ -143,6 +137,10 @@ class InspectionService
     public function attachPhoto(InspectionAnswer $answer, UploadedFile $photo): InspectionPhoto
     {
         $this->ensureSessionIsEditable($answer->inspection->session);
+
+        if ($answer->photos()->count() >= 3) {
+            throw ValidationException::withMessages(['photo' => 'Maksimal 3 foto per jawaban checklist.']);
+        }
 
         $path = $photo->store('inspection-photos', 'public');
 

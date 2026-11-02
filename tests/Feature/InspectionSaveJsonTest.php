@@ -114,6 +114,47 @@ class InspectionSaveJsonTest extends TestCase
         $this->assertCount(1, $second->fresh()->photos);
     }
 
+    public function test_changing_choice_keeps_checklist_photos(): void
+    {
+        Storage::fake('public');
+        [$staff, $inspection, $item] = $this->seedInspection();
+        $service = app(InspectionService::class);
+        $answer = $service->saveAnswer($inspection, $item, 'Tidak', null, UploadedFile::fake()->image('a.jpg'));
+
+        $updated = $service->saveAnswer($inspection, $item, 'Ya');
+
+        $this->assertCount(1, $updated->fresh()->photos);
+    }
+
+    public function test_checklist_answer_allows_at_most_three_photos(): void
+    {
+        Storage::fake('public');
+        [$staff, $inspection, $item] = $this->seedInspection();
+        $service = app(InspectionService::class);
+        $answer = $service->saveAnswer($inspection, $item, 'Tidak');
+        for ($i = 0; $i < 3; $i++) {
+            $service->attachPhoto($answer, UploadedFile::fake()->image("{$i}.jpg"));
+        }
+
+        try {
+            $service->attachPhoto($answer, UploadedFile::fake()->image('fourth.jpg'));
+            $this->fail('Fourth checklist photo should be rejected.');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->assertCount(3, $answer->fresh()->photos);
+        }
+    }
+
+    public function test_checklist_photo_can_be_manually_deleted(): void
+    {
+        Storage::fake('public');
+        [$staff, $inspection, $item] = $this->seedInspection();
+        $answer = app(InspectionService::class)->saveAnswer($inspection, $item, 'Tidak', null, UploadedFile::fake()->image('a.jpg'));
+        $photo = $answer->photos->first();
+
+        $this->actingAs($staff)->deleteJson("/inspection-photos/{$photo->id}")->assertOk()->assertJsonPath('deleted', true);
+        $this->assertDatabaseMissing('inspection_photos', ['id' => $photo->id]);
+    }
+
     public function test_inspection_breadcrumb_has_session_parent(): void
     {
         [$staff, $inspection, $item, $session, $tenant] = $this->seedInspection();

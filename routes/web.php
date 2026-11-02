@@ -196,6 +196,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:sidak.answer')->group(function () {
         Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswer'])->name('inspections.saveAnswer');
+        Route::delete('/inspection-photos/{photo}', [InspectionController::class, 'destroyAnswerPhoto'])->name('inspections.destroyAnswerPhoto');
         Route::post('/inspections/{inspection}/extra-photos', [InspectionController::class, 'storeExtraPhoto'])->name('inspections.storeExtraPhoto');
         Route::delete('/inspection-extra-photos/{photo}', [InspectionController::class, 'destroyExtraPhoto'])->name('inspections.destroyExtraPhoto');
         Route::patch('/inspections/{inspection}/notes', [InspectionController::class, 'updateNotes'])->name('inspections.updateNotes');

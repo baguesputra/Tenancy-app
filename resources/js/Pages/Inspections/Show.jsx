@@ -149,6 +149,23 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
         saveAnswer(sectionIdx, itemIdx, item, { photo: file });
     };
 
+    const handlePhotoDelete = async (sectionIdx, itemIdx, item, photo) => {
+        if (!confirm('Hapus foto ini?')) return;
+        const res = await fetch(`/inspection-photos/${photo.id}`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+        });
+        if (!res.ok) return;
+        updateLocalAnswer(sectionIdx, itemIdx, {
+            photos: item.answer.photos.filter((p) => p.id !== photo.id),
+        });
+    };
+
     const handleNoteBlur = (sectionIdx, itemIdx, item, note) => {
         if ((note ?? '') === (item.answer?.note ?? '')) return;
         saveAnswer(sectionIdx, itemIdx, item, { note });
@@ -351,8 +368,8 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                                     <div className="print:hidden">
                                                         <RealtimePhotoCapture
                                                             tenantName={inspection.tenant?.name}
-                                                            disabled={isLocked}
-                                                            buttonLabel={item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length})` : 'Ambil Foto'}
+                                                            disabled={isLocked || (item.answer?.photos?.length ?? 0) >= 3}
+                                                            buttonLabel={item.answer?.photos?.length > 0 ? `Tambah Foto (${item.answer.photos.length}/3)` : 'Ambil Foto'}
                                                             buttonHint="Kamera realtime"
                                                             onCapture={(file) => handlePhotoUpload(sectionIdx, itemIdx, item, file)}
                                                         />
@@ -361,7 +378,10 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                                     {item.answer?.photos?.length > 0 && (
                                                         <div className="flex gap-2 flex-wrap mt-2 sm:mt-0">
                                                             {item.answer.photos.map((photo) => (
-                                                                <img key={photo.id} src={photo.url} alt="Bukti sidak" loading="lazy" className="w-16 h-16 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200" />
+                                                                <div key={photo.id} className="relative">
+                                                                    <img src={photo.url} alt="Bukti sidak" loading="lazy" className="w-16 h-16 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200" />
+                                                                    {!isLocked && <button type="button" onClick={() => handlePhotoDelete(sectionIdx, itemIdx, item, photo)} aria-label="Hapus foto bukti sidak" className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-black/70 text-white leading-none">×</button>}
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     )}
