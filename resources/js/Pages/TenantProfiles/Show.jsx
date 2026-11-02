@@ -237,7 +237,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
         <AppLayout>
             <div className="px-4 sm:px-8 py-5 flex-1 max-w-7xl w-full mx-auto">
                 {/* Brand Header — Deep Navy #0F1E36 with Crisp High-Contrast Layout */}
-                <div className="bg-[#0F1E36] text-white rounded-2xl border border-[#1E2D4A] shadow-md p-5 sm:p-6 mb-6">
+                <div className="bg-[#0F1E36] text-white rounded-xl border border-[#1E2D4A] p-5 sm:p-6 mb-6">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                         {/* Tenant Identity */}
                         <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0 flex-1">
@@ -321,7 +321,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                 <button
                                     type="button"
                                     onClick={() => setQrModalOpen(true)}
-                                    className="group inline-flex items-center gap-2.5 p-2 bg-white hover:bg-slate-50 transition-all rounded-xl shadow-xs text-left focus-visible:outline-2 focus-visible:outline-white"
+                                    className="group inline-flex items-center gap-2.5 p-2 bg-white hover:bg-slate-50 transition-colors rounded-xl shadow-xs text-left focus-visible:outline-2 focus-visible:outline-white"
                                     title="Klik untuk membuka & mencetak QR Unit"
                                 >
                                     <img
@@ -331,7 +331,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                         loading="lazy"
                                     />
                                     <div className="pr-1.5">
-                                        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">QR Unit</p>
+                                        <p className="text-[11px] font-semibold text-slate-500">QR Unit</p>
                                         <p className="text-xs font-bold text-[#0F1E36] font-mono flex items-center gap-1">
                                             {unitCode}
                                             <IconExternalLink className="w-3 h-3 text-slate-400 group-hover:text-[#0F1E36] transition-colors" />
@@ -345,7 +345,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                     {/* 4 Corporate KPI Tiles — High Contrast & Readable */}
                     <div className="mt-5 pt-4 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-300 block">Unit &amp; Kontrak</span>
+                            <span className="text-xs font-semibold text-slate-300 block">Unit &amp; Kontrak</span>
                             <div className="mt-1 flex items-baseline gap-2">
                                 <span className="text-2xl font-bold font-mono text-white tabular-nums">{tenancies.length}</span>
                                 <span className="text-xs font-medium text-slate-200">{activeTenancy ? 'Unit Aktif' : 'Tanpa Unit'}</span>
@@ -356,7 +356,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         </div>
 
                         <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-300 block">Masa Berlaku Sewa</span>
+                            <span className="text-xs font-semibold text-slate-300 block">Masa Berlaku Sewa</span>
                             <div className="mt-1 flex items-center gap-2">
                                 <span className="text-xl sm:text-2xl font-bold font-mono text-white truncate tabular-nums">
                                     {activeTenancy?.days_remaining !== undefined && activeTenancy?.days_remaining !== null
@@ -381,7 +381,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         </div>
 
                         <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-300 block">Pemeriksaan Sidak</span>
+                            <span className="text-xs font-semibold text-slate-300 block">Pemeriksaan Sidak</span>
                             <div className="mt-1 flex items-baseline gap-2">
                                 <span className="text-2xl font-bold font-mono text-white tabular-nums">{completedSidak}</span>
                                 <span className="text-xs text-slate-300">/ {inspections.length} Selesai</span>
@@ -396,7 +396,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         </div>
 
                         <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-300 block">Perizinan Kerja</span>
+                            <span className="text-xs font-semibold text-slate-300 block">Perizinan Kerja</span>
                             <div className="mt-1 flex items-baseline gap-2">
                                 <span className="text-2xl font-bold font-mono text-white tabular-nums">{permits.length}</span>
                                 <span className="text-xs text-slate-300">Surat Izin</span>
@@ -413,13 +413,13 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                 </div>
 
                 {/* 2-Column Layout: Seamless Left Sidebar + Unified Right Canvas */}
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex flex-col md:flex-row gap-5 items-start">
                     {/* Left Sidebar — Single Unified Panel Container with Safe Top Clearance below Sticky Navbar (h-16 / 64px) */}
                     <aside className="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-20 z-10">
-                        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden max-h-[calc(100vh-6rem)] overflow-y-auto">
+                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden max-h-[calc(100vh-6rem)] overflow-y-auto">
                             {/* Navigation Items */}
                             <div className="p-3">
-                                <div className="px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                                <div className="px-3 py-2 text-[11px] font-semibold text-slate-400">
                                     Menu Data Tenant
                                 </div>
                                 <nav className="space-y-1">
@@ -427,7 +427,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     <button
                                         type="button"
                                         onClick={() => selectTab('profile')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                                             activeTab === 'profile'
                                                 ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                 : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -449,7 +449,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     </button>
                                 </nav>
 
-                                <div className="mt-3 pt-3 border-t border-slate-100 px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                                <div className="mt-3 pt-3 border-t border-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-400">
                                     Log Operasional
                                 </div>
                                 <nav className="space-y-1">
@@ -457,7 +457,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     <button
                                         type="button"
                                         onClick={() => selectTab('inspections')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                                             activeTab === 'inspections'
                                                 ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                 : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -487,7 +487,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     <button
                                         type="button"
                                         onClick={() => selectTab('permits')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                                             activeTab === 'permits'
                                                 ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                 : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -519,7 +519,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                             {primaryContact && (
                                 <div className="border-t border-slate-100 bg-slate-50/70 p-3.5">
                                     <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                                        <span className="text-[11px] font-semibold text-slate-500">
                                             Kontak Cepat PIC
                                         </span>
                                         <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full">
@@ -582,7 +582,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         {activeTab === 'profile' && (
                             <div className="space-y-6">
                                 {/* SECTION A: Legalitas & Profil Entitas Bisnis */}
-                                <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
                                     <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
@@ -669,7 +669,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                 </div>
 
                                 {/* SECTION B: Perjanjian Sewa & Unit Aktif */}
-                                <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
                                     <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
@@ -861,7 +861,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                 </div>
 
                                 {/* SECTION C: Direktori Narahubung & Tim PIC */}
-                                <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
                                     <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
@@ -889,7 +889,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                             {Object.entries(contactsByType).map(([type, list]) => (
                                                 <div key={type} className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/30">
                                                     <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200/60">
-                                                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                        <h3 className="text-xs font-semibold text-slate-700">
                                                             {type} ({list.length})
                                                         </h3>
                                                     </div>
@@ -988,7 +988,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setSidakFilter('all');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                                                     sidakFilter === 'all'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1002,7 +1002,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setSidakFilter('flagged');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                                                     sidakFilter === 'flagged'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1017,7 +1017,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setSidakFilter('completed');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                                                     sidakFilter === 'completed'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1038,7 +1038,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                 setSidakPage(1);
                                             }}
                                             placeholder="Cari berdasarkan nama template, nama petugas, atau status inspeksi..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-all"
+                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-colors"
                                         />
                                         <svg
                                             className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
@@ -1181,7 +1181,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('all');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                                                     permitFilter === 'all'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1195,7 +1195,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('pending');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                                                     permitFilter === 'pending'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1210,7 +1210,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('completed');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                                                     permitFilter === 'completed'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1224,7 +1224,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('rejected');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                                                     permitFilter === 'rejected'
                                                         ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
                                                         : 'text-slate-600 hover:text-slate-900'
@@ -1245,7 +1245,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                 setPermitPage(1);
                                             }}
                                             placeholder="Cari berdasarkan nomor permit, jenis pekerjaan, PIC lapangan, atau vendor..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-all"
+                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-colors"
                                         />
                                         <svg
                                             className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
@@ -1487,7 +1487,7 @@ function CorporateInfoRow({ label, value, fieldKey, onCopy, copiedKey, isTel, is
     return (
         <div className="rounded-xl border border-slate-200/70 bg-slate-50/50 p-3 hover:bg-white hover:border-slate-300 transition-colors">
             <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400">{label}</span>
                 {value && onCopy && (
                     <button
                         type="button"
