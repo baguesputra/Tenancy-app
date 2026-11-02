@@ -100,6 +100,30 @@ class InspectionSaveJsonTest extends TestCase
         ]);
     }
 
+    public function test_uploading_photos_keeps_existing_answer_choice(): void
+    {
+        Storage::fake('public');
+        [$staff, $inspection, $item] = $this->seedInspection();
+        $this->actingAs($staff)->postJson("/inspections/{$inspection->id}/answers", [
+            'checklist_item_id' => $item->id,
+            'value' => 'Ya',
+        ])->assertOk();
+
+        foreach (['a.jpg', 'b.jpg'] as $filename) {
+            $this->postJson("/inspections/{$inspection->id}/answers", [
+                'checklist_item_id' => $item->id,
+                'photo' => UploadedFile::fake()->image($filename),
+            ])->assertOk()->assertJsonPath('answer.value', 'Ya');
+        }
+
+        $this->assertDatabaseHas('inspection_answers', [
+            'inspection_id' => $inspection->id,
+            'checklist_item_id' => $item->id,
+            'value' => 'Ya',
+        ]);
+        $this->assertDatabaseCount('inspection_photos', 2);
+    }
+
     public function test_resave_answer_keeps_id_and_photos(): void
     {
         Storage::fake('public');

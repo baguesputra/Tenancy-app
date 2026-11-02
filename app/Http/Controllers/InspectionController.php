@@ -155,11 +155,12 @@ class InspectionController extends Controller
             ->flatMap(fn ($s) => $s['items'] ?? [])->pluck('id')->map(fn ($v) => (string) $v)->all();
         abort_unless(in_array((string) $item->id, $snapshotIds, true), 422, 'Item bukan bagian dari checklist inspeksi ini.');
 
+        $currentAnswer = $inspection->answers()->where('checklist_item_id', $item->id)->first();
         $answer = $this->inspectionService->saveAnswer(
             $inspection,
             $item,
-            $validated['value'] ?? null,
-            $validated['note'] ?? null,
+            array_key_exists('value', $validated) ? $validated['value'] : $currentAnswer?->value,
+            array_key_exists('note', $validated) ? $validated['note'] : $currentAnswer?->note,
             $request->file('photo'),
         );
 
