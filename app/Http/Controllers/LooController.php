@@ -188,6 +188,53 @@ class LooController extends Controller
      * Servis dokumen pendukung (disk private). Role COVER_ONLY_ROLES tidak
      * berhak membukanya — sama seperti file LOO selain Cover.
      */
+    public function sectionFile(Request $request, Loo $loo)
+    {
+        $this->authorizeAccess($loo, $request);
+
+        $sectionKey = (string) $request->route('section');
+        abort_unless(array_key_exists($sectionKey, config('loo_sections')), 404);
+
+        $path = (string) $request->query('path');
+        $section = $loo->sections()->where('section_key', $sectionKey)->firstOrFail();
+        abort_unless(
+            Str::startsWith($path, "loos/{$loo->id}/sections/")
+                && ! Str::contains($path, ['..', '\\'])
+                && $this->containsStoredSectionFile($section->data ?? [], $path)
+                && $this->hasSectionFilePermission($request, $sectionKey, $path),
+            404
+        );
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return response()->file(Storage::disk('public')->path($path), [
+            'Content-Disposition' => 'inline; filename="'.basename($path).'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    private function hasSectionFilePermission(Request $request, string $sectionKey, string $path): bool
+    {
+        if (in_array($sectionKey, LooSectionService::FITOUT_CHECKLIST_KEYS, true)) {
+            return true;
+        }
+
+        return $request->user()->can(config("loo_sections.{$sectionKey}.permission"));
+    }
+
+    private function containsStoredSectionFile(array $data, string $path): bool
+    {
+        foreach ($data as $value) {
+            if ($value === $path) {
+                return true;
+            }
+            if (is_array($value) && $this->containsStoredSectionFile($value, $path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function attachmentFile(Request $request, Loo $loo, LooAttachment $attachment)
     {
         $this->authorizeAccess($loo, $request);

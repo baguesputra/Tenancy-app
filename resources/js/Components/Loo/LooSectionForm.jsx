@@ -17,7 +17,7 @@ function hasStoredValue(v) {
     return v !== null && v !== undefined && v !== '';
 }
 
-function Field({ field, value, error, onChange, options, looId }) {
+function Field({ field, value, error, onChange, options, looId, sectionKey }) {
     const common = { error };
     const sourceOptions = field.source ? (options?.[field.source] ?? []) : null;
 
@@ -102,9 +102,9 @@ function Field({ field, value, error, onChange, options, looId }) {
         case 'checklist_table':
             return <ChecklistTable field={field} value={value} onChange={onChange} />;
         case 'file':
-            return <FileField field={field} value={value} onChange={onChange} />;
+            return <FileField field={field} value={value} onChange={onChange} looId={looId} sectionKey={sectionKey} />;
         case 'file_multiple':
-            return <FileMultipleField field={field} value={value} onChange={onChange} />;
+            return <FileMultipleField field={field} value={value} onChange={onChange} looId={looId} sectionKey={sectionKey} />;
         default:
             return <TextInput {...common} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
     }
@@ -114,50 +114,68 @@ function filePreviewType(path) {
     return /\.pdf$/i.test(String(path)) ? 'pdf' : 'image';
 }
 
-function FileField({ field, value, onChange }) {
-    const [preview, setPreview] = useState(false);
-    const url = value ? `/storage/${value}` : '';
+function sectionFileUrl(looId, sectionKey, path) {
+    return `/loos/${looId}/sections/${sectionKey}/file?path=${encodeURIComponent(path)}`;
+}
+
+function FileField({ field, value, onChange, looId, sectionKey }) {
+    const [preview, setPreview] = useState(null);
+    const [stored] = useState(() => typeof value === 'string' && value !== '' ? value : null);
+    const selected = value instanceof File ? value : null;
+    const name = selected?.name ?? stored?.split('/').pop() ?? '';
+    const openPreview = () => {
+        if (selected) {
+            setPreview({ url: URL.createObjectURL(selected), label: selected.name, type: filePreviewType(selected.name), temporary: true });
+        } else if (stored) {
+            setPreview({ url: sectionFileUrl(looId, sectionKey, stored), label: name, type: filePreviewType(stored) });
+        }
+    };
+    const closePreview = () => {
+        if (preview?.temporary) URL.revokeObjectURL(preview.url);
+        setPreview(null);
+    };
 
     return (
         <div className="space-y-1.5">
-            {value && (
-                <>
-                    <button type="button" onClick={() => setPreview(true)} className="block max-w-full truncate text-left text-xs text-[#0F1E36] underline">
-                        {String(value).split('/').pop()}
-                    </button>
-                    <FilePreviewModal open={preview} onClose={() => setPreview(false)} label={String(value).split('/').pop()} url={url} type={filePreviewType(value)} />
-                </>
-            )}
-            <FileInput accept={field.accept} maxSize={(field.max_kb ?? 0) * 1024} onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
+            {preview && <FilePreviewModal open onClose={closePreview} label={preview.label} url={preview.url} type={preview.type} />}
+            <FileInput
+                accept={field.accept}
+                maxSize={(field.max_kb ?? 0) * 1024}
+                file={selected}
+                currentFile={stored ? { name: stored.split('/').pop(), type: filePreviewType(stored) } : null}
+                onPreview={selected || stored ? openPreview : null}
+                onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+            />
         </div>
     );
 }
 
-function FileMultipleField({ field, value, onChange }) {
+function FileMultipleField({ field, value, onChange, looId, sectionKey }) {
     const [previews, setPreviews] = useState(value ?? []);
     const [preview, setPreview] = useState(null);
+    const storedPreviews = previews.filter((path) => typeof path === 'string');
 
     useEffect(() => setPreviews(value ?? []), [value]);
 
     return (
         <div className="space-y-2">
-            {previews.length > 0 && (
+            {storedPreviews.length > 0 && (
                 <ul className="space-y-1">
-                    {previews.map((p, i) => (
+                    {storedPreviews.map((p) => (
                         <li key={p} className="flex items-center justify-between gap-2 text-xs">
                             <button type="button" onClick={() => setPreview(p)} className="min-w-0 truncate text-left text-[#0F1E36] underline">{p.split('/').pop()}</button>
-                            <button type="button" className="text-red-500 shrink-0" onClick={() => onChange(previews.filter((_, j) => j !== i))}>Hapus</button>
+                            <button type="button" className="text-red-500 shrink-0" onClick={() => onChange(previews.filter((item) => item !== p))}>Hapus</button>
                         </li>
                     ))}
                 </ul>
             )}
             {preview && (
-                <FilePreviewModal open onClose={() => setPreview(null)} label={preview.split('/').pop()} url={`/storage/${preview}`} type={filePreviewType(preview)} />
+                <FilePreviewModal open onClose={() => setPreview(null)} label={preview.split('/').pop()} url={sectionFileUrl(looId, sectionKey, preview)} type={filePreviewType(preview)} />
             )}
             <FileInput
                 multiple
                 accept={field.accept}
-                onChange={(e) => onChange([...previews, ...Array.from(e.target.files ?? [])])}
+                onChange={(e) => onChange([...storedPreviews, ...Array.from(e.target.files ?? [])])}
             />
         </div>
     );
@@ -523,7 +541,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                                         idPrefix={sectionKey}
                                     />
                                 ) : (
-                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} looId={looId} />
+                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} looId={looId} sectionKey={sectionKey} />
                                 )}
                             </FormField>
                         </div>

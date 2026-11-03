@@ -128,9 +128,15 @@ export default function FileInput({
                         {hasSelected && multiple ? <UploadIcon className="h-4 w-4" /> : <FileIcon kind={kind} />}
                     </span>
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">
-                            {multiple && selected.length > 1 ? `${selected.length} file dipilih` : displayName}
-                        </p>
+                        {onPreview ? (
+                            <button type="button" onClick={onPreview} aria-label={`Pratinjau ${displayName}`} className="block max-w-full truncate text-left text-sm font-medium text-gray-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]">
+                                {displayName}
+                            </button>
+                        ) : (
+                            <p className="truncate text-sm font-medium text-gray-900">
+                                {multiple && selected.length > 1 ? `${selected.length} file dipilih` : displayName}
+                            </p>
+                        )}
                         <p className="truncate text-xs text-gray-500">
                             {[size ? formatBytes(size) : null, hasSelected && currentFile ? `mengganti ${currentFile.name}` : null]
                                 .filter(Boolean)
@@ -157,15 +163,6 @@ export default function FileInput({
                             </>
                         ) : (
                             <>
-                                {currentFile?.url && onPreview && (
-                                    <button
-                                        type="button"
-                                        onClick={onPreview}
-                                        className={`${iconButton} text-gray-600 hover:bg-gray-100`}
-                                    >
-                                        Lihat
-                                    </button>
-                                )}
                                 <button
                                     type="button"
                                     onClick={pick}
