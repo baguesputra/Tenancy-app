@@ -9,6 +9,7 @@ import DateInput from '@/Components/Form/DateInput';
 import FileInput from '@/Components/Form/FileInput';
 import Checkbox from '@/Components/Form/Checkbox';
 import Button from '@/Components/Form/Button';
+import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 
 // Nilai "tersimpan" untuk field prasyarat: string path, array path, atau nilai skalar.
 function hasStoredValue(v) {
@@ -109,13 +110,23 @@ function Field({ field, value, error, onChange, options, looId }) {
     }
 }
 
+function filePreviewType(path) {
+    return /\.pdf$/i.test(String(path)) ? 'pdf' : 'image';
+}
+
 function FileField({ field, value, onChange }) {
+    const [preview, setPreview] = useState(false);
+    const url = value ? `/storage/${value}` : '';
+
     return (
         <div className="space-y-1.5">
             {value && (
-                <a href={`/storage/${value}`} target="_blank" rel="noreferrer" className="block text-xs text-[#0F1E36] underline">
-                    Lihat file saat ini
-                </a>
+                <>
+                    <button type="button" onClick={() => setPreview(true)} className="block max-w-full truncate text-left text-xs text-[#0F1E36] underline">
+                        {String(value).split('/').pop()}
+                    </button>
+                    <FilePreviewModal open={preview} onClose={() => setPreview(false)} label={String(value).split('/').pop()} url={url} type={filePreviewType(value)} />
+                </>
             )}
             <FileInput accept={field.accept} maxSize={(field.max_kb ?? 0) * 1024} onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
         </div>
@@ -124,6 +135,7 @@ function FileField({ field, value, onChange }) {
 
 function FileMultipleField({ field, value, onChange }) {
     const [previews, setPreviews] = useState(value ?? []);
+    const [preview, setPreview] = useState(null);
 
     useEffect(() => setPreviews(value ?? []), [value]);
 
@@ -133,11 +145,14 @@ function FileMultipleField({ field, value, onChange }) {
                 <ul className="space-y-1">
                     {previews.map((p, i) => (
                         <li key={p} className="flex items-center justify-between gap-2 text-xs">
-                            <a href={`/storage/${p}`} target="_blank" rel="noreferrer" className="text-[#0F1E36] underline truncate">{p.split('/').pop()}</a>
+                            <button type="button" onClick={() => setPreview(p)} className="min-w-0 truncate text-left text-[#0F1E36] underline">{p.split('/').pop()}</button>
                             <button type="button" className="text-red-500 shrink-0" onClick={() => onChange(previews.filter((_, j) => j !== i))}>Hapus</button>
                         </li>
                     ))}
                 </ul>
+            )}
+            {preview && (
+                <FilePreviewModal open onClose={() => setPreview(null)} label={preview.split('/').pop()} url={`/storage/${preview}`} type={filePreviewType(preview)} />
             )}
             <FileInput
                 multiple
