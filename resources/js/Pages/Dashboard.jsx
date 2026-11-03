@@ -82,7 +82,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         value={stats?.total_tenants ?? 0}
                         hint={`${total} unit dikelola`}
                         href="/tenants"
-                        accent="bg-[#0F1E36]"
+                        accent="bg-[#0F766E]"
                         divider
                     />
                     <KpiCell
@@ -100,7 +100,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         value={stats?.active_sessions ?? 0}
                         hint="Sedang berjalan"
                         href="/inspection-sessions"
-                        accent="bg-[#0F1E36]"
+                        accent="bg-[#2563EB]"
                     />
                     {canLoo && (
                         <KpiCell
@@ -265,15 +265,21 @@ function KpiCell({ icon, label, value, hint, href, alert = false, accent = null,
             href={href}
             className="group relative bg-white p-4 sm:p-5 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36]"
         >
+            {accent === 'bg-[#D64545]' && <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#D64545]/[0.07] to-transparent" />}
+            {accent === 'bg-[#0F766E]' && <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#0F766E]/[0.06] to-transparent" />}
+            {accent === 'bg-[#2563EB]' && <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#2563EB]/[0.06] to-transparent" />}
+            {accent === 'bg-[#0F1E36]' && <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#0F1E36]/[0.06] to-transparent" />}
             {accent && <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${accent}`} />}
             {divider && <span aria-hidden="true" className="absolute inset-y-0 right-0 w-px bg-[#C9D0D9]" />}
-            {alert && <span className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-label="Perlu perhatian" />}
-            <div className="w-10 h-10 rounded-lg bg-[#0F1E36]/5 text-[#0F1E36] flex items-center justify-center">
-                {icon}
+            {alert && <span className="absolute top-4 right-4 z-10 w-1.5 h-1.5 rounded-full bg-[#FF6B6B]" aria-label="Perlu perhatian" />}
+            <div className="relative z-10">
+                <div className="w-10 h-10 rounded-lg bg-[#0F1E36]/5 text-[#0F1E36] flex items-center justify-center">
+                    {icon}
+                </div>
+                <p className="mt-3 text-2xl sm:text-[28px] leading-none font-semibold font-mono tabular-nums text-slate-900">{value}</p>
+                <p className="mt-1.5 text-xs font-semibold text-slate-500">{label}</p>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">{hint}</p>
             </div>
-            <p className="mt-3 text-2xl sm:text-[28px] leading-none font-semibold font-mono tabular-nums text-slate-900">{value}</p>
-            <p className="mt-1.5 text-xs font-semibold text-slate-500">{label}</p>
-            <p className="text-xs text-slate-400 mt-0.5 truncate">{hint}</p>
         </Link>
     );
 }
