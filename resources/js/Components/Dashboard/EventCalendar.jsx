@@ -232,6 +232,14 @@ function shortDate(k) {
     });
 }
 
+function fullDate(k) {
+    return new Date(`${k}T00:00:00`).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+}
+
 function relDay(start) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -241,6 +249,41 @@ function relDay(start) {
     if (diff === 1) return "Besok";
     if (diff > 1) return `${diff} hari lagi`;
     return `${Math.abs(diff)} hari lalu`;
+}
+
+function weekEventSegments(week, events) {
+    const weekStart = dayKey(week[0]);
+    const weekEnd = dayKey(week[6]);
+    const lanes = [];
+    const segments = events
+        .filter((e) => e.start && (e.end || e.start) >= weekStart && e.start <= weekEnd)
+        .sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) || a.start.localeCompare(b.start))
+        .map((e) => {
+            const eventEnd = e.end || e.start;
+            const start = e.start < weekStart ? weekStart : e.start;
+            const end = eventEnd > weekEnd ? weekEnd : eventEnd;
+            const startIndex = week.findIndex((d) => dayKey(d) === start);
+            const endIndex = week.findIndex((d) => dayKey(d) === end);
+            let lane = lanes.findIndex((lastEnd) => lastEnd < start);
+            if (lane < 0) lane = lanes.length;
+            lanes[lane] = end;
+            return {
+                e,
+                startIndex,
+                endIndex,
+                lane,
+                continuedLeft: e.start < weekStart,
+                continuedRight: eventEnd > weekEnd,
+            };
+        });
+
+    const visible = segments.filter((segment) => segment.lane < 2);
+    const overflow = Array.from({ length: 7 }, (_, dayIndex) => ({
+        dayIndex,
+        count: segments.filter((segment) => segment.lane >= 2 && segment.startIndex <= dayIndex && segment.endIndex >= dayIndex).length,
+    })).filter(({ count }) => count > 0);
+
+    return { segments: visible, overflow };
 }
 
 export default function EventCalendar({
@@ -366,6 +409,8 @@ export default function EventCalendar({
     }, [events]);
 
     const cells = useMemo(() => monthCells(year, monthIdx), [year, monthIdx]);
+    const weeks = useMemo(() => Array.from({ length: 6 }, (_, i) => cells.slice(i * 7, i * 7 + 7)), [cells]);
+    const weekSegments = useMemo(() => weeks.map((week) => weekEventSegments(week, events)), [weeks, events]);
 
     const selectedEvents = useMemo(
         () => (byDay[selected] ?? []).map((x) => x.e),
@@ -864,146 +909,47 @@ export default function EventCalendar({
                 >
                     <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
                         {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
-                            (d) => (
-                                <span key={d}>{d}</span>
+                            (d, i) => (
+                                <span key={d} className={i === 6 ? "text-rose-400" : ""}>{d}</span>
                             ),
                         )}
                     </div>
-                    <div className="grid grid-cols-7 gap-1">
-                        {cells.map((d, i) => {
-                            const k = dayKey(d);
-                            const inMonth = d.getMonth() === monthIdx;
-                            const dayEvents = byDay[k] ?? [];
-                            // Opsi C: hari tengah rentang tidak menggambar apa pun.
-                            // Hanya awal & akhir yang tampil, jadi slot chip tidak
-                            // lagi dimakan bar tanpa identitas.
-                            const visibleEvents = dayEvents.filter(
-                                ({ seg }) => seg !== "middle",
-                            );
-                            const shown = visibleEvents.slice(0, MAX_CHIPS);
-                            const extra = visibleEvents.length - shown.length;
-                            const isToday = k === todayKey;
-                            const isSelected = k === selected;
-                            const weekend = i % 7 >= 5;
+                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                        {weeks.map((week, weekIndex) => {
+                            const { segments, overflow } = weekSegments[weekIndex];
                             return (
-                                <div
-                                    key={i}
-                                    onClick={() => handleCellClick(k, d)}
-                                    className={`min-h-[52px] sm:min-h-[92px] rounded-xl border p-1 sm:p-1.5 flex flex-col cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${
-                                        isSelected
-                                            ? "border-[#0F1E36] ring-1 ring-[#0F1E36] bg-[#0F1E36]/[0.03]"
-                                            : "border-slate-100 hover:border-slate-300 hover:bg-slate-50/60"
-                                    } ${inMonth ? "" : "opacity-40"} ${weekend && inMonth ? "bg-slate-50/70" : ""}`}
-                                >
-                                    <button
-                                        ref={(el) => (cellRefs.current[i] = el)}
-                                        tabIndex={i === rovingIdx ? 0 : -1}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCellClick(k, d);
-                                        }}
-                                        onKeyDown={(e) => onCellKeyDown(e, i)}
-                                        aria-pressed={isSelected}
-                                        aria-label={`${cellAriaLabels[i]}, ${dayEvents.length} agenda`}
-                                        className={`self-start inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-slate-400" : "text-slate-700"}`}
-                                    >
-                                        {d.getDate()}
-                                    </button>
-                                    <div className="mt-1 hidden sm:flex sm:flex-col gap-1">
-                                        {shown.map(({ e, seg }) => {
-                                            const meta =
-                                                TYPE_META[e.type] ??
-                                                TYPE_META.permit;
-                                            const isHl = highlightIds.has(e.id);
-                                            const urgent = !!e.urgent;
+                                <div key={weekIndex} className="relative grid grid-cols-7 min-h-[76px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
+                                    {week.map((d, dayIndex) => {
+                                        const k = dayKey(d);
+                                        const inMonth = d.getMonth() === monthIdx;
+                                        const dayEvents = byDay[k] ?? [];
+                                        const isToday = k === todayKey;
+                                        const isSelected = k === selected;
+                                        const weekend = dayIndex >= 5;
+                                        return (
+                                            <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${dayIndex === 6 && inMonth ? "bg-rose-50/70" : weekend && inMonth ? "bg-slate-50/40" : ""}`}>
+                                                <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : dayIndex === 6 ? "text-rose-500" : weekend ? "text-slate-400" : "text-slate-700"}`}>{d.getDate()}</button>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-2 gap-y-1 px-0.5 sm:px-1">
+                                        {segments.map(({ e, startIndex, endIndex, lane, continuedLeft, continuedRight }) => {
+                                            const meta = TYPE_META[e.type] ?? TYPE_META.permit;
                                             const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
-                                            // Rentang: judul selalu ikut agar penanda
-                                            // akhir tidak terbaca sebagai milik kegiatan
-                                            // lain yang kebetulan lewat di hari itu.
-                                            const isRange = !!e.end && e.end !== e.start;
-                                            const dateNote = isRange
-                                                ? seg === "end"
-                                                    ? `s/d ${shortDate(e.end)}`
-                                                    : `→ ${shortDate(e.end)}`
-                                                : "";
-                                            // Bentuk ujung rentang selalu beda — awal
-                                            // membulat di kiri, akhir di kanan — supaya
-                                            // arah rentang terbaca tanpa perlu klik.
-                                            const shape = !isRange
-                                                ? ""
-                                                : seg === "end"
-                                                  ? "rounded-l-md rounded-r-full"
-                                                  : "rounded-l-full rounded-r-md";
-                                            // Elevasi + warna solid hanya untuk rentang
-                                            // yang tanggalnya sedang dipilih: klik = chip
-                                            // terangkat, membesar ke sisi tumbuhnya, dan
-                                            // berubah warna — hijau awal, merah akhir —
-                                            // supaya kedua ujungnya kontras dan terbaca
-                                            // sebagai sepasang. Warna jenis/urgent tetap
-                                            // berlaku di luar keadaan itu.
-                                            const popped = isRange && isHl;
-                                            const lift = popped
-                                                ? `relative z-10 -translate-y-1 scale-[1.05] shadow-lg hover:shadow-xl ${
-                                                      seg === "end"
-                                                          ? "origin-right"
-                                                          : "origin-left"
-                                                  }`
-                                                : "hover:shadow-sm";
-                                            const tone = !popped
-                                                ? urgent
-                                                    ? "!bg-rose-50 !text-rose-700 !border-rose-200"
-                                                    : meta.chip
-                                                : seg === "end"
-                                                  ? "!bg-rose-700 !text-white !border-rose-800"
-                                                  : "!bg-emerald-700 !text-white !border-emerald-800";
+                                            const isHl = highlightIds.has(e.id);
+                                            const tone = e.urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : meta.chip;
                                             return (
-                                                <EventWrap
-                                                    key={e.id}
-                                                    href={e.url}
-                                                    onClick={(ev) =>
-                                                        ev.stopPropagation()
-                                                    }
-                                                    title={rangeTitle}
-                                                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-shadow focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${shape} ${lift} ${tone}`}
-                                                >
-                                                    <span className="min-w-0 truncate">
-                                                        {e.title}
-                                                    </span>
-                                                    {dateNote && (
-                                                        <span
-                                                            className={`ml-auto shrink-0 pl-1 text-[9px] font-normal tabular-nums ${
-                                                                popped
-                                                                    ? "opacity-90"
-                                                                    : "opacity-70"
-                                                            }`}
-                                                        >
-                                                            {dateNote}
-                                                        </span>
-                                                    )}
+                                                <EventWrap key={`${e.id}-${weekIndex}`} href={e.url} onClick={(ev) => ev.stopPropagation()} title={rangeTitle} className={`pointer-events-auto flex min-w-0 items-center border px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium leading-4 transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${continuedLeft ? "rounded-l-none border-l-0" : "rounded-l-md"} ${continuedRight ? "rounded-r-none border-r-0" : "rounded-r-md"} ${isHl ? "relative z-10 ring-1 ring-[#0F1E36]/30" : ""} ${tone}`} style={{ gridColumn: `${startIndex + 1} / span ${endIndex - startIndex + 1}`, gridRow: lane + 1 }}>
+                                                    <span className="truncate">{e.title}</span>
                                                 </EventWrap>
                                             );
                                         })}
-                                        {extra > 0 && (
-                                            <span className="text-[10px] text-slate-400 font-medium px-1">
-                                                +{extra} lagi
-                                            </span>
-                                        )}
                                     </div>
-                                    <div className="mt-1 flex sm:hidden items-center justify-start gap-0.5 flex-wrap min-h-[6px]">
-                                        {visibleEvents.slice(0, 4).map(({ e }) => {
-                                            const m = TYPE_META[e.type] ?? TYPE_META.permit;
-                                            const isHl = highlightIds.has(e.id);
-                                            return (
-                                                <span
-                                                    key={e.id}
-                                                    className={`rounded-full ${m.dot} ${isHl ? `w-2.5 h-2.5 ring-2 ${m.hlRing}` : "w-1.5 h-1.5"}`}
-                                                />
-                                            );
-                                        })}
-                                        {dayEvents.some(({ e }) => e.urgent) && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                        )}
-                                    </div>
+                                    {overflow.map(({ dayIndex, count }) => (
+                                        <button key={`overflow-${dayIndex}`} type="button" onClick={(e) => { e.stopPropagation(); handleCellClick(dayKey(week[dayIndex]), week[dayIndex]); }} className="absolute z-10 hidden sm:block truncate text-left text-[10px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]" style={{ left: `calc(${dayIndex} * (100% / 7) + 6px)`, top: 80 }} aria-label={`${count} event lainnya pada ${dayKey(week[dayIndex])}`}>
+                                            +{count} lainnya
+                                        </button>
+                                    ))}
                                 </div>
                             );
                         })}
@@ -1097,8 +1043,6 @@ function DayPanel({ dateKey, events }) {
     if (!dateKey) return null;
     const label = new Date(`${dateKey}T00:00:00`).toLocaleDateString("id-ID", {
         weekday: "long",
-        day: "numeric",
-        month: "long",
     });
     // Hanya rentang yang chip-nya benar-benar tampil di tanggal terpilih,
     // sejalan dengan yang diangkat di grid.
@@ -1108,40 +1052,21 @@ function DayPanel({ dateKey, events }) {
             e.end !== e.start &&
             (e.start === dateKey || e.end === dateKey),
     ).length;
+    const sidakCount = events.filter((e) => e.type === "sidak").length;
     return (
-        <div
-            className="mt-3 rounded-xl border border-[#E2E5EA] bg-slate-50/60 p-3"
-            aria-live="polite"
-        >
-            <p className="text-xs font-semibold text-slate-900 capitalize">
-                {label} · {events.length} agenda
-            </p>
-            {spanCount > 0 && (
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                    Awal & akhir {spanCount} event rentang diangkat di kalender —
-                    hijau awal, merah akhir.
-                </p>
-            )}
+        <div className="mt-3 rounded-lg border border-[#E2E5EA] bg-white" aria-live="polite">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900 capitalize">{label} <span className="font-normal text-slate-500">· {fullDate(dateKey)}</span></p>
+                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 ring-1 ring-slate-200">{events.length} agenda{sidakCount ? ` · ${sidakCount} sidak` : ""}</span>
+            </div>
+            {spanCount > 0 && <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">{spanCount} event rentang ditandai pada kalender.</p>}
             {events.length === 0 ? (
-                <p className="mt-1 text-xs text-slate-400">
-                    Tidak ada agenda hari ini.
-                </p>
+                <p className="px-4 py-5 text-sm text-slate-400">Tidak ada agenda hari ini.</p>
             ) : (
-                <div className="mt-2 space-y-3">
-                    {groupByFamily(events).map((g) => (
-                        <div key={g.label}>
-                            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-1">
-                                <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
-                                {g.label}
-                                <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
-                            </p>
-                            <ul className="divide-y divide-slate-100">
-                                {g.items.map((e) => (
-                                    <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
+                <div className="overflow-x-auto">
+                    <ul className="divide-y divide-slate-100">
+                        {events.map((e) => <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />)}
+                    </ul>
                 </div>
             )}
         </div>
@@ -1168,6 +1093,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
               weekday: "long",
               day: "numeric",
               month: "long",
+              year: "numeric",
           })
         : "";
 
@@ -1256,37 +1182,22 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
 }
 
 function AgendaRow({ event: e, span = null }) {
-    const range =
-        e.end && e.end !== e.start
-            ? e.start.slice(0, 7) === e.end.slice(0, 7)
-                ? `${new Date(`${e.start}T00:00:00`).getDate()}–${shortDate(e.end)}`
-                : `${shortDate(e.start)} – ${shortDate(e.end)}`
-            : shortDate(e.start);
+    const range = e.end && e.end !== e.start
+        ? `${fullDate(e.start)} – ${fullDate(e.end)}`
+        : fullDate(e.start);
 
+    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
     return (
         <li>
-            <EventWrap
-                href={e.url}
-                className="flex items-start gap-3 px-2 py-2 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
-            >
-                <span className="w-16 shrink-0 pt-px text-[11px] font-medium leading-tight tabular-nums text-slate-400">
-                    {range}
+            <EventWrap href={e.url} className="grid grid-cols-1 gap-1 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] sm:grid-cols-[minmax(150px,1.1fr)_minmax(220px,2fr)_minmax(110px,0.8fr)_auto] sm:items-center sm:gap-4">
+                <span className="text-xs font-semibold tabular-nums text-slate-700">{range}</span>
+                <span className="min-w-0 truncate text-sm font-medium text-slate-900">{e.title}</span>
+                <span className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
+                    {meta.label}{e.status ? ` · ${statusLabel(e.status)}` : ""}
+                    {span ? ` · ${span}` : ""}
                 </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] text-slate-900">
-                        {e.title}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                        {relDay(e.start)}
-                        {span ? ` · ${span}` : ""}
-                        {e.status ? ` · ${statusLabel(e.status)}` : ""}
-                    </span>
-                </span>
-                {e.urgent && (
-                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
-                        Segera
-                    </span>
-                )}
+                {e.urgent ? <span className="justify-self-start rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 sm:justify-self-end">Perlu perhatian</span> : <span className="hidden sm:block" />}
             </EventWrap>
         </li>
     );
@@ -1295,8 +1206,8 @@ function AgendaRow({ event: e, span = null }) {
 function BoardRow({ event: e }) {
     const range =
         e.end && e.end !== e.start
-            ? `${shortDate(e.start)} – ${shortDate(e.end)}`
-            : shortDate(e.start);
+            ? `${fullDate(e.start)} – ${fullDate(e.end)}`
+            : fullDate(e.start);
 
     return (
         <li>
