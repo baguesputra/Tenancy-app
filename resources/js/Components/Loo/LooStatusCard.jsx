@@ -171,7 +171,7 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                                 <span className="inline-flex items-center" aria-label="Tahap terkunci">
                                                     <IconLock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
                                                 </span>
-                                            ) : !isActive ? <Badge color={meta.color} size="sm">{meta.label}</Badge> : null}
+                                            ) : !isActive && phase.state !== 'done' ? <Badge color={meta.color} size="sm">{meta.label}</Badge> : null}
                                         </div>
 
                                         {isActive && (
