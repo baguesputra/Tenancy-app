@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Department;
 use App\Models\InspectionSession;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 use Database\Seeders\DepartmentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -89,6 +90,48 @@ class InspectionSessionTeamTest extends TestCase
         $session = InspectionSession::latest()->first();
 
         $this->assertSame($oldName, $session->fresh()->pic_name);
+    }
+
+    public function test_show_mengurutkan_tim_sesuai_urutan_divisi(): void
+    {
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
+        $sec = $this->makeUser('Security');
+        $bs = $this->makeUser('Building Service');
+        $eng = $this->makeUser('Engineering');
+
+        // Disimpan terbalik dari urutan divisi, supaya tes gagal bila urutan ikut DB.
+        $this->actingAs($creator)->post('/inspection-sessions', [
+            'participant_ids' => [$sec->id, $eng->id, $bs->id],
+        ])->assertRedirect();
+        $session = InspectionSession::latest()->first();
+
+        $this->actingAs($creator)->get("/inspection-sessions/{$session->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('departmentOrder', ['Building Service', 'Engineering', 'Security'])
+            );
+    }
+
+    public function test_show_mengirim_foto_peserta(): void
+    {
+        $creator = $this->makeUser('Tenancy', null, ['sidak.view', 'sidak.manage', 'sidak.answer']);
+        $bs = $this->makeUser('Building Service');
+        $bs->update(['photo_url' => 'https://foto.example/bs.jpg']);
+
+        $this->actingAs($creator)->post('/inspection-sessions', [
+            'participant_ids' => [$bs->id],
+        ])->assertRedirect();
+        $session = InspectionSession::latest()->first();
+
+        // Foto dibaca langsung dari user, bukan di-snapshot: ganti foto tetap tampil.
+        $bs->update(['photo_url' => 'https://foto.example/bs-baru.jpg']);
+
+        $this->actingAs($creator)->get("/inspection-sessions/{$session->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('InspectionSessions/Show')
+                ->where('session.participants.0.user.photo_url', 'https://foto.example/bs-baru.jpg')
+            );
     }
 
     public function test_store_rejects_invalid_participants(): void

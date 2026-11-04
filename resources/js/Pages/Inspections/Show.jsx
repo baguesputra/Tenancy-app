@@ -5,6 +5,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import RealtimePhotoCapture from '@/Components/Sidak/RealtimePhotoCapture';
+import PhotoPreviewModal from '@/Components/Sidak/PhotoPreviewModal';
 
 import initials from '@/utils/initials';
 import { formatDateTimeShortID } from '@/utils/format';
@@ -173,6 +174,7 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
     };
 
     const [confirmComplete, setConfirmComplete] = useState(false);
+    const [photoPreview, setPhotoPreview] = useState(null); // { photos, index }
     const [completing, setCompleting] = useState(false);
 
     const completeInspection = () => {
@@ -381,10 +383,17 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
 
                                                     {item.answer?.photos?.length > 0 && (
                                                         <div className="flex gap-2 flex-wrap mt-2 sm:mt-0">
-                                                            {item.answer.photos.map((photo) => (
+                                                            {item.answer.photos.map((photo, photoIdx) => (
                                                                 <div key={photo.id} className="relative">
-                                                                    <img src={photo.url} alt="Bukti sidak" loading="lazy" className="w-16 h-16 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200" />
-                                                                    {!isLocked && <button type="button" onClick={() => handlePhotoDelete(sectionIdx, itemIdx, item, photo)} aria-label="Hapus foto bukti sidak" className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-black/70 text-white leading-none">×</button>}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setPhotoPreview({ photos: item.answer.photos.map((p) => ({ url: p.url })), index: photoIdx })}
+                                                                        aria-label="Lihat foto bukti sidak"
+                                                                        className="block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                                                    >
+                                                                        <img src={photo.url} alt="Bukti sidak" loading="lazy" className="w-16 h-16 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200" />
+                                                                    </button>
+                                                                    {!isLocked && <button type="button" onClick={() => handlePhotoDelete(sectionIdx, itemIdx, item, photo)} aria-label="Hapus foto bukti sidak" className="absolute -top-1 -right-1 z-10 w-6 h-6 rounded-full bg-black/70 text-white leading-none">×</button>}
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -461,13 +470,24 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                 </div>
                                 <div>
                                     <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Petugas sidak</p>
-                                    <p className="text-sm text-gray-800">PIC: <span className="font-semibold text-gray-900">{formHeader.pic ?? '—'}</span></p>
+                                    <div className="flex items-center gap-2 text-sm text-gray-800">
+                                        <span>PIC:</span>
+                                        {formHeader.pic_photo_url ? (
+                                            <img src={formHeader.pic_photo_url} alt={`Foto ${formHeader.pic}`} loading="lazy" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+                                        ) : null}
+                                        <span className="font-semibold text-gray-900">{formHeader.pic ?? '—'}</span>
+                                    </div>
                                     {(formHeader.officers ?? []).length > 0 ? (
-                                        <ul className="mt-1.5 space-y-1">
+                                        <ul className="mt-1.5 space-y-1.5">
                                             {formHeader.officers.map((o, i) => (
-                                                <li key={i} className="text-sm text-gray-800">
+                                                <li key={i} className="flex items-center gap-2 text-sm text-gray-800">
+                                                    {o.photo_url ? (
+                                                        <img src={o.photo_url} alt={`Foto ${o.name}`} loading="lazy" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+                                                    ) : (
+                                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0F1E36] text-[9px] font-semibold text-white" aria-hidden="true">{initials(o.name)}</span>
+                                                    )}
                                                     <span className="font-medium">{o.name}</span>
-                                                    {o.department && <span className="text-xs text-gray-500"> — {o.department}</span>}
+                                                    {o.department && <span className="text-xs text-gray-500">— {o.department}</span>}
                                                 </li>
                                             ))}
                                         </ul>
@@ -545,6 +565,14 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                     <ConfirmRow label="Tenant" value={inspection.tenant?.name} />
                     <ConfirmRow label="Terjawab" value={`${stats.answered} dari ${stats.total} item`} />
                 </ConfirmModal>
+
+                {photoPreview && (
+                    <PhotoPreviewModal
+                        photos={photoPreview.photos}
+                        index={photoPreview.index}
+                        onClose={() => setPhotoPreview(null)}
+                    />
+                )}
             </div>
         </AppLayout>
     );
@@ -557,6 +585,7 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
     const [error, setError] = useState('');
+    const [previewIndex, setPreviewIndex] = useState(null);
 
     const savePending = async () => {
         if (!pending || saving) return;
@@ -624,9 +653,16 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
 
             {photos.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
-                    {photos.map((photo) => (
+                    {photos.map((photo, photoIdx) => (
                         <figure key={photo.id} className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                            <img src={photo.url} alt={photo.description || 'Foto lain-lain'} loading="lazy" className="w-full aspect-[4/3] object-cover" />
+                            <button
+                                type="button"
+                                onClick={() => setPreviewIndex(photoIdx)}
+                                aria-label="Lihat foto"
+                                className="block w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                <img src={photo.url} alt={photo.description || 'Foto lain-lain'} loading="lazy" className="w-full aspect-[4/3] object-cover" />
+                            </button>
                             {photo.description && (
                                 <figcaption className="text-[11px] text-gray-700 px-2 py-1.5 leading-snug">{photo.description}</figcaption>
                             )}
@@ -636,7 +672,7 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
                                     disabled={deletingId === photo.id}
                                     onClick={() => removePhoto(photo.id)}
                                     aria-label="Hapus foto"
-                                    className="print:hidden absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-black/60 text-white text-base leading-none hover:bg-black/80 transition-colors disabled:opacity-50"
+                                    className="print:hidden absolute top-1.5 right-1.5 z-10 w-8 h-8 rounded-full bg-black/60 text-white text-base leading-none hover:bg-black/80 transition-colors disabled:opacity-50"
                                 >
                                     ×
                                 </button>
@@ -644,6 +680,14 @@ function ExtraPhotosSection({ inspectionId, tenantName, locked, initialPhotos })
                         </figure>
                     ))}
                 </div>
+            )}
+
+            {previewIndex !== null && (
+                <PhotoPreviewModal
+                    photos={photos.map((p) => ({ url: p.url, caption: p.description }))}
+                    index={previewIndex}
+                    onClose={() => setPreviewIndex(null)}
+                />
             )}
 
             {!locked && !pending && (

@@ -109,8 +109,8 @@ class InspectionSessionController extends Controller
         $this->authorizeAccess($session, $request);
 
         $session->load([
-            'user:id,name',
-            'participants',
+            'user:id,name,photo_url',
+            'participants.user:id,photo_url',
             'inspections:id,inspection_session_id,tenant_id,status,is_flagged,completed_at',
             'inspections.tenant:id,name,logo_path,tenant_category_id,product_category_id',
             'inspections.tenant.productCategory:id,name',
@@ -148,6 +148,7 @@ class InspectionSessionController extends Controller
             'staffByDepartment' => $session->status === 'in_progress'
                 ? $this->staffOptions($session->branch_id, $session->user_id)
                 : [],
+            'departmentOrder' => InspectionSessionService::PARTICIPANT_DEPARTMENTS,
         ]);
     }
 

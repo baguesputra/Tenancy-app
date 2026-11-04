@@ -26,7 +26,7 @@ class InspectionController extends Controller
         $inspection->load([
             'tenant.productCategory',
             'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number',
-            'session', 'session.user:id,name', 'session.participants',
+            'session', 'session.user:id,name,photo_url', 'session.participants.user:id,photo_url',
             'answers.photos', 'extraPhotos',
         ]);
 
@@ -79,8 +79,10 @@ class InspectionController extends Controller
                 'officers' => $inspection->session->participants->map(fn ($p) => [
                     'name' => $p->name_snapshot,
                     'department' => $p->department_name_snapshot,
+                    'photo_url' => $p->user?->photo_url,
                 ])->values(),
                 'pic' => $inspection->session->user?->name,
+                'pic_photo_url' => $inspection->session->user?->photo_url,
             ],
             'checklistSnapshot' => $snapshot,
             'share' => $this->publicShare($inspection),

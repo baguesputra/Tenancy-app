@@ -18,7 +18,7 @@ const filters = [
     { key: 'flagged', label: 'Perlu perhatian' },
 ];
 
-export default function Show({ session, availableTenants, staffByDepartment = {} }) {
+export default function Show({ session, availableTenants, staffByDepartment = {}, departmentOrder = [] }) {
     const { can } = useCan();
     const [search, setSearch] = useState('');
     const [adding, setAdding] = useState(false);
@@ -36,7 +36,10 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
     const done = inspections.filter((i) => i.status === 'completed').length;
     const flagged = inspections.filter((i) => i.is_flagged).length;
     const progress = inspections.length === 0 ? 0 : Math.round((done / inspections.length) * 100);
-    const deptKeys = Object.keys(staffByDepartment);
+    // Urutan divisi tetap (Building Service, Engineering, Security), sama dengan
+    // form "Ubah tim". Tanpa ini tampilan mengikuti urutan penyimpanan, yang
+    // berubah tiap kali tim disimpan.
+    const deptOrder = departmentOrder.length ? departmentOrder : Object.keys(staffByDepartment);
 
     const teamByDept = useMemo(() => {
         const groups = {};
@@ -44,8 +47,17 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
             const key = p.department_name_snapshot || 'Lainnya';
             (groups[key] = groups[key] || []).push(p);
         });
-        return groups;
-    }, [participants]);
+        Object.values(groups).forEach((members) =>
+            members.sort((a, b) => a.name_snapshot.localeCompare(b.name_snapshot, 'id'))
+        );
+        return Object.fromEntries(
+            Object.entries(groups).sort(([a], [b]) => {
+                const ia = deptOrder.indexOf(a);
+                const ib = deptOrder.indexOf(b);
+                return (ia === -1 ? deptOrder.length : ia) - (ib === -1 ? deptOrder.length : ib);
+            })
+        );
+    }, [participants, deptOrder]);
 
     const visibleInspections = useMemo(() => {
         if (filter === 'draft') return inspections.filter((i) => i.status !== 'completed');
@@ -154,7 +166,21 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                                                 <div key={dept}>
                                                     <dt className="text-xs font-medium text-[#8A7C6E]">{dept}</dt>
                                                     <dd className="mt-2 space-y-1.5">
-                                                        {members.map((m) => <div key={m.id} className="flex items-center gap-2 text-sm text-[#394556]"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0F1E36] text-[10px] font-semibold text-white">{initials(m.name_snapshot)}</span>{m.name_snapshot}</div>)}
+                                                        {members.map((m) => (
+                                                            <div key={m.id} className="flex items-center gap-2 text-sm text-[#394556]">
+                                                                {m.user?.photo_url ? (
+                                                                    <img
+                                                                        src={m.user.photo_url}
+                                                                        alt={`Foto ${m.name_snapshot}`}
+                                                                        loading="lazy"
+                                                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
+                                                                        className="h-7 w-7 shrink-0 rounded-full object-cover"
+                                                                    />
+                                                                ) : null}
+                                                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0F1E36] text-[10px] font-semibold text-white ${m.user?.photo_url ? 'hidden' : ''}`} aria-hidden="true">{initials(m.name_snapshot)}</span>
+                                                                {m.name_snapshot}
+                                                            </div>
+                                                        ))}
                                                     </dd>
                                                 </div>
                                             ))}
@@ -162,7 +188,7 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                                     ) : <p className="text-sm text-[#8A7C6E]">Belum ada peserta tercatat.</p>
                                 ) : (
                                     <div className="space-y-3">
-                                        {deptKeys.map((dept) => {
+                                        {deptOrder.map((dept) => {
                                             const options = (staffByDepartment[dept] ?? []).map((u) => ({ value: u.id, label: u.name }));
                                             const deptIds = new Set(options.map((o) => o.value));
                                             return <div key={dept}><p className="mb-1.5 text-xs font-medium text-[#8A7C6E]">{dept}</p>{options.length > 0 ? <MultiSelect value={teamIds.filter((id) => deptIds.has(id))} onChange={(ids) => setDeptSelection(dept, ids)} options={options} placeholder={`Pilih dari ${dept}...`} /> : <p className="text-xs text-[#8A7C6E]">Tidak ada staff aktif.</p>}</div>;
