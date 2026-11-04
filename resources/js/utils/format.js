@@ -2,10 +2,11 @@ function parseDate(value) {
     if (!value) return null;
     if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
     const s = String(value).trim();
+    // Tanggal polos tanpa jam: niatnya tanggal kalender lokal, bukan tengah malam UTC.
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00`);
-    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (m) return new Date(`${m[1]}T00:00:00`);
-    const d = new Date(s);
+    // "YYYY-MM-DD HH:mm:ss" (MySQL) → 'T' agar tidak jatuh ke jalur non-standar.
+    // String ISO dengan zona waktu dibiarkan apa adanya supaya jam tidak hilang.
+    const d = new Date(s.replace(' ', 'T'));
     return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -70,4 +71,31 @@ export function formatDateTimeID(value) {
     const d = parseDate(value);
     if (!d) return typeof value === 'string' && value.trim() !== '' ? value : '—';
     return d.toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+}
+
+/** Tanggal + jam versi ringkas untuk kolom tabel: "04 Nov 2026, 14:32". */
+export function formatDateTimeShortID(value) {
+    const d = parseDate(value);
+    if (!d) return typeof value === 'string' && value.trim() !== '' ? value : '—';
+    return d
+        .toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        .replace('.', ':');
+}
+
+/** Selisih dua waktu: "2 hari 3 jam", "45 mnt". `end` boleh null untuk sesi berjalan. */
+export function formatDurationID(start, end) {
+    const a = parseDate(start);
+    const b = end ? parseDate(end) : new Date();
+    if (!a || !b) return '—';
+    let minutes = Math.round((b.getTime() - a.getTime()) / 60000);
+    if (minutes < 0) return '—';
+    if (minutes < 1) return '<1 mnt';
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    const mins = minutes % 60;
+    const parts = [];
+    if (days) parts.push(`${days} hari`);
+    if (hours) parts.push(`${hours} jam`);
+    if (!days && mins) parts.push(`${mins} mnt`);
+    return parts.length ? parts.join(' ') : '<1 mnt';
 }
