@@ -56,6 +56,7 @@ class InspectionController extends Controller
             'inspection' => [
                 'id' => $inspection->id,
                 'status' => $inspection->status,
+                'completed_at' => $inspection->completed_at,
                 'notes' => $inspection->notes,
                 'other_notes' => $inspection->other_notes,
                 'tenant' => $inspection->tenant,
@@ -64,7 +65,7 @@ class InspectionController extends Controller
             ],
             // Kop formulir ala form sidak Excel (read-only).
             'formHeader' => [
-                'inspected_at' => $inspection->session->started_at?->toDateTimeString(),
+                'inspected_at' => $inspection->session->started_at?->toISOString(),
                 'location' => $unit ? trim(collect([
                     $unit->floor ? "Lantai {$unit->floor}" : null,
                     $unit->block ? "Blok {$unit->block}" : null,

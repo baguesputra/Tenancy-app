@@ -21,6 +21,7 @@ class Inspection extends Model
         'notes',
         'other_notes',
         'status',
+        'completed_at',
         'is_flagged',
         'synced_at',
     ];
@@ -30,6 +31,7 @@ class Inspection extends Model
         return [
             'checklist_snapshot' => 'array',
             'is_flagged' => 'boolean',
+            'completed_at' => 'datetime',
             'synced_at' => 'datetime',
         ];
     }

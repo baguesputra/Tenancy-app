@@ -166,9 +166,11 @@ class InspectionService
                 && $answer->photos->isEmpty();
         });
 
+        // Idempoten: submit ulang tidak menggeser jam selesai yang sudah tercatat.
         $inspection->update([
             'status' => 'completed',
             'is_flagged' => $isFlagged,
+            'completed_at' => $inspection->completed_at ?? now(),
         ]);
 
         return $inspection;

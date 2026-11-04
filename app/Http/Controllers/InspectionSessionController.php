@@ -111,7 +111,7 @@ class InspectionSessionController extends Controller
         $session->load([
             'user:id,name',
             'participants',
-            'inspections:id,inspection_session_id,tenant_id,status,is_flagged',
+            'inspections:id,inspection_session_id,tenant_id,status,is_flagged,completed_at',
             'inspections.tenant:id,name,logo_path,tenant_category_id,product_category_id',
             'inspections.tenant.productCategory:id,name',
             'inspections.tenant.activeTenancy:id,tenant_id,unit_id',
