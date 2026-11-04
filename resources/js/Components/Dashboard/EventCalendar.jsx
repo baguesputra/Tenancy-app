@@ -649,7 +649,7 @@ export default function EventCalendar({
     return (
         <section
             aria-label="Kalender operasional"
-            className="mt-4 bg-white rounded-lg border border-[#E2E5EA] overflow-hidden"
+            className="mt-4 bg-white rounded-lg border border-[#E2E5EA]"
         >
             <div className="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center gap-2.5">
                 <div className="min-w-0 mr-auto">
@@ -938,55 +938,66 @@ export default function EventCalendar({
                         else if (dx > 60) goMonth(-1);
                     }}
                 >
-                    <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
-                        {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
-                            (d, i) => (
-                                <span key={d} className={i === 6 ? "text-rose-400" : ""}>{d}</span>
-                            ),
-                        )}
-                    </div>
-                    <div className="overflow-hidden rounded-lg border border-slate-200">
-                        {weeks.map((week, weekIndex) => {
-                            const { segments, overflow } = weekSegments[weekIndex];
-                            return (
-                                <div key={weekIndex} className="relative grid grid-cols-7 min-h-[76px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
-                                    {week.map((d, dayIndex) => {
-                                        const k = dayKey(d);
-                                        const inMonth = d.getMonth() === monthIdx;
-                                        const dayEvents = byDay[k] ?? [];
-                                        const isToday = k === todayKey;
-                                        const isSelected = k === selected;
-                                        const weekend = dayIndex >= 5;
-                                        return (
-                                            <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${dayIndex === 6 && inMonth ? "bg-rose-50/70" : weekend && inMonth ? "bg-slate-50/40" : ""}`}>
-                                                <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : dayIndex === 6 ? "text-rose-500" : weekend ? "text-slate-400" : "text-slate-700"}`}>{d.getDate()}</button>
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+                        <div className="min-w-0">
+                            <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
+                                {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
+                                    (d, i) => (
+                                        <span key={d} className={i === 6 ? "text-rose-400" : ""}>{d}</span>
+                                    ),
+                                )}
+                            </div>
+                            <div className="overflow-hidden rounded-lg border border-slate-200">
+                                {weeks.map((week, weekIndex) => {
+                                    const { segments, overflow } = weekSegments[weekIndex];
+                                    return (
+                                        <div key={weekIndex} className="relative grid grid-cols-7 min-h-[76px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
+                                            {week.map((d, dayIndex) => {
+                                                const k = dayKey(d);
+                                                const inMonth = d.getMonth() === monthIdx;
+                                                const dayEvents = byDay[k] ?? [];
+                                                const isToday = k === todayKey;
+                                                const isSelected = k === selected;
+                                                const weekend = dayIndex >= 5;
+                                                return (
+                                                    <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${dayIndex === 6 && inMonth ? "bg-rose-50/70" : weekend && inMonth ? "bg-slate-50/40" : ""}`}>
+                                                        <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : dayIndex === 6 ? "text-rose-500" : weekend ? "text-slate-400" : "text-slate-700"}`}>{d.getDate()}</button>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-2 gap-y-1 px-0.5 sm:px-1">
+                                                {segments.map(({ e, startIndex, endIndex, lane, continuedLeft, continuedRight }) => {
+                                                    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
+                                                    const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
+                                                    const isHl = highlightIds.has(e.id);
+                                                    const tone = e.urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : meta.chip;
+                                                    return (
+                                                        <EventWrap key={`${e.id}-${weekIndex}`} href={e.url} onClick={(ev) => ev.stopPropagation()} title={rangeTitle} className={`pointer-events-auto flex min-w-0 items-center border px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium leading-4 transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${continuedLeft ? "rounded-l-none border-l-0" : "rounded-l-md"} ${continuedRight ? "rounded-r-none border-r-0" : "rounded-r-md"} ${isHl ? "relative z-10 ring-1 ring-[#0F1E36]/30" : ""} ${tone}`} style={{ gridColumn: `${startIndex + 1} / span ${endIndex - startIndex + 1}`, gridRow: lane + 1 }}>
+                                                            <span className="truncate">{e.title}</span>
+                                                        </EventWrap>
+                                                    );
+                                                })}
                                             </div>
-                                        );
-                                    })}
-                                    <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-2 gap-y-1 px-0.5 sm:px-1">
-                                        {segments.map(({ e, startIndex, endIndex, lane, continuedLeft, continuedRight }) => {
-                                            const meta = TYPE_META[e.type] ?? TYPE_META.permit;
-                                            const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
-                                            const isHl = highlightIds.has(e.id);
-                                            const tone = e.urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : meta.chip;
-                                            return (
-                                                <EventWrap key={`${e.id}-${weekIndex}`} href={e.url} onClick={(ev) => ev.stopPropagation()} title={rangeTitle} className={`pointer-events-auto flex min-w-0 items-center border px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium leading-4 transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${continuedLeft ? "rounded-l-none border-l-0" : "rounded-l-md"} ${continuedRight ? "rounded-r-none border-r-0" : "rounded-r-md"} ${isHl ? "relative z-10 ring-1 ring-[#0F1E36]/30" : ""} ${tone}`} style={{ gridColumn: `${startIndex + 1} / span ${endIndex - startIndex + 1}`, gridRow: lane + 1 }}>
-                                                    <span className="truncate">{e.title}</span>
-                                                </EventWrap>
-                                            );
-                                        })}
-                                    </div>
-                                    {overflow.map(({ dayIndex, count }) => (
-                                        <button key={`overflow-${dayIndex}`} type="button" onClick={(e) => { e.stopPropagation(); handleCellClick(dayKey(week[dayIndex]), week[dayIndex]); }} className="absolute z-10 hidden sm:block truncate text-left text-[10px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]" style={{ left: `calc(${dayIndex} * (100% / 7) + 6px)`, top: 80 }} aria-label={`${count} event lainnya pada ${dayKey(week[dayIndex])}`}>
-                                            +{count} lainnya
-                                        </button>
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div className="hidden sm:block">
-                        <DayPanel dateKey={selected} events={selectedEvents} />
+                                            {overflow.map(({ dayIndex, count }) => (
+                                                <button key={`overflow-${dayIndex}`} type="button" onClick={(e) => { e.stopPropagation(); handleCellClick(dayKey(week[dayIndex]), week[dayIndex]); }} className="absolute z-10 hidden sm:block truncate text-left text-[10px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]" style={{ left: `calc(${dayIndex} * (100% / 7) + 6px)`, top: 80 }} aria-label={`${count} event lainnya pada ${dayKey(week[dayIndex])}`}>
+                                                    +{count} lainnya
+                                                </button>
+                                            ))}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="hidden sm:block xl:hidden">
+                                <DayPanel dateKey={selected} events={selectedEvents} />
+                            </div>
+                        </div>
+                        <aside className="hidden xl:sticky xl:top-20 xl:block">
+                            <DayPanel
+                                dateKey={selected}
+                                events={selectedEvents}
+                                dense
+                            />
+                        </aside>
                     </div>
                 </div>
             ) : (
@@ -1105,7 +1116,7 @@ export default function EventCalendar({
     );
 }
 
-function DayPanel({ dateKey, events }) {
+function DayPanel({ dateKey, events, dense = false }) {
     if (!dateKey) return null;
     const label = new Date(`${dateKey}T00:00:00`).toLocaleDateString("id-ID", {
         weekday: "long",
@@ -1120,18 +1131,54 @@ function DayPanel({ dateKey, events }) {
     ).length;
     const sidakCount = events.filter((e) => e.type === "sidak").length;
     return (
-        <div className="mt-3 rounded-lg border border-[#E2E5EA] bg-white" aria-live="polite">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-900 capitalize">{label} <span className="font-normal text-slate-500">· {fullDate(dateKey)}</span></p>
-                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 ring-1 ring-slate-200">{events.length} agenda{sidakCount ? ` · ${sidakCount} sidak` : ""}</span>
+        <div
+            className={`rounded-lg border border-[#E2E5EA] bg-white ${
+                dense ? "flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden" : "mt-3"
+            }`}
+            aria-live="polite"
+        >
+            <div
+                className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-100 bg-slate-50/70 ${
+                    dense ? "shrink-0 px-3 py-2.5" : "px-4 py-3"
+                }`}
+            >
+                <p
+                    className={`font-semibold capitalize text-slate-900 ${
+                        dense ? "text-xs" : "text-sm"
+                    }`}
+                >
+                    {label}{" "}
+                    <span className="font-normal text-slate-500">
+                        · {dense ? shortDate(dateKey) : fullDate(dateKey)}
+                    </span>
+                </p>
+                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 ring-1 ring-slate-200">
+                    {events.length} agenda
+                    {sidakCount ? ` · ${sidakCount} sidak` : ""}
+                </span>
             </div>
-            {spanCount > 0 && <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">{spanCount} event rentang ditandai pada kalender.</p>}
+            {spanCount > 0 && (
+                <p className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
+                    {spanCount} event rentang ditandai pada kalender.
+                </p>
+            )}
             {events.length === 0 ? (
-                <p className="px-4 py-5 text-sm text-slate-400">Tidak ada agenda hari ini.</p>
+                <p className="px-4 py-5 text-sm text-slate-400">
+                    Tidak ada agenda hari ini.
+                </p>
             ) : (
-                <div className="overflow-x-auto">
+                <div
+                    className={`${dense ? "min-h-0 overflow-y-auto [scrollbar-width:thin]" : "overflow-x-auto"}`}
+                >
                     <ul className="divide-y divide-slate-100">
-                        {events.map((e) => <AgendaRow key={e.id} event={e} span={spanDay(e, dateKey)} />)}
+                        {events.map((e) => (
+                            <AgendaRow
+                                key={e.id}
+                                event={e}
+                                span={spanDay(e, dateKey)}
+                                dense={dense}
+                            />
+                        ))}
                     </ul>
                 </div>
             )}
@@ -1247,7 +1294,7 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
     );
 }
 
-function AgendaRow({ event: e, span = null }) {
+function AgendaRow({ event: e, span = null, dense = false }) {
     const range = e.end && e.end !== e.start
         ? `${fullDate(e.start)} – ${fullDate(e.end)}`
         : fullDate(e.start);
@@ -1255,10 +1302,14 @@ function AgendaRow({ event: e, span = null }) {
     const meta = TYPE_META[e.type] ?? TYPE_META.permit;
     return (
         <li>
-            <EventWrap href={e.url} className="grid grid-cols-1 gap-1 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] sm:grid-cols-[minmax(150px,1.1fr)_minmax(220px,2fr)_minmax(110px,0.8fr)_auto] sm:items-center sm:gap-4">
-                <span className="text-xs font-semibold tabular-nums text-slate-700">{range}</span>
-                <span className="min-w-0 truncate text-sm font-medium text-slate-900">{e.title}</span>
-                <span className="flex items-center gap-2 text-xs text-slate-500">
+            <EventWrap href={e.url} className={`grid grid-cols-1 gap-1 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                dense
+                    ? "px-3 py-2.5"
+                    : "px-4 py-3 sm:grid-cols-[minmax(150px,1.1fr)_minmax(220px,2fr)_minmax(110px,0.8fr)_auto] sm:items-center sm:gap-4"
+            }`}>
+                <span className={`font-semibold tabular-nums text-slate-700 ${dense ? "text-[11px]" : "text-xs"}`}>{range}</span>
+                <span className={`min-w-0 text-sm font-medium text-slate-900 ${dense ? "line-clamp-2" : "truncate"}`}>{e.title}</span>
+                <span className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
                     {meta.label}{e.status ? ` · ${statusLabel(e.status)}` : ""}
                     {span ? ` · ${span}` : ""}
