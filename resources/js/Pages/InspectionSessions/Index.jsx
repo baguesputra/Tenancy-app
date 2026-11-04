@@ -5,12 +5,15 @@ import Badge from '@/Components/Badge';
 import DataTable from '@/Components/DataTable';
 import EmptyState from '@/Components/EmptyState';
 import useCan from '@/hooks/useCan';
+import { formatDateTimeShortID, formatDurationID } from '@/utils/format';
 
 export default function Index({ sessions }) {
     const { can } = useCan();
     const canManage = can('sidak.manage');
     const columns = [
-        { key: 'date', label: 'Tanggal' },
+        { key: 'start', label: 'Mulai' },
+        { key: 'end', label: 'Selesai' },
+        { key: 'duration', label: 'Durasi' },
         { key: 'pic', label: 'PIC' },
         { key: 'branch', label: 'Cabang' },
         { key: 'count', label: 'Jumlah Tenant' },
@@ -19,7 +22,7 @@ export default function Index({ sessions }) {
 
     return (
         <AppLayout>
-            <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
                 <header className="mb-6 flex flex-col gap-4 border-b border-[#E2E5EA] pb-5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F1E36] sm:text-2xl">Riwayat Sesi Sidak</h1>
@@ -52,8 +55,14 @@ export default function Index({ sessions }) {
                                 tabIndex={0}
                                 className="cursor-pointer transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
                             >
-                                <td className="px-5 py-4 font-medium text-gray-900">
-                                    {new Date(session.started_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                                <td className="px-5 py-4 whitespace-nowrap font-medium text-gray-900">
+                                    {formatDateTimeShortID(session.started_at)}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap text-gray-700">
+                                    {session.ended_at ? formatDateTimeShortID(session.ended_at) : '—'}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap text-gray-600">
+                                    {formatDurationID(session.started_at, session.ended_at)}
                                 </td>
                                 <td className="px-5 py-4 text-gray-700">{session.pic_name ?? '—'}</td>
                                 <td className="px-5 py-4 text-gray-600">{session.branch?.name ?? '—'}</td>
@@ -67,7 +76,7 @@ export default function Index({ sessions }) {
                         ))}
                         {sessions.data.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-5 py-8">
+                                <td colSpan={7} className="px-5 py-8">
                                     <EmptyState
                                         variant="empty"
                                         size="md"
@@ -97,7 +106,10 @@ export default function Index({ sessions }) {
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-gray-900">
-                                        {new Date(session.started_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                                        {formatDateTimeShortID(session.started_at)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                        Selesai: {session.ended_at ? formatDateTimeShortID(session.ended_at) : '—'} · {formatDurationID(session.started_at, session.ended_at)}
                                     </p>
                                     <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
                                         <div className="truncate"><dt className="sr-only">PIC</dt>PIC: {session.pic_name ?? '—'}</div>

@@ -7,6 +7,7 @@ import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import RealtimePhotoCapture from '@/Components/Sidak/RealtimePhotoCapture';
 
 import initials from '@/utils/initials';
+import { formatDateTimeShortID } from '@/utils/format';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -217,10 +218,13 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                             <p className="text-xs text-gray-500 truncate mt-0.5">
                                 {inspection.tenant?.product_category?.name} — {snapshot.template_name}
                             </p>
-                            {(formHeader.inspected_at || formHeader.location) && (
+                            {(formHeader.inspected_at || formHeader.location || inspection.status === 'completed') && (
                                 <div className="mt-1.5 space-y-0.5">
                                     {formHeader.inspected_at && (
                                         <p className="text-xs text-gray-600">Hari / Tanggal: <span className="font-medium text-gray-800">{formatTanggalSidak(formHeader.inspected_at)}</span></p>
+                                    )}
+                                    {inspection.status === 'completed' && (
+                                        <p className="text-xs text-gray-600">Selesai: <span className="font-medium text-gray-800">{inspection.completed_at ? formatDateTimeShortID(inspection.completed_at) : '—'}</span></p>
                                     )}
                                     {formHeader.location && (
                                         <p className="text-xs text-gray-600">Lokasi: <span className="font-medium text-gray-800">{formHeader.location}</span></p>
