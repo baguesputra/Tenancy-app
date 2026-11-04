@@ -2,159 +2,204 @@ import { Link, router } from "@inertiajs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+    IconAlert,
+    IconCalendarEvent,
+    IconCar,
     IconChevronDown,
     IconChevronLeft,
     IconChevronRight,
+    IconClipboardCheck,
+    IconClipboardList,
+    IconContract,
+    IconDocument,
+    IconFileText,
+    IconGrid,
+    IconHome,
     IconRefresh,
+    IconStorefront,
+    IconUsers,
     IconX,
 } from "@/Components/Icons";
 
+// Enam hue saja. Warna menandai keluarga jenis, ikon menandai jenisnya.
+// `chip` untuk event yang akan datang, `chipPast` versi garis (tanpa isian)
+// untuk yang sudah lewat — teks tetap pekat, tidak dipudarkan.
 const TYPE_META = {
     permit: {
         label: "Izin Kerja",
-        dot: "bg-blue-500",
-        chip: "bg-blue-50 text-blue-800 border-blue-200",
-        accent: "border-l-blue-400",
-        hlRing: "ring-blue-400",
+        icon: IconDocument,
+        chip: "border-sky-200 bg-sky-50 text-sky-800",
+        chipPast: "border-sky-200 bg-white text-sky-700",
+        iconColor: "text-sky-500",
+        accent: "border-l-sky-400",
     },
     pameran: {
         label: "Pameran",
-        dot: "bg-[#FF6B6B]",
-        chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
-        accent: "border-l-[#FF6B6B]",
-        hlRing: "ring-[#FF6B6B]",
+        icon: IconStorefront,
+        chip: "border-violet-200 bg-violet-50 text-violet-800",
+        chipPast: "border-violet-200 bg-white text-violet-700",
+        iconColor: "text-violet-500",
+        accent: "border-l-violet-400",
     },
     kegiatan: {
         label: "Kegiatan",
-        dot: "bg-emerald-500",
-        chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
-        accent: "border-l-emerald-400",
-        hlRing: "ring-emerald-400",
+        icon: IconCalendarEvent,
+        chip: "border-teal-200 bg-teal-50 text-teal-800",
+        chipPast: "border-teal-200 bg-white text-teal-700",
+        iconColor: "text-teal-500",
+        accent: "border-l-teal-400",
     },
     parkir: {
         label: "Parkir",
-        dot: "bg-orange-500",
-        chip: "bg-orange-50 text-orange-800 border-orange-200",
-        accent: "border-l-orange-400",
-        hlRing: "ring-orange-400",
+        icon: IconCar,
+        chip: "border-amber-200 bg-amber-50 text-amber-800",
+        chipPast: "border-amber-200 bg-white text-amber-700",
+        iconColor: "text-amber-500",
+        accent: "border-l-amber-400",
     },
     customer: {
         label: "Customer Isi Form",
-        dot: "bg-violet-500",
-        chip: "bg-violet-50 text-violet-800 border-violet-200",
-        accent: "border-l-violet-400",
-        hlRing: "ring-violet-400",
+        icon: IconUsers,
+        chip: "border-amber-200 bg-amber-50 text-amber-800",
+        chipPast: "border-amber-200 bg-white text-amber-700",
+        iconColor: "text-amber-500",
+        accent: "border-l-amber-400",
     },
     contract_start: {
         label: "Kontrak mulai",
-        dot: "bg-purple-500",
-        chip: "bg-purple-50 text-purple-800 border-purple-200",
-        accent: "border-l-purple-400",
-        hlRing: "ring-purple-400",
+        icon: IconContract,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
+        accent: "border-l-indigo-400",
     },
     contract_end: {
         label: "Kontrak berakhir",
-        dot: "bg-purple-500",
-        chip: "bg-purple-50 text-purple-800 border-purple-200",
-        accent: "border-l-purple-400",
-        hlRing: "ring-purple-400",
+        icon: IconContract,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
+        accent: "border-l-indigo-400",
     },
     sidak: {
         label: "Sidak",
-        dot: "bg-amber-500",
-        chip: "bg-amber-50 text-amber-900 border-amber-200",
-        accent: "border-l-amber-400",
-        hlRing: "ring-amber-400",
+        icon: IconClipboardCheck,
+        chip: "border-orange-200 bg-orange-50 text-orange-800",
+        chipPast: "border-orange-200 bg-white text-orange-700",
+        iconColor: "text-orange-500",
+        accent: "border-l-orange-400",
     },
     loo_received: {
         label: "LOO diterima",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconFileText,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     loo_submitted: {
         label: "LOO disubmit",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconFileText,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     loo_completed: {
         label: "LOO selesai",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconFileText,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconFileText,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     section_filled: {
         label: "Section diisi",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconClipboardList,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     section_submitted: {
         label: "Section disubmit",
-        dot: "bg-indigo-500",
-        chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
+        icon: IconClipboardList,
+        chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+        chipPast: "border-indigo-200 bg-white text-indigo-700",
+        iconColor: "text-indigo-500",
         accent: "border-l-indigo-400",
-        hlRing: "ring-indigo-400",
     },
     libur_nasional: {
         label: "Libur nasional",
-        dot: "bg-red-500",
-        chip: "bg-red-50 text-red-800 border-red-200",
-        accent: "border-l-red-400",
-        hlRing: "ring-red-400",
+        icon: IconHome,
+        chip: "border-slate-200 bg-[repeating-linear-gradient(135deg,#ffffff,#ffffff_4px,#f1f5f9_4px,#f1f5f9_8px)] text-slate-700",
+        // Pola adalah identitas hari libur, jadi tetap dipakai walau tanggalnya lewat.
+        chipPast: "border-slate-200 bg-[repeating-linear-gradient(135deg,#ffffff,#ffffff_4px,#f1f5f9_4px,#f1f5f9_8px)] text-slate-600",
+        iconColor: "text-slate-500",
+        accent: "border-l-slate-300",
     },
     cuti_bersama: {
         label: "Cuti bersama",
-        dot: "bg-teal-500",
-        chip: "bg-teal-50 text-teal-800 border-teal-200",
-        accent: "border-l-teal-400",
-        hlRing: "ring-teal-400",
+        icon: IconHome,
+        chip: "border-slate-200 bg-[repeating-linear-gradient(135deg,#ffffff,#ffffff_4px,#f1f5f9_4px,#f1f5f9_8px)] text-slate-700",
+        chipPast: "border-slate-200 bg-[repeating-linear-gradient(135deg,#ffffff,#ffffff_4px,#f1f5f9_4px,#f1f5f9_8px)] text-slate-500",
+        iconColor: "text-slate-500",
+        accent: "border-l-slate-300",
     },
 };
 
 // Legenda diringkas per keluarga agar hue tetap sedikit.
 const LEGEND_GROUPS = [
-    { label: "Izin Kerja", dot: "bg-blue-500", types: ["permit"] },
-    { label: "Pameran", dot: "bg-[#FF6B6B]", types: ["pameran"] },
-    { label: "Kegiatan", dot: "bg-emerald-500", types: ["kegiatan"] },
-    { label: "Parkir", dot: "bg-orange-500", types: ["parkir"] },
-    { label: "Customer Isi Form", dot: "bg-violet-500", types: ["customer"] },
-    { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
-    { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
-    { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled"] },
-    { label: "Section LOO", dot: "bg-indigo-500", types: ["section_filled", "section_submitted"] },
-    { label: "Libur & cuti bersama", dot: "bg-red-500", types: ["libur_nasional", "cuti_bersama"] },
+    { label: "Izin Kerja", icon: IconDocument, types: ["permit"] },
+    { label: "Pameran", icon: IconStorefront, types: ["pameran"] },
+    { label: "Kegiatan", icon: IconCalendarEvent, types: ["kegiatan"] },
+    { label: "Parkir", icon: IconCar, types: ["parkir"] },
+    { label: "Customer Isi Form", icon: IconUsers, types: ["customer"] },
+    { label: "Kontrak", icon: IconContract, types: ["contract_start", "contract_end"] },
+    { label: "Sidak", icon: IconClipboardCheck, types: ["sidak"] },
+    { label: "LOO", icon: IconFileText, types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled"] },
+    { label: "Section LOO", icon: IconClipboardList, types: ["section_filled", "section_submitted"] },
+    { label: "Libur & cuti bersama", icon: IconHome, types: ["libur_nasional", "cuti_bersama"] },
 ];
 
 const FILTERS = [
-    { key: "all", label: "Semua" },
-    { key: "permit", label: "Izin" },
-    { key: "pameran", label: "Pameran" },
-    { key: "kegiatan", label: "Kegiatan" },
-    { key: "parkir", label: "Parkir" },
-    { key: "customer", label: "Customer" },
-    { key: "contract_start", label: "Kontrak mulai" },
-    { key: "contract_end", label: "Kontrak berakhir" },
-    { key: "sidak", label: "Sidak" },
-    { key: "loo", label: "LOO" },
-    { key: "section", label: "Section" },
-    { key: "libur_nasional", label: "Libur nasional" },
-    { key: "cuti_bersama", label: "Cuti bersama" },
+    { key: "all", label: "Semua", icon: IconGrid },
+    { key: "permit", label: "Izin", icon: IconDocument },
+    { key: "pameran", label: "Pameran", icon: IconStorefront },
+    { key: "kegiatan", label: "Kegiatan", icon: IconCalendarEvent },
+    { key: "parkir", label: "Parkir", icon: IconCar },
+    { key: "customer", label: "Customer", icon: IconUsers },
+    { key: "contract_start", label: "Kontrak mulai", icon: IconContract },
+    { key: "contract_end", label: "Kontrak berakhir", icon: IconContract },
+    { key: "sidak", label: "Sidak", icon: IconClipboardCheck },
+    { key: "loo", label: "LOO", icon: IconFileText },
+    { key: "section", label: "Section", icon: IconClipboardList },
+    { key: "libur_nasional", label: "Libur nasional", icon: IconHome },
+    { key: "cuti_bersama", label: "Cuti bersama", icon: IconHome },
 ];
 
 const PERMIT_TYPES = ["permit", "pameran", "kegiatan", "parkir", "customer"];
+
+// Ikon pada dropdown filter memakai hue keluarga yang sama dengan chip, supaya
+// pemetaan warna mudah dipelajari sambil filter dibuka.
+const filterIconColor = (key) => {
+    if (key === "all") return "text-slate-400";
+    const rep =
+        key === "loo"
+            ? "loo_received"
+            : key === "section"
+              ? "section_filled"
+              : key;
+    return (TYPE_META[rep] ?? TYPE_META.permit).iconColor;
+};
 
 // Status permit/LOO/kontrak tampil berlabel Indonesia, bukan nilai mentah DB.
 const STATUS_LABEL = {
@@ -214,6 +259,10 @@ const MAX_CHIPS = 3;
 
 const dayKey = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Event yang rentangnya sudah lewat tampil sebagai chip garis (tanpa isian),
+// bukan dipudarkan — teks tetap kontras.
+const isPast = (e) => (e.end || e.start) < dayKey(new Date());
 
 function monthCells(year, monthIdx) {
     const first = new Date(year, monthIdx, 1);
@@ -278,10 +327,25 @@ function weekEventSegments(week, events) {
         });
 
     const visible = segments.filter((segment) => segment.lane < 2);
-    const overflow = Array.from({ length: 7 }, (_, dayIndex) => ({
-        dayIndex,
-        count: segments.filter((segment) => segment.lane >= 2 && segment.startIndex <= dayIndex && segment.endIndex >= dayIndex).length,
-    })).filter(({ count }) => count > 0);
+    // "N lainnya" menempel tepat di bawah chip terakhir pada hari itu, jadi
+    // tidak melayang di baris ketiga saat hari itu hanya punya satu chip.
+    const overflow = Array.from({ length: 7 }, (_, dayIndex) => {
+        const hidden = segments.filter(
+            (segment) =>
+                segment.lane >= 2 &&
+                segment.startIndex <= dayIndex &&
+                segment.endIndex >= dayIndex,
+        ).length;
+        if (!hidden) return null;
+        const lastVisibleLane = visible
+            .filter(
+                (segment) =>
+                    segment.startIndex <= dayIndex &&
+                    segment.endIndex >= dayIndex,
+            )
+            .reduce((max, segment) => Math.max(max, segment.lane), -1);
+        return { dayIndex, count: hidden, lane: Math.min(lastVisibleLane + 1, 2) };
+    }).filter(Boolean);
 
     return { segments: visible, overflow };
 }
@@ -852,6 +916,10 @@ export default function EventCalendar({
                                             }}
                                             className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${active ? "bg-[#0F1E36] font-medium text-white" : "text-slate-600 hover:bg-slate-100"}`}
                                         >
+                                            <f.icon
+                                                className={`h-3 w-3 shrink-0 ${active ? "text-white/70" : filterIconColor(f.key)}`}
+                                                aria-hidden="true"
+                                            />
                                             <span className="flex-1">{f.label}</span>
                                             <span
                                                 className={`tabular-nums ${active ? "text-white/70" : "text-slate-400"}`}
@@ -908,18 +976,42 @@ export default function EventCalendar({
                     id="calendar-legend"
                     className="flex flex-wrap gap-x-3 gap-y-1 border-b border-slate-100 px-5 py-2"
                 >
-                    {activeLegendGroups.map((g) => (
-                        <span
-                            key={g.label}
-                            className="inline-flex items-center gap-1.5 text-[11px] text-slate-500"
-                        >
+                    {activeLegendGroups.map((g) => {
+                        const meta = TYPE_META[g.types[0]] ?? TYPE_META.permit;
+                        return (
                             <span
-                                className={`w-2 h-2 rounded-full ${g.dot}`}
-                                aria-hidden="true"
-                            />
-                            {g.label}
-                        </span>
-                    ))}
+                                key={g.label}
+                                className="inline-flex items-center gap-1.5 text-[11px] text-slate-600"
+                            >
+                                <g.icon
+                                    className={`h-3 w-3 ${meta.iconColor}`}
+                                    aria-hidden="true"
+                                />
+                                {g.label}
+                            </span>
+                        );
+                    })}
+                    <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3 text-[11px] text-rose-700">
+                        <IconAlert
+                            className="h-3 w-3 text-rose-500"
+                            aria-hidden="true"
+                        />
+                        Perlu perhatian
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <span
+                            className="h-3 w-4 shrink-0 rounded-sm border border-slate-200 bg-[repeating-linear-gradient(135deg,#ffffff,#ffffff_4px,#f1f5f9_4px,#f1f5f9_8px)]"
+                            aria-hidden="true"
+                        />
+                        Berpola: hari libur
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <span
+                            className="h-3 w-4 shrink-0 rounded-sm border border-slate-200 bg-white"
+                            aria-hidden="true"
+                        />
+                        Tanpa isian: sudah lewat
+                    </span>
                 </div>
             )}
 
@@ -943,7 +1035,7 @@ export default function EventCalendar({
                             <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
                                 {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
                                     (d, i) => (
-                                        <span key={d} className={i === 6 ? "text-rose-400" : ""}>{d}</span>
+                                        <span key={d} className={i >= 5 ? "text-slate-500" : ""}>{d}</span>
                                     ),
                                 )}
                             </div>
@@ -951,7 +1043,7 @@ export default function EventCalendar({
                                 {weeks.map((week, weekIndex) => {
                                     const { segments, overflow } = weekSegments[weekIndex];
                                     return (
-                                        <div key={weekIndex} className="relative grid grid-cols-7 min-h-[76px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
+                                        <div key={weekIndex} className="relative grid grid-cols-7 min-h-[84px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
                                             {week.map((d, dayIndex) => {
                                                 const k = dayKey(d);
                                                 const inMonth = d.getMonth() === monthIdx;
@@ -960,29 +1052,37 @@ export default function EventCalendar({
                                                 const isSelected = k === selected;
                                                 const weekend = dayIndex >= 5;
                                                 return (
-                                                    <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${dayIndex === 6 && inMonth ? "bg-rose-50/70" : weekend && inMonth ? "bg-slate-50/40" : ""}`}>
-                                                        <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : dayIndex === 6 ? "text-rose-500" : weekend ? "text-slate-400" : "text-slate-700"}`}>{d.getDate()}</button>
+                                                    <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${weekend && inMonth ? (dayIndex === 6 ? "bg-slate-100/60" : "bg-slate-50/40") : ""}`}>
+                                                        <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-slate-500" : "text-slate-700"}`}>{d.getDate()}</button>
                                                     </div>
                                                 );
                                             })}
-                                            <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-2 gap-y-1 px-0.5 sm:px-1">
+                                            <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-[repeat(3,auto)] gap-y-1 px-0.5 sm:px-1">
                                                 {segments.map(({ e, startIndex, endIndex, lane, continuedLeft, continuedRight }) => {
                                                     const meta = TYPE_META[e.type] ?? TYPE_META.permit;
                                                     const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
                                                     const isHl = highlightIds.has(e.id);
-                                                    const tone = e.urgent ? "!bg-rose-50 !text-rose-700 !border-rose-200" : meta.chip;
+                                                    const past = isPast(e);
+                                                    // Warna = keluarga jenis; ikon = jenisnya. Event lewat
+                                                    // memakai versi garis (tanpa isian), bukan dipudarkan.
+                                                    const tone = e.urgent
+                                                        ? "border-rose-300 bg-rose-100 font-semibold text-rose-900"
+                                                        : past
+                                                          ? meta.chipPast
+                                                          : meta.chip;
                                                     return (
-                                                        <EventWrap key={`${e.id}-${weekIndex}`} href={e.url} onClick={(ev) => ev.stopPropagation()} title={rangeTitle} className={`pointer-events-auto flex min-w-0 items-center border px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium leading-4 transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${continuedLeft ? "rounded-l-none border-l-0" : "rounded-l-md"} ${continuedRight ? "rounded-r-none border-r-0" : "rounded-r-md"} ${isHl ? "relative z-10 ring-1 ring-[#0F1E36]/30" : ""} ${tone}`} style={{ gridColumn: `${startIndex + 1} / span ${endIndex - startIndex + 1}`, gridRow: lane + 1 }}>
+                                                        <EventWrap key={`${e.id}-${weekIndex}`} href={e.url} onClick={(ev) => ev.stopPropagation()} title={rangeTitle} className={`pointer-events-auto flex min-w-0 items-center gap-1 border px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium leading-4 transition-colors hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${continuedLeft ? "rounded-l-none border-l-0" : "rounded-l-md"} ${continuedRight ? "rounded-r-none border-r-0" : "rounded-r-md"} ${isHl ? "relative z-10 ring-1 ring-[#0F1E36]/30" : ""} ${tone}`} style={{ gridColumn: `${startIndex + 1} / span ${endIndex - startIndex + 1}`, gridRow: lane + 1 }}>
+                                                            <meta.icon className={`h-3 w-3 shrink-0 ${e.urgent ? "text-rose-500" : meta.iconColor}`} aria-hidden="true" />
                                                             <span className="truncate">{e.title}</span>
                                                         </EventWrap>
                                                     );
                                                 })}
+                                                {overflow.map(({ dayIndex, count, lane }) => (
+                                                    <button key={`overflow-${dayIndex}`} type="button" onClick={(e) => { e.stopPropagation(); handleCellClick(dayKey(week[dayIndex]), week[dayIndex]); }} className="pointer-events-auto hidden min-w-0 items-center truncate rounded-md px-1.5 text-left text-[10px] font-medium leading-4 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36] sm:flex" style={{ gridColumn: dayIndex + 1, gridRow: lane + 1 }} aria-label={`${count} event lainnya pada ${dayKey(week[dayIndex])}`}>
+                                                        +{count} lainnya
+                                                    </button>
+                                                ))}
                                             </div>
-                                            {overflow.map(({ dayIndex, count }) => (
-                                                <button key={`overflow-${dayIndex}`} type="button" onClick={(e) => { e.stopPropagation(); handleCellClick(dayKey(week[dayIndex]), week[dayIndex]); }} className="absolute z-10 hidden sm:block truncate text-left text-[10px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-[#0F1E36]" style={{ left: `calc(${dayIndex} * (100% / 7) + 6px)`, top: 80 }} aria-label={`${count} event lainnya pada ${dayKey(week[dayIndex])}`}>
-                                                    +{count} lainnya
-                                                </button>
-                                            ))}
                                         </div>
                                     );
                                 })}
@@ -991,7 +1091,7 @@ export default function EventCalendar({
                                 <DayPanel dateKey={selected} events={selectedEvents} />
                             </div>
                         </div>
-                        <aside className="hidden xl:sticky xl:top-20 xl:block">
+                        <aside className="hidden xl:sticky xl:top-20 xl:block xl:pt-6">
                             <DayPanel
                                 dateKey={selected}
                                 events={selectedEvents}
@@ -1065,8 +1165,11 @@ export default function EventCalendar({
                                             className="flex w-72 shrink-0 snap-start flex-col rounded-lg border border-[#E2E5EA] bg-white"
                                         >
                                             <h3 className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
-                                                <span
-                                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`}
+                                                <col.icon
+                                                    className={`h-3.5 w-3.5 shrink-0 ${
+                                                        (TYPE_META[col.types[0]] ?? TYPE_META.permit)
+                                                            .iconColor
+                                                    }`}
                                                     aria-hidden="true"
                                                 />
                                                 <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
@@ -1133,13 +1236,13 @@ function DayPanel({ dateKey, events, dense = false }) {
     return (
         <div
             className={`rounded-lg border border-[#E2E5EA] bg-white ${
-                dense ? "flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden" : "mt-3"
+                dense ? "flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden" : "mt-3"
             }`}
             aria-live="polite"
         >
             <div
                 className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-100 bg-slate-50/70 ${
-                    dense ? "shrink-0 px-3 py-2.5" : "px-4 py-3"
+                    dense ? "shrink-0 px-3 py-3" : "px-4 py-3"
                 }`}
             >
                 <p
@@ -1274,7 +1377,12 @@ function DaySheet({ open, onClose, dateKey, events, onNavigateMonth }) {
                             {groupByFamily(events).map((g) => (
                                 <div key={g.label}>
                                     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 px-1 mb-1">
-                                        <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} aria-hidden="true" />
+                                        <g.icon
+                                            className={`h-3 w-3 ${
+                                                (TYPE_META[g.types[0]] ?? TYPE_META.permit).iconColor
+                                            }`}
+                                            aria-hidden="true"
+                                        />
                                         {g.label}
                                         <span className="font-normal text-slate-400 tabular-nums">{g.items.length}</span>
                                     </p>
@@ -1310,7 +1418,17 @@ function AgendaRow({ event: e, span = null, dense = false }) {
                 <span className={`font-semibold tabular-nums text-slate-700 ${dense ? "text-[11px]" : "text-xs"}`}>{range}</span>
                 <span className={`min-w-0 text-sm font-medium text-slate-900 ${dense ? "line-clamp-2" : "truncate"}`}>{e.title}</span>
                 <span className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
+                    {e.urgent ? (
+                        <IconAlert
+                            className="h-3 w-3 shrink-0 text-rose-500"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <meta.icon
+                            className={`h-3 w-3 shrink-0 ${meta.iconColor}`}
+                            aria-hidden="true"
+                        />
+                    )}
                     {meta.label}{e.status ? ` · ${statusLabel(e.status)}` : ""}
                     {span ? ` · ${span}` : ""}
                 </span>
@@ -1338,10 +1456,17 @@ function BoardRow({ event: e }) {
                 }`}
             >
                 <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                    <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`}
-                        aria-hidden="true"
-                    />
+                    {e.urgent ? (
+                        <IconAlert
+                            className="h-3 w-3 shrink-0 text-rose-500"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <meta.icon
+                            className={`h-3 w-3 shrink-0 ${meta.iconColor}`}
+                            aria-hidden="true"
+                        />
+                    )}
                     <span className="min-w-0 truncate">{meta.label}</span>
                     {e.status && (
                         <span className="min-w-0 truncate">
@@ -1354,7 +1479,11 @@ function BoardRow({ event: e }) {
                         </span>
                     )}
                 </span>
-                <span className="mt-1 block line-clamp-2 text-[13px] leading-snug text-slate-900">
+                <span
+                    className={`mt-1 block line-clamp-2 text-[13px] leading-snug ${
+                        isPast(e) && !e.urgent ? "text-slate-600" : "text-slate-900"
+                    }`}
+                >
                     {e.title}
                 </span>
                 <span className="mt-1 block text-[11px] tabular-nums text-slate-400">
