@@ -14,112 +14,112 @@ const TYPE_META = {
         label: "Izin Kerja",
         dot: "bg-blue-500",
         chip: "bg-blue-50 text-blue-800 border-blue-200",
-        
+        accent: "border-l-blue-400",
         hlRing: "ring-blue-400",
     },
     pameran: {
         label: "Pameran",
         dot: "bg-[#FF6B6B]",
         chip: "bg-[#FF6B6B]/10 text-[#D64545] border-[#FF6B6B]/20",
-        
+        accent: "border-l-[#FF6B6B]",
         hlRing: "ring-[#FF6B6B]",
     },
     kegiatan: {
         label: "Kegiatan",
         dot: "bg-emerald-500",
         chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
-        
+        accent: "border-l-emerald-400",
         hlRing: "ring-emerald-400",
     },
     parkir: {
         label: "Parkir",
         dot: "bg-orange-500",
         chip: "bg-orange-50 text-orange-800 border-orange-200",
-        
+        accent: "border-l-orange-400",
         hlRing: "ring-orange-400",
     },
     customer: {
         label: "Customer Isi Form",
         dot: "bg-violet-500",
         chip: "bg-violet-50 text-violet-800 border-violet-200",
-        
+        accent: "border-l-violet-400",
         hlRing: "ring-violet-400",
     },
     contract_start: {
         label: "Kontrak mulai",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
-        
+        accent: "border-l-purple-400",
         hlRing: "ring-purple-400",
     },
     contract_end: {
         label: "Kontrak berakhir",
         dot: "bg-purple-500",
         chip: "bg-purple-50 text-purple-800 border-purple-200",
-        
+        accent: "border-l-purple-400",
         hlRing: "ring-purple-400",
     },
     sidak: {
         label: "Sidak",
         dot: "bg-amber-500",
         chip: "bg-amber-50 text-amber-900 border-amber-200",
-        
+        accent: "border-l-amber-400",
         hlRing: "ring-amber-400",
     },
     loo_received: {
         label: "LOO diterima",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     loo_submitted: {
         label: "LOO disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     loo_completed: {
         label: "LOO selesai",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     section_filled: {
         label: "Section diisi",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     section_submitted: {
         label: "Section disubmit",
         dot: "bg-indigo-500",
         chip: "bg-indigo-50 text-indigo-800 border-indigo-200",
-        
+        accent: "border-l-indigo-400",
         hlRing: "ring-indigo-400",
     },
     libur_nasional: {
         label: "Libur nasional",
         dot: "bg-red-500",
         chip: "bg-red-50 text-red-800 border-red-200",
-        
+        accent: "border-l-red-400",
         hlRing: "ring-red-400",
     },
     cuti_bersama: {
         label: "Cuti bersama",
         dot: "bg-teal-500",
         chip: "bg-teal-50 text-teal-800 border-teal-200",
-        
+        accent: "border-l-teal-400",
         hlRing: "ring-teal-400",
     },
 };
@@ -133,7 +133,8 @@ const LEGEND_GROUPS = [
     { label: "Customer Isi Form", dot: "bg-violet-500", types: ["customer"] },
     { label: "Kontrak", dot: "bg-purple-500", types: ["contract_start", "contract_end"] },
     { label: "Sidak", dot: "bg-amber-500", types: ["sidak"] },
-    { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled", "section_filled", "section_submitted"] },
+    { label: "LOO", dot: "bg-indigo-500", types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled"] },
+    { label: "Section LOO", dot: "bg-indigo-500", types: ["section_filled", "section_submitted"] },
     { label: "Libur & cuti bersama", dot: "bg-red-500", types: ["libur_nasional", "cuti_bersama"] },
 ];
 
@@ -210,7 +211,6 @@ function groupByFamily(list) {
 }
 
 const MAX_CHIPS = 3;
-const BOARD_PREVIEW = 6;
 
 const dayKey = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -300,7 +300,6 @@ export default function EventCalendar({
     });
     const [selected, setSelected] = useState(dayKey(new Date()));
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [expandedCols, setExpandedCols] = useState(() => new Set());
     const [navLoading, setNavLoading] = useState(false);
     const [legendOpen, setLegendOpen] = useState(false);
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -311,6 +310,8 @@ export default function EventCalendar({
     const cellRefs = useRef([]);
     const pickerRef = useRef(null);
     const filterRef = useRef(null);
+    const boardRef = useRef(null);
+    const [boardEdges, setBoardEdges] = useState({ left: false, right: false });
 
     useEffect(() => {
         const isCalendarVisit = (e) =>
@@ -441,6 +442,12 @@ export default function EventCalendar({
             })).filter((col) => col.items.length > 0),
         [events],
     );
+    // Judul kolom mengikuti filter aktif agar tidak menampilkan "LOO" saat
+    // yang difilter hanya bagian Section, atau "Kontrak" untuk kontrak berakhir.
+    const boardFilterLabel =
+        filter !== "all" && filter !== "permit"
+            ? FILTERS.find((f) => f.key === filter)?.label
+            : null;
 
     const visitData = (mm) => {
         const data = { cal_month: mm };
@@ -546,13 +553,6 @@ export default function EventCalendar({
         ev.preventDefault();
         cellRefs.current[target]?.focus();
     };
-    const toggleCol = (label) =>
-        setExpandedCols((prev) => {
-            const next = new Set(prev);
-            if (next.has(label)) next.delete(label);
-            else next.add(label);
-            return next;
-        });
 
     const monthLabel = new Date(year, monthIdx, 1).toLocaleDateString("id-ID", {
         month: "long",
@@ -614,6 +614,37 @@ export default function EventCalendar({
             syncUrl(view, "all");
         }
     }, [visibleFilters, filter, view]);
+
+    // Penanda tepi + tombol panah board: hanya tampil saat memang masih ada
+    // kolom tersembunyi di arah tersebut. Snap/geser tetap native.
+    useEffect(() => {
+        if (view !== "board") return;
+        const el = boardRef.current;
+        if (!el) return;
+        const update = () => {
+            const left = el.scrollLeft > 4;
+            const right =
+                el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+            setBoardEdges((prev) =>
+                prev.left === left && prev.right === right
+                    ? prev
+                    : { left, right },
+            );
+        };
+        update();
+        el.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update);
+        return () => {
+            el.removeEventListener("scroll", update);
+            window.removeEventListener("resize", update);
+        };
+    }, [view, events, filter]);
+
+    const scrollBoard = (direction) => {
+        const el = boardRef.current;
+        if (!el) return;
+        el.scrollBy({ left: direction * 300, behavior: "smooth" });
+    };
 
     return (
         <section
@@ -978,52 +1009,87 @@ export default function EventCalendar({
                             )}
                         </div>
                     ) : (
-                        <div className="flex items-start gap-3 overflow-x-auto pt-1 pb-2 [scrollbar-width:thin]">
-                            {boardColumns.map((col) => {
-                                const isOpen =
-                                    expandedCols.has(col.label) ||
-                                    col.items.length <= BOARD_PREVIEW;
-                                const visibleItems = isOpen
-                                    ? col.items
-                                    : col.items.slice(0, BOARD_PREVIEW);
-                                return (
+                        <div className="pt-1">
+                            <div className="flex items-center gap-2 pb-2">
+                                <p className="mr-auto text-[11px] text-slate-400">
+                                    {boardColumns.length} jenis agenda · geser
+                                    untuk melihat lainnya
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => scrollBoard(-1)}
+                                    disabled={!boardEdges.left}
+                                    aria-label="Geser kolom ke kiri"
+                                    className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E2E5EA] text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-default disabled:opacity-40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    <IconChevronLeft
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => scrollBoard(1)}
+                                    disabled={!boardEdges.right}
+                                    aria-label="Geser kolom ke kanan"
+                                    className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E2E5EA] text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-default disabled:opacity-40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    <IconChevronRight
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <div
+                                    ref={boardRef}
+                                    role="region"
+                                    aria-label="Agenda per jenis"
+                                    tabIndex={0}
+                                    className="flex snap-x snap-proximity items-start gap-3 overflow-x-auto overscroll-x-contain pt-1 pb-2 [scrollbar-width:thin] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                >
+                                    {boardColumns.map((col) => (
+                                        <div
+                                            key={col.label}
+                                            className="flex w-72 shrink-0 snap-start flex-col rounded-lg border border-[#E2E5EA] bg-white"
+                                        >
+                                            <h3 className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
+                                                <span
+                                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`}
+                                                    aria-hidden="true"
+                                                />
+                                                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
+                                                    {boardFilterLabel ??
+                                                        col.label}
+                                                </span>
+                                                <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 tabular-nums whitespace-nowrap">
+                                                    {col.items.length}
+                                                </span>
+                                            </h3>
+                                            <ul className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+                                                {col.items.map((e) => (
+                                                    <BoardRow
+                                                        key={e.id}
+                                                        event={e}
+                                                    />
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+                                {boardEdges.left && (
                                     <div
-                                        key={col.label}
-                                        className="flex w-72 shrink-0 flex-col rounded-xl border border-[#E2E5EA] bg-white"
-                                    >
-                                        <h3 className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
-                                            <span
-                                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`}
-                                                aria-hidden="true"
-                                            />
-                                            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
-                                                {col.label}
-                                            </span>
-                                            <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 tabular-nums whitespace-nowrap">
-                                                {col.items.length}
-                                            </span>
-                                        </h3>
-                                        <ul className="divide-y divide-slate-100">
-                                            {visibleItems.map((e) => (
-                                                <BoardRow key={e.id} event={e} />
-                                            ))}
-                                        </ul>
-                                        {col.items.length > BOARD_PREVIEW && (
-                                            <button
-                                                onClick={() =>
-                                                    toggleCol(col.label)
-                                                }
-                                                aria-expanded={isOpen}
-                                                className="w-full border-t border-slate-100 py-2 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
-                                            >
-                                                {isOpen
-                                                    ? "Sembunyikan"
-                                                    : `+${col.items.length - BOARD_PREVIEW} agenda lagi`}
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                        className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                {boardEdges.right && (
+                                    <div
+                                        className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1204,32 +1270,45 @@ function AgendaRow({ event: e, span = null }) {
 }
 
 function BoardRow({ event: e }) {
+    const meta = TYPE_META[e.type] ?? TYPE_META.permit;
     const range =
         e.end && e.end !== e.start
-            ? `${fullDate(e.start)} – ${fullDate(e.end)}`
-            : fullDate(e.start);
+            ? `${shortDate(e.start)} – ${shortDate(e.end)}`
+            : shortDate(e.start);
 
     return (
         <li>
             <EventWrap
                 href={e.url}
-                className="block px-3 py-2.5 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                className={`block border-l-2 px-3 py-2.5 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36] ${
+                    e.urgent
+                        ? "border-l-rose-400 bg-rose-50/40 hover:bg-rose-50/70"
+                        : `${meta.accent} hover:bg-slate-50`
+                }`}
             >
-                <span className="line-clamp-2 text-[13px] leading-snug text-slate-900">
+                <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`}
+                        aria-hidden="true"
+                    />
+                    <span className="min-w-0 truncate">{meta.label}</span>
+                    {e.status && (
+                        <span className="min-w-0 truncate">
+                            · {statusLabel(e.status)}
+                        </span>
+                    )}
+                    {e.urgent && (
+                        <span className="ml-auto shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                            Segera
+                        </span>
+                    )}
+                </span>
+                <span className="mt-1 block line-clamp-2 text-[13px] leading-snug text-slate-900">
                     {e.title}
                 </span>
-                <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
-                    <span className="min-w-0 truncate">
-                        {relDay(e.start)}
-                        {e.status ? ` · ${statusLabel(e.status)}` : ""}
-                    </span>
-                    <span className="shrink-0 tabular-nums">{range}</span>
+                <span className="mt-1 block text-[11px] tabular-nums text-slate-400">
+                    {range}
                 </span>
-                {e.urgent && (
-                    <span className="mt-1.5 inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
-                        Segera
-                    </span>
-                )}
             </EventWrap>
         </li>
     );
