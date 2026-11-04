@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -125,6 +126,23 @@ class LooWorkflowTest extends TestCase
         $loo = $this->makeLoo();
         $loo->updateStatus('cancelled');
         $this->assertNotNull($loo->fresh()->cancelled_at);
+    }
+
+    public function test_progress_mengirim_timestamp_mutlak_untuk_audit(): void
+    {
+        $loo = $this->makeLoo();
+        $this->seedSubmitted($loo, 'legalitas');
+        $section = $loo->sections()->where('section_key', 'legalitas')->first();
+
+        $this->actingAs($this->userWithRole('marketing'))
+            ->get("/loos/{$loo->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('progress.created_at', $loo->created_at->toISOString())
+                ->where('progress.completed_at', null)
+                ->where('progress.phases.0.sections.0.filled_at', $section->filled_at->toISOString())
+                ->where('progress.phases.0.sections.0.submitted_at', $section->submitted_at->toISOString())
+            );
     }
 
     public function test_index_requires_auth(): void

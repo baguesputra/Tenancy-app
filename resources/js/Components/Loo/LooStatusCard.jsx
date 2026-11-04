@@ -1,5 +1,15 @@
 import Badge from '@/Components/Badge';
 import { IconLock } from '@/Components/Icons';
+import { formatDateTimeShortID } from '@/utils/format';
+
+const at = (value) => (value ? formatDateTimeShortID(value) : null);
+
+/** Tahap selesai = section terakhir yang disubmit. null bila ada yang belum. */
+const phaseCompletedAt = (phase) => {
+    const stamps = (phase.sections ?? []).map((s) => s.submitted_at).filter(Boolean);
+    if (stamps.length !== (phase.sections ?? []).length) return null;
+    return stamps.reduce((latest, s) => (s > latest ? s : latest), stamps[0]);
+};
 
 const STATUS_LABELS = {
     draft: 'Draft',
@@ -78,8 +88,13 @@ function SectionRow({ section, badge }) {
                 </div>
                 <span className="text-[10px] text-gray-500 shrink-0">{section.filled}/{section.total} field</span>
             </div>
-            {section.state !== 'none' && section.updated_days_ago != null && (
-                <p className="text-[10px] text-slate-500 mt-0.5">diubah {section.updated_days_ago} hari lalu</p>
+            {section.state !== 'none' && section.filled_at && (
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                    Diubah {at(section.filled_at)}
+                    {section.submitted_at && section.submitted_at.slice(0, 10) !== section.filled_at.slice(0, 10) && (
+                        <> · disubmit {at(section.submitted_at)}</>
+                    )}
+                </p>
             )}
         </li>
     );
@@ -99,7 +114,9 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
         <div className="bg-white rounded-lg border border-slate-200 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Status LOO</p>
-                <span className="text-xs text-slate-500">diupload {progress.days_since_upload} hari lalu</span>
+                <span className="text-xs text-slate-500">
+                    {progress.created_at ? `Diunggah ${at(progress.created_at)}` : `diunggah ${progress.days_since_upload} hari lalu`}
+                </span>
             </div>
 
             {progress.status === 'completed' ? (
@@ -109,7 +126,17 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                     </svg>
                     <div className="min-w-0">
                         <p className="text-sm font-semibold text-emerald-900">LOO selesai</p>
+                        {progress.completed_at && (
+                            <p className="text-xs text-emerald-800 mt-0.5">Selesai {at(progress.completed_at)}</p>
+                        )}
                         <p className="text-xs text-emerald-800 mt-0.5">{progress.summary}</p>
+                        <ul className="mt-2 space-y-0.5">
+                            {progress.phases.map((phase) => (
+                                <li key={phase.key} className="text-[11px] text-emerald-800">
+                                    {phase.label}{phaseCompletedAt(phase) ? ` · ${at(phaseCompletedAt(phase))}` : ''}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             ) : progress.status === 'cancelled' ? (
@@ -119,6 +146,9 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                     </svg>
                     <div className="min-w-0">
                         <p className="text-sm font-semibold text-red-900">LOO dibatalkan</p>
+                        {progress.cancelled_at && (
+                            <p className="text-xs text-red-800 mt-0.5">Dibatalkan {at(progress.cancelled_at)}</p>
+                        )}
                         <p className="text-xs text-red-800 mt-0.5">{progress.summary}</p>
                         {loo?.cancel_reason && (
                             <p className="text-xs text-red-700 mt-1">Alasan: {loo.cancel_reason}</p>
@@ -173,6 +203,10 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
                                                 </span>
                                             ) : !isActive && phase.state !== 'done' ? <Badge color={meta.color} size="sm">{meta.label}</Badge> : null}
                                         </div>
+
+                                        {phase.state === 'done' && phaseCompletedAt(phase) && (
+                                            <p className="mt-0.5 text-[11px] text-slate-500">Selesai {at(phaseCompletedAt(phase))}</p>
+                                        )}
 
                                         {isActive && (
                                             <ul className="mt-2 space-y-2">

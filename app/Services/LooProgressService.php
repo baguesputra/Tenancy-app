@@ -177,6 +177,12 @@ class LooProgressService
             'status' => $status,
             'phase' => $active,
             'days_since_upload' => $this->daysSinceUpload($loo),
+            // Timestamp mutlak untuk audit — "N hari lalu" bergeser tiap hari
+            // dan tidak bisa dikutip. Kosong bila LOO belum sampai tahap itu.
+            'created_at' => $loo->created_at?->toISOString(),
+            'submitted_at' => $loo->submitted_at?->toISOString(),
+            'completed_at' => $loo->completed_at?->toISOString(),
+            'cancelled_at' => $loo->cancelled_at?->toISOString(),
             'summary' => $this->summaryLine($loo, $phases, $status),
             'phases' => $phases,
         ];
@@ -230,6 +236,8 @@ class LooProgressService
             'missing' => $stats['missing'],
             'updated_days_ago' => $this->daysAgo($section?->filled_at),
             'submitted_days_ago' => $this->daysAgo($section?->submitted_at),
+            'filled_at' => $section?->filled_at?->toISOString(),
+            'submitted_at' => $section?->submitted_at?->toISOString(),
         ];
     }
 
