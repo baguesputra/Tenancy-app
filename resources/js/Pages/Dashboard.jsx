@@ -160,7 +160,6 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
     const vacant = stats?.vacant_units ?? 0;
     const total = occupied + vacant;
     const percentage = total > 0 ? Math.round((occupied / total) * 100) : 0;
-    const targetReached = percentage >= 85;
 
     const canSidak = can('sidak.manage') || can('sidak.answer');
     const canPermits = can('permits.view');
@@ -275,15 +274,6 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                                 <div className="flex items-center gap-2">
                                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                                         Okupansi &amp; Unit Mal
-                                    </span>
-                                    <span
-                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                                            targetReached
-                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                                : 'bg-amber-50 text-amber-800 border-amber-200'
-                                        }`}
-                                    >
-                                        {targetReached ? 'Target ≥85% Tercapai' : 'Target ≥85%'}
                                     </span>
                                 </div>
                                 <div className="mt-2 flex items-baseline gap-3">

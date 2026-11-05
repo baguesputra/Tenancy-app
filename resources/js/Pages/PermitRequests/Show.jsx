@@ -112,6 +112,32 @@ function ApprovalActionBox({
     );
 }
 
+// Node alur persetujuan: centang untuk tahap selesai, silang untuk ditolak,
+// dot biru untuk yang masih menunggu — mengikuti StepNode di kartu status LOO.
+function ApprovalStepNode({ status }) {
+    if (status === 'approved') {
+        return (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <IconCheck className="h-3 w-3" aria-hidden="true" />
+            </span>
+        );
+    }
+
+    if (status === 'rejected') {
+        return (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                <IconX className="h-3 w-3" aria-hidden="true" />
+            </span>
+        );
+    }
+
+    return (
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100">
+            <span className="h-2 w-2 rounded-full bg-blue-600" />
+        </span>
+    );
+}
+
 export default function Show({ permit, can_revise, can_cancel, share, docFiles = {}, doc_files = {} }) {
     const activeDocFiles = docFiles && Object.keys(docFiles).length ? docFiles : doc_files;
     const { can } = useCan();
@@ -1160,10 +1186,10 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                         <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
                             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                                    Alur Persetujuan (Workflow)
+                                    Alur Persetujuan
                                 </h3>
                                 <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
-                                    {permit.approvals?.filter((a) => a.status === 'approved').length} / {permit.approvals?.length} Selesai
+                                    {permit.approvals?.filter((a) => a.status === 'approved').length} dari {permit.approvals?.length} selesai
                                 </span>
                             </div>
 
@@ -1186,64 +1212,61 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     totalTasks={totalTasks}
                                 />
                             </div>
-                            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    Alur Persetujuan (Workflow)
-                                </h3>
-                                <span className="text-[11px] text-slate-400 tabular-nums">
-                                    {permit.approvals?.filter((a) => a.status === 'approved').length} dari {permit.approvals?.length} selesai
-                                </span>
-                            </div>
 
-                            <ol className="relative ml-2 border-l-2 border-slate-100 space-y-4">
-                                {(permit.approvals || []).map((a) => {
+                            <ol className="mt-1" aria-label="Alur persetujuan">
+                                {(permit.approvals || []).map((a, index, all) => {
                                     const isPendingHere = a.status === 'pending';
                                     const isApprovedHere = a.status === 'approved';
                                     const isRejectedHere = a.status === 'rejected';
+                                    const isLast = index === all.length - 1;
 
                                     return (
-                                        <li key={a.id} className="pl-4 relative">
-                                            {/* Dot Indikator */}
-                                            <span
-                                                className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full ${
-                                                    isApprovedHere
-                                                        ? 'bg-emerald-500 ring-4 ring-emerald-50'
-                                                        : isRejectedHere
-                                                        ? 'bg-rose-500 ring-4 ring-rose-50'
-                                                        : 'bg-amber-400 ring-4 ring-amber-50'
-                                                }`}
-                                            />
+                                        <li key={a.id} className="relative flex gap-3">
+                                            {!isLast && (
+                                                <span
+                                                    className={`absolute left-2.5 top-6 bottom-0 w-px ${
+                                                        isApprovedHere ? 'bg-emerald-200' : 'bg-slate-200'
+                                                    }`}
+                                                    aria-hidden="true"
+                                                />
+                                            )}
 
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="text-xs font-bold text-slate-800">{a.label}</span>
-                                                <Badge color={approvalColor[a.status]} size="sm">
-                                                    {approvalLabel[a.status] ?? a.status}
-                                                </Badge>
-                                            </div>
+                                            <span className="relative z-10 shrink-0 mt-0.5">
+                                                <ApprovalStepNode status={a.status} />
+                                            </span>
 
-                                            <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                                {isApprovedHere
-                                                    ? `Disetujui oleh ${a.approved_by?.name ?? '—'} • ${formatDateTimeID(a.approved_at)}`
-                                                    : isRejectedHere
-                                                    ? `Ditolak oleh ${a.approved_by?.name ?? '—'} • ${formatDateTimeID(a.approved_at)}`
-                                                    : a.department?.name
-                                                    ? `Menunggu persetujuan Departemen ${a.department.name}`
-                                                    : 'Menunggu persetujuan'}
-                                            </p>
-
-                                            {a.notes && (
-                                                <div className={`text-xs mt-1.5 p-2 rounded-lg border ${
-                                                    isRejectedHere ? 'text-rose-800 bg-rose-50 border-rose-200' : 'text-slate-700 bg-slate-50 border-slate-200'
-                                                }`}>
-                                                    {a.notes}
+                                            <div className="min-w-0 flex-1 pb-4">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-bold text-slate-800">{a.label}</span>
+                                                    <Badge color={approvalColor[a.status]} size="sm">
+                                                        {approvalLabel[a.status] ?? a.status}
+                                                    </Badge>
                                                 </div>
-                                            )}
 
-                                            {a.step_key === 'security' && isPendingHere && (
-                                                <p className="text-[11px] text-slate-400 mt-1 italic">
-                                                    Verifikasi fisik tenaga kerja &amp; material di pos pemeriksaan keamanan.
+                                                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                                                    {isApprovedHere
+                                                        ? `Disetujui oleh ${a.approved_by?.name ?? '—'} • ${formatDateTimeID(a.approved_at)}`
+                                                        : isRejectedHere
+                                                        ? `Ditolak oleh ${a.approved_by?.name ?? '—'} • ${formatDateTimeID(a.approved_at)}`
+                                                        : a.department?.name
+                                                        ? `Menunggu persetujuan Departemen ${a.department.name}`
+                                                        : 'Menunggu persetujuan'}
                                                 </p>
-                                            )}
+
+                                                {a.notes && (
+                                                    <div className={`text-xs mt-1.5 p-2 rounded-lg border ${
+                                                        isRejectedHere ? 'text-rose-800 bg-rose-50 border-rose-200' : 'text-slate-700 bg-slate-50 border-slate-200'
+                                                    }`}>
+                                                        {a.notes}
+                                                    </div>
+                                                )}
+
+                                                {a.step_key === 'security' && isPendingHere && (
+                                                    <p className="text-[11px] text-slate-400 mt-1 italic">
+                                                        Verifikasi fisik tenaga kerja &amp; material di pos pemeriksaan keamanan.
+                                                    </p>
+                                                )}
+                                            </div>
                                         </li>
                                     );
                                 })}
