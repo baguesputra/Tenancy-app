@@ -383,232 +383,144 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                {/* 1. Header Hero Terpadu & Minimalis */}
-                <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5 print:border-none print:shadow-none print:p-0">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2.5 flex-wrap">
-                                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-mono">
-                                    {permit.permit_number}
-                                </h1>
-                                <Badge color={category.color}>{category.label}</Badge>
-                                <Badge color={statusColor[permit.status] ?? 'gray'}>
-                                    {statusLabel[permit.status] ?? permit.status}
-                                </Badge>
-                                {permit.is_flagged && (
-                                    <Badge color="red">Catatan Ketidaksesuaian</Badge>
+            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-6xl w-full mx-auto">
+                {/* 1. Header record */}
+                <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 font-mono truncate">
+                                {permit.permit_number}
+                            </h1>
+                            <Badge color={category.color} size="sm">{category.label}</Badge>
+                            <Badge color={statusColor[permit.status] ?? 'gray'} size="sm">
+                                {statusLabel[permit.status] ?? permit.status}
+                            </Badge>
+                            {permit.is_flagged && (
+                                <Badge color="red" size="sm">Catatan Ketidaksesuaian</Badge>
+                            )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                            Diajukan pada {formatDateID(permit.request_date)} oleh{' '}
+                            <strong className="text-slate-700 font-medium">{permit.requested_by_label}</strong>
+                        </p>
+                        {!isParkir && activityLabels.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                                {activityLabels.map((lbl) => (
+                                    <Badge key={lbl} color={category.color} size="sm">{lbl}</Badge>
+                                ))}
+                                {(permit.job_type || permit.event_name) && (
+                                    <span className="text-xs text-slate-600 truncate max-w-xl">
+                                        {permit.job_type || permit.event_name}
+                                    </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500 mt-1.5">
-                                Diajukan pada {formatDateID(permit.request_date)} oleh{' '}
-                                <strong className="text-slate-700 font-medium">{permit.requested_by_label}</strong>
-                            </p>
-                        </div>
-
-                        {/* Aksi Terpadu Sejajar dengan Nomor Surat */}
-                        <div className="flex items-center gap-2 flex-wrap print:hidden self-start lg:self-auto">
-                            {!isParkir && (
-                                <button
-                                    type="button"
-                                    onClick={() => setQrModalOpen(true)}
-                                    className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5 shadow-2xs"
-                                >
-                                    <IconQr className="w-4 h-4 text-slate-600" aria-hidden="true" />
-                                    <span>Kartu Akses QR</span>
-                                </button>
-                            )}
-
-                            <DropdownMenu label="Unduh Dokumen" icon={docsMenuIcon} sections={docSections} />
-
-                            {can_revise && (
-                                <button
-                                    type="button"
-                                    onClick={() => setReviseOpen(true)}
-                                    className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
-                                >
-                                    Ajukan Revisi
-                                </button>
-                            )}
-
-                            {can_cancel && (
-                                <button
-                                    type="button"
-                                    onClick={cancelPermit}
-                                    className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
-                                >
-                                    Batalkan Permohonan
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
 
-                    {/* Baris Sorotan Jenis Kegiatan & Lingkup Pekerjaan di Hero (Sesuai yang disukai user) */}
-                    {!isParkir && activityLabels.length > 0 && (
-                        <div className="flex items-center gap-2.5 flex-wrap mt-3.5 pt-3.5 border-t border-slate-100">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                Jenis Kegiatan:
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                {activityLabels.map((lbl) => (
-                                    <Badge key={lbl} color={category.color} size="sm">
-                                        {lbl}
-                                    </Badge>
-                                ))}
-                            </div>
-                            {(permit.job_type || permit.event_name) && (
-                                <span className="text-xs text-slate-600 font-medium truncate max-w-xl">
-                                    — <strong className="font-semibold text-slate-800">{permit.job_type || permit.event_name}</strong>
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    {/* Penanda posisi lifecycle permohonan */}
-                    <ol className="flex items-center gap-1.5 mt-4 pt-4 border-t border-slate-100 overflow-x-auto" aria-label="Tahapan permohonan">
-                        {(() => {
-                            const approvedCount = permit.approvals?.filter((a) => a.status === 'approved').length ?? 0;
-                            const totalSteps = permit.approvals?.length ?? 0;
-                            const activeIdx =
-                                permit.status === 'completed' || permit.status === 'approved' ? 3
-                                : ['rejected', 'cancelled'].includes(permit.status) ? -1
-                                : canCompleteSecurityCheck || isMyTurn ? 2
-                                : totalSteps > 0 && approvedCount >= totalSteps ? 2
-                                : approvedCount > 0 ? 1 : 0;
-                            return [
-                                { key: 'diajukan', label: 'Diajukan' },
-                                { key: 'persetujuan', label: 'Persetujuan' },
-                                { key: 'verifikasi', label: 'Verifikasi' },
-                                { key: 'selesai', label: 'Selesai' },
-                            ].map((step, i) => {
-                                const done = activeIdx >= 0 && i < activeIdx;
-                                const current = i === activeIdx;
-                                return (
-                                    <li key={step.key} className="flex items-center gap-1.5 shrink-0" aria-current={current ? 'step' : undefined}>
-                                        <span
-                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                                done ? 'bg-emerald-600 text-white'
-                                                : current ? 'bg-[#0F1E36] text-white'
-                                                : 'bg-slate-100 text-slate-400'
-                                            }`}
-                                            aria-hidden="true"
-                                        >
-                                            {done ? '✓' : i + 1}
-                                        </span>
-                                        <span className={`text-[11px] font-semibold ${current ? 'text-slate-900' : 'text-slate-500'}`}>
-                                            {step.label}
-                                        </span>
-                                        {i < 3 && <span className="w-6 h-px bg-slate-200 mx-1" aria-hidden="true" />}
-                                    </li>
-                                );
-                            });
-                        })()}
-                    </ol>
+                    <div className="flex items-center gap-2 flex-wrap print:hidden shrink-0">
+                        {!isParkir && (
+                            <button
+                                type="button"
+                                onClick={() => setQrModalOpen(true)}
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                <IconQr className="w-4 h-4 text-slate-600" aria-hidden="true" />
+                                <span>Kartu Akses QR</span>
+                            </button>
+                        )}
+
+                        <DropdownMenu label="Unduh Dokumen" icon={docsMenuIcon} sections={docSections} />
+
+                        {can_revise && (
+                            <button
+                                type="button"
+                                onClick={() => setReviseOpen(true)}
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                Ajukan Revisi
+                            </button>
+                        )}
+
+                        {can_cancel && (
+                            <button
+                                type="button"
+                                onClick={cancelPermit}
+                                className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                Batalkan Permohonan
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {/* 2. Empat Kartu Ringkasan Eksekutif (anchor ke section detail — bukan salinan) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5 print:grid-cols-4">
-                    {/* Kartu 1: Tenant & Lokasi */}
-                    <a href="#info-lokasi" className="block bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:border-[#0369A1]/50 hover:shadow-sm transition text-left focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Tenant & Lokasi Unit
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm truncate" title={locationTitle}>
-                                {locationTitle}
-                            </div>
-                            <div className="text-xs text-slate-500 mt-0.5 truncate" title={location}>
-                                {location}
-                            </div>
-                        </div>
-                    </a>
+                {/* 2. Strip ringkasan (satu surface hairline, mengikuti detail LOO) */}
+                <dl className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#E2E5EA] rounded-lg border border-[#E2E5EA] overflow-hidden print:grid-cols-4">
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Tenant &amp; Lokasi Unit</dt>
+                        <dd className="mt-1 text-sm font-semibold text-slate-900 truncate" title={locationTitle}>{locationTitle}</dd>
+                        <dd className="text-xs text-slate-500 mt-0.5 truncate" title={location}>{location}</dd>
+                    </div>
 
-                    {/* Kartu 2: Periode Pelaksanaan */}
-                    <a href="#info-lokasi" className="block bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:border-[#0369A1]/50 hover:shadow-sm transition text-left focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
                             {isParkir ? 'Identitas Kendaraan' : 'Periode Pelaksanaan'}
-                        </div>
-                        <div>
-                            {isParkir ? (
-                                <>
-                                    <div className="font-bold text-slate-900 text-sm font-mono tracking-wide">
-                                        {permit.vehicle_plate || '—'}
-                                    </div>
-                                    <div className="text-xs text-slate-500 mt-0.5">
-                                        {vehicleTypeLabel}
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="font-bold text-slate-900 text-sm truncate" title={formatDateRange(permit.work_start_date, permit.work_end_date)}>
-                                        {formatDateRange(permit.work_start_date, permit.work_end_date)}
-                                    </div>
-                                    <div className="text-xs text-slate-500 mt-0.5">
-                                        {formatTimeRange(permit.work_start_time, permit.work_end_time)}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </a>
+                        </dt>
+                        {isParkir ? (
+                            <>
+                                <dd className="mt-1 text-sm font-semibold text-slate-900 font-mono tracking-wide truncate">{permit.vehicle_plate || '—'}</dd>
+                                <dd className="text-xs text-slate-500 mt-0.5 truncate">{vehicleTypeLabel}</dd>
+                            </>
+                        ) : (
+                            <>
+                                <dd className="mt-1 text-sm font-semibold text-slate-900 truncate" title={formatDateRange(permit.work_start_date, permit.work_end_date)}>
+                                    {formatDateRange(permit.work_start_date, permit.work_end_date)}
+                                </dd>
+                                <dd className="text-xs text-slate-500 mt-0.5 truncate">{formatTimeRange(permit.work_start_time, permit.work_end_time)}</dd>
+                            </>
+                        )}
+                    </div>
 
-                    {/* Kartu 3: Penanggung Jawab (PIC) */}
-                    <a href="#info-lokasi" className="block bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:border-[#0369A1]/50 hover:shadow-sm transition text-left focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Penanggung Jawab (PIC)
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm truncate" title={permit.pic_name || '—'}>
-                                {permit.pic_name || '—'}
-                            </div>
-                            <div className="text-xs text-slate-500 mt-0.5 truncate">
-                                {permit.pic_phone ? (
-                                    <span className="text-[#0369A1] font-medium">
-                                        {permit.pic_phone}
-                                    </span>
-                                ) : (
-                                    '—'
-                                )}
-                            </div>
-                        </div>
-                    </a>
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Penanggung Jawab (PIC)</dt>
+                        <dd className="mt-1 text-sm font-semibold text-slate-900 truncate" title={permit.pic_name || '—'}>{permit.pic_name || '—'}</dd>
+                        <dd className="text-xs text-slate-500 mt-0.5 truncate">{permit.pic_phone || '—'}</dd>
+                    </div>
 
-                    {/* Kartu 4: Verifikasi Fisik Lapangan */}
-                    <a href="#verifikasi" className="block bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:border-[#0369A1]/50 hover:shadow-sm transition text-left focus-visible:outline-2 focus-visible:outline-[#0F1E36]">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Verifikasi Fisik Lapangan
-                        </div>
-                        <div>
-                            {!isKegiatan && !isParkir ? (
-                                <>
-                                    <div className="font-bold text-slate-900 text-sm">
-                                        {workersDone}/{workerTotal} Tenaga Kerja • {goodsDone}/{goods.length} Item
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                            {!isKegiatan && !isParkir ? 'Verifikasi Fisik Lapangan' : isParkir ? 'Pemohon' : 'Area Kegiatan'}
+                        </dt>
+                        {!isKegiatan && !isParkir ? (
+                            <>
+                                <dd className="mt-1 text-sm font-semibold text-slate-900 tabular-nums">
+                                    {workersDone}/{workerTotal} tenaga kerja
+                                </dd>
+                                <dd className="flex items-center gap-2 mt-1.5">
+                                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Kemajuan verifikasi fisik">
+                                        <div
+                                            className={`h-full ${allChecked ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                            style={{ width: `${pct}%` }}
+                                        />
                                     </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Kemajuan verifikasi fisik">
-                                            <div
-                                                className={`h-full transition-all ${allChecked ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                                                style={{ width: `${pct}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-slate-500 tabular-nums">{pct}%</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="font-bold text-slate-900 text-sm truncate">
-                                        {isParkir ? permit.applicant_position || 'Staf Pemohon' : permit.event_area || 'Area Gedung'}
-                                    </div>
-                                    <div className="text-xs text-slate-500 mt-0.5 truncate">
-                                        {isParkir ? permit.applicant_name || 'Pemohon' : permit.event_name || 'Kegiatan'}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </a>
-                </div>
+                                    <span className="text-[11px] font-medium text-slate-500 tabular-nums">{pct}%</span>
+                                </dd>
+                            </>
+                        ) : (
+                            <>
+                                <dd className="mt-1 text-sm font-semibold text-slate-900 truncate">
+                                    {isParkir ? permit.applicant_position || 'Staf Pemohon' : permit.event_area || 'Area Gedung'}
+                                </dd>
+                                <dd className="text-xs text-slate-500 mt-0.5 truncate">
+                                    {isParkir ? permit.applicant_name || 'Pemohon' : permit.event_name || 'Kegiatan'}
+                                </dd>
+                            </>
+                        )}
+                    </div>
+                </dl>
 
                 {/* Banner Pemberitahuan Ketidaksesuaian Fisik */}
                 {permit.is_flagged && (
-                    <div className="bg-rose-50 border border-rose-200/80 text-rose-900 text-xs font-medium p-3.5 sm:p-4 rounded-xl mb-5 flex items-start gap-3 shadow-2xs">
+                    <div className="bg-rose-50 border border-rose-200 text-rose-900 text-xs font-medium p-3.5 sm:p-4 rounded-lg mt-4 flex items-start gap-3">
                         <IconAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
                         <div>
                             <strong className="font-semibold block mb-0.5">Pemberitahuan Catatan Lapangan</strong>
@@ -619,8 +531,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     </div>
                 )}
 
-                {/* 3. Tata Letak Dua Kolom: Dokumen Utama (Kiri) & Workflow Approval (Kanan) */}
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-6 items-start">
+                {/* 3. Tata Letak Dua Kolom: Dokumen Utama (Kiri) & Alur Persetujuan (Kanan) */}
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19rem] gap-4 items-start">
                     {/* Box aksi persetujuan untuk mobile: tampil di atas dokumen, sembunyi di desktop */}
                     <div className="lg:hidden print:hidden">
                         <ApprovalActionBox
@@ -641,80 +553,41 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                             totalTasks={totalTasks}
                         />
                     </div>
-                    {/* Kolom Kiri: Dokumen Perizinan (Unified Card dengan Tab Navigation Header) */}
-                    <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden print:border-none print:shadow-none">
-                        {/* Tab Switcher jika memiliki pekerja & barang (Terintegrasi Langsung pada Header Card) */}
+                    {/* Kolom Kiri: Dokumen Perizinan */}
+                    <div className="bg-white rounded-lg border border-slate-200 p-5 print:border-none">
                         {!isKegiatan && !isParkir && !isCustomer && (
-                            <div className="border-b border-slate-200/80 bg-slate-50/50 px-4 sm:px-6 print:hidden">
-                                <div className="flex items-center gap-1 sm:gap-3 md:gap-5 overflow-x-auto no-scrollbar -mb-px" role="group" aria-label="Bagian dokumen">
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveTab('detail')}
-                                        aria-pressed={activeTab === 'detail'}
-                                        className={`py-3.5 px-2 text-xs sm:text-sm font-semibold border-b-2 transition inline-flex items-center gap-2 whitespace-nowrap -mb-px ${
-                                            activeTab === 'detail'
-                                                ? 'border-[#0369A1] text-[#0F1E36] font-bold'
-                                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        Informasi Perizinan
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveTab('pekerja')}
-                                        aria-pressed={activeTab === 'pekerja'}
-                                        className={`py-3.5 px-2 text-xs sm:text-sm font-semibold border-b-2 transition inline-flex items-center gap-2 whitespace-nowrap -mb-px ${
-                                            activeTab === 'pekerja'
-                                                ? 'border-[#0369A1] text-[#0F1E36] font-bold'
-                                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        <span>Daftar Tenaga Kerja</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono tabular-nums ${
-                                            activeTab === 'pekerja'
-                                                ? 'bg-[#0369A1]/10 text-[#0F1E36] font-bold'
-                                                : 'bg-slate-200/80 text-slate-600 font-medium'
-                                        }`}>
-                                            {workersDone}/{workerTotal}
-                                        </span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveTab('barang')}
-                                        aria-pressed={activeTab === 'barang'}
-                                        className={`py-3.5 px-2 text-xs sm:text-sm font-semibold border-b-2 transition inline-flex items-center gap-2 whitespace-nowrap -mb-px ${
-                                            activeTab === 'barang'
-                                                ? 'border-[#0369A1] text-[#0F1E36] font-bold'
-                                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        <span>Material &amp; Peralatan</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono tabular-nums ${
-                                            activeTab === 'barang'
-                                                ? 'bg-[#0369A1]/10 text-[#0F1E36] font-bold'
-                                                : 'bg-slate-200/80 text-slate-600 font-medium'
-                                        }`}>
-                                            {goodsDone}/{goods.length}
-                                        </span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveTab('all')}
-                                        aria-pressed={activeTab === 'all'}
-                                        className={`py-3.5 px-2 text-xs sm:text-sm font-semibold border-b-2 transition inline-flex items-center gap-2 whitespace-nowrap -mb-px ${
-                                            activeTab === 'all'
-                                                ? 'border-[#0369A1] text-[#0F1E36] font-bold'
-                                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        Seluruh Dokumen
-                                    </button>
-                                </div>
+                            <div className="inline-flex max-w-full rounded-lg border border-slate-200 p-0.5 overflow-x-auto print:hidden" role="group" aria-label="Bagian dokumen">
+                                {[
+                                    { key: 'detail', label: 'Informasi Perizinan' },
+                                    { key: 'pekerja', label: 'Daftar Tenaga Kerja', count: `${workersDone}/${workerTotal}` },
+                                    { key: 'barang', label: 'Material & Peralatan', count: `${goodsDone}/${goods.length}` },
+                                    { key: 'all', label: 'Seluruh Dokumen' },
+                                ].map((tab) => {
+                                    const selected = activeTab === tab.key;
+                                    return (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.key)}
+                                            aria-pressed={selected}
+                                            className={`flex items-center gap-2 px-3 min-h-11 rounded-md text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F1E36] ${
+                                                selected ? 'bg-[#0F1E36] text-white' : 'text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                            {tab.count && (
+                                                <span className={`text-[11px] font-mono tabular-nums ${selected ? 'text-white/70' : 'text-slate-400'}`}>
+                                                    {tab.count}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
 
                         {/* Card Body: Konten Bagian Dokumen */}
-                        <div className="p-5 sm:p-7 space-y-6">
+                        <div className={`space-y-6 ${!isKegiatan && !isParkir && !isCustomer ? 'mt-5' : ''}`}>
                             {/* SECTION A: Informasi & Spesifikasi Perizinan */}
                             {(activeTab === 'detail' || activeTab === 'all' || isKegiatan || isParkir || isCustomer) && (
                                 <div className={`space-y-6 ${activeTab !== 'detail' && !isKegiatan && !isParkir ? 'print:hidden' : ''}`}>
@@ -757,7 +630,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 ) : (
                                 <div id="info-lokasi" className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 text-sm scroll-mt-24">
                                     <div>
-                                        <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                             Lokasi Unit / Area Kerja
                                         </dt>
                                         <dd className="font-semibold text-slate-900">
@@ -770,7 +643,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 
                                     {!isParkir ? (
                                         <div>
-                                            <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                                 Periode &amp; Jadwal Kerja
                                             </dt>
                                             <dd className="font-semibold text-slate-900">
@@ -782,7 +655,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                         </div>
                                     ) : (
                                         <div>
-                                            <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                                 Identitas Kendaraan
                                             </dt>
                                             <dd className="font-semibold text-slate-900 font-mono">
@@ -794,16 +667,16 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     {!isParkir && (
                                         <>
                                             <div className="sm:col-span-2">
-                                                <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1.5">
                                                     {isKegiatan ? kegiatanNameLabel : 'Lingkup Pekerjaan'}
                                                 </dt>
-                                                <dd className="text-slate-900 font-medium text-sm leading-relaxed bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/70">
+                                                <dd className="text-slate-900 font-medium text-sm leading-relaxed bg-slate-50 p-3.5 rounded-lg border border-slate-200">
                                                     {isKegiatan ? (permit.event_name || '—') : (permit.job_type || '—')}
                                                 </dd>
                                             </div>
 
                                             <div className="sm:col-span-2">
-                                                <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                                     {isKegiatan ? 'Area Penyelenggaraan' : 'Jalur Akses Logistik'}
                                                 </dt>
                                                 <dd className="text-slate-900 font-medium">
@@ -816,7 +689,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     {isParkir && (
                                         <>
                                             <div>
-                                                <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                                     Nama Pemohon / Pengemudi
                                                 </dt>
                                                 <dd className="font-semibold text-slate-900">
@@ -828,7 +701,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                             </div>
 
                                             <div>
-                                                <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                                     Penanggung Jawab Tenant
                                                 </dt>
                                                 <dd className="font-semibold text-slate-900">
@@ -842,8 +715,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 
                                 {/* Catatan / Ketentuan Khusus */}
                                 {permit.notes && (
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80">
-                                        <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
                                             Instruksi &amp; Ketentuan Khusus
                                         </dt>
                                         <dd className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
@@ -855,24 +728,24 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 {/* Identitas Kontraktor / Vendor Eksternal jika ada */}
                                 {!isParkir && !isCustomer && (permit.is_external || permit.contractor_company) && (
                                     <div className="pt-4 border-t border-slate-100">
-                                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-3">
                                             {category.key === 'vendor' ? 'Identitas Vendor Pelaksana' : 'Identitas Kontraktor Pelaksana'}
                                         </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-lg border border-slate-200">
                                             <div>
-                                                <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider">Badan Usaha / Perusahaan</span>
+                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Badan Usaha / Perusahaan</span>
                                                 <span className="font-bold text-slate-900">{permit.contractor_company || '—'}</span>
                                             </div>
                                             <div>
-                                                <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider">Penanggung Jawab Lapangan</span>
+                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Penanggung Jawab Lapangan</span>
                                                 <span className="font-semibold text-slate-900">{permit.contractor_pic || '—'}</span>
                                             </div>
                                             <div>
-                                                <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider">Kontak Telepon</span>
+                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Kontak Telepon</span>
                                                 <span className="text-slate-800">{permit.contractor_phone || '—'}</span>
                                             </div>
                                             <div>
-                                                <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider">Domisili Perusahaan</span>
+                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Domisili Perusahaan</span>
                                                 <span className="text-slate-800 text-xs">{permit.contractor_address || '—'}</span>
                                             </div>
                                         </div>
@@ -882,7 +755,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 {/* Departemen Pendamping Teknis jika ada */}
                                 {!isParkir && !isCustomer && permit.accompanying_departments?.length > 0 && (
                                     <div className="pt-4 border-t border-slate-100">
-                                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-2">
                                             Departemen Pendamping Teknis
                                         </h3>
                                         <div className="flex flex-wrap gap-1.5">
@@ -913,7 +786,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 </div>
 
                                 {isLegacyWorkers ? (
-                                    <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                                    <div className="overflow-x-auto rounded-lg border border-slate-200">
                                         <table className="w-full text-sm">
                                             <caption className="sr-only">Daftar tenaga kerja dan status kehadiran lapangan</caption>
                                             <thead>
@@ -957,9 +830,9 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     <div>
                                         {/* Security Capture Box untuk Foto KTP */}
                                         {canCompleteSecurityCheck && (
-                                            <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 print:hidden">
+                                            <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/70 p-4 print:hidden">
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                                    <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
                                                         Unggah Dokumentasi Identitas (KTP)
                                                     </p>
                                                 </div>
@@ -978,7 +851,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                         {ktpPhotos.length > 0 ? (
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                 {ktpPhotos.map((p, idx) => (
-                                                    <div key={p.id} className="group relative bg-slate-50 border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs">
+                                                    <div key={p.id} className="group relative bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
                                                         <img
                                                             src={p.photo_url}
                                                             alt={`KTP Pekerja #${idx + 1}`}
@@ -1006,7 +879,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                                            <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-xs text-slate-400">
                                                 Belum ada berkas identitas (KTP) yang diunggah.
                                             </div>
                                         )}
@@ -1034,7 +907,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 
                                 {goods.length > 0 ? (
                                     <>
-                                        <div className="overflow-x-auto rounded-xl border border-slate-200/80 hidden sm:block">
+                                        <div className="overflow-x-auto rounded-lg border border-slate-200 hidden sm:block">
                                             <table className="w-full text-sm">
                                             <caption className="sr-only">Daftar material, peralatan, dan status pemeriksaan fisik</caption>
                                             <thead>
@@ -1105,7 +978,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     {/* Kartu daftar untuk layar kecil: tabel 5 kolom terjepit di 375px */}
                                     <ul className="sm:hidden space-y-3">
                                         {goods.map((g, idx) => (
-                                            <li key={g.id} id={`good-${g.id}-card`} className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs">
+                                            <li key={g.id} id={`good-${g.id}-card`} className="rounded-lg border border-slate-200 bg-white p-4">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <p className="font-semibold text-slate-900 text-sm">
                                                         <span className="text-slate-400 font-mono text-xs mr-1.5">{idx + 1}</span>
@@ -1153,16 +1026,16 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     </ul>
                                 </>
                                 ) : (
-                                    <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                                    <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-xs text-slate-400">
                                         Tidak ada daftar material atau barang bawaan yang dicatat pada permohonan ini.
                                     </div>
                                 )}
 
                                 {/* Form Verifikasi Foto Barang untuk Pos Security */}
                                 {canCompleteSecurityCheck && expandedGood && !expandedGood.is_verified && (
-                                    <div id="good-verify" className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 print:hidden scroll-mt-40">
+                                    <div id="good-verify" className="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-4 print:hidden scroll-mt-40">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                            <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
                                                 Pemeriksaan Fisik Lapangan: {expandedGood.description} ({expandedGood.quantity_note})
                                             </p>
                                         </div>
@@ -1183,9 +1056,9 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     {/* Kolom Kanan: Alur Persetujuan Terpadu (1 Card) */}
                     <div className="space-y-5 lg:sticky lg:top-20 order-first lg:order-none print:order-none">
                         {/* KARTU TERPADU ALUR PERSETUJUAN (WORKFLOW) */}
-                        <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
-                            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        <div className="bg-white rounded-lg border border-slate-200 p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                     Alur Persetujuan
                                 </h3>
                                 <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
@@ -1275,8 +1148,8 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 
                         {/* 4. RIWAYAT REVISI jika ada */}
                         {(permit.revisions ?? []).length > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 pb-2 border-b border-slate-100">
+                            <div className="bg-white rounded-lg border border-slate-200 p-5">
+                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-3">
                                     Riwayat Revisi ({permit.revisions.length})
                                 </h3>
                                 <RevisionTimeline revisions={permit.revisions} />
@@ -1343,14 +1216,14 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                     maxWidth="max-w-md"
                 >
                     <div className="space-y-4">
-                        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs">
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
                             <div className="font-mono font-bold text-slate-900">{permit.permit_number}</div>
                             <div className="text-slate-600 mt-0.5 truncate">{locationTitle} • {location}</div>
                         </div>
 
                         {share ? (
                             <>
-                                <div className="flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200/80 rounded-xl">
+                                <div className="flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 rounded-lg">
                                     <img
                                         src={share.qr}
                                         alt="QR Akses Digital"
@@ -1367,7 +1240,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-1.5 p-2 bg-slate-100 rounded-xl text-xs font-mono text-slate-600 truncate border border-slate-200">
+                                    <div className="flex items-center gap-1.5 p-2 bg-slate-100 rounded-lg text-xs font-mono text-slate-600 truncate border border-slate-200">
                                         <span className="truncate flex-1 text-[11px] px-1">{share.url}</span>
                                         <button
                                             type="button"
@@ -1385,7 +1258,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                     <div className="grid grid-cols-2 gap-2 pt-1">
                                         <a
                                             href={`/permit-requests/${permit.id}/qr-label`}
-                                            className="py-2.5 px-3 text-center text-xs font-semibold text-white bg-[#0F1E36] hover:bg-[#1a2f52] rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
+                                            className="py-2.5 px-3 text-center text-xs font-semibold text-white bg-[#0F1E36] hover:bg-[#1a2f52] rounded-lg transition flex items-center justify-center gap-1.5"
                                         >
                                             <IconDownload className="w-4 h-4" aria-hidden="true" />
                                             <span>Unduh Label PDF</span>
@@ -1403,7 +1276,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                 </div>
                             </>
                         ) : (
-                            <div className="py-6 px-4 bg-slate-50 border border-slate-200/80 rounded-xl text-center text-xs text-slate-500 leading-relaxed">
+                            <div className="py-6 px-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-xs text-slate-500 leading-relaxed">
                                 Kode QR verifikasi digital akan otomatis aktif dan dapat dipindai setelah permohonan disetujui secara lengkap.
                             </div>
                         )}
@@ -1417,7 +1290,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
 function DetailField({ label, value, wide = false }) {
     return (
         <div className={`min-w-0 border-b border-slate-100 pb-3 ${wide ? 'sm:col-span-2' : ''}`}>
-            <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</dt>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">{label}</dt>
             <dd className="text-sm font-medium text-slate-900 whitespace-pre-line break-words">{value || '—'}</dd>
         </div>
     );
