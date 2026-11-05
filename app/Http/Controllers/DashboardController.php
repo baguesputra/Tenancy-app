@@ -60,23 +60,40 @@ class DashboardController extends Controller
         ['totalTenants' => $totalTenants, 'totalUnits' => $totalUnits, 'occupiedUnits' => $occupiedUnits, 'pendingPermits' => $pendingPermits, 'activeSessions' => $activeSessions, 'totalLoos' => $totalLoos, 'pendingLoos' => $pendingLoos] = $cached;
 
         $actionNeeded = collect();
-        if ($user->department_id) {
-            $pendingApprovals = Approval::where('department_id', $user->department_id)
-                ->where('status', 'pending')
+        $isManager = $user->hasRole('manager');
+        if ($user->department_id || $isManager) {
+            $pendingApprovals = Approval::where('status', 'pending')
                 ->where('approvable_type', PermitRequest::class)
+                ->where(function ($q) use ($user, $isManager) {
+                    if ($user->department_id) {
+                        $q->where('department_id', $user->department_id);
+                    }
+                    if ($isManager) {
+                        $q->orWhere('step_key', 'branch_manager');
+                    }
+                })
                 ->get();
 
             $permitIds = $pendingApprovals->pluck('approvable_id');
 
             $permitsQuery = $this->permitVisibility->applyView(
-                PermitRequest::whereIn('id', $permitIds),
+                PermitRequest::whereIn('id', $permitIds)
+                    ->whereNotIn('status', ['rejected', 'cancelled']),
                 $user
             );
             $validPermits = $permitsQuery->get()->keyBy('id');
 
-            $candidateApprovals = $pendingApprovals->filter(
-                fn ($a) => $validPermits->has($a->approvable_id)
-            );
+            $candidateApprovals = $pendingApprovals->filter(function (Approval $a) use ($validPermits, $user, $branchScoped) {
+                $permit = $validPermits->get($a->approvable_id);
+                if (! $permit) {
+                    return false;
+                }
+                if ($a->step_key === 'branch_manager' && $branchScoped && (int) $user->branch_id !== (int) $permit->branch_id) {
+                    return false;
+                }
+
+                return true;
+            });
 
             $allRelatedApprovals = Approval::whereIn('approvable_id', $permitIds)
                 ->where('approvable_type', PermitRequest::class)
@@ -96,10 +113,11 @@ class DashboardController extends Controller
                     'id' => $permit->id,
                     'permit_number' => $permit->permit_number,
                     'store_name' => $permit->store_name_snapshot,
+                    'activity_types' => $permit->activity_types ?? [],
                     'step_label' => $a->label,
                     'requested_at' => $permit->created_at,
                 ];
-            })->sortBy('requested_at')->take(5)->values();
+            })->sortBy('requested_at')->take(6)->values();
         }
 
         // Aktivitas terbaru — gabungan 3 sumber
@@ -153,7 +171,7 @@ class DashboardController extends Controller
             ->concat($recentTenancies)
             ->concat($recentLoos)
             ->sortByDesc('time')
-            ->take(8)
+            ->take(12)
             ->values();
 
         return Inertia::render('Dashboard', [
