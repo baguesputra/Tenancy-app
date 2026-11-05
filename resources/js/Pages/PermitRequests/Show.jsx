@@ -590,7 +590,7 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                         <div className={`space-y-6 ${!isKegiatan && !isParkir && !isCustomer ? 'mt-5' : ''}`}>
                             {/* SECTION A: Informasi & Spesifikasi Perizinan */}
                             {(activeTab === 'detail' || activeTab === 'all' || isKegiatan || isParkir || isCustomer) && (
-                                <div className={`space-y-6 ${activeTab !== 'detail' && !isKegiatan && !isParkir ? 'print:hidden' : ''}`}>
+                                <div className={`space-y-4 ${activeTab !== 'detail' && !isKegiatan && !isParkir ? 'print:hidden' : ''}`}>
                                     {(activeTab === 'all' || isKegiatan || isParkir || isCustomer) ? (
                                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                             <h2 className="text-base font-bold text-slate-900 tracking-tight">
@@ -607,163 +607,95 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
                                         </div>
                                     )}
 
-                                {/* Informasi Pokok Pekerjaan */}
+                                {/* Informasi Pokok — dokumen datar: judul kecil + garis tipis, tanpa kartu bersarang */}
                                 {isCustomer ? (
-                                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                                        <DetailField label="Nama Perusahaan PT/CV" value={permit.customer_form_data?.customer_company_name} />
-                                        <DetailField label="No. Telp/HP Perusahaan" value={permit.customer_form_data?.customer_company_phone} />
-                                        <DetailField label="Alamat Pengiriman Invoice" value={permit.customer_form_data?.customer_invoice_address} wide />
-                                        <DetailField label="No. NPWP Perusahaan" value={permit.customer_form_data?.customer_npwp_number} />
-                                        <DetailField label="Nama di NPWP" value={permit.customer_form_data?.customer_npwp_name} />
-                                        <DetailField label="Alamat di NPWP" value={permit.customer_form_data?.customer_npwp_address} wide />
-                                        <DetailField label="Nama PIC" value={permit.customer_form_data?.customer_pic_name} />
-                                        <DetailField label="Jabatan" value={permit.customer_form_data?.customer_pic_position} />
-                                        <DetailField label="No. KTP PIC" value={permit.customer_form_data?.customer_pic_ktp} />
-                                        <DetailField label="No. Telp/HP PIC" value={permit.customer_form_data?.customer_pic_phone} />
-                                        <DetailField label="E-mail PIC" value={permit.customer_form_data?.customer_pic_email} />
-                                        <DetailField label="Hubungan Tenant" value={permit.customer_form_data?.customer_tenant_relation || permit.tenant?.name} />
-                                        <DetailField label="Keterangan Tagihan" value={permit.customer_form_data?.customer_billing_description} wide />
-                                        <DetailField label="Nominal (di luar PPN)" value={`Rp ${Number(permit.customer_form_data?.customer_amount || 0).toLocaleString('id-ID')}`} />
-                                        <DetailField label="Kota / Tanggal" value={`${permit.customer_form_data?.customer_city || '—'}, ${formatDateID(permit.request_date)}`} />
-                                        <DetailField label="Catatan" value={permit.customer_form_data?.customer_notes} wide />
-                                    </dl>
+                                    <>
+                                        <InfoGroup title="Perusahaan">
+                                            <DetailField label="Nama Perusahaan PT/CV" value={permit.customer_form_data?.customer_company_name} lead />
+                                            <DetailField label="No. Telp/HP Perusahaan" value={permit.customer_form_data?.customer_company_phone} />
+                                            <DetailField label="No. NPWP Perusahaan" value={permit.customer_form_data?.customer_npwp_number} />
+                                            <DetailField label="Nama di NPWP" value={permit.customer_form_data?.customer_npwp_name} />
+                                            <DetailField label="Alamat di NPWP" value={permit.customer_form_data?.customer_npwp_address} wide />
+                                            <DetailField label="Alamat Pengiriman Invoice" value={permit.customer_form_data?.customer_invoice_address} wide />
+                                        </InfoGroup>
+                                        <InfoGroup title="Penanggung Jawab (PIC)">
+                                            <DetailField label="Nama PIC" value={permit.customer_form_data?.customer_pic_name} lead />
+                                            <DetailField label="Jabatan" value={permit.customer_form_data?.customer_pic_position} />
+                                            <DetailField label="No. KTP PIC" value={permit.customer_form_data?.customer_pic_ktp} />
+                                            <DetailField label="No. Telp/HP PIC" value={permit.customer_form_data?.customer_pic_phone} />
+                                            <DetailField label="E-mail PIC" value={permit.customer_form_data?.customer_pic_email} />
+                                            <DetailField label="Hubungan Tenant" value={permit.customer_form_data?.customer_tenant_relation || permit.tenant?.name} />
+                                        </InfoGroup>
+                                        <InfoGroup title="Tagihan">
+                                            <DetailField label="Nominal (di luar PPN)" value={`Rp ${Number(permit.customer_form_data?.customer_amount || 0).toLocaleString('id-ID')}`} lead />
+                                            <DetailField label="Kota / Tanggal" value={`${permit.customer_form_data?.customer_city || '—'}, ${formatDateID(permit.request_date)}`} />
+                                            <DetailField label="Keterangan Tagihan" value={permit.customer_form_data?.customer_billing_description} wide />
+                                            <DetailField label="Catatan" value={permit.customer_form_data?.customer_notes} wide />
+                                        </InfoGroup>
+                                        {permit.notes && (
+                                            <InfoGroup title="Instruksi & Ketentuan Khusus">
+                                                <dd className="sm:col-span-2 text-sm text-slate-800 leading-relaxed whitespace-pre-line">{permit.notes}</dd>
+                                            </InfoGroup>
+                                        )}
+                                    </>
+                                ) : isParkir ? (
+                                    <>
+                                        <InfoGroup title="Kendaraan & Pemohon" id="info-lokasi">
+                                            <DetailField label="Identitas Kendaraan" lead>
+                                                <span className="font-mono">{permit.vehicle_plate || '—'}</span>
+                                                <span className="ml-1.5 text-sm font-normal text-slate-500">({vehicleTypeLabel})</span>
+                                            </DetailField>
+                                            <DetailField label="Lokasi Unit / Area Kerja" value={permit.store_name_snapshot} hint={location} />
+                                            <DetailField label="Nama Pemohon / Pengemudi" value={permit.applicant_name} hint={permit.applicant_position ? `Jabatan: ${permit.applicant_position}` : null} />
+                                            <DetailField label="Penanggung Jawab Tenant" value={permit.pic_name} />
+                                        </InfoGroup>
+                                        {permit.notes && (
+                                            <InfoGroup title="Instruksi & Ketentuan Khusus">
+                                                <dd className="sm:col-span-2 text-sm text-slate-800 leading-relaxed whitespace-pre-line">{permit.notes}</dd>
+                                            </InfoGroup>
+                                        )}
+                                    </>
                                 ) : (
-                                <div id="info-lokasi" className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 text-sm scroll-mt-24">
-                                    <div>
-                                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                            Lokasi Unit / Area Kerja
-                                        </dt>
-                                        <dd className="font-semibold text-slate-900">
-                                            {permit.store_name_snapshot}
-                                        </dd>
-                                        <dd className="text-xs text-slate-500 mt-0.5">
-                                            {location}
-                                        </dd>
-                                    </div>
-
-                                    {!isParkir ? (
-                                        <div>
-                                            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                                Periode &amp; Jadwal Kerja
-                                            </dt>
-                                            <dd className="font-semibold text-slate-900">
-                                                {formatDateRange(permit.work_start_date, permit.work_end_date)}
-                                            </dd>
-                                            <dd className="text-xs text-slate-500 mt-0.5">
-                                                {formatTimeRange(permit.work_start_time, permit.work_end_time)}
-                                            </dd>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                                Identitas Kendaraan
-                                            </dt>
-                                            <dd className="font-semibold text-slate-900 font-mono">
-                                                {permit.vehicle_plate || '—'} <span className="font-normal text-xs text-slate-500 font-sans">({vehicleTypeLabel})</span>
-                                            </dd>
-                                        </div>
-                                    )}
-
-                                    {!isParkir && (
-                                        <>
-                                            <div className="sm:col-span-2">
-                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1.5">
-                                                    {isKegiatan ? kegiatanNameLabel : 'Lingkup Pekerjaan'}
-                                                </dt>
-                                                <dd className="text-slate-900 font-medium text-sm leading-relaxed bg-slate-50 p-3.5 rounded-lg border border-slate-200">
-                                                    {isKegiatan ? (permit.event_name || '—') : (permit.job_type || '—')}
-                                                </dd>
-                                            </div>
-
-                                            <div className="sm:col-span-2">
-                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                                    {isKegiatan ? 'Area Penyelenggaraan' : 'Jalur Akses Logistik'}
-                                                </dt>
-                                                <dd className="text-slate-900 font-medium">
-                                                    {isKegiatan ? (permit.event_area || '—') : (permit.access_route || '—')}
-                                                </dd>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {isParkir && (
-                                        <>
-                                            <div>
-                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                                    Nama Pemohon / Pengemudi
-                                                </dt>
-                                                <dd className="font-semibold text-slate-900">
-                                                    {permit.applicant_name || '—'}
-                                                </dd>
-                                                <dd className="text-xs text-slate-500 mt-0.5">
-                                                    Jabatan: {permit.applicant_position || '—'}
-                                                </dd>
-                                            </div>
-
-                                            <div>
-                                                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                                    Penanggung Jawab Tenant
-                                                </dt>
-                                                <dd className="font-semibold text-slate-900">
-                                                    {permit.pic_name || '—'}
-                                                </dd>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                )}
-
-                                {/* Catatan / Ketentuan Khusus */}
-                                {permit.notes && (
-                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">
-                                            Instruksi &amp; Ketentuan Khusus
-                                        </dt>
-                                        <dd className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
-                                            {permit.notes}
-                                        </dd>
-                                    </div>
+                                    <>
+                                        <InfoGroup title="Lokasi & Jadwal" id="info-lokasi">
+                                            <DetailField label="Lokasi Unit / Area Kerja" value={permit.store_name_snapshot} hint={location} lead />
+                                            <DetailField
+                                                label="Periode & Jadwal Kerja"
+                                                value={formatDateRange(permit.work_start_date, permit.work_end_date)}
+                                                hint={formatTimeRange(permit.work_start_time, permit.work_end_time)}
+                                            />
+                                        </InfoGroup>
+                                        <InfoGroup title="Lingkup">
+                                            <DetailField label={isKegiatan ? kegiatanNameLabel : 'Lingkup Pekerjaan'} value={isKegiatan ? permit.event_name : permit.job_type} wide lead />
+                                            <DetailField label={isKegiatan ? 'Area Penyelenggaraan' : 'Jalur Akses Logistik'} value={isKegiatan ? permit.event_area : permit.access_route} wide />
+                                        </InfoGroup>
+                                        {permit.notes && (
+                                            <InfoGroup title="Instruksi & Ketentuan Khusus">
+                                                <dd className="sm:col-span-2 text-sm text-slate-800 leading-relaxed whitespace-pre-line">{permit.notes}</dd>
+                                            </InfoGroup>
+                                        )}
+                                    </>
                                 )}
 
                                 {/* Identitas Kontraktor / Vendor Eksternal jika ada */}
                                 {!isParkir && !isCustomer && (permit.is_external || permit.contractor_company) && (
-                                    <div className="pt-4 border-t border-slate-100">
-                                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-3">
-                                            {category.key === 'vendor' ? 'Identitas Vendor Pelaksana' : 'Identitas Kontraktor Pelaksana'}
-                                        </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                            <div>
-                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Badan Usaha / Perusahaan</span>
-                                                <span className="font-bold text-slate-900">{permit.contractor_company || '—'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Penanggung Jawab Lapangan</span>
-                                                <span className="font-semibold text-slate-900">{permit.contractor_pic || '—'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Kontak Telepon</span>
-                                                <span className="text-slate-800">{permit.contractor_phone || '—'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 block">Domisili Perusahaan</span>
-                                                <span className="text-slate-800 text-xs">{permit.contractor_address || '—'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <InfoGroup title={category.key === 'vendor' ? 'Identitas Vendor Pelaksana' : 'Identitas Kontraktor Pelaksana'}>
+                                        <DetailField label="Badan Usaha / Perusahaan" value={permit.contractor_company} lead />
+                                        <DetailField label="Penanggung Jawab Lapangan" value={permit.contractor_pic} />
+                                        <DetailField label="Kontak Telepon" value={permit.contractor_phone} />
+                                        <DetailField label="Domisili Perusahaan" value={permit.contractor_address} wide />
+                                    </InfoGroup>
                                 )}
 
                                 {/* Departemen Pendamping Teknis jika ada */}
                                 {!isParkir && !isCustomer && permit.accompanying_departments?.length > 0 && (
-                                    <div className="pt-4 border-t border-slate-100">
-                                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-2">
-                                            Departemen Pendamping Teknis
-                                        </h3>
-                                        <div className="flex flex-wrap gap-1.5">
+                                    <InfoGroup title="Departemen Pendamping Teknis">
+                                        <div className="sm:col-span-2 flex flex-wrap gap-1.5">
                                             {permit.accompanying_departments.map((d) => (
                                                 <Badge key={d.id} color="gray">{d.name}</Badge>
                                             ))}
                                         </div>
-                                    </div>
+                                    </InfoGroup>
                                 )}
                             </div>
                         )}
@@ -1287,11 +1219,27 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     );
 }
 
-function DetailField({ label, value, wide = false }) {
+function InfoGroup({ title, id, children }) {
     return (
-        <div className={`min-w-0 border-b border-slate-100 pb-3 ${wide ? 'sm:col-span-2' : ''}`}>
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500 mb-1">{label}</dt>
-            <dd className="text-sm font-medium text-slate-900 whitespace-pre-line break-words">{value || '—'}</dd>
+        <section id={id} className={id ? 'scroll-mt-24' : undefined}>
+            <h3 className="pb-1.5 mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">
+                {title}
+            </h3>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
+                {children}
+            </dl>
+        </section>
+    );
+}
+
+function DetailField({ label, value, hint, wide = false, lead = false, children }) {
+    return (
+        <div className={`min-w-0 ${wide ? 'sm:col-span-2' : ''}`}>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+            <dd className={`mt-0.5 text-slate-900 whitespace-pre-line break-words ${lead ? 'text-base font-semibold' : 'text-sm font-medium'}`}>
+                {children || value || '—'}
+            </dd>
+            {hint && <dd className="text-xs text-slate-500 mt-0.5">{hint}</dd>}
         </div>
     );
 }
