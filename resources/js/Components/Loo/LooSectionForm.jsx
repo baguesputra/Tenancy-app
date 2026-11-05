@@ -407,34 +407,42 @@ function ChecklistTable({ field, value, onChange, editableDepartments = null, si
 /**
  * Tampilan nilai read-only (tanpa input) untuk sebagian field section —
  * dipakai mis. role tenant yang boleh melihat data badan hukum Legal tapi
- * tidak boleh mengisi. Link file tetap bisa diklik.
+ * tidak boleh mengisi. File dibuka lewat modal preview, sama seperti kartu
+ * Dokumen, dan dilayani endpoint ter-auth section file.
  */
-function PreviewField({ field, value }) {
-    if (field.type === 'file') {
-        return (
-            <FormField label={field.label}>
-                {value
-                    ? <a href={`/storage/${value}`} target="_blank" rel="noreferrer" className="text-sm text-[#0F1E36] underline">Lihat file</a>
-                    : <span className="text-sm text-gray-400">—</span>}
-            </FormField>
-        );
-    }
+function PreviewField({ field, value, looId, sectionKey }) {
+    const [preview, setPreview] = useState(null);
 
-    if (field.type === 'file_multiple') {
-        const list = Array.isArray(value) ? value : [];
+    if (field.type === 'file' || field.type === 'file_multiple') {
+        const list = field.type === 'file' ? (value ? [value] : []) : (Array.isArray(value) ? value : []);
         return (
             <FormField label={field.label}>
                 {list.length
                     ? (
                         <ul className="space-y-1">
-                            {list.map((p) => (
+                            {list.map((p, i) => (
                                 <li key={p}>
-                                    <a href={`/storage/${p}`} target="_blank" rel="noreferrer" className="text-sm text-[#0F1E36] underline">{p.split('/').pop()}</a>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreview(p)}
+                                        className="text-sm text-[#0F1E36] underline text-left focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                    >
+                                        {list.length > 1 ? `Lihat dokumen ${i + 1}` : 'Lihat dokumen'}
+                                    </button>
                                 </li>
                             ))}
                         </ul>
                     )
                     : <span className="text-sm text-gray-400">—</span>}
+                {preview && (
+                    <FilePreviewModal
+                        open
+                        onClose={() => setPreview(null)}
+                        label={preview.split('/').pop()}
+                        url={sectionFileUrl(looId, sectionKey, preview)}
+                        type={filePreviewType(preview)}
+                    />
+                )}
             </FormField>
         );
     }
@@ -465,7 +473,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {previewList.map((field) => (
-                    <PreviewField key={field.name} field={field} value={initial[field.name]} />
+                    <PreviewField key={field.name} field={field} value={initial[field.name]} looId={looId} sectionKey={sectionKey} />
                 ))}
             </div>
         );
