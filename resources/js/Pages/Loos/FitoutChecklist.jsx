@@ -3,8 +3,9 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
-import { IconCheck, IconLock } from '@/Components/Icons';
+import { IconCheck, IconChevronDown, IconLock } from '@/Components/Icons';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
+import { formatDateTimeShortID } from '@/utils/format';
 
 // Tiga langkah operasional yang tampil di halaman ini. Urutan array = urutan
 // gating di `config/loo.php`, jadi langkah sebelumnya adalah prasyaratnya.
@@ -214,6 +215,11 @@ function ChecklistPanel({
                 <div className="min-w-0">
                     <h2 className="text-base font-semibold text-slate-900">{step.title}</h2>
                     <p className="text-xs text-slate-500 mt-0.5">{step.description}</p>
+                    {section?.submitted_at ? (
+                        <p className="text-xs text-slate-600 mt-1">Disubmit {formatDateTimeShortID(section.submitted_at)}{section.filler?.name ? ` · ${section.filler.name}` : ''}</p>
+                    ) : section?.filled_at ? (
+                        <p className="text-xs text-slate-600 mt-1">Terakhir diubah {formatDateTimeShortID(section.filled_at)}{section.filler?.name ? ` · ${section.filler.name}` : ''}</p>
+                    ) : null}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     {headerBadges}
@@ -397,10 +403,11 @@ export default function FitoutChecklist({
     const filledItems = fitoutSections.reduce((n, s) => n + s.filled, 0);
     const totalItems = fitoutSections.reduce((n, s) => n + s.total, 0);
     const remainingItems = Math.max(totalItems - filledItems, 0);
-    const daysList = fitoutSections
-        .map((s) => s.updated_days_ago)
-        .filter((d) => d !== null && d !== undefined);
-    const lastUpdate = daysList.length > 0 ? Math.min(...daysList) : null;
+    const lastFilledAt = fitoutSections
+        .map((s) => s.filled_at)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null;
     const activePhaseLabel = progress?.phases?.find((p) => p.state === 'active')?.label
         ?? (STATUS_LABELS[loo.status] ?? loo.status);
 
@@ -418,9 +425,8 @@ export default function FitoutChecklist({
         { label: 'Tahap aktif', value: activePhaseLabel, small: true },
         {
             label: 'Update terakhir',
-            value: lastUpdate === null ? '—' : lastUpdate === 0 ? 'Hari ini' : lastUpdate,
-            hint: lastUpdate === null || lastUpdate === 0 ? null : 'hari lalu',
-            small: lastUpdate === 0,
+            value: lastFilledAt ? formatDateTimeShortID(lastFilledAt) : '—',
+            small: true,
         },
     ];
 
@@ -529,7 +535,64 @@ export default function FitoutChecklist({
                     jumpToDept={jumpToDept}
                     deptLabel={deptLabel}
                 />
+
+                <SectionHistory history={loo.history ?? []} sectionKey={activeStep.sectionKey} />
             </div>
         </AppLayout>
+    );
+}
+
+// Riwayat simpanan satu langkah: tiap draft maupun submit tercatat di
+// loo_histories (action section_filled, metadata.section_key + is_submit).
+// Yang tercatat adalah kejadiannya, bukan isi perubahan per field.
+function SectionHistory({ history = [], sectionKey }) {
+    const [open, setOpen] = useState(false);
+    const rows = history
+        .filter((h) => h.action === 'section_filled' && h.metadata?.section_key === sectionKey)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    const visible = open ? rows : rows.slice(0, 5);
+
+    return (
+        <div className="mt-4 bg-white rounded-lg border border-slate-200 p-5">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Riwayat ({rows.length})
+            </p>
+            {rows.length === 0 ? (
+                <p className="text-xs text-slate-500">Belum ada riwayat.</p>
+            ) : (
+                <>
+                    <ul className="space-y-2.5">
+                        {visible.map((h) => <SectionHistoryRow key={h.id} item={h} />)}
+                    </ul>
+                    {rows.length > 5 && (
+                        <button
+                            type="button"
+                            onClick={() => setOpen((v) => !v)}
+                            aria-expanded={open}
+                            className="mt-3 flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
+                        >
+                            <IconChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+                            {open ? 'Tutup' : `Lihat semua (${rows.length})`}
+                        </button>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+function SectionHistoryRow({ item: h }) {
+    const submitted = h.metadata?.is_submit === true;
+
+    return (
+        <li className="flex items-start gap-2.5 text-xs">
+            <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${submitted ? 'bg-emerald-600' : 'bg-slate-400'}`} aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+                <p className="text-slate-900 font-medium">{submitted ? 'Disubmit' : 'Draft disimpan'}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                    {formatDateTimeShortID(h.created_at)}{h.user?.name ? ` · ${h.user.name}` : ''}
+                </p>
+            </div>
+        </li>
     );
 }

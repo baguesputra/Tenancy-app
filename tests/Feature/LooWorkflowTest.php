@@ -145,6 +145,49 @@ class LooWorkflowTest extends TestCase
             );
     }
 
+    public function test_tiap_simpanan_draft_dan_submit_tercatat_di_riwayat(): void
+    {
+        $loo = $this->makeLoo();
+        $this->submitDivisions($loo);
+        $legal = $this->userWithRole('legal', ['loos.view', 'loos.legal_edit']);
+
+        // Dua draft lalu satu submit pada section yang sama.
+        foreach ([false, false, true] as $submit) {
+            $this->actingAs($legal)
+                ->post("/loos/{$loo->id}/sections/legalitas", [
+                    'entity_name' => 'PT A',
+                    ...($submit ? ['submit' => '1'] : []),
+                ])
+                ->assertRedirect();
+        }
+
+        $rows = $loo->history()
+            ->where('action', 'section_filled')
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(3, $rows);
+        $this->assertSame([false, false, true], $rows->map(fn ($h) => $h->metadata['is_submit'])->all());
+        $this->assertTrue($rows->every(fn ($h) => ($h->metadata['section_key'] ?? null) === 'legalitas'));
+
+        // Halaman fitout mengirim riwayat lengkap beserta pembedanya.
+        // Tiga baris section_filled plus satu status_changed saat draft
+        // pertama menggeser status LOO.
+        $this->actingAs($this->userWithRole('marketing'))
+            ->get("/loos/{$loo->id}/fitout")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('loo.history', 4)
+                ->where('loo.history.0.action', 'section_filled')
+                ->where('loo.history.0.metadata.is_submit', false)
+                ->where('loo.history.1.action', 'status_changed')
+                ->where('loo.history.3.action', 'section_filled')
+                ->where('loo.history.3.metadata.is_submit', true)
+                ->where('loo.history.3.metadata.section_key', 'legalitas')
+                ->where('loo.history.3.user.name', $legal->name)
+            );
+    }
+
     public function test_index_requires_auth(): void
     {
         $this->get('/loos')->assertRedirect('/login');
