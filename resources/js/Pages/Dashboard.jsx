@@ -677,19 +677,19 @@ function KpiCell({
             {accent === 'bg-[#D64545]' && (
                 <span
                     aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-t from-[#D64545]/[0.06] to-transparent"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#D64545]/[0.06] to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200"
                 />
             )}
             {accent === 'bg-[#2563EB]' && (
                 <span
                     aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-t from-[#2563EB]/[0.05] to-transparent"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2563EB]/[0.05] to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200"
                 />
             )}
             {accent === 'bg-[#0F1E36]' && (
                 <span
                     aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-t from-[#0F1E36]/[0.05] to-transparent"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0F1E36]/[0.05] to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200"
                 />
             )}
             {accent && <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${accent}`} />}
