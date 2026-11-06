@@ -236,4 +236,25 @@ class PermitVisibilityTest extends TestCase
         $this->assertFalse($tenancyEvents->contains('id', "permit-{$pameranA->id}"));
         $this->assertFalse($tenancyEvents->contains('id', "permit-{$pameranB->id}"));
     }
+
+    public function test_super_admin_sees_permits_from_every_branch(): void
+    {
+        $branchA = $this->branch('PVA');
+        $branchB = $this->branch('PVB');
+        $creator = $this->user('tenancy_staff', ['permits.view'], $branchA);
+
+        $kerjaA = $this->permit($branchA, $creator, ['kerja'], 'Tenant Cabang A');
+        $kerjaB = $this->permit($branchB, $creator, ['kerja'], 'Tenant Cabang B');
+
+        // Super admin berkedudukan di cabang A, tapi harus tetap melihat cabang B.
+        $super = $this->user('super_admin', ['permits.view'], $branchA);
+
+        $numbers = collect($this->actingAs($super)->get('/permit-requests')->assertOk()->viewData('page')['props']['permits']['data'])
+            ->pluck('permit_number');
+
+        $this->assertTrue($numbers->contains($kerjaA->permit_number));
+        $this->assertTrue($numbers->contains($kerjaB->permit_number));
+
+        $this->actingAs($super)->get("/permit-requests/{$kerjaB->id}")->assertOk();
+    }
 }
