@@ -6,7 +6,6 @@ import {
     IconAlert,
     IconArrowRight,
     IconBuilding,
-    IconCheck,
     IconClipboard,
     IconClipboardCheck,
     IconContract,
@@ -17,6 +16,7 @@ import {
     IconPlus,
 } from '@/Components/Icons';
 import EventCalendar from '@/Components/Dashboard/EventCalendar';
+import EmptyState from '@/Components/EmptyState';
 import useCan from '@/hooks/useCan';
 
 const activityMeta = {
@@ -453,36 +453,34 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         )}
 
                         {queue.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center">
-                                <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
-                                    <IconCheck className="w-5 h-5" aria-hidden="true" />
-                                </div>
-                                <p className="mt-3 text-sm font-semibold text-slate-900">
-                                    Tidak Ada Antrean Persetujuan
-                                </p>
-                                <p className="mt-1 max-w-sm text-xs text-slate-500">
-                                    Seluruh pengajuan surat izin yang membutuhkan persetujuan bagian Anda sudah selesai ditangani.
-                                </p>
-                                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                                    {canSidak && (
-                                        <Link
-                                            href="/inspection-sessions/current"
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
-                                        >
-                                            <IconClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                                            <span>Mulai / Lanjutkan Sidak</span>
-                                        </Link>
-                                    )}
-                                    {canPermits && (
-                                        <Link
-                                            href="/permit-requests"
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-[#E2E5EA] rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
-                                        >
-                                            <span>Lihat Semua Surat Izin</span>
-                                        </Link>
-                                    )}
-                                </div>
-                            </div>
+                            <EmptyState
+                                variant="notification"
+                                size="md"
+                                className="flex-1"
+                                title="Tidak Ada Antrean Persetujuan"
+                                description="Seluruh pengajuan surat izin yang membutuhkan persetujuan bagian Anda sudah selesai ditangani."
+                                action={
+                                    <div className="flex flex-wrap items-center justify-center gap-2">
+                                        {canSidak && (
+                                            <Link
+                                                href="/inspection-sessions/current"
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#0F1E36] rounded-lg hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                            >
+                                                <IconClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                                                <span>Mulai / Lanjutkan Sidak</span>
+                                            </Link>
+                                        )}
+                                        {canPermits && (
+                                            <Link
+                                                href="/permit-requests"
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-[#E2E5EA] rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                            >
+                                                <span>Lihat Semua Surat Izin</span>
+                                            </Link>
+                                        )}
+                                    </div>
+                                }
+                            />
                         ) : (
                             <ol className="divide-y divide-[#E2E5EA] flex-1">
                                 {queue.map((item) => {
