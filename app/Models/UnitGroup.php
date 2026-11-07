@@ -8,13 +8,14 @@ use Illuminate\Support\Str;
 class UnitGroup extends Model
 {
     protected $fillable = [
-        'branch_id', 'name', 'code', 'size', 'is_active',
+        'branch_id', 'name', 'name_auto', 'code', 'size', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'name_auto' => 'boolean',
             'size' => 'decimal:2',
         ];
     }

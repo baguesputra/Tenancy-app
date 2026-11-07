@@ -42,7 +42,9 @@ function Field({ field, value, error, onChange, options, looId, sectionKey }) {
                     <option value="">Pilih...</option>
                     {sourceOptions
                         ? sourceOptions.map((o) => (
-                            <option key={o.id} value={o.id}>{o.name}</option>
+                            <option key={o.id} value={o.id}>
+                                {o.units_label ? `${o.name} · ${o.units_label}` : o.name}
+                            </option>
                         ))
                         : (field.options ?? []).map((o) => (
                             <option key={o} value={o}>{o.replaceAll('_', ' ')}</option>

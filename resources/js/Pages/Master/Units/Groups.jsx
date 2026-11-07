@@ -22,6 +22,65 @@ function UnitChip({ code }) {
     );
 }
 
+// Cermin dari UnitGroupNameService: rentang untuk nomor berurutan (A1-3),
+// daftar eksplisit untuk yang berjarak (A2+A4+A6).
+function suggestGroupName(units) {
+    if (!units || units.length === 0) return '';
+
+    const labelOf = (u) => {
+        const number = (u.unit_number ?? '').trim();
+        const prefix = (u.block ?? '').trim() || (u.floor ?? '').trim();
+        return number ? `${prefix}${number}` : (u.unit_code ?? '');
+    };
+
+    let labels = units.map(labelOf);
+    if (new Set(labels).size !== labels.length) {
+        labels = units.map((u) => u.unit_code ?? '');
+    }
+
+    const buckets = new Map();
+    const plain = [];
+
+    labels.forEach((label) => {
+        const match = label.match(/^(.*?)(\d+)$/);
+        if (!match) {
+            plain.push(label);
+            return;
+        }
+        const [, prefix, digits] = match;
+        if (!buckets.has(prefix)) buckets.set(prefix, []);
+        buckets.get(prefix).push({ number: Number(digits), width: digits.length });
+    });
+
+    const segments = [...plain];
+
+    [...buckets.keys()].sort().forEach((prefix) => {
+        const items = buckets.get(prefix).sort((a, b) => a.number - b.number);
+        let start = items[0].number;
+        let prev = start;
+        let width = items[0].width;
+
+        const flush = () => {
+            const pad = (n) => String(n).padStart(width, '0');
+            segments.push(start === prev ? `${prefix}${pad(start)}` : `${prefix}${pad(start)}-${pad(prev)}`);
+        };
+
+        items.slice(1).forEach((item) => {
+            if (item.number === prev + 1) {
+                prev = item.number;
+                return;
+            }
+            flush();
+            start = prev = item.number;
+            width = item.width;
+        });
+
+        flush();
+    });
+
+    return segments.join('+');
+}
+
 export default function Groups({ groups = [], units = [], branches = [], canPickBranch = false }) {
     const { can } = useCan();
     const canCreate = can('units.create');
@@ -36,6 +95,7 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         branch_id: '',
         name: '',
+        name_auto: true,
         code: '',
         size: '',
         is_active: true,
@@ -57,6 +117,7 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
         setData({
             branch_id: group.branch_id,
             name: group.name,
+            name_auto: group.name_auto ?? false,
             code: group.code ?? '',
             size: group.size ?? '',
             is_active: group.is_active,
@@ -110,12 +171,25 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
     const totalSize = selectedUnits.reduce((sum, u) => sum + (Number(u.size) || 0), 0);
 
     const toggleUnit = (next) => {
-        setData('unit_ids', next);
-        if (data.primary_unit_id && !next.includes(String(data.primary_unit_id))) {
-            setData('primary_unit_id', next[0] ?? '');
-        } else if (!data.primary_unit_id && next.length > 0) {
-            setData('primary_unit_id', next[0]);
-        }
+        const nextUnits = branchUnits.filter((u) => next.includes(String(u.id)));
+        const primaryUnitId = data.primary_unit_id && next.includes(String(data.primary_unit_id))
+            ? data.primary_unit_id
+            : (next[0] ?? '');
+
+        setData((prev) => ({
+            ...prev,
+            unit_ids: next,
+            primary_unit_id: primaryUnitId,
+            name: prev.name_auto ? suggestGroupName(nextUnits) : prev.name,
+        }));
+    };
+
+    const toggleNameAuto = (enabled) => {
+        setData((prev) => ({
+            ...prev,
+            name_auto: enabled,
+            name: enabled ? suggestGroupName(selectedUnits) : prev.name,
+        }));
     };
 
     return (
@@ -234,7 +308,13 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
                                 <SelectInput
                                     value={data.branch_id}
                                     onChange={(e) => {
-                                        setData({ ...data, branch_id: e.target.value, unit_ids: [], primary_unit_id: '' });
+                                        setData((prev) => ({
+                                            ...prev,
+                                            branch_id: e.target.value,
+                                            unit_ids: [],
+                                            primary_unit_id: '',
+                                            name: prev.name_auto ? '' : prev.name,
+                                        }));
                                     }}
                                 >
                                     <option value="">Pilih...</option>
@@ -244,9 +324,29 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
                                 </SelectInput>
                             </FormField>
                         )}
-                        <FormField compact label="Nama Area" error={errors.name} required>
-                            <TextInput value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="mis. Kopi Senja 3-in-1" />
+                        <FormField
+                            compact
+                            label="Nama Area"
+                            error={errors.name}
+                            required={!data.name_auto}
+                            hint={data.name_auto ? 'Dihitung otomatis dari unit anggota, mis. A1-3 atau A2+A4+A6.' : 'Nama manual tidak boleh bentrok dengan kode/nomor unit.'}
+                        >
+                            <TextInput
+                                value={data.name}
+                                readOnly={data.name_auto}
+                                onChange={(e) => setData((prev) => ({ ...prev, name: e.target.value, name_auto: false }))}
+                                placeholder={data.name_auto ? 'Otomatis dari unit anggota' : 'mis. Kopi Senja 3-in-1'}
+                                className={data.name_auto ? 'bg-slate-50 text-slate-500' : ''}
+                            />
                         </FormField>
+                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+                            <span className="text-xs font-medium text-slate-700">Nama otomatis dari unit</span>
+                            <Checkbox
+                                label={data.name_auto ? 'Otomatis' : 'Manual'}
+                                checked={data.name_auto}
+                                onChange={(e) => toggleNameAuto(e.target.checked)}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-2.5">
                             <FormField compact label="Kode Area" error={errors.code}>
                                 <TextInput value={data.code} onChange={(e) => setData('code', e.target.value)} placeholder="OPSIONAL" />

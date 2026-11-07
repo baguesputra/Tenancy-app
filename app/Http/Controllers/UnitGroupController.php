@@ -6,14 +6,17 @@ use App\Models\Branch;
 use App\Models\Unit;
 use App\Models\UnitGroup;
 use App\Services\BranchScopeService;
+use App\Services\UnitGroupNameService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class UnitGroupController extends Controller
 {
-    public function __construct(private BranchScopeService $branchScope) {}
+    public function __construct(
+        private BranchScopeService $branchScope,
+        private UnitGroupNameService $names,
+    ) {}
 
     public function index(Request $request)
     {
@@ -71,7 +74,7 @@ class UnitGroupController extends Controller
         $group = UnitGroup::findOrFail($id);
         $this->authorizeAccess($group, $request);
 
-        $validated = $this->validateGroup($request, $group);
+        $validated = $this->validateGroup($request);
         $unitIds = $this->validatedUnitIds($request, $group->branch_id, $group->id);
 
         $group->update($this->groupAttributes($validated, $unitIds, $group));
@@ -97,19 +100,14 @@ class UnitGroupController extends Controller
         return back()->with('success', 'Area gabungan dihapus.');
     }
 
-    private function validateGroup(Request $request, ?UnitGroup $group = null): array
+    private function validateGroup(Request $request): array
     {
         $canPickBranch = $request->user()->canViewAllBranches();
-        $branchId = $canPickBranch ? $request->input('branch_id') : $request->user()->branch_id;
 
         return $request->validate([
             'branch_id' => $canPickBranch ? 'required|exists:branches,id' : 'nullable',
-            'name' => [
-                'required', 'string', 'max:100',
-                Rule::unique('unit_groups', 'name')
-                    ->where(fn ($q) => $q->where('branch_id', $branchId))
-                    ->ignore($group?->id),
-            ],
+            'name' => 'nullable|string|max:100',
+            'name_auto' => 'boolean',
             'code' => 'nullable|string|max:50',
             'size' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
@@ -156,19 +154,56 @@ class UnitGroupController extends Controller
 
     private function groupAttributes(array $validated, array $unitIds, ?UnitGroup $group = null): array
     {
+        $branchId = (int) ($validated['branch_id'] ?? $group?->branch_id);
+        $units = Unit::whereIn('id', $unitIds)->get(['id', 'block', 'floor', 'unit_number', 'unit_code', 'size']);
+        $nameAuto = (bool) ($validated['name_auto'] ?? false);
+
+        $name = $nameAuto
+            ? $this->names->unique(
+                $this->names->suggest($units),
+                $branchId,
+                $group?->id,
+                $unitIds,
+                $units->first()?->block,
+            )
+            : $this->manualName($validated['name'] ?? '', $branchId, $group?->id, $unitIds);
+
         $size = $validated['size'] ?? null;
 
         if ($size === null || $size === '') {
-            $size = Unit::whereIn('id', $unitIds)->sum('size') ?: null;
+            $size = $units->sum('size') ?: null;
         }
 
         return [
-            'branch_id' => $validated['branch_id'] ?? $group?->branch_id,
-            'name' => $validated['name'],
+            'branch_id' => $branchId,
+            'name' => $name,
+            'name_auto' => $nameAuto,
             'code' => $validated['code'] ?? null,
             'size' => $size,
             'is_active' => $validated['is_active'] ?? true,
         ];
+    }
+
+    /**
+     * Nama manual tidak boleh menabrak nama area, kode unit, atau nomor unit lain.
+     *
+     * @param  array<int, int>  $unitIds
+     */
+    private function manualName(string $name, int $branchId, ?int $ignoreGroupId, array $unitIds): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            throw ValidationException::withMessages(['name' => 'Nama area wajib diisi.']);
+        }
+
+        if ($this->names->taken($name, $branchId, $ignoreGroupId, $unitIds)) {
+            throw ValidationException::withMessages([
+                'name' => 'Nama area bentrok dengan nama area, kode unit, atau nomor unit lain.',
+            ]);
+        }
+
+        return $name;
     }
 
     private function syncUnits(UnitGroup $group, array $unitIds, ?int $primaryUnitId): void
