@@ -211,38 +211,41 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                     </div>
 
                     {/* Pintasan Kerja Kontekstual */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
                         {canUnits && (
                             <Link
                                 href="/floor-plans"
-                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                aria-label="Denah Lantai"
+                                className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-full bg-[#0F1E36]/5 text-xs font-medium text-[#0F1E36] hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                             >
-                                <IconMap className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                                <span>Denah Lantai</span>
+                                <IconMap className="w-3.5 h-3.5 text-[#0F1E36]/60" aria-hidden="true" />
+                                <span className="hidden sm:inline">Denah Lantai</span>
                             </Link>
                         )}
                         {canSidak && (
                             <Link
                                 href="/inspection-sessions/current"
-                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                aria-label="Sesi Sidak"
+                                className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-full bg-[#0F1E36]/5 text-xs font-medium text-[#0F1E36] hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                             >
-                                <IconClipboardCheck className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                                <span>Sesi Sidak</span>
+                                <IconClipboardCheck className="w-3.5 h-3.5 text-[#0F1E36]/60" aria-hidden="true" />
+                                <span className="hidden sm:inline">Sesi Sidak</span>
                             </Link>
                         )}
                         {canCreateLoo && (
                             <Link
                                 href="/loos/create"
-                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#E2E5EA] bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                aria-label="Buat LOO"
+                                className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-full bg-[#0F1E36]/5 text-xs font-medium text-[#0F1E36] hover:bg-[#0F1E36]/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                             >
-                                <IconPlus className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                                <span>Buat LOO</span>
+                                <IconPlus className="w-3.5 h-3.5 text-[#0F1E36]/60" aria-hidden="true" />
+                                <span className="hidden sm:inline">Buat LOO</span>
                             </Link>
                         )}
                         {canCreatePermit && (
                             <Link
                                 href="/permit-requests/create"
-                                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#0F1E36] text-xs font-semibold text-white hover:bg-[#1a2f52] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                                className="inline-flex items-center gap-1.5 h-9 px-3.5 sm:px-4 rounded-full bg-[#0F1E36] text-xs font-semibold text-white shadow-sm hover:bg-[#1a2f52] hover:shadow transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
                             >
                                 <IconPlus className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>Buat Surat Izin</span>
