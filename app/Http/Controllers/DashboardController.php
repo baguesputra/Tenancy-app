@@ -40,11 +40,18 @@ class DashboardController extends Controller
         $cached = Cache::remember($statsKey, 60, function () use ($branchScoped, $user) {
             $totalTenants = Tenant::where('is_active', true)
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
+            // Okupansi sewa hanya menghitung unit yang memang disewakan;
+            // unit internal/fasilitas tidak masuk pembagi.
             $totalUnits = Unit::where('is_active', true)
+                ->where('usage_type', 'tenant')
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
             $occupiedUnits = Unit::where('is_active', true)
+                ->where('usage_type', 'tenant')
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
-                ->whereHas('activeTenancy')->count();
+                ->where(function ($q) {
+                    $q->whereHas('activeTenancy')
+                        ->orWhereHas('group.activeTenancy');
+                })->count();
             $pendingPermits = $this->permitVisibility->applyView(
                 PermitRequest::where('status', 'pending'),
                 $user

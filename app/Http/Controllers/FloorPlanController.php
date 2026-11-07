@@ -58,19 +58,31 @@ class FloorPlanController extends Controller
         // Load units for all 5 floors (needed for 3D multi-floor building view & 2D quick switch)
         $allUnits = Unit::where('branch_id', $branchId)
             ->where('is_active', true)
-            ->with(['activeTenancy.tenant.tenantCategory', 'activeTenancy.tenant.productCategory'])
+            ->with([
+                'activeTenancy.tenant.tenantCategory',
+                'activeTenancy.tenant.productCategory',
+                'activeAssignment.department',
+                'group.activeTenancy.tenant',
+            ])
             ->get()
             ->map(function ($u) use ($looUnitIds, $fitoutUnitIds) {
+                $group = $u->group->first();
+                $tenancy = $u->activeTenancy ?: $group?->activeTenancy;
+
                 $status = 'Kosong';
-                if ($u->activeTenancy && $u->activeTenancy->status === 'active') {
+                if ($tenancy && $tenancy->status === 'active') {
                     $status = 'Aktif';
                 } elseif (isset($looUnitIds[$u->id])) {
                     $status = 'LOO';
                 } elseif (isset($fitoutUnitIds[$u->id])) {
                     $status = 'Fitout';
+                } elseif ($u->activeAssignment || $u->usage_type === 'internal') {
+                    $status = 'Internal';
+                } elseif ($u->usage_type === 'common') {
+                    $status = 'Fasilitas';
                 }
 
-                $tenant = $u->activeTenancy?->tenant;
+                $tenant = $tenancy?->tenant;
 
                 return [
                     'id' => $u->id,
@@ -78,6 +90,9 @@ class FloorPlanController extends Controller
                     'floor' => $u->floor,
                     'block' => $u->block,
                     'unit_number' => $u->unit_number,
+                    'usage_type' => $u->usage_type,
+                    'group_name' => $group?->name,
+                    'internal_department' => $u->activeAssignment?->department?->name,
                     'size' => $u->size ? (float) $u->size : null,
                     'polygon_points' => $u->polygon_points,
                     'custom_color' => $u->custom_color,
@@ -91,17 +106,20 @@ class FloorPlanController extends Controller
                         'pic_name' => $tenant->pic_name,
                         'pic_phone' => $tenant->pic_phone,
                         'company_email' => $tenant->company_email,
-                        'contract_number' => $u->activeTenancy?->contract_number,
+                        'contract_number' => $tenancy?->contract_number,
                     ] : null,
                 ];
             });
 
-        // Summary stats
-        $totalUnits = $allUnits->count();
-        $occupiedUnits = $allUnits->where('status', 'Aktif')->count();
-        $looUnits = $allUnits->where('status', 'LOO')->count();
-        $fitoutUnits = $allUnits->where('status', 'Fitout')->count();
-        $vacantUnits = $allUnits->where('status', 'Kosong')->count();
+        // Okupansi peta dihitung dari unit yang disewakan saja.
+        $leasableUnits = $allUnits->where('usage_type', 'tenant');
+        $totalUnits = $leasableUnits->count();
+        $occupiedUnits = $leasableUnits->where('status', 'Aktif')->count();
+        $looUnits = $leasableUnits->where('status', 'LOO')->count();
+        $fitoutUnits = $leasableUnits->where('status', 'Fitout')->count();
+        $vacantUnits = $leasableUnits->where('status', 'Kosong')->count();
+        $internalUnits = $allUnits->where('status', 'Internal')->count();
+        $commonUnits = $allUnits->where('status', 'Fasilitas')->count();
 
         return Inertia::render('FloorPlan/Index', [
             'branches' => $branches,
@@ -116,6 +134,8 @@ class FloorPlanController extends Controller
                 'loo' => $looUnits,
                 'fitout' => $fitoutUnits,
                 'vacant' => $vacantUnits,
+                'internal' => $internalUnits,
+                'common' => $commonUnits,
             ],
         ]);
     }
