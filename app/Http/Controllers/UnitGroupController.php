@@ -7,6 +7,7 @@ use App\Models\Unit;
 use App\Models\UnitGroup;
 use App\Services\BranchScopeService;
 use App\Services\UnitGroupNameService;
+use App\Services\UnitPackageService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -16,6 +17,7 @@ class UnitGroupController extends Controller
     public function __construct(
         private BranchScopeService $branchScope,
         private UnitGroupNameService $names,
+        private UnitPackageService $packages,
     ) {}
 
     public function index(Request $request)
@@ -27,7 +29,7 @@ class UnitGroupController extends Controller
 
         $unitsQuery = Unit::where('usage_type', 'tenant')
             ->where('is_active', true)
-            ->with('group')
+            ->with(['group', 'activeTenancy.tenant'])
             ->orderBy('floor')->orderBy('unit_number');
 
         $this->branchScope->apply($unitsQuery, $request->user());
@@ -46,6 +48,8 @@ class UnitGroupController extends Controller
                     'size' => $unit->size,
                     'group_id' => $group?->id,
                     'group_name' => $group?->name,
+                    'tenant_id' => $unit->activeTenancy?->tenant_id,
+                    'tenant_name' => $unit->activeTenancy?->tenant?->name,
                 ];
             });
 
@@ -124,7 +128,13 @@ class UnitGroupController extends Controller
      */
     private function validatedUnitIds(Request $request, int $branchId, ?int $ignoreGroupId = null): array
     {
-        $ids = array_values(array_unique(array_map('intval', $request->input('unit_ids', []))));
+        // Unit milik tenant yang sama selalu satu paket: lengkapi pilihan yang
+        // hanya membawa sebagian sebelum validasi bentrok area.
+        $ids = $this->packages->expand(
+            $request->input('unit_ids', []),
+            $branchId,
+            $ignoreGroupId,
+        );
 
         $units = Unit::whereIn('id', $ids)->get(['id', 'branch_id', 'usage_type']);
 

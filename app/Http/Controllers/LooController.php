@@ -16,6 +16,7 @@ use App\Services\LooProgressService;
 use App\Services\LooSectionService;
 use App\Services\LooStateService;
 use App\Services\NotificationService;
+use App\Services\UnitPackageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -30,6 +31,7 @@ class LooController extends Controller
         private LooSectionService $sections,
         private LooProgressService $progress,
         private NotificationService $notifications,
+        private UnitPackageService $packages,
     ) {}
 
     private const STATUSES = [
@@ -144,8 +146,15 @@ class LooController extends Controller
         }
 
         $units = Unit::whereIn('id', $unitIds)
+            ->with(['activeTenancy.tenant'])
             ->orderBy('unit_number')
             ->get(['id', 'unit_code']);
+
+        $looTenantId = $loo->tenant_id ? (int) $loo->tenant_id : null;
+        $tenantPackages = $looTenantId
+            ? $this->packages->packagesForTenants([$looTenantId], $loo->branch_id)
+            : [];
+        $package = $looTenantId ? ($tenantPackages[$looTenantId] ?? []) : [];
 
         $unitGroupId = $tenantSection?->data['unit_group_id'] ?? null;
         $unitGroupName = $unitGroupId ? UnitGroup::find($unitGroupId)?->name : null;
@@ -181,7 +190,19 @@ class LooController extends Controller
             'options' => [
                 'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
                 'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-                'units' => $units->map(fn ($u) => ['id' => $u->id, 'name' => $u->unit_code])->values(),
+                'units' => $units->map(function (Unit $unit) use ($looTenantId, $package) {
+                    $tenantId = $unit->activeTenancy?->tenant_id
+                        ? (int) $unit->activeTenancy->tenant_id
+                        : null;
+
+                    return [
+                        'id' => $unit->id,
+                        'name' => $unit->unit_code,
+                        'tenant_id' => $tenantId,
+                        'tenant_name' => $unit->activeTenancy?->tenant?->name,
+                        'package' => $looTenantId && $tenantId === $looTenantId ? $package : [],
+                    ];
+                })->values(),
                 'unitGroups' => $unitGroups,
             ],
         ]);
@@ -304,6 +325,7 @@ class LooController extends Controller
             ->where('usage_type', 'tenant')
             ->where('is_active', true)
             ->whereDoesntHave('group')
+            ->with(['activeTenancy.tenant'])
             ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('unit_code', 'like', "%{$search}%")
                 ->orWhere('floor', 'like', "%{$search}%")
@@ -315,7 +337,26 @@ class LooController extends Controller
             ->limit(50)
             ->get(['id', 'unit_code']);
 
-        return response()->json($units->map(fn ($u) => ['id' => $u->id, 'name' => $u->unit_code])->values());
+        $looTenantId = $loo->tenant_id ? (int) $loo->tenant_id : null;
+
+        $tenantPackages = $looTenantId
+            ? $this->packages->packagesForTenants([$looTenantId], $loo->branch_id)
+            : [];
+        $package = $looTenantId ? ($tenantPackages[$looTenantId] ?? []) : [];
+
+        return response()->json($units->map(function (Unit $unit) use ($looTenantId, $package) {
+            $tenantId = $unit->activeTenancy?->tenant_id
+                ? (int) $unit->activeTenancy->tenant_id
+                : null;
+
+            return [
+                'id' => $unit->id,
+                'name' => $unit->unit_code,
+                'tenant_id' => $tenantId,
+                'tenant_name' => $unit->activeTenancy?->tenant?->name,
+                'package' => $looTenantId && $tenantId === $looTenantId ? $package : [],
+            ];
+        })->values());
     }
 
     public function edit(Loo $loo, Request $request)
@@ -819,6 +860,14 @@ class LooController extends Controller
             ->all();
 
         abort_unless(count($valid) === count($ids), 422, 'Ada unit yang tidak berada di cabang LOO ini.');
+
+        // Auto-paket: unit tenant yang sama selalu dipilih utuh. Hanya berlaku
+        // bila tenant LOO memang tenant yang menempati unit tersebut.
+        $ids = $this->packages->expandForTenant(
+            $ids,
+            $loo->tenant_id ? (int) $loo->tenant_id : null,
+            $loo->branch_id,
+        );
 
         // Unit milik area gabungan tidak boleh disewa sebagian.
         $partial = UnitGroup::whereHas('units', fn ($q) => $q->whereIn('units.id', $ids))

@@ -46,16 +46,25 @@ export default function MultiSelect({
 
     const pool = fetchOptions ? remote : options;
 
+    // Label unit paket bisa datang dari option lain yang membawa `packageLabels`,
+    // supaya unit hasil ekspansi tidak tampil sebagai id mentah.
+    const labelIndex = useMemo(() => {
+        const map = {};
+        [...options, ...pool].forEach((o) => {
+            if (o.label) map[String(o.value)] = o.label;
+            Object.assign(map, o.packageLabels ?? {});
+        });
+
+        return map;
+    }, [options, pool]);
+
     // Label terpilih harus tetap tampil walau hasil pencarian sudah berganti.
     const selected = useMemo(
         () => value.map((v) => ({
             value: v,
-            label: known[v]
-                ?? options.find((o) => String(o.value) === String(v))?.label
-                ?? pool.find((o) => String(o.value) === String(v))?.label
-                ?? String(v),
+            label: known[v] ?? labelIndex[String(v)] ?? String(v),
         })),
-        [value, options, pool, known]
+        [value, labelIndex, known]
     );
 
     const filtered = useMemo(() => {
@@ -73,12 +82,12 @@ export default function MultiSelect({
         const next = isSelected(v)
             ? value.filter((x) => String(x) !== String(v))
             : [...value, v];
-        setKnown((prev) => ({ ...prev, [v]: option.label }));
-        onChange && onChange(next);
+        setKnown((prev) => ({ ...prev, [v]: option.label, ...(option.packageLabels ?? {}) }));
+        onChange && onChange(next, option);
     };
 
     const clearAll = () => {
-        onChange && onChange([]);
+        onChange && onChange([], null);
     };
 
     const close = () => {

@@ -18,6 +18,25 @@ function hasStoredValue(v) {
     return v !== null && v !== undefined && v !== '';
 }
 
+// Cache paket tenant dari opsi unit yang sudah dimuat. MultiSelect hanya
+// mengirim daftar nilai, jadi detail paket diambil dari cache ini. Kunci
+// memakai looId supaya paket LOO lain tidak terbawa.
+const unitPackageRegistry = new Map();
+
+function rememberPackages(looId, options = []) {
+    if (!looId) return;
+
+    options.forEach((o) => {
+        if (Array.isArray(o.package) && o.package.length >= 2) {
+            unitPackageRegistry.set(`${looId}:${String(o.value)}`, o.package.map(String));
+        }
+    });
+}
+
+function packageForUnit(looId, unitId) {
+    return unitPackageRegistry.get(`${looId}:${String(unitId)}`) ?? [];
+}
+
 // Pencarian unit server-side (dipakai select tunggal & multi).
 function fetchUnitOptions(looId) {
     return async (q) => {
@@ -25,7 +44,15 @@ function fetchUnitOptions(looId) {
             headers: { Accept: 'application/json' },
         });
         if (!res.ok) return [];
-        return (await res.json()).map((o) => ({ value: String(o.id), label: o.name }));
+        const mapped = (await res.json()).map((o) => ({
+            value: String(o.id),
+            label: o.tenant_name ? `${o.name} · ${o.tenant_name}` : o.name,
+            package: (o.package ?? []).map((p) => String(p.id)),
+            packageLabels: Object.fromEntries((o.package ?? []).map((p) => [String(p.id), p.name])),
+        }));
+        rememberPackages(looId, mapped);
+
+        return mapped;
     };
 }
 
@@ -76,12 +103,21 @@ function Field({ field, value, error, onChange, options, looId, sectionKey }) {
         case 'multiselect': {
             const list = Array.isArray(value) ? value : [];
 
+            if (field.source === 'units') {
+                rememberPackages(looId, sourceOptions ?? []);
+            }
+
             if (field.searchable) {
                 return (
                     <MultiSelect
                         {...common}
                         value={list.map(String)}
-                        options={(sourceOptions ?? []).map((o) => ({ value: String(o.id), label: o.name }))}
+                        options={(sourceOptions ?? []).map((o) => ({
+                            value: String(o.id),
+                            label: o.tenant_name ? `${o.name} · ${o.tenant_name}` : o.name,
+                            package: (o.package ?? []).map((p) => String(p.id)),
+                            packageLabels: Object.fromEntries((o.package ?? []).map((p) => [String(p.id), p.name])),
+                        }))}
                         onChange={onChange}
                         fetchOptions={field.source === 'units' && looId
                             ? fetchUnitOptions(looId)
@@ -535,6 +571,36 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                 unit_group_id: value,
                 unit_ids: group ? (group.unit_ids ?? []).map(String) : [],
             }));
+            return;
+        }
+
+        // Paket tenant: pilih satu unit → semua unit tenant ikut; hapus satu →
+        // semua ikut terlepas. Backend tetap menegakkan aturan yang sama.
+        if (field.name === 'unit_ids') {
+            const prev = (Array.isArray(data.unit_ids) ? data.unit_ids : []).map(String);
+            const next = (Array.isArray(value) ? value : []).map(String);
+            const nextSet = new Set(next);
+            const removed = prev.filter((id) => !nextSet.has(id));
+            let result = [...next];
+
+            if (removed.length > 0 && next.length < prev.length) {
+                removed.forEach((id) => {
+                    const pkg = packageForUnit(looId, id);
+                    if (pkg.length < 2) return;
+                    const drop = new Set(pkg);
+                    result = result.filter((v) => !drop.has(v));
+                });
+            } else {
+                next.forEach((id) => {
+                    const pkg = packageForUnit(looId, id);
+                    if (pkg.length < 2) return;
+                    pkg.forEach((p) => {
+                        if (!result.includes(p)) result.push(p);
+                    });
+                });
+            }
+
+            setValue('unit_ids', result);
             return;
         }
 

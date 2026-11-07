@@ -170,18 +170,91 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
     const selectedUnits = branchUnits.filter((u) => data.unit_ids.includes(String(u.id)));
     const totalSize = selectedUnits.reduce((sum, u) => sum + (Number(u.size) || 0), 0);
 
+    // Tenant dengan minimal 2 unit layak dianggap satu paket: memilih satu unit
+    // otomatis menarik seluruh unitnya, dan menghapus satu melepas semuanya.
+    const tenantPackages = useMemo(() => {
+        const byTenant = new Map();
+
+        branchUnits.forEach((u) => {
+            if (!u.tenant_id) return;
+            const key = String(u.tenant_id);
+            if (!byTenant.has(key)) {
+                byTenant.set(key, { id: key, name: u.tenant_name ?? 'Tenant', units: [] });
+            }
+            byTenant.get(key).units.push(u);
+        });
+
+        return [...byTenant.values()]
+            .filter((t) => t.units.length >= 2)
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [branchUnits]);
+
+    const packageFor = (unitId) => {
+        const unit = branchUnits.find((u) => String(u.id) === String(unitId));
+        if (!unit?.tenant_id) return [];
+
+        const tenant = tenantPackages.find((t) => String(t.id) === String(unit.tenant_id));
+
+        return tenant ? tenant.units.map((u) => String(u.id)) : [];
+    };
+
+    const resolvePackages = (next) => {
+        const prev = data.unit_ids.map(String);
+        const nextIds = [...new Set(next.map(String))];
+        const nextSet = new Set(nextIds);
+        const removed = prev.filter((id) => !nextSet.has(id));
+
+        // Menghapus satu unit paket melepas seluruh unit tenant tersebut.
+        if (removed.length > 0 && nextIds.length < prev.length) {
+            let result = [...nextIds];
+
+            removed.forEach((id) => {
+                const pkg = packageFor(id);
+                if (pkg.length < 2) return;
+                const drop = new Set(pkg);
+                result = result.filter((v) => !drop.has(v));
+            });
+
+            return result;
+        }
+
+        const result = [...nextIds];
+        nextIds.forEach((id) => {
+            const pkg = packageFor(id);
+            if (pkg.length < 2) return;
+            pkg.forEach((p) => {
+                if (!result.includes(p)) result.push(p);
+            });
+        });
+
+        return result;
+    };
+
     const toggleUnit = (next) => {
-        const nextUnits = branchUnits.filter((u) => next.includes(String(u.id)));
-        const primaryUnitId = data.primary_unit_id && next.includes(String(data.primary_unit_id))
+        const resolved = resolvePackages(next);
+        const nextUnits = branchUnits.filter((u) => resolved.includes(String(u.id)));
+        const primaryUnitId = data.primary_unit_id && resolved.includes(String(data.primary_unit_id))
             ? data.primary_unit_id
-            : (next[0] ?? '');
+            : (resolved[0] ?? '');
 
         setData((prev) => ({
             ...prev,
-            unit_ids: next,
+            unit_ids: resolved,
             primary_unit_id: primaryUnitId,
             name: prev.name_auto ? suggestGroupName(nextUnits) : prev.name,
         }));
+    };
+
+    const addTenantPackage = (tenantId) => {
+        const tenant = tenantPackages.find((t) => String(t.id) === String(tenantId));
+        if (!tenant) return;
+
+        toggleUnit([
+            ...new Set([
+                ...data.unit_ids.map(String),
+                ...tenant.units.map((u) => String(u.id)),
+            ]),
+        ]);
     };
 
     const toggleNameAuto = (enabled) => {
@@ -362,6 +435,22 @@ export default function Groups({ groups = [], units = [], branches = [], canPick
                     </FormSection>
 
                     <FormSection variant="drawer" title="Unit Anggota" description="Satu unit hanya boleh menjadi anggota satu area">
+                        {tenantPackages.length > 0 && (
+                            <FormField
+                                compact
+                                label="Pilih dari tenant"
+                                hint="Hanya tenant dengan minimal 2 unit yang belum masuk area lain. Memilih tenant menarik seluruh unitnya."
+                            >
+                                <SelectInput value="" onChange={(e) => addTenantPackage(e.target.value)}>
+                                    <option value="">Pilih tenant...</option>
+                                    {tenantPackages.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {`${t.name} · ${t.units.map((u) => u.unit_code).join(', ')}`}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </FormField>
+                        )}
                         <FormField compact label="Unit" error={errors.unit_ids} required>
                             <MultiSelect
                                 value={data.unit_ids}
