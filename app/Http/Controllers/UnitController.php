@@ -28,10 +28,18 @@ class UnitController extends Controller
             'scannableCode',
         ])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
-                $qq->where('unit_code', 'like', "%{$request->search}%")
-                    ->orWhere('floor', 'like', "%{$request->search}%")
-                    ->orWhere('block', 'like', "%{$request->search}%")
-                    ->orWhere('unit_number', 'like', "%{$request->search}%");
+                $term = "%{$request->search}%";
+
+                $qq->where('unit_code', 'like', $term)
+                    ->orWhere('floor', 'like', $term)
+                    ->orWhere('block', 'like', $term)
+                    ->orWhere('unit_number', 'like', $term)
+                    ->orWhereHas('activeTenancy.tenant', fn ($t) => $t
+                        ->where('name', 'like', $term)
+                        ->orWhere('trade_name', 'like', $term))
+                    ->orWhereHas('group.activeTenancy.tenant', fn ($t) => $t
+                        ->where('name', 'like', $term)
+                        ->orWhere('trade_name', 'like', $term));
             }));
 
         $this->branchScope->apply($base, $request->user());

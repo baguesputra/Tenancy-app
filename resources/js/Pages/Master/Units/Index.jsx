@@ -366,11 +366,11 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         <div className="relative flex-1">
                             <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
                             <TextInput
-                                placeholder="Cari kode / nomor unit…"
+                                placeholder="Cari kode unit / tenant…"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9"
-                                aria-label="Cari unit"
+                                aria-label="Cari unit atau nama tenant"
                             />
                         </div>
                         <div className="grid grid-cols-3 gap-2">

@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\ProductCategory;
+use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
 use App\Models\UnitGroup;
@@ -62,6 +64,17 @@ class UnitFlexibilityTest extends TestCase
         ]);
     }
 
+    private function tenant(string $name): Tenant
+    {
+        return Tenant::create([
+            'name' => $name,
+            'branch_id' => $this->branch->id,
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
+            'is_active' => true,
+        ]);
+    }
+
     private function makeLoo(): Loo
     {
         $user = $this->userWithPermissions(['loos.view', 'loos.transition']);
@@ -115,6 +128,57 @@ class UnitFlexibilityTest extends TestCase
                 ->where('summary.total', 2)
                 ->where('summary.internal', 1)
                 ->where('summary.vacant', 1));
+    }
+
+    public function test_unit_search_matches_tenant_name(): void
+    {
+        $user = $this->userWithPermissions(['units.view']);
+        $tenant = $this->tenant('Kopi Senja');
+
+        $occupied = $this->unit('01');
+        $tenant->tenancies()->create([
+            'unit_id' => $occupied->id,
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+        ]);
+        $this->unit('02');
+
+        $this->actingAs($user)
+            ->get('/units?search=Kopi')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Master/Units/Index')
+                ->has('units.data', 1)
+                ->where('units.data.0.id', $occupied->id));
+    }
+
+    public function test_unit_search_matches_group_tenant_name(): void
+    {
+        $user = $this->userWithPermissions(['units.view']);
+        $tenant = $this->tenant('Senja Coffee');
+
+        $first = $this->unit('01');
+        $second = $this->unit('02');
+
+        $group = UnitGroup::create(['branch_id' => $this->branch->id, 'name' => 'Area Senja']);
+        $group->units()->sync([
+            $first->id => ['is_primary' => true],
+            $second->id => ['is_primary' => false],
+        ]);
+        $tenant->tenancies()->create([
+            'unit_id' => $first->id,
+            'unit_group_id' => $group->id,
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+        ]);
+        $this->unit('03');
+
+        $this->actingAs($user)
+            ->get('/units?search=Senja')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Master/Units/Index')
+                ->has('units.data', 2));
     }
 
     public function test_internal_unit_can_only_have_one_active_assignment(): void
