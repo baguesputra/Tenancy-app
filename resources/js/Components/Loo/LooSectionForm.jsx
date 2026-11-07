@@ -524,6 +524,21 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
         }
     };
 
+    // Pilih area gabungan → unit anggota otomatis terisi dan dikunci.
+    const changeField = (field) => (value) => {
+        if (field.name === 'unit_group_id') {
+            const group = (options?.unitGroups ?? []).find((g) => String(g.id) === String(value));
+            setData((prev) => ({
+                ...prev,
+                unit_group_id: value,
+                unit_ids: group ? (group.unit_ids ?? []).map(String) : [],
+            }));
+            return;
+        }
+
+        setValue(field.name, value);
+    };
+
     const missingRequired = (config.fields ?? []).filter(
         (f) => f.required && !f.type.match(/file|checkbox|repeater/) && !data[f.name]
     );
@@ -544,7 +559,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(config.fields ?? []).map((field) => {
                     if (hasChecklistTable && DEPT_SIG_RE.test(field.name)) return null;
-                    const locked = isFieldLocked(field);
+                    const locked = isFieldLocked(field) || (field.name === 'unit_ids' && Boolean(data.unit_group_id));
                     const depLocked = Boolean(field.depends_on) && !hasStoredValue(initial[field.depends_on]);
                     const depLabel = field.depends_on
                         ? (config.fields ?? []).find((f) => f.name === field.depends_on)?.label ?? field.depends_on
@@ -571,7 +586,7 @@ export default function LooSectionForm({ looId, sectionKey, config, section, opt
                                         idPrefix={sectionKey}
                                     />
                                 ) : (
-                                    <Field field={field} value={data[field.name]} onChange={(v) => setValue(field.name, v)} options={options} looId={looId} sectionKey={sectionKey} />
+                                    <Field field={field} value={data[field.name]} onChange={changeField(field)} options={options} looId={looId} sectionKey={sectionKey} />
                                 )}
                             </FormField>
                         </div>

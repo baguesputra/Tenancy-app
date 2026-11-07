@@ -155,7 +155,7 @@ function KpiStrip({ items = [] }) {
     );
 }
 
-export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, readOnlySections = {}, canEditLoo = false, canCancel = false, files = [], attachments = [], progress = null, options = {}, unitCodes = [] }) {
+export default function Show({ loo, sectionConfigs = {}, canEditSections = [], visibleSectionKeys = null, readOnlySections = {}, canEditLoo = false, canCancel = false, files = [], attachments = [], progress = null, options = {}, unitCodes = [], unitGroupName = null }) {
     const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState(null);
     const [cancelModal, setCancelModal] = useState(false);
@@ -256,7 +256,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                             </Badge>
                         </div>
                         <p className="text-xs sm:text-sm text-slate-500 mt-1 truncate">
-                            {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'} · Unit: {(unitCodes.length > 0 ? unitCodes.join(', ') : loo.unit?.unit_code) ?? '—'}
+                            {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'} · Unit: {unitGroupName ? `${unitGroupName} — ` : ''}{(unitCodes.length > 0 ? unitCodes.join(', ') : loo.unit?.unit_code) ?? '—'}
                         </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">

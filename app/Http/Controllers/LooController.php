@@ -9,6 +9,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Models\User;
 use App\Services\BranchScopeService;
 use App\Services\LooProgressService;
@@ -137,6 +138,7 @@ class LooController extends Controller
         if ($tenantSection) {
             $data = $tenantSection->data ?? [];
             $data['unit_ids'] = $unitIds;
+            $data['unit_group_id'] = $data['unit_group_id'] ?? null;
             $data['product_categories'] = LooSectionService::decodeList($data['product_categories'] ?? []);
             $tenantSection->data = $data;
         }
@@ -144,6 +146,22 @@ class LooController extends Controller
         $units = Unit::whereIn('id', $unitIds)
             ->orderBy('unit_number')
             ->get(['id', 'unit_code']);
+
+        $unitGroupId = $tenantSection?->data['unit_group_id'] ?? null;
+        $unitGroupName = $unitGroupId ? UnitGroup::find($unitGroupId)?->name : null;
+
+        $unitGroups = UnitGroup::where('branch_id', $loo->branch_id)
+            ->where('is_active', true)
+            ->with(['units' => fn ($q) => $q->orderBy('unit_number')])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (UnitGroup $group) => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'unit_ids' => $group->units->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+                'units_label' => $group->units->pluck('unit_code')->implode(', '),
+            ])
+            ->values();
 
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
@@ -159,10 +177,12 @@ class LooController extends Controller
                 : $this->attachmentRows($loo),
             'progress' => $this->progress->progress($loo),
             'unitCodes' => $units->pluck('unit_code')->all(),
+            'unitGroupName' => $unitGroupName,
             'options' => [
                 'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
                 'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
                 'units' => $units->map(fn ($u) => ['id' => $u->id, 'name' => $u->unit_code])->values(),
+                'unitGroups' => $unitGroups,
             ],
         ]);
     }
@@ -281,6 +301,9 @@ class LooController extends Controller
         $search = trim((string) $request->query('search'));
 
         $units = Unit::where('branch_id', $loo->branch_id)
+            ->where('usage_type', 'tenant')
+            ->where('is_active', true)
+            ->whereDoesntHave('group')
             ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('unit_code', 'like', "%{$search}%")
                 ->orWhere('floor', 'like', "%{$search}%")
@@ -362,8 +385,15 @@ class LooController extends Controller
         $this->sections->assertDependencies($config, $request->all(), $current?->data ?? []);
 
         if ($key === 'manajemen_tenant') {
+            $request->validate([
+                'tenant_category_id' => 'nullable|exists:tenant_categories,id',
+                'unit_group_id' => 'nullable|exists:unit_groups,id',
+            ]);
+
             $unitIds = $this->validatedUnitIds($request, $loo);
-            $request->validate(['tenant_category_id' => 'nullable|exists:tenant_categories,id']);
+
+            // Anggota grup otomatis menjadi unit_ids yang tersimpan.
+            $request->merge(['unit_ids' => $unitIds]);
 
             $loo->update([
                 'unit_id' => $unitIds[0] ?? null,
@@ -747,13 +777,34 @@ class LooController extends Controller
     }
 
     /**
-     * `unit_ids` (multi) atau `unit_id` (payload lama). Semua harus milik cabang
-     * LOO; id pertama menjadi `loos.unit_id` (unit primary).
+     * `unit_group_id` menang: anggota grup menjadi unit terpilih (override input).
+     * Tanpa grup: `unit_ids` (multi) atau `unit_id` (payload lama). Semua harus
+     * milik cabang LOO; id pertama menjadi `loos.unit_id` (unit primary).
      *
      * @return array<int, int>
      */
     private function validatedUnitIds(Request $request, Loo $loo): array
     {
+        $groupId = $request->input('unit_group_id');
+
+        if ($groupId) {
+            $group = UnitGroup::where('id', $groupId)
+                ->where('branch_id', $loo->branch_id)
+                ->first();
+
+            abort_unless($group, 422, 'Area gabungan tidak berada di cabang LOO ini.');
+
+            $ids = $group->units()
+                ->orderBy('unit_number')
+                ->pluck('units.id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            abort_if($ids === [], 422, 'Area gabungan belum punya unit anggota.');
+
+            return $ids;
+        }
+
         $raw = $request->input('unit_ids', $request->input('unit_id'));
         $ids = array_values(array_unique(array_map('intval', LooSectionService::decodeList($raw))));
 
@@ -768,6 +819,19 @@ class LooController extends Controller
             ->all();
 
         abort_unless(count($valid) === count($ids), 422, 'Ada unit yang tidak berada di cabang LOO ini.');
+
+        // Unit milik area gabungan tidak boleh disewa sebagian.
+        $partial = UnitGroup::whereHas('units', fn ($q) => $q->whereIn('units.id', $ids))
+            ->with('units:id')
+            ->get()
+            ->contains(function (UnitGroup $group) use ($ids) {
+                $members = $group->units->pluck('id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $selected = collect($ids)->sort()->values()->all();
+
+                return $members !== $selected;
+            });
+
+        abort_if($partial, 422, 'Unit yang tergabung dalam area gabungan harus dipilih seluruhnya.');
 
         return $ids;
     }

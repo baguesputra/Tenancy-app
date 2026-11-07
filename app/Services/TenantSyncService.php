@@ -7,6 +7,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -90,7 +91,8 @@ class TenantSyncService
      */
     private function syncTenancies(Loo $loo, Tenant $tenant, array $sections): array
     {
-        $unitIds = $this->unitIds($loo, $sections['manajemen_tenant'] ?? []);
+        $mgmt = $sections['manajemen_tenant'] ?? [];
+        $unitIds = $this->unitIds($loo, $mgmt);
 
         if ($unitIds === []) {
             return [];
@@ -98,6 +100,35 @@ class TenantSyncService
 
         $acct = $sections['biaya_termin'] ?? [];
         $ba = $sections['ba_handover'] ?? [];
+        $groupId = isset($mgmt['unit_group_id']) && $mgmt['unit_group_id'] !== ''
+            ? (int) $mgmt['unit_group_id']
+            : null;
+
+        $group = $groupId ? UnitGroup::find($groupId) : null;
+
+        // Area gabungan = satu kontrak, satu tenancy (unit primary grup).
+        if ($group) {
+            $primaryId = Unit::whereIn('id', $unitIds)
+                ->orderBy('unit_number')
+                ->value('id') ?? $unitIds[0];
+
+            $tenancy = $this->syncTenancyForUnit($loo, $tenant, $primaryId, $acct, $ba, $group->id);
+
+            // Unit lain di grup tidak boleh punya kontrak aktif lain.
+            Tenancy::whereIn('unit_id', $unitIds)
+                ->where('id', '!=', $tenancy->id)
+                ->where('status', 'active')
+                ->update(['status' => 'ended', 'end_date' => now()]);
+
+            // Tenancy lain milik kontrak ini yang bukan tenancy grup diakhiri.
+            Tenancy::where('tenant_id', $tenant->id)
+                ->where('contract_number', $loo->loo_number)
+                ->where('id', '!=', $tenancy->id)
+                ->where('status', 'active')
+                ->update(['status' => 'ended', 'end_date' => now()]);
+
+            return [$tenancy];
+        }
 
         $tenancies = [];
 
@@ -115,8 +146,14 @@ class TenantSyncService
         return $tenancies;
     }
 
-    private function syncTenancyForUnit(Loo $loo, Tenant $tenant, int $unitId, array $acct, array $ba): Tenancy
-    {
+    private function syncTenancyForUnit(
+        Loo $loo,
+        Tenant $tenant,
+        int $unitId,
+        array $acct,
+        array $ba,
+        ?int $unitGroupId = null,
+    ): Tenancy {
         $existing = Tenancy::where('tenant_id', $tenant->id)
             ->where('unit_id', $unitId)
             ->whereNull('end_date')
@@ -124,6 +161,7 @@ class TenantSyncService
 
         $attributes = [
             'unit_id' => $unitId,
+            'unit_group_id' => $unitGroupId,
             'tenant_id' => $tenant->id,
             'contract_number' => $loo->loo_number,
             'start_date' => $acct['contract_start_date'] ?? now()->toDateString(),
