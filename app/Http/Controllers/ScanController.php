@@ -6,6 +6,7 @@ use App\Models\Inspection;
 use App\Models\PermitRequest;
 use App\Models\ScannableCode;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use App\Services\PermitScanWindowService;
@@ -37,6 +38,7 @@ class ScanController extends Controller
             PermitRequest::class => $this->handlePermit($model, $scanWindow),
             Inspection::class => $this->handleInspection($model),
             Unit::class => $this->handleUnit($model, $webUser, $request, $sessions, $inspections),
+            UnitGroup::class => $this->handleUnitGroup($model, $webUser, $request, $sessions, $inspections),
             default => abort(400, 'Unsupported scannable type'),
         };
     }
@@ -166,24 +168,64 @@ class ScanController extends Controller
             $tenancy = $unit->activeTenancy;
             abort_unless($tenancy && $tenancy->tenant, 404, 'Unit kosong, tidak ada tenant aktif.');
 
-            $ongoing = $inspections->findOngoingInspection($webUser, $tenancy->tenant);
-            if ($ongoing) {
-                return redirect()->route('inspections.show', $ongoing->id);
-            }
-
-            $other = $inspections->findOtherOngoingInspection($webUser, $tenancy->tenant);
-            if ($other) {
-                $name = $other->session->user->name ?? 'inspector lain';
-
-                return back()->withErrors(['token' => "Tenant {$tenancy->tenant->name} sedang disidak {$name}."]);
-            }
-
-            $session = $sessions->getOrCreateActiveSession($webUser);
-            $inspection = $inspections->addInspection($session, $tenancy->tenant);
-
-            return redirect()->route('inspections.show', $inspection->id);
+            return $this->startInspection($tenancy->tenant, $webUser, $sessions, $inspections);
         }
 
+        return $this->redirectAfterScan($webUser);
+    }
+
+    /**
+     * QR area gabungan: kontrak menempel di unit primary grup, jadi konteks
+     * tenant diambil dari tenancy grup.
+     */
+    private function handleUnitGroup(
+        UnitGroup $group,
+        $webUser,
+        Request $request,
+        InspectionSessionService $sessions,
+        InspectionService $inspections,
+    ) {
+        if (! $webUser) {
+            $request->session()->put('scan_redirect_token', $group->scannableCode->token);
+
+            return redirect()->route('login');
+        }
+
+        if ($webUser->can('sidak.manage')) {
+            $tenancy = $group->activeTenancy;
+
+            if (! $tenancy || ! $tenancy->tenant) {
+                return back()->withErrors(['token' => 'Area gabungan belum ditempati tenant aktif.']);
+            }
+
+            return $this->startInspection($tenancy->tenant, $webUser, $sessions, $inspections);
+        }
+
+        return $this->redirectAfterScan($webUser);
+    }
+
+    private function startInspection($tenant, $webUser, InspectionSessionService $sessions, InspectionService $inspections)
+    {
+        $ongoing = $inspections->findOngoingInspection($webUser, $tenant);
+        if ($ongoing) {
+            return redirect()->route('inspections.show', $ongoing->id);
+        }
+
+        $other = $inspections->findOtherOngoingInspection($webUser, $tenant);
+        if ($other) {
+            $name = $other->session->user->name ?? 'inspector lain';
+
+            return back()->withErrors(['token' => "Tenant {$tenant->name} sedang disidak {$name}."]);
+        }
+
+        $session = $sessions->getOrCreateActiveSession($webUser);
+        $inspection = $inspections->addInspection($session, $tenant);
+
+        return redirect()->route('inspections.show', $inspection->id);
+    }
+
+    private function redirectAfterScan($webUser)
+    {
         return $webUser->can('units.view')
             ? redirect()->route('units.index')
             : redirect()->route('dashboard');

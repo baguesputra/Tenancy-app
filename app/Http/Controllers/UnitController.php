@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\Department;
 use App\Models\Unit;
+use App\Models\UnitAssignment;
+use App\Models\UnitGroup;
 use App\Services\BranchScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +19,14 @@ class UnitController extends Controller
 
     public function index(Request $request)
     {
-        $base = Unit::with(['branch', 'activeTenancy.tenant', 'scannableCode'])
+        $base = Unit::with([
+            'branch',
+            'activeTenancy.tenant',
+            'activeAssignment.department',
+            'assignments.department',
+            'group.activeTenancy',
+            'scannableCode',
+        ])
             ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
                 $qq->where('unit_code', 'like', "%{$request->search}%")
                     ->orWhere('floor', 'like', "%{$request->search}%")
@@ -39,18 +49,12 @@ class UnitController extends Controller
             ->whereNotNull('unit_number')->where('unit_number', '!=', '')
             ->distinct()->orderBy('unit_number')->pluck('unit_number');
 
-        $agg = (clone $filterBase)
-            ->leftJoin('tenancies', function ($j) {
-                $j->on('tenancies.unit_id', '=', 'units.id')
-                    ->where('tenancies.status', '=', 'active');
-            })
-            ->toBase()
-            ->selectRaw('count(distinct units.id) as total, count(distinct case when units.is_active = 0 then units.id end) as inactive, count(distinct tenancies.id) as occupied')
-            ->first();
-        $total = (int) ($agg->total ?? 0);
-        $inactive = (int) ($agg->inactive ?? 0);
-        $occupied = (int) ($agg->occupied ?? 0);
-        $vacant = $total - $occupied - $inactive;
+        $total = (clone $filterBase)->count();
+        $inactive = (clone $filterBase)->where('is_active', false)->count();
+        $occupied = $this->applyOccupied(clone $filterBase)->count();
+        $internal = $this->applyInternal(clone $filterBase)->count();
+        $common = $this->applyCommon(clone $filterBase)->count();
+        $vacant = max(0, $total - $inactive - $occupied - $internal - $common);
 
         $located = (clone $base)
             ->when($request->floor, fn ($q) => $q->where('floor', $request->floor))
@@ -59,33 +63,36 @@ class UnitController extends Controller
 
         // Ringkasan per lantai untuk header grup di tabel — sengaja tanpa filter status
         // supaya meter okupansi tetap menggambarkan kondisi lantai, bukan hasil saring.
-        $floorSummary = (clone $located)->reorder()->toBase()
-            ->leftJoin('tenancies', function ($j) {
-                $j->on('tenancies.unit_id', '=', 'units.id')
-                    ->where('tenancies.status', '=', 'active');
-            })
-            ->groupBy('units.floor')
-            ->orderBy('units.floor')
-            ->selectRaw('units.floor as floor, count(distinct units.id) as total, count(distinct case when units.is_active = 0 then units.id end) as inactive, count(distinct tenancies.id) as occupied')
-            ->get()
-            ->map(fn ($row) => [
-                'floor' => $row->floor,
-                'total' => (int) $row->total,
-                'occupied' => (int) $row->occupied,
-                'inactive' => (int) $row->inactive,
-                'vacant' => (int) $row->total - (int) $row->occupied - (int) $row->inactive,
-            ])
-            ->values();
+        $floorSummary = $this->summarizeByFloor(clone $located);
 
         $query = (clone $located)
-            ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
-            ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
+            ->when($request->status === 'occupied', fn ($q) => $this->applyOccupied($q))
+            ->when($request->status === 'vacant', fn ($q) => $this->applyVacant($q))
+            ->when($request->status === 'internal', fn ($q) => $this->applyInternal($q))
+            ->when($request->status === 'common', fn ($q) => $this->applyCommon($q))
             ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
             ->orderBy('floor')->orderBy('block')->orderBy('unit_number');
 
         $units = $query->paginate(15)->withQueryString();
         $units->getCollection()->transform(function (Unit $unit) {
-            $unit->is_occupied = $unit->activeTenancy !== null;
+            $state = $unit->occupancyState();
+            $unit->is_occupied = $state === 'occupied';
+            $unit->occupancy_state = $state;
+            $unit->internal_department = $unit->activeAssignment?->department?->name;
+            $unit->active_assignment_id = $unit->activeAssignment?->id;
+            $unit->group_name = $unit->group->first()?->name;
+            $unit->assignments_history = $unit->assignments
+                ->sortByDesc('started_at')
+                ->map(fn (UnitAssignment $assignment) => [
+                    'id' => $assignment->id,
+                    'department' => $assignment->department?->name,
+                    'pic_name' => $assignment->pic_name,
+                    'pic_phone' => $assignment->pic_phone,
+                    'note' => $assignment->note,
+                    'started_at' => $assignment->started_at?->toDateString(),
+                    'ended_at' => $assignment->ended_at?->toDateString(),
+                ])
+                ->values();
             $unit->scan_url = $unit->scanUrl;
             // ponytail: QR inline 15x per page, pindah ke endpoint/PDF saat lambat
             $unit->qr_image = $unit->scanUrl
@@ -101,6 +108,8 @@ class UnitController extends Controller
                 'total' => $total,
                 'occupied' => $occupied,
                 'vacant' => $vacant,
+                'internal' => $internal,
+                'common' => $common,
                 'inactive' => $inactive,
             ],
             'filters' => $request->only(['search', 'status', 'floor', 'block', 'unit_number']),
@@ -108,9 +117,97 @@ class UnitController extends Controller
             'floors' => $floors,
             'blocks' => $blocks,
             'unitNumbers' => $unitNumbers,
+            'departments' => Department::orderBy('name')->get(['id', 'name']),
             'branches' => $request->user()->canViewAllBranches() ? Branch::orderBy('name')->get(['id', 'name']) : [],
             'canPickBranch' => $request->user()->canViewAllBranches(),
         ]);
+    }
+
+    /**
+     * Terisi = tenancy aktif di unit itu sendiri atau di grup tempat unit menjadi anggota.
+     */
+    private function applyOccupied($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereHas('activeTenancy')
+                    ->orWhereHas('group.activeTenancy');
+            });
+    }
+
+    /**
+     * Internal = ditandai internal atau ada assignment aktif, dan tidak sedang disewa.
+     */
+    private function applyInternal($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('usage_type', 'internal')
+                    ->orWhereHas('activeAssignment');
+            })
+            ->whereDoesntHave('activeTenancy')
+            ->whereDoesntHave('group.activeTenancy');
+    }
+
+    private function applyCommon($query)
+    {
+        return $query->where('is_active', true)
+            ->where('usage_type', 'common')
+            ->whereDoesntHave('activeTenancy')
+            ->whereDoesntHave('group.activeTenancy')
+            ->whereDoesntHave('activeAssignment');
+    }
+
+    private function applyVacant($query)
+    {
+        return $query->where('is_active', true)
+            ->where('usage_type', 'tenant')
+            ->whereDoesntHave('activeTenancy')
+            ->whereDoesntHave('group.activeTenancy')
+            ->whereDoesntHave('activeAssignment');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, int|string>>
+     */
+    private function summarizeByFloor($query)
+    {
+        $counts = function (?callable $scope = null) use ($query) {
+            $q = (clone $query)->reorder();
+
+            if ($scope) {
+                $q = $scope($q);
+            }
+
+            return $q->toBase()
+                ->selectRaw('units.floor as floor, count(*) as total')
+                ->groupBy('units.floor')
+                ->pluck('total', 'floor');
+        };
+
+        $total = $counts();
+        $inactive = $counts(fn ($q) => $q->where('units.is_active', false));
+        $occupied = $counts(fn ($q) => $this->applyOccupied($q));
+        $internal = $counts(fn ($q) => $this->applyInternal($q));
+        $common = $counts(fn ($q) => $this->applyCommon($q));
+
+        return $total->map(function ($count, $floor) use ($inactive, $occupied, $internal, $common) {
+            $t = (int) $count;
+            $i = (int) ($inactive[$floor] ?? 0);
+            $o = (int) ($occupied[$floor] ?? 0);
+            $in = (int) ($internal[$floor] ?? 0);
+            $c = (int) ($common[$floor] ?? 0);
+
+            return [
+                'floor' => $floor,
+                'total' => $t,
+                'occupied' => $o,
+                'internal' => $in,
+                'common' => $c,
+                'inactive' => $i,
+                'vacant' => max(0, $t - $i - $o - $in - $c),
+            ];
+        })->values();
     }
 
     public function create(Request $request)
@@ -124,6 +221,7 @@ class UnitController extends Controller
 
         Unit::create([
             ...$validated,
+            'usage_type' => $validated['usage_type'] ?? 'tenant',
             'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $request->user()->branch_id,
         ]);
 
@@ -139,6 +237,7 @@ class UnitController extends Controller
 
         $unit->update([
             ...$validated,
+            'usage_type' => $validated['usage_type'] ?? $unit->usage_type ?? 'tenant',
             'branch_id' => $request->user()->canViewAllBranches() ? $validated['branch_id'] : $unit->branch_id,
         ]);
 
@@ -152,6 +251,14 @@ class UnitController extends Controller
 
         if ($unit->tenancies()->exists()) {
             return back()->withErrors(['unit' => 'Unit tidak bisa dihapus karena masih punya riwayat tenancy.']);
+        }
+
+        if ($unit->assignments()->exists()) {
+            return back()->withErrors(['unit' => 'Unit tidak bisa dihapus karena masih punya riwayat pemakaian internal.']);
+        }
+
+        if ($unit->group()->exists()) {
+            return back()->withErrors(['unit' => 'Unit tidak bisa dihapus karena masih menjadi anggota area gabungan.']);
         }
 
         $unit->delete();
@@ -172,6 +279,7 @@ class UnitController extends Controller
                 Rule::unique('units', 'unit_code')->ignore($ignoreId),
             ],
             'size' => 'nullable|numeric|min:0',
+            'usage_type' => ['nullable', Rule::in(['tenant', 'internal', 'common'])],
             'branch_id' => $canPickBranch ? 'required|exists:branches,id' : 'nullable',
             'is_active' => 'boolean',
         ]);

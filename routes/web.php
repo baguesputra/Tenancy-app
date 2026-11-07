@@ -24,7 +24,9 @@ use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\TenantCategoryController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantProfileController;
+use App\Http\Controllers\UnitAssignmentController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UnitGroupController;
 use App\Http\Controllers\UnitQrController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -146,6 +148,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:units.create')->post('/units', [UnitController::class, 'store'])->name('units.store');
     Route::middleware('can:units.edit')->put('/units/{id}', [UnitController::class, 'update'])->name('units.update');
     Route::middleware('can:units.delete')->delete('/units/{id}', [UnitController::class, 'destroy'])->name('units.destroy');
+
+    // Pemakaian internal (gudang divisi) — riwayat assignment per unit.
+    Route::middleware('can:units.edit')->post('/units/{unit}/assignments', [UnitAssignmentController::class, 'store'])->name('units.assignments.store');
+    Route::middleware('can:units.edit')->put('/units/{unit}/assignments/{assignment}/end', [UnitAssignmentController::class, 'end'])->name('units.assignments.end');
+
+    // Area gabungan: beberapa unit fisik disewakan sebagai satu identitas.
+    Route::middleware('can:units.view')->get('/unit-groups', [UnitGroupController::class, 'index'])->name('unit-groups.index');
+    Route::middleware('can:units.create')->post('/unit-groups', [UnitGroupController::class, 'store'])->name('unit-groups.store');
+    Route::middleware('can:units.edit')->put('/unit-groups/{id}', [UnitGroupController::class, 'update'])->name('unit-groups.update');
+    Route::middleware('can:units.delete')->delete('/unit-groups/{id}', [UnitGroupController::class, 'destroy'])->name('unit-groups.destroy');
+    Route::middleware('can:units.view')->get('/unit-groups/{id}/qr', [UnitQrController::class, 'group'])->name('unit-groups.qr');
 
     Route::middleware('can:units.view')->group(function () {
         Route::get('/units/{id}/qr', [UnitQrController::class, 'single'])->name('units.qr');

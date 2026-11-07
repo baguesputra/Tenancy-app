@@ -10,7 +10,7 @@ class Unit extends Model
 {
     protected $fillable = [
         'branch_id', 'floor', 'block', 'unit_number',
-        'unit_code', 'size', 'polygon_points', 'custom_color', 'is_active',
+        'unit_code', 'usage_type', 'size', 'polygon_points', 'custom_color', 'is_active',
     ];
 
     protected function casts(): array
@@ -36,13 +36,86 @@ class Unit extends Model
         return $this->hasOne(Tenancy::class)->where('status', 'active');
     }
 
+    public function assignments()
+    {
+        return $this->hasMany(UnitAssignment::class);
+    }
+
+    public function activeAssignment()
+    {
+        return $this->hasOne(UnitAssignment::class)->whereNull('ended_at');
+    }
+
+    public function group()
+    {
+        return $this->belongsToMany(UnitGroup::class, 'unit_group_unit')
+            ->withPivot('is_primary')
+            ->withTimestamps();
+    }
+
     /**
      * Status dihitung otomatis dari ada/tidaknya tenancy aktif —
      * bukan kolom manual, sesuai keputusan sebelumnya.
+     *
+     * Unit anggota grup dianggap terisi bila grupnya punya tenancy aktif
+     * (kontrak grup hanya menempel di unit primary).
      */
     public function isOccupied(): bool
     {
-        return $this->activeTenancy()->exists();
+        return $this->hasActiveTenancy();
+    }
+
+    private function hasActiveTenancy(): bool
+    {
+        $own = $this->relationLoaded('activeTenancy')
+            ? $this->activeTenancy !== null
+            : $this->activeTenancy()->exists();
+
+        if ($own) {
+            return true;
+        }
+
+        $groups = $this->relationLoaded('group')
+            ? $this->group
+            : $this->group()->with('activeTenancy')->get();
+
+        return $groups->contains(fn (UnitGroup $group) => $group->relationLoaded('activeTenancy')
+            ? $group->activeTenancy !== null
+            : $group->activeTenancy()->exists());
+    }
+
+    public function isInternal(): bool
+    {
+        return $this->usage_type === 'internal';
+    }
+
+    public function isLeasable(): bool
+    {
+        return $this->usage_type === 'tenant';
+    }
+
+    /**
+     * Urutan prioritas status: Nonaktif → Tenisi → Internal → Fasilitas → Kosong.
+     */
+    public function occupancyState(): string
+    {
+        if (! $this->is_active) {
+            return 'inactive';
+        }
+
+        if ($this->hasActiveTenancy()) {
+            return 'occupied';
+        }
+
+        if ($this->activeAssignment || $this->usage_type === 'internal') {
+            return 'internal';
+        }
+
+        if ($this->usage_type === 'common') {
+            return 'common';
+        }
+
+        return 'vacant';
     }
 
     protected static function booted(): void

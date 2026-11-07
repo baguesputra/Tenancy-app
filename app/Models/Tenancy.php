@@ -9,7 +9,7 @@ class Tenancy extends Model
     protected $table = 'tenancies';
 
     protected $fillable = [
-        'unit_id', 'tenant_id', 'contract_number', 'contract_document_path',
+        'unit_id', 'unit_group_id', 'tenant_id', 'contract_number', 'contract_document_path',
         'start_date', 'end_date', 'signed_date', 'status',
         'rent_value', 'rent_period', 'service_charge', 'deposit_value', 'payment_term',
         'percentage_rent_rate', 'percentage_rent_breakpoint', 'notes',
@@ -70,6 +70,11 @@ class Tenancy extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    public function unitGroup()
+    {
+        return $this->belongsTo(UnitGroup::class);
     }
 
     public function tenant()

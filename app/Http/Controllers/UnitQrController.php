@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ScannableCode;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -38,6 +39,9 @@ class UnitQrController extends Controller
             ->when($request->status === 'occupied', fn ($q) => $q->whereHas('activeTenancy'))
             ->when($request->status === 'vacant', fn ($q) => $q->whereDoesntHave('activeTenancy')->where('is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($request->status === 'internal', fn ($q) => $q->where('is_active', true)
+                ->where(fn ($qq) => $qq->where('usage_type', 'internal')->orWhereHas('activeAssignment')))
+            ->when($request->status === 'common', fn ($q) => $q->where('is_active', true)->where('usage_type', 'common'))
             ->when(! $request->status, fn ($q) => $q->where('is_active', true));
 
         if (! $request->user()->canViewAllBranches()) {
@@ -52,6 +56,19 @@ class UnitQrController extends Controller
             ->setPaper('a4');
 
         return $pdf->download('QR-Semua-Unit.pdf');
+    }
+
+    public function group($id, Request $request)
+    {
+        $group = UnitGroup::with(['branch', 'units', 'activeTenancy.tenant', 'scannableCode'])->findOrFail($id);
+        $user = $request->user();
+        abort_unless($group->branch_id === $user->branch_id || $user->canViewAllBranches(), 403);
+        $this->ensureGroupCodes(collect([$group]));
+
+        $pdf = Pdf::loadView('pdf.unit-group-qr-label', ['groups' => collect([$group])])
+            ->setPaper('a4');
+
+        return $pdf->download("QR-Area-{$group->name}.pdf");
     }
 
     private function logos($units): array
@@ -105,6 +122,32 @@ class UnitQrController extends Controller
         foreach ($missing as $unit) {
             if ($code = $fresh->get($unit->id)) {
                 $unit->setRelation('scannableCode', $code);
+            }
+        }
+    }
+
+    private function ensureGroupCodes($groups): void
+    {
+        $missing = $groups->filter(fn ($group) => ! $group->scannableCode)->values();
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $rows = $missing->map(fn ($group) => [
+            'token' => (string) Str::uuid(),
+            'scannable_type' => UnitGroup::class,
+            'scannable_id' => $group->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->all();
+        ScannableCode::insert($rows);
+
+        $fresh = ScannableCode::where('scannable_type', UnitGroup::class)
+            ->whereIn('scannable_id', $missing->pluck('id')->all())
+            ->get()->keyBy('scannable_id');
+        foreach ($missing as $group) {
+            if ($code = $fresh->get($group->id)) {
+                $group->setRelation('scannableCode', $code);
             }
         }
     }
