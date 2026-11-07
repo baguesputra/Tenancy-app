@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -297,6 +298,42 @@ class LooTenantSyncTest extends TestCase
         );
         $this->assertSame(2, $tenant->tenancies()->where('status', 'active')->count());
         $this->assertSame('GF-01, GF-02', $tenant->location_map);
+    }
+
+    public function test_completed_loo_with_unit_group_creates_one_tenancy(): void
+    {
+        $second = Unit::create([
+            'branch_id' => $this->branch->id, 'floor' => 'GF',
+            'unit_number' => '02', 'unit_code' => 'GF-02', 'is_active' => true,
+        ]);
+
+        $group = UnitGroup::create([
+            'branch_id' => $this->branch->id,
+            'name' => 'Area Kopi Senja',
+        ]);
+        $group->units()->sync([
+            $this->unit->id => ['is_primary' => true],
+            $second->id => ['is_primary' => false],
+        ]);
+
+        $loo = $this->makeLoo();
+        $section = $loo->sections()->where('section_key', 'manajemen_tenant')->first();
+        $section->update(['data' => [
+            ...$section->data,
+            'unit_group_id' => $group->id,
+            'unit_ids' => [$this->unit->id, $second->id],
+        ]]);
+
+        $this->complete($loo);
+
+        $tenant = Tenant::where('loo_id', $loo->id)->first();
+        $this->assertNotNull($tenant);
+
+        $tenancies = $tenant->tenancies()->get();
+        $this->assertCount(1, $tenancies, 'Area gabungan = satu tenancy untuk satu kontrak');
+        $this->assertSame($group->id, $tenancies->first()->unit_group_id);
+        $this->assertSame($this->unit->id, $tenancies->first()->unit_id, 'unit_id memakai unit primary grup');
+        $this->assertSame(1, $tenant->tenancies()->where('status', 'active')->count());
     }
 
     public function test_sync_ends_previous_tenancy_on_each_selected_unit(): void

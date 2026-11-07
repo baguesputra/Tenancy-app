@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -363,6 +364,67 @@ class LooWorkflowTest extends TestCase
         $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
             'brand_name' => 'Kopi Senja',
             'unit_ids' => json_encode([$unit->id]),
+        ])->assertStatus(422);
+
+        $this->assertNull($loo->fresh()->unit_id);
+    }
+
+    public function test_tenant_mgmt_unit_group_overrides_selected_units(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'pengisian_divisi', 'current_stage' => 'marketing']);
+        $user = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
+
+        $first = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '001', 'unit_code' => 'GF-A-001', 'is_active' => true,
+        ]);
+        $second = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '002', 'unit_code' => 'GF-A-002', 'is_active' => true,
+        ]);
+        $group = UnitGroup::create(['branch_id' => $loo->branch_id, 'name' => 'Area Gabungan']);
+        $group->units()->sync([
+            $first->id => ['is_primary' => true],
+            $second->id => ['is_primary' => false],
+        ]);
+
+        // Hanya satu unit dikirim, tapi grup menang → semua anggota dipakai.
+        $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
+            'brand_name' => 'Kopi Senja',
+            'unit_group_id' => $group->id,
+            'unit_ids' => [$first->id],
+        ])->assertRedirect();
+
+        $this->assertSame($first->id, $loo->fresh()->unit_id);
+
+        $data = $loo->sections()->where('section_key', 'manajemen_tenant')->first()->data;
+        $this->assertSame([$first->id, $second->id], $data['unit_ids']);
+    }
+
+    public function test_tenant_mgmt_rejects_partial_unit_group(): void
+    {
+        $loo = $this->makeLoo();
+        $loo->update(['status' => 'pengisian_divisi', 'current_stage' => 'marketing']);
+        $user = $this->userWithRole('tenant_mgmt', ['loos.view', 'loos.tenant_mgmt_edit']);
+
+        $first = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '001', 'unit_code' => 'GF-A-001', 'is_active' => true,
+        ]);
+        $second = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '002', 'unit_code' => 'GF-A-002', 'is_active' => true,
+        ]);
+        $group = UnitGroup::create(['branch_id' => $loo->branch_id, 'name' => 'Area Gabungan']);
+        $group->units()->sync([
+            $first->id => ['is_primary' => true],
+            $second->id => ['is_primary' => false],
+        ]);
+
+        $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
+            'brand_name' => 'Kopi Senja',
+            'unit_ids' => [$first->id],
         ])->assertStatus(422);
 
         $this->assertNull($loo->fresh()->unit_id);
