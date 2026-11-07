@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // Dropdown multi-pilih: pola visual mengikuti SearchableSelect,
-// nilai onChange berupa array (bukan event).
+// nilai onChange berupa array (bukan event). `fetchOptions` mengaktifkan
+// pencarian server-side; tanpa itu opsi difilter client-side.
 export default function MultiSelect({
     value = [],
     onChange,
@@ -10,26 +11,69 @@ export default function MultiSelect({
     error,
     disabled = false,
     className = '',
+    fetchOptions = null,
 }) {
     const rootRef = useRef(null);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [remote, setRemote] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [known, setKnown] = useState({});
     const searchRef = useRef(null);
 
+    const fetchRef = useRef(fetchOptions);
+    fetchRef.current = fetchOptions;
+
+    useEffect(() => {
+        if (!fetchRef.current || !open) return undefined;
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const result = await fetchRef.current(query);
+                if (!cancelled) setRemote(result ?? []);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }, 250);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [open, query]);
+
+    const pool = fetchOptions ? remote : options;
+
+    // Label terpilih harus tetap tampil walau hasil pencarian sudah berganti.
     const selected = useMemo(
-        () => options.filter((o) => value.includes(o.value)),
-        [options, value]
+        () => value.map((v) => ({
+            value: v,
+            label: known[v]
+                ?? options.find((o) => String(o.value) === String(v))?.label
+                ?? pool.find((o) => String(o.value) === String(v))?.label
+                ?? String(v),
+        })),
+        [value, options, pool, known]
     );
 
     const filtered = useMemo(() => {
+        if (fetchOptions) return pool;
         const q = query.trim().toLowerCase();
         if (!q) return options;
         return options.filter((o) => o.label.toLowerCase().includes(q));
-    }, [options, query]);
+    }, [fetchOptions, pool, options, query]);
 
-    const toggle = (v) => {
+    const isSelected = (v) => value.some((x) => String(x) === String(v));
+
+    const toggle = (option) => {
         if (disabled) return;
-        const next = value.includes(v) ? value.filter((x) => x !== v) : [...value, v];
+        const v = option.value;
+        const next = isSelected(v)
+            ? value.filter((x) => String(x) !== String(v))
+            : [...value, v];
+        setKnown((prev) => ({ ...prev, [v]: option.label }));
         onChange && onChange(next);
     };
 
@@ -58,6 +102,8 @@ export default function MultiSelect({
         : selected.length <= 2
         ? selected.map((o) => o.label).join(', ')
         : `${selected[0].label}, ${selected[1].label} +${selected.length - 2}`;
+
+    const hasUnselected = filtered.some((o) => !isSelected(o.value));
 
     return (
         <div ref={rootRef} className={`relative ${className}`} onKeyDown={onKeyDown}>
@@ -113,12 +159,12 @@ export default function MultiSelect({
                     </div>
                     <div className="max-h-60 overflow-y-auto py-1">
                         {filtered.map((opt) => {
-                            const on = value.includes(opt.value);
+                            const on = isSelected(opt.value);
                             return (
                                 <button
                                     key={opt.value}
                                     type="button"
-                                    onClick={() => toggle(opt.value)}
+                                    onClick={() => toggle(opt)}
                                     aria-pressed={on}
                                     className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors flex items-center gap-2.5 hover:bg-gray-50
                                         ${on ? 'font-medium text-[#0F1E36]' : 'text-gray-700'}`}
@@ -139,13 +185,15 @@ export default function MultiSelect({
                             );
                         })}
                         {filtered.length === 0 && (
-                            <p className="px-3.5 py-4 text-sm text-gray-400 text-center">Tidak ditemukan.</p>
+                            <p className="px-3.5 py-4 text-sm text-gray-400 text-center">
+                                {loading ? 'Mencari...' : 'Tidak ditemukan.'}
+                            </p>
                         )}
                     </div>
                     <div className="border-t border-gray-100 bg-gray-50 px-3.5 py-2 flex items-center justify-between gap-2">
                         <span className="text-xs text-gray-500 tabular-nums">{selected.length} dipilih</span>
                         <div className="flex items-center gap-3">
-                            {filtered.length > 0 && selected.length < options.length && (
+                            {hasUnselected && (
                                 <button
                                     type="button"
                                     onClick={() => onChange && onChange([...new Set([...value, ...filtered.map((o) => o.value)])])}

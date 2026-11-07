@@ -5,6 +5,7 @@ import TextInput from '@/Components/Form/TextInput';
 import Textarea from '@/Components/Form/Textarea';
 import SelectInput from '@/Components/Form/SelectInput';
 import SearchableSelect from '@/Components/Form/SearchableSelect';
+import MultiSelect from '@/Components/Form/MultiSelect';
 import DateInput from '@/Components/Form/DateInput';
 import FileInput from '@/Components/Form/FileInput';
 import Checkbox from '@/Components/Form/Checkbox';
@@ -15,6 +16,17 @@ import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 function hasStoredValue(v) {
     if (Array.isArray(v)) return v.length > 0;
     return v !== null && v !== undefined && v !== '';
+}
+
+// Pencarian unit server-side (dipakai select tunggal & multi).
+function fetchUnitOptions(looId) {
+    return async (q) => {
+        const res = await fetch(`/loos/${looId}/units?search=${encodeURIComponent(q)}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return [];
+        return (await res.json()).map((o) => ({ value: String(o.id), label: o.name }));
+    };
 }
 
 function Field({ field, value, error, onChange, options, looId, sectionKey }) {
@@ -45,13 +57,7 @@ function Field({ field, value, error, onChange, options, looId, sectionKey }) {
                     options={(sourceOptions ?? []).map((o) => ({ value: o.id, label: o.name }))}
                     onChange={(e) => onChange(e.target.value)}
                     fetchOptions={field.source === 'units' && looId
-                        ? async (q) => {
-                            const res = await fetch(`/loos/${looId}/units?search=${encodeURIComponent(q)}`, {
-                                headers: { Accept: 'application/json' },
-                            });
-                            if (!res.ok) return [];
-                            return (await res.json()).map((o) => ({ value: o.id, label: o.name }));
-                        }
+                        ? fetchUnitOptions(looId)
                         : null}
                 />
             );
@@ -65,11 +71,26 @@ function Field({ field, value, error, onChange, options, looId, sectionKey }) {
             return <TextInput {...common} type="email" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
         case 'checkbox':
             return <Checkbox {...common} label={field.label} checked={!!value} onChange={(e) => onChange(e.target.checked)} />;
-        case 'multiselect':
+        case 'multiselect': {
+            const list = Array.isArray(value) ? value : [];
+
+            if (field.searchable) {
+                return (
+                    <MultiSelect
+                        {...common}
+                        value={list.map(String)}
+                        options={(sourceOptions ?? []).map((o) => ({ value: String(o.id), label: o.name }))}
+                        onChange={onChange}
+                        fetchOptions={field.source === 'units' && looId
+                            ? fetchUnitOptions(looId)
+                            : null}
+                    />
+                );
+            }
+
             return (
                 <div className="flex flex-wrap gap-2">
                     {(options?.[field.source] ?? []).map((o) => {
-                        const list = Array.isArray(value) ? value : [];
                         const on = list.includes(o.id);
                         return (
                             <button
@@ -84,6 +105,7 @@ function Field({ field, value, error, onChange, options, looId, sectionKey }) {
                     })}
                 </div>
             );
+        }
         case 'group':
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

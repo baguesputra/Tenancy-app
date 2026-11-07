@@ -325,18 +325,26 @@ class LooWorkflowTest extends TestCase
             'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
             'unit_number' => '001', 'unit_code' => 'GF-A-001', 'is_active' => true,
         ]);
+        $second = Unit::create([
+            'branch_id' => $loo->branch_id, 'floor' => 'GF', 'block' => 'A',
+            'unit_number' => '002', 'unit_code' => 'GF-A-002', 'is_active' => true,
+        ]);
         $category = TenantCategory::firstOrCreate(['name' => 'Anchor']);
 
         $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
             'brand_name' => 'Kopi Senja',
             'trade_name' => 'Senja Coffee',
-            'unit_id' => $unit->id,
+            'unit_ids' => [$unit->id, $second->id],
             'tenant_category_id' => $category->id,
         ])->assertRedirect();
 
         $loo->refresh();
+        // Unit pertama jadi primary agar pembacaan `loos.unit_id` yang ada tetap jalan.
         $this->assertSame($unit->id, $loo->unit_id);
         $this->assertSame($category->id, $loo->tenant_category_id);
+
+        $data = $loo->sections()->where('section_key', 'manajemen_tenant')->first()->data;
+        $this->assertSame([$unit->id, $second->id], $data['unit_ids']);
     }
 
     public function test_tenant_mgmt_rejects_unit_from_other_branch(): void
@@ -351,9 +359,10 @@ class LooWorkflowTest extends TestCase
             'unit_number' => '001', 'unit_code' => 'GF-OTH-001', 'is_active' => true,
         ]);
 
+        // FormData asli mengirim list sebagai string JSON.
         $this->actingAs($user)->post("/loos/{$loo->id}/sections/manajemen_tenant", [
             'brand_name' => 'Kopi Senja',
-            'unit_id' => $unit->id,
+            'unit_ids' => json_encode([$unit->id]),
         ])->assertStatus(422);
 
         $this->assertNull($loo->fresh()->unit_id);

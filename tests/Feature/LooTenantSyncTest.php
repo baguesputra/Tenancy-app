@@ -103,7 +103,7 @@ class LooTenantSyncTest extends TestCase
             'trade_name' => 'Senja Coffee',
             'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
             'product_categories' => [ProductCategory::firstOrCreate(['name' => 'F&B'])->id],
-            'unit_id' => $this->unit->id,
+            'unit_ids' => [$this->unit->id],
             'contact_person_name' => 'Budi Customer',
             'contact_person_phone' => '0812-0000-0002',
             'contact_person_email' => 'budi@sENJA.test',
@@ -267,11 +267,66 @@ class LooTenantSyncTest extends TestCase
         $loo = $this->makeLoo();
         $loo->update(['unit_id' => null]);
 
+        $section = $loo->sections()->where('section_key', 'manajemen_tenant')->first();
+        $section->update(['data' => array_diff_key($section->data, ['unit_id' => true, 'unit_ids' => true])]);
+
         $this->complete($loo);
 
         $tenant = Tenant::where('loo_id', $loo->id)->first();
         $this->assertNotNull($tenant, 'Tenant tetap dibuat walau unit belum ada');
         $this->assertSame(0, $tenant->tenancies()->count());
+    }
+
+    public function test_completed_loo_creates_tenancy_for_each_selected_unit(): void
+    {
+        $second = Unit::create([
+            'branch_id' => $this->branch->id, 'floor' => 'GF',
+            'unit_number' => '02', 'unit_code' => 'GF-02', 'is_active' => true,
+        ]);
+
+        $loo = $this->makeLoo();
+        $section = $loo->sections()->where('section_key', 'manajemen_tenant')->first();
+        $section->update(['data' => [...$section->data, 'unit_ids' => [$this->unit->id, $second->id]]]);
+
+        $this->complete($loo);
+
+        $tenant = Tenant::where('loo_id', $loo->id)->first();
+        $this->assertSame(
+            [$this->unit->id, $second->id],
+            $tenant->tenancies()->orderBy('unit_id')->pluck('unit_id')->all()
+        );
+        $this->assertSame(2, $tenant->tenancies()->where('status', 'active')->count());
+        $this->assertSame('GF-01, GF-02', $tenant->location_map);
+    }
+
+    public function test_sync_ends_previous_tenancy_on_each_selected_unit(): void
+    {
+        $second = Unit::create([
+            'branch_id' => $this->branch->id, 'floor' => 'GF',
+            'unit_number' => '02', 'unit_code' => 'GF-02', 'is_active' => true,
+        ]);
+
+        $previous = Tenant::create([
+            'name' => 'Tenant Lama', 'branch_id' => $this->branch->id,
+            'tenant_category_id' => TenantCategory::firstOrCreate(['name' => 'Tenant'])->id,
+            'product_category_id' => ProductCategory::firstOrCreate(['name' => 'F&B'])->id,
+            'is_active' => true,
+        ]);
+        $oldFirst = $previous->tenancies()->create([
+            'unit_id' => $this->unit->id, 'status' => 'active', 'start_date' => '2020-01-01',
+        ]);
+        $oldSecond = $previous->tenancies()->create([
+            'unit_id' => $second->id, 'status' => 'active', 'start_date' => '2020-01-01',
+        ]);
+
+        $loo = $this->makeLoo();
+        $section = $loo->sections()->where('section_key', 'manajemen_tenant')->first();
+        $section->update(['data' => [...$section->data, 'unit_ids' => [$this->unit->id, $second->id]]]);
+
+        $this->complete($loo);
+
+        $this->assertSame('ended', $oldFirst->fresh()->status);
+        $this->assertSame('ended', $oldSecond->fresh()->status);
     }
 
     public function test_loo_backed_tenant_only_allows_pic_edit(): void

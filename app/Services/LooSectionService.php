@@ -49,6 +49,8 @@ class LooSectionService
                     : $this->collectRepeater($raw, $field['fields'], $loo, $existing[$name] ?? []);
             } elseif ($type === 'checklist_table') {
                 $data[$name] = $this->collectChecklist($this->decode($input[$name] ?? []), $field);
+            } elseif ($type === 'multiselect') {
+                $data[$name] = self::decodeList($input[$name] ?? []);
             } else {
                 $data[$name] = $input[$name] ?? null;
             }
@@ -247,6 +249,26 @@ class LooSectionService
         }
 
         return true;
+    }
+
+    /**
+     * Nilai multi-nilai bisa datang sebagai array (tes/pemanggil langsung) atau
+     * string JSON (FormData). Data lama bisa berupa skalar tunggal.
+     *
+     * @return array<int, mixed>
+     */
+    public static function decodeList(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : ($decoded === null ? [] : [$decoded]);
+        }
+
+        if (! is_array($raw)) {
+            return $raw === null || $raw === '' ? [] : [$raw];
+        }
+
+        return array_values(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
     }
 
     /**

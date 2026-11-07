@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\Loo;
+use App\Models\Unit;
 use App\Services\BranchScopeService;
 use App\Services\LooProgressService;
 use App\Services\LooSectionService;
@@ -64,7 +65,7 @@ class LooFitoutController extends Controller
                 'loo_number' => $loo->loo_number,
                 'tenant_name' => ($loo->tenant ? $loo->tenant->name : null) ?? $loo->prospective_tenant_name ?? '—',
                 'branch' => $loo->branch ? ['id' => $loo->branch->id, 'name' => $loo->branch->name, 'code' => $loo->branch->code] : null,
-                'unit_code' => $loo->unit ? $loo->unit->unit_code : '—',
+                'unit_code' => implode(', ', $this->unitCodes($loo)) ?: '—',
                 'status' => $loo->status,
                 'current_stage' => $loo->current_stage,
                 'checklist_pre' => [
@@ -129,6 +130,7 @@ class LooFitoutController extends Controller
             'postConfig' => $postConfig,
             'preHandoverConfig' => $preHandoverConfig,
             'progress' => $this->progress->progress($loo),
+            'unitCodes' => $this->unitCodes($loo),
             'canEditPre' => $canEditDepartments && $preUnlocked,
             'canEditPost' => $canEditDepartments && $postUnlocked,
             'canEditPreHandover' => ! $terminal && $preHandoverUnlocked && $request->user()->can('loos.tenant_mgmt_edit'),
@@ -166,6 +168,32 @@ class LooFitoutController extends Controller
         );
 
         return back()->with('success', 'Checklist Fitout berhasil disetujui Deputy GM.');
+    }
+
+    /**
+     * Kode unit gabungan dari section tenant; fallback unit primary.
+     *
+     * @return array<int, string>
+     */
+    private function unitCodes(Loo $loo): array
+    {
+        $section = $loo->sections->firstWhere('section_key', 'manajemen_tenant');
+        $data = $section?->data ?? [];
+        $ids = LooSectionService::decodeList($data['unit_ids'] ?? ($data['unit_id'] ?? []));
+
+        if ($ids === [] && $loo->unit_id) {
+            $ids = [$loo->unit_id];
+        }
+
+        $codes = $ids === []
+            ? collect()
+            : Unit::whereIn('id', array_map('intval', $ids))->orderBy('unit_number')->pluck('unit_code');
+
+        if ($codes->isNotEmpty()) {
+            return $codes->all();
+        }
+
+        return $loo->unit?->unit_code ? [$loo->unit->unit_code] : [];
     }
 
     private function authorizeAccess(Loo $loo, Request $request): void

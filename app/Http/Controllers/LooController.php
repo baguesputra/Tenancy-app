@@ -129,6 +129,22 @@ class LooController extends Controller
         $this->authorizeAccess($loo, $request);
         $loo->load(['branch', 'tenant', 'tenantCategory', 'marketing', 'unit', 'sections.filler', 'history.user']);
 
+        $tenantSection = $loo->sections->firstWhere('section_key', 'manajemen_tenant');
+        $unitIds = $this->unitIdsFor($loo, $tenantSection);
+
+        // Data lama menyimpan list sebagai string JSON; normalkan supaya form
+        // langsung menerima array.
+        if ($tenantSection) {
+            $data = $tenantSection->data ?? [];
+            $data['unit_ids'] = $unitIds;
+            $data['product_categories'] = LooSectionService::decodeList($data['product_categories'] ?? []);
+            $tenantSection->data = $data;
+        }
+
+        $units = Unit::whereIn('id', $unitIds)
+            ->orderBy('unit_number')
+            ->get(['id', 'unit_code']);
+
         return Inertia::render('Loos/Show', [
             'loo' => $loo,
             'sectionConfigs' => config('loo_sections'),
@@ -142,12 +158,11 @@ class LooController extends Controller
                 ? []
                 : $this->attachmentRows($loo),
             'progress' => $this->progress->progress($loo),
+            'unitCodes' => $units->pluck('unit_code')->all(),
             'options' => [
                 'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
                 'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
-                'units' => $loo->unit
-                    ? [['id' => $loo->unit->id, 'name' => $loo->unit->unit_code]]
-                    : [],
+                'units' => $units->map(fn ($u) => ['id' => $u->id, 'name' => $u->unit_code])->values(),
             ],
         ]);
     }
@@ -347,11 +362,11 @@ class LooController extends Controller
         $this->sections->assertDependencies($config, $request->all(), $current?->data ?? []);
 
         if ($key === 'manajemen_tenant') {
-            $this->assertUnitBelongsToBranch($request, $loo);
+            $unitIds = $this->validatedUnitIds($request, $loo);
             $request->validate(['tenant_category_id' => 'nullable|exists:tenant_categories,id']);
 
             $loo->update([
-                'unit_id' => $request->input('unit_id') ?: null,
+                'unit_id' => $unitIds[0] ?? null,
                 'tenant_category_id' => $request->input('tenant_category_id') ?: null,
             ]);
         }
@@ -714,17 +729,47 @@ class LooController extends Controller
             ->get(['id', 'name']);
     }
 
-    private function assertUnitBelongsToBranch(Request $request, Loo $loo): void
+    /**
+     * Unit terpilih dari section tenant; fallback `loos.unit_id` untuk data lama.
+     *
+     * @return array<int, int>
+     */
+    private function unitIdsFor(Loo $loo, mixed $section = null): array
     {
-        if (! $request->filled('unit_id')) {
-            return;
+        $data = $section?->data ?? [];
+        $ids = LooSectionService::decodeList($data['unit_ids'] ?? ($data['unit_id'] ?? []));
+
+        if ($ids === [] && $loo->unit_id) {
+            $ids = [$loo->unit_id];
         }
 
-        $exists = Unit::where('id', $request->input('unit_id'))
-            ->where('branch_id', $loo->branch_id)
-            ->exists();
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
 
-        abort_unless($exists, 422, 'Unit tidak berada di cabang LOO ini.');
+    /**
+     * `unit_ids` (multi) atau `unit_id` (payload lama). Semua harus milik cabang
+     * LOO; id pertama menjadi `loos.unit_id` (unit primary).
+     *
+     * @return array<int, int>
+     */
+    private function validatedUnitIds(Request $request, Loo $loo): array
+    {
+        $raw = $request->input('unit_ids', $request->input('unit_id'));
+        $ids = array_values(array_unique(array_map('intval', LooSectionService::decodeList($raw))));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $valid = Unit::whereIn('id', $ids)
+            ->where('branch_id', $loo->branch_id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        abort_unless(count($valid) === count($ids), 422, 'Ada unit yang tidak berada di cabang LOO ini.');
+
+        return $ids;
     }
 
     private function authorizeAccess(Loo $loo, Request $request): void

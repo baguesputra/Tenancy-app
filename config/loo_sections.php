@@ -152,7 +152,7 @@ return [
             ['name' => 'tenant_category_id', 'type' => 'select', 'label' => 'Kategori Tenant', 'source' => 'tenantCategories'],
             ['name' => 'business_category', 'type' => 'text', 'label' => 'Kategori Bisnis'],
             ['name' => 'product_categories', 'type' => 'multiselect', 'label' => 'Kategori Produk', 'source' => 'productCategories'],
-            ['name' => 'unit_id', 'type' => 'searchable_select', 'label' => 'Unit', 'source' => 'units'],
+            ['name' => 'unit_ids', 'type' => 'multiselect', 'label' => 'Unit', 'source' => 'units', 'searchable' => true],
             ['name' => 'opening_target_date', 'type' => 'date', 'label' => 'Target Opening'],
             ['name' => 'contact_person_name', 'type' => 'text', 'label' => 'Contact Person Nama'],
             ['name' => 'contact_person_phone', 'type' => 'text', 'label' => 'Contact Person Telp'],

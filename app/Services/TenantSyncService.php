@@ -6,6 +6,7 @@ use App\Models\Loo;
 use App\Models\ProductCategory;
 use App\Models\Tenancy;
 use App\Models\Tenant;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -19,20 +20,26 @@ class TenantSyncService
     public function sync(Loo $loo): array
     {
         return DB::transaction(function () use ($loo) {
-            $tenant = $this->syncTenant($loo);
-            $tenancy = $this->syncTenancy($loo, $tenant);
+            $sections = $this->sections($loo);
+            $tenant = $this->syncTenant($loo, $sections);
+            $tenancies = $this->syncTenancies($loo, $tenant, $sections);
 
-            return [$tenant, $tenancy];
+            return [$tenant, $tenancies[0] ?? null];
         });
     }
 
-    private function syncTenant(Loo $loo): Tenant
+    private function syncTenant(Loo $loo, array $sections): Tenant
     {
-        $sections = $this->sections($loo);
         $legal = $sections['legalitas'] ?? [];
         $mgmt = $sections['manajemen_tenant'] ?? [];
         $fitout = $sections['pre_fitout'] ?? [];
-        $unit = $loo->unit;
+
+        $unitIds = $this->unitIds($loo, $mgmt);
+        $units = $unitIds === []
+            ? collect()
+            : Unit::whereIn('id', $unitIds)->orderBy('unit_number')->get(['id', 'unit_code', 'floor']);
+
+        $primary = $loo->unit ?? $units->first();
 
         $attributes = [
             'loo_id' => $loo->id,
@@ -55,8 +62,10 @@ class TenantSyncService
             'fitout_pic_name' => $fitout['contractor_pic_name'] ?? null,
             'fitout_pic_phone' => $fitout['contractor_pic_phone'] ?? null,
             'description' => $mgmt['tenant_mgmt_notes'] ?? null,
-            'floor_map' => $unit?->floor,
-            'location_map' => $unit?->unit_code,
+            'floor_map' => $primary?->floor,
+            'location_map' => $units->isNotEmpty()
+                ? $units->pluck('unit_code')->implode(', ')
+                : $loo->unit?->unit_code,
             'fitout_drawing_file_path' => $fitout['design_drawing_path'] ?? null,
             'tenant_category_id' => $loo->tenant_category_id,
             'product_category_id' => $this->firstProductCategory($mgmt) ?? $this->fallbackProductCategory($loo->branch_id),
@@ -76,23 +85,45 @@ class TenantSyncService
         return $tenant->fresh();
     }
 
-    private function syncTenancy(Loo $loo, Tenant $tenant): ?Tenancy
+    /**
+     * @return array<int, Tenancy>
+     */
+    private function syncTenancies(Loo $loo, Tenant $tenant, array $sections): array
     {
-        if (! $loo->unit_id) {
-            return null;
+        $unitIds = $this->unitIds($loo, $sections['manajemen_tenant'] ?? []);
+
+        if ($unitIds === []) {
+            return [];
         }
 
-        $sections = $this->sections($loo);
         $acct = $sections['biaya_termin'] ?? [];
         $ba = $sections['ba_handover'] ?? [];
 
+        $tenancies = [];
+
+        foreach ($unitIds as $unitId) {
+            $tenancies[] = $this->syncTenancyForUnit($loo, $tenant, $unitId, $acct, $ba);
+        }
+
+        // Unit yang tidak lagi dipilih untuk kontrak ini tidak boleh tetap aktif.
+        Tenancy::where('tenant_id', $tenant->id)
+            ->where('contract_number', $loo->loo_number)
+            ->whereNotIn('unit_id', $unitIds)
+            ->where('status', 'active')
+            ->update(['status' => 'ended', 'end_date' => now()]);
+
+        return $tenancies;
+    }
+
+    private function syncTenancyForUnit(Loo $loo, Tenant $tenant, int $unitId, array $acct, array $ba): Tenancy
+    {
         $existing = Tenancy::where('tenant_id', $tenant->id)
-            ->where('unit_id', $loo->unit_id)
+            ->where('unit_id', $unitId)
             ->whereNull('end_date')
             ->first();
 
         $attributes = [
-            'unit_id' => $loo->unit_id,
+            'unit_id' => $unitId,
             'tenant_id' => $tenant->id,
             'contract_number' => $loo->loo_number,
             'start_date' => $acct['contract_start_date'] ?? now()->toDateString(),
@@ -116,12 +147,28 @@ class TenantSyncService
         }
 
         // Aturan bisnis inti: 1 unit hanya boleh punya 1 tenancy aktif.
-        Tenancy::where('unit_id', $loo->unit_id)
+        Tenancy::where('unit_id', $unitId)
             ->where('id', '!=', $existing->id)
             ->where('status', 'active')
             ->update(['status' => 'ended', 'end_date' => now()]);
 
         return $existing->fresh();
+    }
+
+    /**
+     * Unit terpilih dari section tenant; fallback `loos.unit_id` untuk data lama.
+     *
+     * @return array<int, int>
+     */
+    private function unitIds(Loo $loo, array $mgmt): array
+    {
+        $ids = LooSectionService::decodeList($mgmt['unit_ids'] ?? ($mgmt['unit_id'] ?? []));
+
+        if ($ids === [] && $loo->unit_id) {
+            $ids = [$loo->unit_id];
+        }
+
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     private function sections(Loo $loo): array
@@ -135,7 +182,7 @@ class TenantSyncService
 
     private function firstProductCategory(array $mgmt): ?int
     {
-        $ids = collect($mgmt['product_categories'] ?? [])
+        $ids = collect(LooSectionService::decodeList($mgmt['product_categories'] ?? []))
             ->filter(fn ($v) => is_numeric($v))
             ->map(fn ($v) => (int) $v)
             ->values();

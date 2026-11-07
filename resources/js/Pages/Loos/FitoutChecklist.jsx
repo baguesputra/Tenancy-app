@@ -291,6 +291,7 @@ export default function FitoutChecklist({
     canEditPreHandover = false,
     editableDepartments = [],
     canGmAcknowledge = false,
+    unitCodes = [],
 }) {
     const [submitting, setSubmitting] = useState(false);
 
@@ -477,7 +478,7 @@ export default function FitoutChecklist({
                             </Badge>
                         </div>
                         <p className="text-xs sm:text-sm text-slate-500 mt-1 truncate">
-                            {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'} · Unit: {loo.unit?.unit_code ?? '—'}
+                            {loo.tenant?.name ?? loo.prospective_tenant_name ?? '—'} · {loo.branch?.name ?? '—'} · Unit: {(unitCodes.length > 0 ? unitCodes.join(', ') : loo.unit?.unit_code) ?? '—'}
                         </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
