@@ -6,12 +6,11 @@ import {
     IconAlert,
     IconArrowRight,
     IconBuilding,
-    IconClipboard,
     IconClipboardCheck,
     IconContract,
     IconDocument,
     IconDoor,
-    IconFileText,
+    IconHandshake,
     IconMap,
     IconPlus,
 } from '@/Components/Icons';
@@ -40,7 +39,7 @@ const activityMeta = {
     },
     loo: {
         label: 'LOO',
-        icon: IconFileText,
+        icon: IconHandshake,
         iconBg: 'bg-violet-50 text-violet-600 border-violet-200/80',
         href: '/loos',
     },
@@ -378,7 +377,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
                         />
 
                         <KpiCell
-                            icon={<IconClipboard className="w-4 h-4" aria-hidden="true" />}
+                            icon={<IconClipboardCheck className="w-4 h-4" aria-hidden="true" />}
                             label="Sesi Sidak Aktif"
                             value={stats?.active_sessions ?? 0}
                             hint={(stats?.active_sessions ?? 0) > 0 ? 'Sidak sedang berjalan' : 'Tidak ada sesi aktif'}
@@ -388,7 +387,7 @@ export default function Dashboard({ stats, actionNeeded, recentActivity, calenda
 
                         {canLoo && (
                             <KpiCell
-                                icon={<IconContract className="w-4 h-4" aria-hidden="true" />}
+                                icon={<IconHandshake className="w-4 h-4" aria-hidden="true" />}
                                 label="LOO"
                                 value={stats?.pending_loos ?? 0}
                                 hint={`${stats?.total_loos ?? 0} total dokumen LOO`}

@@ -12,8 +12,8 @@ import {
     IconClipboardList,
     IconContract,
     IconDocument,
-    IconFileText,
     IconGrid,
+    IconHandshake,
     IconHome,
     IconRefresh,
     IconStorefront,
@@ -91,7 +91,7 @@ const TYPE_META = {
     },
     loo_received: {
         label: "LOO diterima",
-        icon: IconFileText,
+        icon: IconHandshake,
         chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
         chipPast: "border-indigo-200 bg-white text-indigo-700",
         iconColor: "text-indigo-500",
@@ -99,7 +99,7 @@ const TYPE_META = {
     },
     loo_submitted: {
         label: "LOO disubmit",
-        icon: IconFileText,
+        icon: IconHandshake,
         chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
         chipPast: "border-indigo-200 bg-white text-indigo-700",
         iconColor: "text-indigo-500",
@@ -107,7 +107,7 @@ const TYPE_META = {
     },
     loo_completed: {
         label: "LOO selesai",
-        icon: IconFileText,
+        icon: IconHandshake,
         chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
         chipPast: "border-indigo-200 bg-white text-indigo-700",
         iconColor: "text-indigo-500",
@@ -115,7 +115,7 @@ const TYPE_META = {
     },
     loo_cancelled: {
         label: "LOO dibatalkan",
-        icon: IconFileText,
+        icon: IconHandshake,
         chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
         chipPast: "border-indigo-200 bg-white text-indigo-700",
         iconColor: "text-indigo-500",
@@ -165,7 +165,7 @@ const LEGEND_GROUPS = [
     { label: "Customer Isi Form", icon: IconUsers, types: ["customer"] },
     { label: "Kontrak", icon: IconContract, types: ["contract_start", "contract_end"] },
     { label: "Sidak", icon: IconClipboardCheck, types: ["sidak"] },
-    { label: "LOO", icon: IconFileText, types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled"] },
+    { label: "LOO", icon: IconHandshake, types: ["loo_received", "loo_submitted", "loo_completed", "loo_cancelled"] },
     { label: "Section LOO", icon: IconClipboardList, types: ["section_filled", "section_submitted"] },
     { label: "Libur & cuti bersama", icon: IconHome, types: ["libur_nasional", "cuti_bersama"] },
 ];
@@ -180,7 +180,7 @@ const FILTERS = [
     { key: "contract_start", label: "Kontrak mulai", icon: IconContract },
     { key: "contract_end", label: "Kontrak berakhir", icon: IconContract },
     { key: "sidak", label: "Sidak", icon: IconClipboardCheck },
-    { key: "loo", label: "LOO", icon: IconFileText },
+    { key: "loo", label: "LOO", icon: IconHandshake },
     { key: "section", label: "Section", icon: IconClipboardList },
     { key: "libur_nasional", label: "Libur nasional", icon: IconHome },
     { key: "cuti_bersama", label: "Cuti bersama", icon: IconHome },

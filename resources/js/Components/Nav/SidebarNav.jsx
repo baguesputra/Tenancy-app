@@ -2,13 +2,13 @@ import { Link } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import NavItem from './NavItem';
 import {
-    IconClipboard,
     IconClipboardCheck,
-    IconContract,
     IconDocument,
     IconDoor,
+    IconHandshake,
     IconHome,
     IconKey,
+    IconListChecks,
     IconMap,
     IconPanelLeft,
     IconStorefront,
@@ -39,8 +39,8 @@ const SECTIONS = [
         key: 'leasing',
         label: 'Leasing',
         items: [
-            { label: 'LOO', href: '/loos', permission: 'loos.view', icon: <IconContract className="h-4 w-4" /> },
-            { label: 'Checklist Operasional', href: '/fitout-checklists', permission: 'loos.view', icon: <IconClipboard className="h-4 w-4" /> },
+            { label: 'LOO', href: '/loos', permission: 'loos.view', icon: <IconHandshake className="h-4 w-4" /> },
+            { label: 'Checklist Operasional', href: '/fitout-checklists', permission: 'loos.view', icon: <IconListChecks className="h-4 w-4" /> },
         ],
     },
     {
