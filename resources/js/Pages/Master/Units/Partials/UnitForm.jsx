@@ -17,6 +17,7 @@ export default function UnitForm({ unit, branches, canPickBranch }) {
         block: unit?.block ?? '',
         unit_number: unit?.unit_number ?? '',
         unit_code: unit?.unit_code ?? '',
+        usage_type: unit?.usage_type ?? 'tenant',
         size: unit?.size ?? '',
         branch_id: unit?.branch_id ?? '',
         is_active: unit?.is_active ?? true,
@@ -62,6 +63,14 @@ export default function UnitForm({ unit, branches, canPickBranch }) {
                         value={data.unit_code}
                         onChange={(e) => { setCodeManuallyEdited(true); setData('unit_code', e.target.value); }}
                     />
+                </FormField>
+
+                <FormField label="Jenis Pemakaian" error={errors.usage_type} hint="Internal dipakai divisi sendiri, mis. gudang atau workshop.">
+                    <SelectInput value={data.usage_type} onChange={(e) => setData('usage_type', e.target.value)}>
+                        <option value="tenant">Disewakan (tenant)</option>
+                        <option value="internal">Internal (divisi)</option>
+                        <option value="common">Fasilitas umum</option>
+                    </SelectInput>
                 </FormField>
 
                 <FormField label="Luas Unit (m²)" error={errors.size}>

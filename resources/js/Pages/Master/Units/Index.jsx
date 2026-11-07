@@ -12,15 +12,21 @@ import Button from '@/Components/Form/Button';
 import Pagination from '@/Components/Pagination';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import UnitQrModal from '@/Components/Master/UnitQrModal';
+import InternalUsagePanel from './Partials/InternalUsagePanel';
 import { IconPlus, IconEdit, IconTrash, IconQr, IconDownload, IconDoor, IconSearch } from '@/Components/Icons';
 import useCan from '@/hooks/useCan';
 
 function StatusLabel({ unit }) {
-    const map = !unit.is_active
-        ? { dot: 'bg-slate-300', text: 'text-slate-400', label: 'Nonaktif' }
-        : unit.is_occupied
-            ? { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Terisi' }
-            : { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Kosong' };
+    const state = unit.occupancy_state
+        ?? (!unit.is_active ? 'inactive' : unit.is_occupied ? 'occupied' : 'vacant');
+
+    const map = {
+        inactive: { dot: 'bg-slate-300', text: 'text-slate-400', label: 'Nonaktif' },
+        occupied: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Terisi' },
+        internal: { dot: 'bg-sky-500', text: 'text-sky-700', label: 'Internal' },
+        common: { dot: 'bg-violet-400', text: 'text-violet-700', label: 'Fasilitas' },
+        vacant: { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Kosong' },
+    }[state] ?? { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Kosong' };
 
     return (
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-medium">
@@ -46,12 +52,13 @@ function SummaryStrip({ summary, activeStatus, onSelect }) {
     const cells = [
         { key: '', label: 'Total Unit', value: summary.total },
         { key: 'occupied', label: 'Terisi', value: summary.occupied },
+        { key: 'internal', label: 'Internal', value: summary.internal ?? 0 },
         { key: 'vacant', label: 'Kosong', value: summary.vacant },
         { key: 'inactive', label: 'Nonaktif', value: summary.inactive },
     ];
 
     return (
-        <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E2E5EA] bg-[#E2E5EA] sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E2E5EA] bg-[#E2E5EA] sm:grid-cols-5">
             {cells.map((cell) => {
                 const active = activeStatus === cell.key;
                 return (
@@ -100,7 +107,7 @@ function UnitsEmpty({ filtered, onReset, onCreate, canCreate }) {
     );
 }
 
-export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, inactive: 0 }, floorSummary = [], filters = {}, floors = [], blocks = [], unitNumbers = [], branches, canPickBranch }) {
+export default function Index({ units, summary = { total: 0, occupied: 0, vacant: 0, internal: 0, inactive: 0 }, floorSummary = [], filters = {}, floors = [], blocks = [], unitNumbers = [], departments = [], branches, canPickBranch }) {
     const { can } = useCan();
     const canCreate = can('units.create');
     const canEdit = can('units.edit');
@@ -119,6 +126,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
         block: '',
         unit_number: '',
         unit_code: '',
+        usage_type: 'tenant',
         size: '',
         branch_id: '',
         is_active: true,
@@ -144,6 +152,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
             block: unit.block ?? '',
             unit_number: unit.unit_number,
             unit_code: unit.unit_code,
+            usage_type: unit.usage_type ?? 'tenant',
             size: unit.size ?? '',
             branch_id: unit.branch_id,
             is_active: unit.is_active,
@@ -219,12 +228,52 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
 
     const statsFor = (group) => floorStats[group.floor] ?? {
         total: group.items.length,
-        occupied: group.items.filter((u) => u.is_active && u.is_occupied).length,
-        vacant: group.items.filter((u) => u.is_active && !u.is_occupied).length,
-        inactive: group.items.filter((u) => !u.is_active).length,
+        occupied: group.items.filter((u) => u.occupancy_state === 'occupied').length,
+        internal: group.items.filter((u) => u.occupancy_state === 'internal').length,
+        common: group.items.filter((u) => u.occupancy_state === 'common').length,
+        vacant: group.items.filter((u) => u.occupancy_state === 'vacant').length,
+        inactive: group.items.filter((u) => u.occupancy_state === 'inactive').length,
     };
 
-    const occupancyPct = summary.total > 0 ? Math.round((summary.occupied / summary.total) * 100) : 0;
+    // Penyebut okupansi sewa: unit aktif yang memang disewakan.
+    const leasableTotal = (stats) => Math.max(
+        0,
+        stats.total - (stats.internal ?? 0) - (stats.common ?? 0) - (stats.inactive ?? 0),
+    );
+
+    const occupancyBase = Math.max(
+        0,
+        summary.total - (summary.internal ?? 0) - (summary.common ?? 0) - (summary.inactive ?? 0),
+    );
+    const occupancyPct = occupancyBase > 0 ? Math.round((summary.occupied / occupancyBase) * 100) : 0;
+
+    const renderOccupant = (unit) => {
+        const tenant = unit.active_tenancy?.tenant?.name;
+        const group = unit.group_name ? `Area: ${unit.group_name}` : null;
+
+        if (tenant) {
+            return (
+                <>
+                    <span className="block">{tenant}</span>
+                    {group && <span className="block text-[11px] text-slate-400">{group}</span>}
+                </>
+            );
+        }
+
+        if (unit.occupancy_state === 'internal') {
+            return <span className="block text-sky-700">{unit.internal_department ?? 'Pemakaian internal'}</span>;
+        }
+
+        if (unit.occupancy_state === 'common') {
+            return <span className="block text-violet-700">Fasilitas umum</span>;
+        }
+
+        if (group) {
+            return <span className="block text-slate-500">{group}</span>;
+        }
+
+        return <span className="text-slate-300">—</span>;
+    };
 
     const renderActions = (unit) => (
         <div className="flex justify-end gap-1">
@@ -272,6 +321,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                             <p className="text-sm text-slate-500">
                                 {summary.total} unit · {summary.occupied} terisi · {summary.vacant} kosong
+                                {(summary.internal ?? 0) > 0 ? ` · ${summary.internal} internal` : ''}
                             </p>
                             <span className="inline-flex items-center gap-2">
                                 <span className="h-1 w-24 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
@@ -282,6 +332,12 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         </div>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row">
+                        <a
+                            href="/unit-groups"
+                            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#E2E5EA] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            Area Gabungan
+                        </a>
                         <a
                             href={bulkQrHref}
                             target="_blank"
@@ -380,7 +436,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                     <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Lantai {group.floor}</span>
                                                     <span className="flex items-center gap-2">
                                                         <span className="text-[11px] tabular-nums text-slate-400">{stats.total} unit</span>
-                                                        <OccupancyMeter total={stats.total} occupied={stats.occupied} />
+                                                        <OccupancyMeter total={leasableTotal(stats)} occupied={stats.occupied} />
                                                     </span>
                                                 </div>
                                             </th>
@@ -398,7 +454,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                 <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-slate-900">{unit.unit_code}</td>
                                                 <td className="whitespace-nowrap px-5 py-3.5 text-sm">{renderLocation(unit)}</td>
                                                 <td className="whitespace-nowrap px-5 py-3.5 text-right text-sm tabular-nums text-slate-600">{unit.size ? `${unit.size} m²` : '—'}</td>
-                                                <td className="px-5 py-3.5 text-sm text-slate-600">{unit.active_tenancy?.tenant?.name ?? <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-5 py-3.5 text-sm text-slate-600">{renderOccupant(unit)}</td>
                                                 <td className="whitespace-nowrap px-5 py-3.5 text-right"><StatusLabel unit={unit} /></td>
                                                 <td className="px-5 py-3.5">{renderActions(unit)}</td>
                                             </tr>
@@ -433,7 +489,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                         <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Lantai {group.floor}</span>
                                         <span className="flex items-center gap-2">
                                             <span className="text-[11px] tabular-nums text-slate-400">{stats.total} unit</span>
-                                            <OccupancyMeter total={stats.total} occupied={stats.occupied} />
+                                            <OccupancyMeter total={leasableTotal(stats)} occupied={stats.occupied} />
                                         </span>
                                     </div>
                                     {group.items.map((unit) => (
@@ -450,7 +506,7 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                                                 {renderLocation(unit)}
                                             </p>
                                             <div className="mt-1 flex items-center justify-between gap-2">
-                                                <p className="truncate text-xs text-slate-500">{unit.active_tenancy?.tenant?.name ?? 'Belum ada tenant'}</p>
+                                                <p className="truncate text-xs text-slate-500">{renderOccupant(unit)}</p>
                                                 <span className="shrink-0 text-xs tabular-nums text-slate-400">{unit.size ? `${unit.size} m²` : '—'}</span>
                                             </div>
                                             <div className={`mt-3 grid gap-2 ${canDelete ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -531,9 +587,16 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                         </div>
                     </FormSection>
 
-                    <FormSection variant="drawer" title="Identitas & Status" description="Kode final, luas, dan keaktifan unit">
+                    <FormSection variant="drawer" title="Identitas & Status" description="Kode final, jenis pemakaian, luas, dan keaktifan unit">
                         <FormField compact label="Kode Unit" error={errors.unit_code} hint="Otomatis dari Lantai-Blok-Nomor, bisa diedit manual.">
                             <TextInput value={data.unit_code} onChange={(e) => setData('unit_code', e.target.value)} />
+                        </FormField>
+                        <FormField compact label="Jenis Pemakaian" error={errors.usage_type} hint="Internal dipakai divisi sendiri, mis. gudang atau workshop.">
+                            <SelectInput value={data.usage_type} onChange={(e) => setData('usage_type', e.target.value)}>
+                                <option value="tenant">Disewakan (tenant)</option>
+                                <option value="internal">Internal (divisi)</option>
+                                <option value="common">Fasilitas umum</option>
+                            </SelectInput>
                         </FormField>
                         <FormField compact label="Luas Unit (m²)" error={errors.size}>
                             <NumberInput step="0.01" value={data.size} onChange={(e) => setData('size', e.target.value)} />
@@ -543,6 +606,12 @@ export default function Index({ units, summary = { total: 0, occupied: 0, vacant
                             <Checkbox label={data.is_active ? 'Aktif' : 'Nonaktif'} checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} />
                         </div>
                     </FormSection>
+
+                    {editingUnit && (data.usage_type === 'internal' || editingUnit.occupancy_state === 'internal') && (
+                        <FormSection variant="drawer" title="Pemakaian Internal" description="Catat divisi yang memakai unit dan riwayatnya">
+                            <InternalUsagePanel unit={editingUnit} departments={departments} canEdit={canEdit} />
+                        </FormSection>
+                    )}
                 </form>
             </SlideOver>
 
