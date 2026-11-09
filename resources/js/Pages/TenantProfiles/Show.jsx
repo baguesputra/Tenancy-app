@@ -233,765 +233,243 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
         printWindow.document.close();
     };
 
+    const leaseTone = (days) => {
+        if (days === null || days === undefined) return 'text-gray-900';
+        if (days < 0) return 'text-red-700';
+        if (days <= 90) return 'text-amber-700';
+        return 'text-gray-900';
+    };
+
+    const tabs = [
+        { key: 'profile', label: 'Profil' },
+        { key: 'inspections', label: 'Sidak', count: inspections.length },
+        { key: 'permits', label: 'Izin', count: permits.length },
+    ];
+
     return (
         <AppLayout>
             <div className="px-4 sm:px-8 py-5 flex-1 max-w-7xl w-full mx-auto">
-                {/* Brand Header — Deep Navy #0F1E36 with Crisp High-Contrast Layout */}
-                <div className="bg-[#0F1E36] text-white rounded-xl border border-[#1E2D4A] p-5 sm:p-6 mb-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                        {/* Tenant Identity */}
-                        <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0 flex-1">
-                            {tenant.logo_url ? (
-                                <img
-                                    src={tenant.logo_url}
-                                    alt={`Logo ${tenant.name}`}
-                                    className="w-18 h-18 sm:w-22 sm:h-22 rounded-xl bg-white object-contain p-2 shrink-0 border border-white/20 shadow-sm"
-                                />
-                            ) : (
-                                <div
-                                    className="w-18 h-18 sm:w-22 sm:h-22 rounded-xl bg-white/10 border border-white/20 text-white text-2xl font-bold flex items-center justify-center shrink-0 shadow-sm"
-                                    aria-hidden="true"
-                                >
-                                    {initials(tenant.name)}
-                                </div>
-                            )}
-
-                            <div className="min-w-0 flex-1">
-                                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
-                                    {tenant.name}
-                                </h1>
-
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    <span
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
-                                            tenant.is_active
-                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                                : 'bg-slate-700/60 text-slate-300 border border-slate-600'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`w-1.5 h-1.5 rounded-full ${
-                                                tenant.is_active ? 'bg-emerald-400' : 'bg-slate-400'
-                                            }`}
-                                        />
-                                        {tenant.is_active ? 'Tenant Aktif' : 'Nonaktif'}
-                                    </span>
-
-                                    {tenant.tenant_category?.name && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-400/20 text-amber-200 border border-amber-400/30">
-                                            {tenant.tenant_category.name}
-                                        </span>
-                                    )}
-
-                                    {tenant.product_category?.name && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-400/20 text-blue-200 border border-blue-400/30">
-                                            {tenant.product_category.name}
-                                        </span>
-                                    )}
-
-                                    {tenant.branch?.name && (
-                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-200 bg-white/10 border border-white/15 px-2.5 py-0.5 rounded-md">
-                                            <IconBuilding className="w-3.5 h-3.5 text-slate-300" />
-                                            {tenant.branch.name}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
-                                    {tenant.legal_entity_name && (
-                                        <span className="font-medium text-slate-200">{tenant.legal_entity_name}</span>
-                                    )}
-                                    {tenant.legal_entity_name && <span className="text-slate-400">·</span>}
-                                    <span className="text-slate-300">Dokumen Legal {completeness}/6 Terisi</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Top Actions & QR Verification Asset */}
-                        <div className="flex sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between gap-3 shrink-0">
-                            <Link
-                                href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 active:bg-white/25 transition-colors rounded-xl border border-white/20 focus-visible:outline-2 focus-visible:outline-white"
+                <section className="overflow-hidden rounded-xl border border-[#E2E5EA]">
+                <header className="flex flex-col gap-4 bg-[#0F1E36] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                    <div className="flex min-w-0 items-center gap-4">
+                        {tenant.logo_url ? (
+                            <img
+                                src={tenant.logo_url}
+                                alt={`Logo ${tenant.name}`}
+                                className="h-14 w-14 shrink-0 rounded-lg bg-white object-contain p-1.5"
+                            />
+                        ) : (
+                            <div
+                                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/10 text-lg font-semibold text-white"
+                                aria-hidden="true"
                             >
-                                <IconEdit className="w-3.5 h-3.5 text-white/80" />
-                                Kelola Master Tenant
-                            </Link>
-
-                            {unitQr && (
-                                <button
-                                    type="button"
-                                    onClick={() => setQrModalOpen(true)}
-                                    className="group inline-flex items-center gap-2.5 p-2 bg-white hover:bg-slate-50 transition-colors rounded-xl shadow-xs text-left focus-visible:outline-2 focus-visible:outline-white"
-                                    title="Klik untuk membuka & mencetak QR Unit"
-                                >
-                                    <img
-                                        src={unitQr}
-                                        alt={`QR ${unitCode}`}
-                                        className="w-9 h-9 rounded bg-white p-0.5 border border-slate-200"
-                                        loading="lazy"
-                                    />
-                                    <div className="pr-1.5">
-                                        <p className="text-[11px] font-semibold text-slate-500">QR Unit</p>
-                                        <p className="text-xs font-bold text-[#0F1E36] font-mono flex items-center gap-1">
-                                            {unitCode}
-                                            <IconExternalLink className="w-3 h-3 text-slate-400 group-hover:text-[#0F1E36] transition-colors" />
-                                        </p>
-                                    </div>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 4 Corporate KPI Tiles — High Contrast & Readable */}
-                    <div className="mt-5 pt-4 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-xs font-semibold text-slate-300 block">Unit &amp; Kontrak</span>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-2xl font-bold font-mono text-white tabular-nums">{tenancies.length}</span>
-                                <span className="text-xs font-medium text-slate-200">{activeTenancy ? 'Unit Aktif' : 'Tanpa Unit'}</span>
-                            </div>
-                            <p className="text-xs text-slate-300 mt-1 truncate font-mono">
-                                {activeTenancy?.unit?.unit_code ? `Unit ${activeTenancy.unit.unit_code}` : 'Belum ada unit aktif'}
-                            </p>
-                        </div>
-
-                        <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-xs font-semibold text-slate-300 block">Masa Berlaku Sewa</span>
-                            <div className="mt-1 flex items-center gap-2">
-                                <span className="text-xl sm:text-2xl font-bold font-mono text-white truncate tabular-nums">
-                                    {activeTenancy?.days_remaining !== undefined && activeTenancy?.days_remaining !== null
-                                        ? `${activeTenancy.days_remaining} Hari`
-                                        : '—'}
-                                </span>
-                                {activeTenancy && (
-                                    <span
-                                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                            activeTenancy.days_remaining < 0
-                                                ? 'bg-red-400'
-                                                : activeTenancy.days_remaining <= 90
-                                                ? 'bg-amber-400'
-                                                : 'bg-emerald-400'
-                                        }`}
-                                    />
-                                )}
-                            </div>
-                            <p className="text-xs text-slate-300 mt-1 truncate">
-                                {daysLabel(activeTenancy?.days_remaining)}
-                            </p>
-                        </div>
-
-                        <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-xs font-semibold text-slate-300 block">Pemeriksaan Sidak</span>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-2xl font-bold font-mono text-white tabular-nums">{completedSidak}</span>
-                                <span className="text-xs text-slate-300">/ {inspections.length} Selesai</span>
-                            </div>
-                            <p className="text-xs mt-1 truncate font-medium">
-                                {flaggedSidak > 0 ? (
-                                    <span className="text-red-300 font-semibold">{flaggedSidak} temuan perlu tindak lanjut</span>
-                                ) : (
-                                    <span className="text-slate-300">Kepatuhan terpantau baik</span>
-                                )}
-                            </p>
-                        </div>
-
-                        <div className="bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 rounded-xl p-3.5 transition-colors">
-                            <span className="text-xs font-semibold text-slate-300 block">Perizinan Kerja</span>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-2xl font-bold font-mono text-white tabular-nums">{permits.length}</span>
-                                <span className="text-xs text-slate-300">Surat Izin</span>
-                            </div>
-                            <p className="text-xs mt-1 truncate font-medium">
-                                {pendingPermits > 0 ? (
-                                    <span className="text-amber-300 font-semibold">{pendingPermits} menunggu persetujuan</span>
-                                ) : (
-                                    <span className="text-slate-300">Seluruh izin telah diproses</span>
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2-Column Layout: Seamless Left Sidebar + Unified Right Canvas */}
-                <div className="flex flex-col md:flex-row gap-5 items-start">
-                    {/* Left Sidebar — Single Unified Panel Container with Safe Top Clearance below Sticky Navbar (h-16 / 64px) */}
-                    <aside className="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-20 z-10">
-                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden max-h-[calc(100vh-6rem)] overflow-y-auto">
-                            {/* Navigation Items */}
-                            <div className="p-3">
-                                <div className="px-3 py-2 text-[11px] font-semibold text-slate-400">
-                                    Menu Data Tenant
-                                </div>
-                                <nav className="space-y-1">
-                                    {/* Profil & Kontrak (Unified View) */}
-                                    <button
-                                        type="button"
-                                        onClick={() => selectTab('profile')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                                            activeTab === 'profile'
-                                                ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <IconBuilding className={`w-4 h-4 ${activeTab === 'profile' ? 'text-white' : 'text-slate-500'}`} />
-                                            <span>Profil &amp; Kontrak</span>
-                                        </div>
-                                        <span
-                                            className={`px-2 py-0.5 rounded-md text-[11px] font-mono ${
-                                                activeTab === 'profile'
-                                                    ? 'bg-white/20 text-white'
-                                                    : 'bg-slate-100 text-slate-600'
-                                            }`}
-                                        >
-                                            Lengkap
-                                        </span>
-                                    </button>
-                                </nav>
-
-                                <div className="mt-3 pt-3 border-t border-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-400">
-                                    Log Operasional
-                                </div>
-                                <nav className="space-y-1">
-                                    {/* Inspeksi Sidak */}
-                                    <button
-                                        type="button"
-                                        onClick={() => selectTab('inspections')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                                            activeTab === 'inspections'
-                                                ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <IconClipboard className={`w-4 h-4 ${activeTab === 'inspections' ? 'text-white' : 'text-slate-500'}`} />
-                                            <span>Inspeksi Sidak</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            {flaggedSidak > 0 && (
-                                                <span className="w-2 h-2 rounded-full bg-red-500" title={`${flaggedSidak} temuan terbuka`} />
-                                            )}
-                                            <span
-                                                className={`px-2 py-0.5 rounded-md text-[11px] font-mono ${
-                                                    activeTab === 'inspections'
-                                                        ? 'bg-white/20 text-white font-bold'
-                                                        : 'bg-slate-100 text-slate-600'
-                                                }`}
-                                            >
-                                                {inspections.length}
-                                            </span>
-                                        </div>
-                                    </button>
-
-                                    {/* Surat Izin Kerja */}
-                                    <button
-                                        type="button"
-                                        onClick={() => selectTab('permits')}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                                            activeTab === 'permits'
-                                                ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <IconContract className={`w-4 h-4 ${activeTab === 'permits' ? 'text-white' : 'text-slate-500'}`} />
-                                            <span>Surat Izin Kerja</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            {pendingPermits > 0 && (
-                                                <span className="w-2 h-2 rounded-full bg-amber-500" title={`${pendingPermits} antre persetujuan`} />
-                                            )}
-                                            <span
-                                                className={`px-2 py-0.5 rounded-md text-[11px] font-mono ${
-                                                    activeTab === 'permits'
-                                                        ? 'bg-white/20 text-white font-bold'
-                                                        : 'bg-slate-100 text-slate-600'
-                                                }`}
-                                            >
-                                                {permits.length}
-                                            </span>
-                                        </div>
-                                    </button>
-                                </nav>
-                            </div>
-
-                            {/* Integrated Quick PIC Section at Bottom of Sidebar */}
-                            {primaryContact && (
-                                <div className="border-t border-slate-100 bg-slate-50/70 p-3.5">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-[11px] font-semibold text-slate-500">
-                                            Kontak Cepat PIC
-                                        </span>
-                                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full">
-                                            {primaryContact.contact_type || 'Narahubung'}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs font-bold text-slate-900 truncate">{primaryContact.name}</p>
-                                    {primaryContact.title && (
-                                        <p className="text-[11px] text-slate-500 truncate mt-0.5">{primaryContact.title}</p>
-                                    )}
-
-                                    <div className="mt-2.5 flex items-center gap-1.5">
-                                        {primaryContact.phone && (
-                                            <>
-                                                <a
-                                                    href={`tel:${primaryContact.phone}`}
-                                                    className="flex-1 py-1.5 px-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors shadow-2xs"
-                                                    title="Telepon PIC"
-                                                >
-                                                    <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                                    </svg>
-                                                    Panggil
-                                                </a>
-                                                {formatWaLink(primaryContact.phone) && (
-                                                    <a
-                                                        href={formatWaLink(primaryContact.phone)}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-[11px] font-semibold text-emerald-800 flex items-center justify-center gap-1 transition-colors shadow-2xs"
-                                                        title="Chat WhatsApp"
-                                                    >
-                                                        WhatsApp
-                                                    </a>
-                                                )}
-                                            </>
-                                        )}
-                                        {primaryContact.email && (
-                                            <a
-                                                href={`mailto:${primaryContact.email}`}
-                                                className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
-                                                title="Kirim Email"
-                                            >
-                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                </svg>
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </aside>
-
-                    {/* Right Main Content Canvas */}
-                    <main className="min-w-0 flex-1 space-y-6">
-                        {/* ========================================================= */}
-                        {/* VIEW 1: PROFIL & KONTRAK (GABUNGAN DATA UTAMA LENGKAP)    */}
-                        {/* ========================================================= */}
-                        {activeTab === 'profile' && (
-                            <div className="space-y-6">
-                                {/* SECTION A: Legalitas & Profil Entitas Bisnis */}
-                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
-                                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
-                                                <IconBuilding className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-base font-bold text-slate-900">Legalitas &amp; Profil Entitas Bisnis</h2>
-                                                <p className="text-xs text-slate-500">Informasi perizinan resmi, perpajakan, dan domisili perusahaan</p>
-                                            </div>
-                                        </div>
-                                        <Badge color={completeness >= 5 ? 'green' : 'yellow'} size="sm" variant="soft">
-                                            {completeness}/6 Terisi
-                                        </Badge>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <CorporateInfoRow
-                                            label="Badan Hukum"
-                                            value={tenant.legal_entity_name}
-                                            fieldKey="legal_entity"
-                                            onCopy={copyText}
-                                            copiedKey={copiedKey}
-                                            placeholder="Belum terisi"
-                                        />
-
-                                        <CorporateInfoRow
-                                            label="Telepon Perusahaan"
-                                            value={tenant.company_phone}
-                                            fieldKey="phone"
-                                            onCopy={copyText}
-                                            copiedKey={copiedKey}
-                                            isTel
-                                            placeholder="Belum terisi"
-                                        />
-
-                                        <CorporateInfoRow
-                                            label="Email Resmi"
-                                            value={tenant.company_email}
-                                            fieldKey="email"
-                                            onCopy={copyText}
-                                            copiedKey={copiedKey}
-                                            isMail
-                                            placeholder="Belum terisi"
-                                        />
-
-                                        <CorporateInfoRow
-                                            label="Nomor NPWP"
-                                            value={tenant.npwp_number}
-                                            fieldKey="npwp"
-                                            onCopy={copyText}
-                                            copiedKey={copiedKey}
-                                            mono
-                                            placeholder="Belum diisi"
-                                        />
-
-                                        <CorporateInfoRow
-                                            label="Nomor SIUP / NIB"
-                                            value={tenant.siup_number}
-                                            fieldKey="siup"
-                                            onCopy={copyText}
-                                            copiedKey={copiedKey}
-                                            mono
-                                            placeholder="Belum diisi"
-                                        />
-
-                                        <CorporateInfoRow
-                                            label="Cabang Mall Penempatan"
-                                            value={tenant.branch?.name}
-                                            fieldKey="branch"
-                                            placeholder="Semua Cabang"
-                                        />
-
-                                        <div className="sm:col-span-2">
-                                            <CorporateInfoRow
-                                                label="Alamat Kantor Pusat / Domisili"
-                                                value={tenant.company_address}
-                                                fieldKey="address"
-                                                onCopy={copyText}
-                                                copiedKey={copiedKey}
-                                                placeholder="Belum ada alamat kantor yang diisi"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* SECTION B: Perjanjian Sewa & Unit Aktif */}
-                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
-                                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
-                                                <IconStorefront className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-base font-bold text-slate-900">Perjanjian Sewa &amp; Unit Operasional</h2>
-                                                <p className="text-xs text-slate-500">Masa berlaku kontrak, nilai sewa, termin pembayaran, dan spesifikasi unit</p>
-                                            </div>
-                                        </div>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                                            {tenancies.length} Kontrak Terdata
-                                        </span>
-                                    </div>
-
-                                    {tenancies.length === 0 ? (
-                                        <EmptyState
-                                            variant="empty"
-                                            size="sm"
-                                            title="Belum Ada Kontrak Sewa"
-                                            description="Tenant ini belum memiliki data perjanjian sewa unit terdaftar di sistem."
-                                        />
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {tenancies.map((c) => {
-                                                const isActive = c.status === 'active';
-                                                const progress = getTenancyProgress(c.start_date, c.end_date);
-
-                                                return (
-                                                    <div
-                                                        key={c.id}
-                                                        className={`rounded-xl border p-4 sm:p-5 transition-colors ${
-                                                            isActive
-                                                                ? 'border-[#0F1E36]/30 bg-white ring-1 ring-[#0F1E36]/10'
-                                                                : 'border-slate-200 bg-slate-50/50'
-                                                        }`}
-                                                    >
-                                                        {/* Unit Header */}
-                                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-mono text-xl font-bold text-slate-900">
-                                                                        Unit {c.unit?.unit_code ?? '—'}
-                                                                    </span>
-                                                                    <Badge
-                                                                        color={isActive ? 'green' : c.status === 'draft' ? 'gray' : 'red'}
-                                                                        size="sm"
-                                                                    >
-                                                                        {isActive ? 'Aktif' : c.status === 'draft' ? 'Draft' : 'Berakhir'}
-                                                                    </Badge>
-                                                                    {c.is_current && (
-                                                                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
-                                                                            Sedang Ditempati
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <p className="text-xs text-slate-500 mt-1">
-                                                                    {[
-                                                                        c.unit?.floor ? `Lantai ${c.unit.floor}` : null,
-                                                                        c.unit?.block ? `Blok ${c.unit.block}` : null,
-                                                                        c.unit?.size ? `${c.unit.size} m²` : null,
-                                                                    ]
-                                                                        .filter(Boolean)
-                                                                        .join(' · ') || 'Lokasi terdaftar'}
-                                                                </p>
-                                                            </div>
-
-                                                            {c.contract_number && (
-                                                                <span className="text-xs text-slate-600 font-mono bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 self-start">
-                                                                    {c.contract_number}
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Duration timeline */}
-                                                        <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                                                            <div className="flex items-center justify-between text-xs">
-                                                                <span className="text-slate-500">Masa Berlaku Sewa:</span>
-                                                                <span className="font-semibold text-slate-800">
-                                                                    {formatDateRange(c.start_date, c.end_date)}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center justify-between text-xs mt-1">
-                                                                <span className="text-slate-500">Status Waktu:</span>
-                                                                <span
-                                                                    className={`font-semibold ${
-                                                                        c.days_remaining !== null && c.days_remaining < 0
-                                                                            ? 'text-red-700'
-                                                                            : c.days_remaining !== null && c.days_remaining <= 90
-                                                                            ? 'text-amber-700'
-                                                                            : 'text-emerald-800'
-                                                                    }`}
-                                                                >
-                                                                    {daysLabel(c.days_remaining)}
-                                                                </span>
-                                                            </div>
-
-                                                            {isActive && progress !== null && (
-                                                                <div className="mt-2.5">
-                                                                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                                                                        <div
-                                                                            className={`h-1.5 rounded-full ${
-                                                                                progress >= 100
-                                                                                    ? 'bg-red-500'
-                                                                                    : progress >= 80
-                                                                                    ? 'bg-amber-500'
-                                                                                    : 'bg-[#0F1E36]'
-                                                                            }`}
-                                                                            style={{ width: `${progress}%` }}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                                                                        <span>Mulai: {formatDateID(c.start_date)}</span>
-                                                                        <span className="font-medium">{progress}% Masa Sewa Berjalan</span>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Financial details table */}
-                                                        <dl className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                                                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                <dt className="text-[10px] uppercase font-bold text-slate-500">Nilai Sewa</dt>
-                                                                <dd className="font-bold text-slate-900 font-mono mt-0.5">
-                                                                    {rupiah(c.rent_value)}
-                                                                    {c.rent_period && (
-                                                                        <span className="font-normal text-slate-500 font-sans">/{c.rent_period}</span>
-                                                                    )}
-                                                                </dd>
-                                                            </div>
-
-                                                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                <dt className="text-[10px] uppercase font-bold text-slate-500">Service Charge</dt>
-                                                                <dd className="font-bold text-slate-900 font-mono mt-0.5">{rupiah(c.service_charge)}</dd>
-                                                            </div>
-
-                                                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                <dt className="text-[10px] uppercase font-bold text-slate-500">Deposit</dt>
-                                                                <dd className="font-bold text-slate-900 font-mono mt-0.5">{rupiah(c.deposit_value)}</dd>
-                                                            </div>
-
-                                                            {c.percentage_rent_rate && (
-                                                                <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                    <dt className="text-[10px] uppercase font-bold text-slate-500">Bagi Hasil</dt>
-                                                                    <dd className="font-bold text-slate-900 font-mono mt-0.5">
-                                                                        {c.percentage_rent_rate}%
-                                                                        {c.percentage_rent_breakpoint && (
-                                                                            <span className="block text-[10px] font-normal text-slate-500 font-sans">
-                                                                                Break: {rupiah(c.percentage_rent_breakpoint)}
-                                                                            </span>
-                                                                        )}
-                                                                    </dd>
-                                                                </div>
-                                                            )}
-
-                                                            {c.payment_term && (
-                                                                <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                    <dt className="text-[10px] uppercase font-bold text-slate-500">Termin</dt>
-                                                                    <dd className="font-medium text-slate-800 mt-0.5">{c.payment_term}</dd>
-                                                                </div>
-                                                            )}
-
-                                                            {c.signed_date && (
-                                                                <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60">
-                                                                    <dt className="text-[10px] uppercase font-bold text-slate-500">Tanggal TTD</dt>
-                                                                    <dd className="font-medium text-slate-800 mt-0.5">{formatDateID(c.signed_date)}</dd>
-                                                                </div>
-                                                            )}
-                                                        </dl>
-
-                                                        {c.contract_document_path && (
-                                                            <div className="mt-4 pt-3 border-t border-slate-100">
-                                                                <a
-                                                                    href={`/storage/${c.contract_document_path}`}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F1E36] hover:text-blue-700 hover:underline min-h-[36px]"
-                                                                >
-                                                                    <IconExternalLink className="w-3.5 h-3.5" />
-                                                                    Buka Dokumen Perjanjian Sewa (PDF) →
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* SECTION C: Direktori Narahubung & Tim PIC */}
-                                <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
-                                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0F1E36] flex items-center justify-center shrink-0 border border-slate-200/60">
-                                                <IconContract className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-base font-bold text-slate-900">Direktori Narahubung &amp; Tim PIC</h2>
-                                                <p className="text-xs text-slate-500">Daftar PIC operasional, pengelola, manajer toko, dan kontak darurat</p>
-                                            </div>
-                                        </div>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                                            Total: {totalContacts} Kontak
-                                        </span>
-                                    </div>
-
-                                    {totalContacts === 0 ? (
-                                        <EmptyState
-                                            variant="empty"
-                                            size="sm"
-                                            title="Belum Ada Kontak Narahubung"
-                                            description="Belum ada nomor PIC atau narahubung yang didaftarkan untuk tenant ini."
-                                        />
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {Object.entries(contactsByType).map(([type, list]) => (
-                                                <div key={type} className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/30">
-                                                    <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200/60">
-                                                        <h3 className="text-xs font-semibold text-slate-700">
-                                                            {type} ({list.length})
-                                                        </h3>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        {list.map((c) => {
-                                                            const waLink = formatWaLink(c.phone);
-
-                                                            return (
-                                                                <div
-                                                                    key={c.id}
-                                                                    className="bg-white rounded-xl border border-slate-200 p-3.5 flex flex-col justify-between shadow-2xs"
-                                                                >
-                                                                    <div>
-                                                                        <div className="flex items-start justify-between gap-2">
-                                                                            <p className="text-xs font-bold text-slate-900">{c.name}</p>
-                                                                            {c.is_primary && (
-                                                                                <Badge color="green" size="sm">
-                                                                                    Utama
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        {c.title && <p className="text-[11px] text-slate-500 mt-0.5">{c.title}</p>}
-                                                                    </div>
-
-                                                                    <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center gap-2">
-                                                                        {c.phone && (
-                                                                            <>
-                                                                                <a
-                                                                                    href={`tel:${c.phone}`}
-                                                                                    className="flex-1 min-h-[34px] px-2 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-slate-200/80"
-                                                                                    title="Panggil nomor telepon ini"
-                                                                                >
-                                                                                    <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                                                                    </svg>
-                                                                                    Telepon
-                                                                                </a>
-                                                                                {waLink && (
-                                                                                    <a
-                                                                                        href={waLink}
-                                                                                        target="_blank"
-                                                                                        rel="noreferrer"
-                                                                                        className="flex-1 min-h-[34px] px-2 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-emerald-200/80"
-                                                                                        title="Hubungi melalui WhatsApp"
-                                                                                    >
-                                                                                        WhatsApp
-                                                                                    </a>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                        {c.email && (
-                                                                            <a
-                                                                                href={`mailto:${c.email}`}
-                                                                                className="p-1.5 min-h-[34px] min-w-[34px] rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors border border-slate-200/80"
-                                                                                title="Kirim pesan email"
-                                                                            >
-                                                                                <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                                                </svg>
-                                                                            </a>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                {initials(tenant.name)}
                             </div>
                         )}
+                        <div className="min-w-0">
+                            <h1 className="truncate text-xl font-semibold tracking-tight text-white">{tenant.name}</h1>
+                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/70">
+                                <span className={tenant.is_active ? 'text-emerald-300' : 'text-white/50'}>
+                                    {tenant.is_active ? 'Aktif' : 'Nonaktif'}
+                                </span>
+                                {tenant.tenant_category?.name && <span>{tenant.tenant_category.name}</span>}
+                                {tenant.product_category?.name && <span>{tenant.product_category.name}</span>}
+                                {tenant.branch?.name && <span>{tenant.branch.name}</span>}
+                                {tenant.legal_entity_name && <span className="truncate">{tenant.legal_entity_name}</span>}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                        {unitQr && (
+                            <button
+                                type="button"
+                                onClick={() => setQrModalOpen(true)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-white py-1 pl-1 pr-3 text-left transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-white"
+                            >
+                                <img src={unitQr} alt={`QR ${unitCode}`} className="h-8 w-8 rounded" loading="lazy" />
+                                <span>
+                                    <span className="block text-xs text-gray-500">QR unit</span>
+                                    <span className="block font-mono text-sm font-semibold text-gray-900">{unitCode}</span>
+                                </span>
+                            </button>
+                        )}
+                        <Link
+                            href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/25 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        >
+                            <IconEdit className="h-3.5 w-3.5" />
+                            Kelola master
+                        </Link>
+                    </div>
+                </header>
+
+                <dl className="grid grid-cols-2 gap-px border-t border-white/10 bg-[#E2E5EA] sm:grid-cols-4">
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-xs text-gray-500">Unit aktif</dt>
+                        <dd className="mt-1 font-mono text-xl font-semibold tabular-nums text-gray-900">{activeTenancy?.unit?.unit_code ?? '—'}</dd>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-xs text-gray-500">Sisa sewa</dt>
+                        <dd className={`mt-1 text-xl font-semibold tabular-nums ${leaseTone(activeTenancy?.days_remaining)}`}>
+                            {activeTenancy?.days_remaining !== undefined && activeTenancy?.days_remaining !== null
+                                ? `${activeTenancy.days_remaining} hari`
+                                : '—'}
+                        </dd>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-xs text-gray-500">Sidak selesai</dt>
+                        <dd className="mt-1 text-xl font-semibold tabular-nums text-gray-900">
+                            {completedSidak}
+                            <span className="text-sm font-normal text-gray-400"> / {inspections.length}</span>
+                            {flaggedSidak > 0 && <span className="ml-2 text-sm font-normal text-red-700">{flaggedSidak} temuan</span>}
+                        </dd>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                        <dt className="text-xs text-gray-500">Izin menunggu</dt>
+                        <dd className={`mt-1 text-xl font-semibold tabular-nums ${pendingPermits > 0 ? 'text-amber-700' : 'text-gray-900'}`}>
+                            {pendingPermits}
+                            <span className="text-sm font-normal text-gray-400"> / {permits.length}</span>
+                        </dd>
+                    </div>
+                </dl>
+                </section>
+
+                <div role="tablist" aria-label="Data tenant" className="mt-4 flex gap-1 border-b border-[#E2E5EA]">
+                    {tabs.map((tab) => {
+                        const selected = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                role="tab"
+                                id={`tab-${tab.key}`}
+                                aria-selected={selected}
+                                aria-controls={`panel-${tab.key}`}
+                                onClick={() => selectTab(tab.key)}
+                                className={`-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                    selected
+                                        ? 'border-[#0F1E36] font-semibold text-gray-900'
+                                        : 'border-transparent text-gray-500 hover:text-gray-900'
+                                }`}
+                            >
+                                {tab.label}
+                                {tab.count !== undefined && <span className="ml-1.5 tabular-nums text-gray-400">{tab.count}</span>}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-5">
+                    {activeTab === 'profile' && (
+                        <div role="tabpanel" id="panel-profile" aria-labelledby="tab-profile" className="space-y-4">
+                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                                <div className="flex items-baseline justify-between border-b border-[#E2E5EA] px-4 py-3">
+                                    <h2 className="text-sm font-semibold text-gray-900">Legalitas</h2>
+                                    <p className="text-xs text-gray-500">{completeness} dari 6 field terisi</p>
+                                </div>
+                                <dl>
+                                    <CorporateInfoRow label="Badan hukum" value={tenant.legal_entity_name} fieldKey="legal_entity" onCopy={copyText} copiedKey={copiedKey} />
+                                    <CorporateInfoRow label="Telepon" value={tenant.company_phone} fieldKey="phone" onCopy={copyText} copiedKey={copiedKey} isTel />
+                                    <CorporateInfoRow label="Email" value={tenant.company_email} fieldKey="email" onCopy={copyText} copiedKey={copiedKey} isMail />
+                                    <CorporateInfoRow label="NPWP" value={tenant.npwp_number} fieldKey="npwp" onCopy={copyText} copiedKey={copiedKey} mono />
+                                    <CorporateInfoRow label="SIUP / NIB" value={tenant.siup_number} fieldKey="siup" onCopy={copyText} copiedKey={copiedKey} mono />
+                                    <CorporateInfoRow label="Cabang" value={tenant.branch?.name} fieldKey="branch" />
+                                    <CorporateInfoRow label="Alamat" value={tenant.company_address} fieldKey="address" onCopy={copyText} copiedKey={copiedKey} />
+                                </dl>
+                            </section>
+
+                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                                <div className="border-b border-[#E2E5EA] px-4 py-3">
+                                    <h2 className="text-sm font-semibold text-gray-900">Kontrak</h2>
+                                </div>
+                                {tenancies.length === 0 ? (
+                                    <EmptyState variant="empty" size="sm" title="Belum ada kontrak" description="Tenant ini belum memiliki perjanjian sewa." />
+                                ) : (
+                                    <table className="w-full text-left text-sm">
+                                        <thead>
+                                            <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
+                                                <th className="px-4 py-2.5 font-medium">Unit</th>
+                                                <th className="px-4 py-2.5 font-medium">Lokasi</th>
+                                                <th className="px-4 py-2.5 font-medium">Masa sewa</th>
+                                                <th className="px-4 py-2.5 font-medium">Sisa</th>
+                                                <th className="px-4 py-2.5 text-right font-medium">Nilai sewa</th>
+                                                <th className="px-4 py-2.5 font-medium">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#E2E5EA]">
+                                            {tenancies.map((c) => (
+                                                <ContractRow key={c.id} contract={c} />
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </section>
+
+                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                                <div className="border-b border-[#E2E5EA] px-4 py-3">
+                                    <h2 className="text-sm font-semibold text-gray-900">Narahubung</h2>
+                                </div>
+                                {totalContacts === 0 ? (
+                                    <EmptyState variant="empty" size="sm" title="Belum ada narahubung" description="Belum ada kontak yang didaftarkan untuk tenant ini." />
+                                ) : (
+                                    <table className="w-full text-left text-sm">
+                                        <thead>
+                                            <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
+                                                <th className="px-4 py-2.5 font-medium">Nama</th>
+                                                <th className="px-4 py-2.5 font-medium">Jabatan</th>
+                                                <th className="px-4 py-2.5 font-medium">Kelompok</th>
+                                                <th className="px-4 py-2.5 font-medium">Kontak</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#E2E5EA]">
+                                            {Object.entries(contactsByType).flatMap(([type, list]) => list.map((c) => {
+                                                const waLink = formatWaLink(c.phone);
+                                                return (
+                                                    <tr key={c.id}>
+                                                        <td className="px-4 py-2.5 font-medium text-gray-900">
+                                                            {c.name}
+                                                            {c.is_primary && <span className="ml-2 text-xs font-normal text-emerald-700">Utama</span>}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-gray-500">{c.title || '—'}</td>
+                                                        <td className="px-4 py-2.5 text-gray-500">{type}</td>
+                                                        <td className="px-4 py-2.5">
+                                                            <span className="flex items-center gap-3">
+                                                                {c.phone && <a href={`tel:${c.phone}`} className="tabular-nums text-gray-900 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">{c.phone}</a>}
+                                                                {waLink && <a href={waLink} target="_blank" rel="noreferrer" className="text-emerald-700 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">WhatsApp</a>}
+                                                                {c.email && <a href={`mailto:${c.email}`} className="text-gray-700 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">Email</a>}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </section>
+                        </div>
+                    )}
 
                         {/* ========================================================= */}
                         {/* VIEW 2: INSPEKSI SIDAK — SINGLE UNIFIED DATA TABLE CARD   */}
                         {/* ========================================================= */}
                         {activeTab === 'inspections' && (
-                            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-                                {/* Unified Card Toolbar Header (Title + Filters + Search) */}
-                                <div className="p-4 sm:p-5 border-b border-slate-200 space-y-3.5">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-base font-bold text-slate-900">Pemeriksaan &amp; Inspeksi Sidak</h2>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Log checklist inspeksi berkala, kondisi kepatuhan operasional, dan temuan fisik unit
-                                            </p>
-                                        </div>
+                            <div role="tabpanel" id="panel-inspections" aria-labelledby="tab-inspections" className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                                <div className="space-y-3 border-b border-[#E2E5EA] p-4">
+                                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                        <h2 className="text-sm font-semibold text-gray-900">Inspeksi sidak</h2>
 
-                                        {/* Status Filter Pills */}
-                                        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-fit shrink-0">
+                                        <div className="flex w-fit shrink-0 items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     setSidakFilter('all');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     sidakFilter === 'all'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Semua ({inspections.length})
@@ -1002,10 +480,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setSidakFilter('flagged');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     sidakFilter === 'flagged'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Ada Temuan ({flaggedSidak})
@@ -1017,10 +495,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setSidakFilter('completed');
                                                     setSidakPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     sidakFilter === 'completed'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Selesai ({completedSidak})
@@ -1069,8 +547,8 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
-                                                    <th className="py-3 px-4">Waktu &amp; Tanggal</th>
+                                                <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
+                                                    <th className="py-2.5 px-4 font-medium">Tanggal</th>
                                                     <th className="py-3 px-4">Template Pemeriksaan</th>
                                                     <th className="py-3 px-4">Petugas Pemeriksa</th>
                                                     <th className="py-3 px-4">Hasil Checklist</th>
@@ -1162,29 +640,22 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                         {/* VIEW 3: SURAT IZIN KERJA — SINGLE UNIFIED DATA TABLE CARD */}
                         {/* ========================================================= */}
                         {activeTab === 'permits' && (
-                            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-                                {/* Unified Card Toolbar Header (Title + Filters + Search) */}
-                                <div className="p-4 sm:p-5 border-b border-slate-200 space-y-3.5">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-base font-bold text-slate-900">Surat Izin Kerja &amp; Aktivitas</h2>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Pengajuan izin renovasi, fit-out, aktivitas malam, tenaga kerja dan verifikasi material
-                                            </p>
-                                        </div>
+                            <div role="tabpanel" id="panel-permits" aria-labelledby="tab-permits" className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
+                                <div className="space-y-3 border-b border-[#E2E5EA] p-4">
+                                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                        <h2 className="text-sm font-semibold text-gray-900">Surat izin kerja</h2>
 
-                                        {/* Status Filter Pills */}
-                                        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-fit shrink-0">
+                                        <div className="flex w-fit shrink-0 flex-wrap items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     setPermitFilter('all');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     permitFilter === 'all'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Semua ({permits.length})
@@ -1195,10 +666,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('pending');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     permitFilter === 'pending'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Antre Approval ({pendingPermits})
@@ -1210,10 +681,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('completed');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     permitFilter === 'completed'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Disetujui
@@ -1224,10 +695,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     setPermitFilter('rejected');
                                                     setPermitPage(1);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
                                                     permitFilter === 'rejected'
-                                                        ? 'bg-[#0F1E36] text-white shadow-xs font-bold'
-                                                        : 'text-slate-600 hover:text-slate-900'
+                                                        ? 'bg-[#0F1E36] font-semibold text-white'
+                                                        : 'text-gray-500 hover:text-gray-900'
                                                 }`}
                                             >
                                                 Ditolak
@@ -1276,8 +747,8 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
-                                                    <th className="py-3 px-4">No. Izin Kerja</th>
+                                                <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
+                                                    <th className="py-2.5 px-4 font-medium">No. izin</th>
                                                     <th className="py-3 px-4">Pekerjaan &amp; Vendor</th>
                                                     <th className="py-3 px-4">Jadwal Pelaksanaan</th>
                                                     <th className="py-3 px-4">Tenaga Kerja</th>
@@ -1355,7 +826,6 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                 )}
                             </div>
                         )}
-                    </main>
                 </div>
             </div>
 
@@ -1482,49 +952,130 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
     );
 }
 
-function CorporateInfoRow({ label, value, fieldKey, onCopy, copiedKey, isTel, isMail, mono, placeholder }) {
+function CorporateInfoRow({ label, value, fieldKey, onCopy, copiedKey, isTel, isMail, mono }) {
     const isCopied = copiedKey === fieldKey;
+    const valueClass = `text-sm text-gray-900 ${mono ? 'font-mono' : ''}`;
+
     return (
-        <div className="rounded-xl border border-slate-200/70 bg-slate-50/50 p-3 hover:bg-white hover:border-slate-300 transition-colors">
-            <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-slate-400">{label}</span>
+        <div className="grid grid-cols-1 gap-0.5 border-b border-[#E2E5EA] px-4 py-2.5 last:border-b-0 sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-4">
+            <dt className="text-sm text-gray-500">{label}</dt>
+            <dd className="flex min-w-0 items-baseline gap-2">
+                {value ? (
+                    isTel ? (
+                        <a href={`tel:${value}`} className={`${valueClass} underline-offset-2 hover:underline`}>{value}</a>
+                    ) : isMail ? (
+                        <a href={`mailto:${value}`} className={`${valueClass} truncate underline-offset-2 hover:underline`}>{value}</a>
+                    ) : (
+                        <span className={valueClass}>{value}</span>
+                    )
+                ) : (
+                    <span className="text-sm text-gray-300">Belum diisi</span>
+                )}
                 {value && onCopy && (
                     <button
                         type="button"
                         onClick={() => onCopy(value, fieldKey)}
-                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors ${
-                            isCopied ? 'bg-emerald-100 text-emerald-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+                        className={`shrink-0 rounded text-xs focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                            isCopied ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-700'
                         }`}
-                        title="Salin ke papan klip"
                     >
                         {isCopied ? 'Tersalin' : 'Salin'}
                     </button>
                 )}
-            </div>
-            <div className="mt-1">
-                {value ? (
-                    isTel ? (
-                        <a
-                            href={`tel:${value}`}
-                            className="text-xs font-semibold text-slate-800 hover:text-[#0F1E36] hover:underline"
-                        >
-                            {value}
-                        </a>
-                    ) : isMail ? (
-                        <a
-                            href={`mailto:${value}`}
-                            className="text-xs font-semibold text-slate-800 hover:text-[#0F1E36] hover:underline truncate block"
-                        >
-                            {value}
-                        </a>
-                    ) : (
-                        <p className={`text-xs text-slate-800 ${mono ? 'font-mono font-bold' : 'font-medium'}`}>{value}</p>
-                    )
-                ) : (
-                    <p className="text-xs text-slate-400 italic">{placeholder ?? 'Belum diisi'}</p>
-                )}
-            </div>
+            </dd>
         </div>
+    );
+}
+
+function ContractRow({ contract: c }) {
+    const isActive = c.status === 'active';
+    const progress = getTenancyProgress(c.start_date, c.end_date);
+    const [open, setOpen] = useState(isActive);
+    const location = [c.unit?.floor ? `Lantai ${c.unit.floor}` : null, c.unit?.block ? `Blok ${c.unit.block}` : null, c.unit?.size ? `${c.unit.size} m²` : null]
+        .filter(Boolean)
+        .join(' · ');
+    const statusLabel = isActive ? 'Aktif' : c.status === 'draft' ? 'Draft' : 'Berakhir';
+    const statusColor = isActive ? 'green' : c.status === 'draft' ? 'gray' : 'red';
+    const facts = [
+        ['Masa sewa', formatDateRange(c.start_date, c.end_date)],
+        ['Sisa waktu', daysLabel(c.days_remaining)],
+        c.contract_number ? ['No. kontrak', c.contract_number] : null,
+        c.rent_value ? ['Nilai sewa', `${rupiah(c.rent_value)}${c.rent_period ? ` / ${c.rent_period}` : ''}`] : null,
+        c.service_charge ? ['Service charge', rupiah(c.service_charge)] : null,
+        c.deposit_value ? ['Deposit', rupiah(c.deposit_value)] : null,
+        c.percentage_rent_rate ? ['Bagi hasil', `${c.percentage_rent_rate}%${c.percentage_rent_breakpoint ? ` di atas ${rupiah(c.percentage_rent_breakpoint)}` : ''}`] : null,
+        c.payment_term ? ['Termin', c.payment_term] : null,
+        c.signed_date ? ['Tanggal TTD', formatDateID(c.signed_date)] : null,
+    ].filter(Boolean);
+
+    const leaseLeft = c.days_remaining;
+    const leaseClass = leaseLeft !== null && leaseLeft !== undefined && leaseLeft < 0
+        ? 'text-red-700'
+        : leaseLeft !== null && leaseLeft !== undefined && leaseLeft <= 90
+            ? 'text-amber-700'
+            : 'text-gray-700';
+
+    return (
+        <>
+            <tr
+                onClick={() => setOpen((v) => !v)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((v) => !v); }
+                }}
+                tabIndex={0}
+                aria-expanded={open}
+                className="cursor-pointer hover:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+            >
+                <td className="px-4 py-2.5 font-mono font-semibold text-gray-900">{c.unit?.unit_code ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500">{location || '—'}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-gray-700">{formatDateRange(c.start_date, c.end_date)}</td>
+                <td className={`whitespace-nowrap px-4 py-2.5 ${leaseClass}`}>{daysLabel(c.days_remaining)}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-gray-900">
+                    {c.rent_value ? rupiah(c.rent_value) : '—'}
+                    {c.rent_period && <span className="text-gray-400"> / {c.rent_period}</span>}
+                </td>
+                <td className="px-4 py-2.5">
+                    <Badge color={statusColor} size="sm">{statusLabel}</Badge>
+                    {c.is_current && <span className="ml-2 text-xs text-gray-500">Ditempati</span>}
+                </td>
+            </tr>
+            {open && (
+                <tr className="bg-gray-50">
+                    <td colSpan={6} className="px-4 py-3">
+                        {isActive && progress !== null && (
+                            <div className="mb-2 max-w-xs">
+                                <div className="h-1 overflow-hidden rounded-full bg-gray-200">
+                                    <div
+                                        className={`h-1 rounded-full ${progress >= 100 ? 'bg-red-500' : progress >= 80 ? 'bg-amber-500' : 'bg-[#0F1E36]'}`}
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-400">{progress}% masa sewa berjalan</p>
+                            </div>
+                        )}
+                        <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+                            {facts.map(([label, value]) => (
+                                <div key={label} className="grid grid-cols-[9rem_1fr] gap-3 py-1">
+                                    <dt className="text-sm text-gray-500">{label}</dt>
+                                    <dd className="text-sm text-gray-900">{value}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        {c.contract_document_path && (
+                            <a
+                                href={`/storage/${c.contract_document_path}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 inline-flex items-center gap-1.5 text-sm text-[#0F1E36] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                            >
+                                <IconExternalLink className="h-3.5 w-3.5" />
+                                Dokumen perjanjian
+                            </a>
+                        )}
+                    </td>
+                </tr>
+            )}
+        </>
     );
 }
 
@@ -1563,7 +1114,7 @@ function SidakBody({ cached }) {
 
             {(cached.checklistSnapshot?.sections ?? []).map((section) => (
                 <div key={section.id} className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs">
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 pb-1.5 border-b border-slate-100">
+                    <h4 className="mb-2.5 border-b border-slate-100 pb-1.5 text-sm font-semibold text-slate-800">
                         {section.name}
                     </h4>
                     <div className="space-y-2.5">
@@ -1673,7 +1224,7 @@ function PermitBody({ permit }) {
 
             {permit.is_external && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-                    <p className="text-[10px] uppercase tracking-wide text-amber-800 font-bold">Kontraktor Eksternal</p>
+                    <p className="text-xs font-medium text-amber-800">Kontraktor eksternal</p>
                     <p className="text-xs text-amber-950 mt-0.5">
                         {[permit.contractor_company, permit.contractor_pic, permit.contractor_phone].filter(Boolean).join(' · ') || '—'}
                     </p>
@@ -1703,7 +1254,7 @@ function PermitBody({ permit }) {
 
             {(permit.workers_detail ?? []).length > 0 && (
                 <div>
-                    <p className="text-[11px] uppercase tracking-wide text-slate-500 font-bold mb-1.5">Daftar Tenaga Kerja</p>
+                    <p className="mb-1.5 text-xs text-slate-500">Tenaga kerja</p>
                     <div className="space-y-1.5">
                         {permit.workers_detail.map((w) => (
                             <div
@@ -1725,7 +1276,7 @@ function PermitBody({ permit }) {
 
             {(permit.goods_detail ?? []).length > 0 && (
                 <div>
-                    <p className="text-[11px] uppercase tracking-wide text-slate-500 font-bold mb-1.5">Daftar Material &amp; Peralatan</p>
+                    <p className="mb-1.5 text-xs text-slate-500">Material dan peralatan</p>
                     <div className="space-y-1.5">
                         {permit.goods_detail.map((g) => (
                             <div
