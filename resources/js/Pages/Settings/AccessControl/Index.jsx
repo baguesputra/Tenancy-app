@@ -193,7 +193,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                     <span className="block min-w-0">
                                         <span className="flex items-center gap-2 font-medium text-gray-900">
                                             <span className="truncate">{role.name}</span>
-                                            {authRoles.includes(role.name) && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">Role Anda</span>}
+                                            {authRoles.includes(role.name) && <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-500">Role Anda</span>}
                                         </span>
                                         <span className="block text-xs text-gray-400 truncate mt-0.5">{role.users_count ?? 0} user</span>
                                     </span>
@@ -246,7 +246,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                                 <div className="flex-1 min-w-0">
                                     <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                                         <span className="truncate">{role.name}</span>
-                                        {authRoles.includes(role.name) && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">Role Anda</span>}
+                                        {authRoles.includes(role.name) && <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-500">Role Anda</span>}
                                     </p>
                                     <p className="text-xs text-gray-400 truncate mt-0.5">{role.users_count ?? 0} user · {role.permissions.length} akses</p>
                                 </div>
@@ -285,7 +285,7 @@ export default function Index({ roles = [], permissions = [], groups = [], authR
                     {panelRole && (
                         <>
                             <div className="rounded-xl border border-[#E2E5EA] bg-white p-4 mb-3 shadow-sm">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">Role</p>
+                                <p className="text-xs text-gray-500">Role</p>
                                 <p className="mt-1 text-base font-semibold text-gray-900 truncate">{panelRole.name}</p>
                                 <p className="text-xs text-gray-500 mt-0.5">{panelRole.users_count ?? 0} user · {selectedCount}/{permissions.length} akses dipilih</p>
                             </div>

@@ -59,8 +59,8 @@ export default function Index({ gateStatus, summary = {}, companies = [], branch
             <div>
                 <PageHeader
                     title="Sinkronisasi Gate"
-                    description="Master + karyawan Gate jadi user (role staff)"
-                    actions={<StatusGate status={gateStatus} />}
+                    description="Master dan karyawan Gate jadi user dengan role staff."
+                    meta={<StatusGate status={gateStatus} />}
                 />
 
                 <StatTiles items={stats} />

@@ -1,13 +1,14 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import NavItem from './NavItem';
+import SettingsIcon from '@/Components/Settings/SettingsIcon';
+import { SETTINGS_ITEMS } from '@/Components/Settings/settingsItems';
 import {
     IconClipboardCheck,
     IconDocument,
     IconDoor,
     IconHandshake,
     IconHome,
-    IconKey,
     IconListChecks,
     IconMap,
     IconPanelLeft,
@@ -63,14 +64,18 @@ const SECTIONS = [
     },
 ];
 
-// Pengaturan ikut dalam daftar yang sama — bukan dipin di dasar rail, agar
-// seluruh navigasi memakai satu scroll container dan satu ritme seksi.
+// Modul pengaturan ikut dalam daftar yang sama — bukan dipin di dasar rail dan
+// bukan digandakan sebagai menu kedua di dalam halaman. Satu pintu per modul,
+// disaring izinnya dari sumber yang sama dengan halaman hub.
 const SETTINGS_SECTION = {
     key: 'pengaturan',
     label: 'Pengaturan',
-    items: [
-        { label: 'Pengaturan', href: '/settings', anyPermission: ['users.manage', 'settings.gate', 'settings.permit_scan', 'settings.templates', 'settings.documents'], icon: <IconKey className="h-4 w-4" /> },
-    ],
+    items: SETTINGS_ITEMS.map((item) => ({
+        label: item.label,
+        href: item.href,
+        permission: item.permission,
+        icon: <SettingsIcon name={item.icon} />,
+    })),
 };
 
 /** Rail navigasi utama. Lebar & state ciut dikendalikan `AppLayout`. */
