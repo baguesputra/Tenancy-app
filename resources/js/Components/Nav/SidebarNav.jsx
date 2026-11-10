@@ -185,9 +185,15 @@ export default function SidebarNav({
 
             {/* Satu scroll container untuk seluruh navigasi, termasuk
                 Pengaturan. `min-h-0` wajib agar blok ini benar-benar bisa
-                menyusut dan menyerahkan sisa tinggi ke scroll container. */}
-            <nav ref={navRef} className="flex-1 min-h-0 px-2.5 py-3 thin-scrollbar overflow-y-auto">
-                <div className="space-y-3">
+                menyusut dan menyerahkan sisa tinggi ke scroll container.
+                Padding kanan hilang saat rail terbuka agar item aktif menempel
+                ke tepi dan menyambung ke kanvas halaman. Scrollbar dipindah ke
+                kiri lewat `direction: rtl` supaya tidak memotong sambungan itu;
+                isi dikembalikan ke `ltr` agar teks tidak ikut terbalik. Saat
+                ciut penanda aktif adalah kotak di tengah, jadi scrollbar boleh
+                kembali ke kanan. */}
+            <nav ref={navRef} className={`flex-1 min-h-0 py-3 thin-scrollbar overflow-y-auto ${collapsed ? 'px-2.5' : 'pl-2.5 pr-0 [direction:rtl]'}`}>
+                <div className={`space-y-3 ${collapsed ? '' : '[direction:ltr]'}`}>
                     {sections.map((section, index) => (
                         <NavSection
                             key={section.key}

@@ -16,6 +16,12 @@ import { useRef, useState } from 'react';
  *
  * Ikon diskalakan lewat pembungkus (`[&>svg]`): 16px saat rail terbuka agar
  * sejajar teks, 20px saat ciut karena rail ikon murni butuh presence lebih.
+ *
+ * Item aktif berwarna sama dengan kanvas halaman (`slate-50`) dan menempel
+ * rata di tepi kanan rail, jadi terbaca sebagai bagian halaman yang terbuka,
+ * bukan baris yang disorot. Sisi kiri saja yang beradius. Saat rail ciut
+ * tidak ada label yang bisa menyambung ke kanvas, jadi penandanya kotak putih
+ * di belakang ikon, dengan ikon navy.
  */
 export default function NavItem({ href, currentUrl, children, icon, collapsed = false }) {
     const isActive = currentUrl === href || currentUrl.startsWith(href + '/') || (href !== '/dashboard' && currentUrl.startsWith(href));
@@ -46,16 +52,16 @@ export default function NavItem({ href, currentUrl, children, icon, collapsed = 
             onMouseLeave={collapsed ? hideTip : undefined}
             onFocus={collapsed ? showTip : undefined}
             onBlur={collapsed ? hideTip : undefined}
-            className={`group relative flex items-center gap-3 py-2.5 pl-3 pr-2.5 min-h-10 rounded-md text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
-                ${collapsed ? 'justify-center pl-0 pr-0' : ''}
-                ${isActive ? 'text-white bg-white/15 font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]' : 'text-white/75 hover:text-white hover:bg-white/[0.08]'}`}
+            className={`group relative flex items-center gap-3 py-2.5 min-h-10 text-sm transition-colors duration-150 motion-reduce:transition-none
+                ${collapsed
+                    ? `justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive ? '' : 'text-white/65 hover:bg-white/[0.06] hover:text-white'}`
+                    : `pl-3 pr-4 focus-visible:outline-2 focus-visible:-outline-offset-2 ${isActive ? 'rounded-l-md bg-slate-50 text-[#0F1E36] focus-visible:outline-[#0F1E36]' : 'rounded-md mr-2.5 text-white/65 hover:bg-white/[0.06] hover:text-white focus-visible:outline-white'}`}`}
         >
-            {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-sm bg-white" aria-hidden="true" />
-            )}
             {icon && (
                 <span
-                    className={`shrink-0 ${collapsed ? '[&>svg]:h-5 [&>svg]:w-5' : '[&>svg]:h-4 [&>svg]:w-4'}`}
+                    className={`shrink-0 ${collapsed
+                        ? `[&>svg]:h-5 [&>svg]:w-5 ${isActive ? 'flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[#0F1E36]' : 'text-white/70 group-hover:text-white'}`
+                        : `[&>svg]:h-4 [&>svg]:w-4 ${isActive ? '' : 'text-white/70 group-hover:text-white'}`}`}
                     aria-hidden="true"
                 >
                     {icon}
