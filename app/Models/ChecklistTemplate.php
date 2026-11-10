@@ -24,6 +24,9 @@ class ChecklistTemplate extends Model
      */
     public function toSnapshotArray(?Tenant $tenant = null): array
     {
+        $this->loadMissing('sections.items');
+        $tenant?->loadMissing(['productCategory:id,name', 'activeTenancy.unit:id,floor']);
+
         $categoryName = $tenant?->productCategory?->name;
         $floor = $tenant?->activeTenancy?->unit?->floor;
 

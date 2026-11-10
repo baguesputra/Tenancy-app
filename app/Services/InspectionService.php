@@ -62,6 +62,8 @@ class InspectionService
             }
         }
 
+        $tenant->loadMissing(['productCategory:id,name', 'activeTenancy.unit:id,floor']);
+
         $template = ChecklistTemplate::with('sections.items')->whereHas('productCategories', fn ($q) => $q->where('product_categories.id', $tenant->product_category_id)
         )->where('is_active', true)->first();
 

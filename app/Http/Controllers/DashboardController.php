@@ -45,13 +45,19 @@ class DashboardController extends Controller
             $totalUnits = Unit::where('is_active', true)
                 ->where('usage_type', 'tenant')
                 ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))->count();
-            $occupiedUnits = Unit::where('is_active', true)
-                ->where('usage_type', 'tenant')
-                ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
-                ->where(function ($q) {
-                    $q->whereHas('activeTenancy')
-                        ->orWhereHas('group.activeTenancy');
-                })->count();
+            $occupiedUnits = Unit::query()
+                ->where('units.is_active', true)
+                ->where('units.usage_type', 'tenant')
+                ->when($branchScoped, fn ($q) => $q->where('units.branch_id', $user->branch_id))
+                ->where(fn ($q) => $q
+                    ->whereExists(fn ($t) => $t->selectRaw('1')->from('tenancies')
+                        ->whereColumn('tenancies.unit_id', 'units.id')
+                        ->where('tenancies.status', 'active'))
+                    ->orWhereExists(fn ($t) => $t->selectRaw('1')->from('tenancies')
+                        ->join('unit_group_unit', 'unit_group_unit.unit_group_id', '=', 'tenancies.unit_group_id')
+                        ->whereColumn('unit_group_unit.unit_id', 'units.id')
+                        ->where('tenancies.status', 'active')))
+                ->count();
             $pendingPermits = $this->permitVisibility->applyView(
                 PermitRequest::where('status', 'pending'),
                 $user
@@ -319,8 +325,8 @@ class DashboardController extends Controller
 
             if ($user->can('sidak.view')) {
                 $sessions = InspectionSession::select(['id', 'user_id', 'branch_id', 'status', 'started_at', 'creator_name_snapshot'])->with('user:id,name')
-                    ->whereDate('started_at', '>=', $start->toDateString())
-                    ->whereDate('started_at', '<=', $end->toDateString())
+                    ->where('started_at', '>=', $start->copy()->startOfDay())
+                    ->where('started_at', '<=', $end->copy()->endOfDay())
                     ->when($branchScoped, fn ($q) => $q->where('branch_id', $user->branch_id))
                     ->latest('started_at')
                     ->limit(50)
@@ -407,13 +413,11 @@ class DashboardController extends Controller
             // LooSection events (milestone per divisi)
             $sectionKeys = ['legalitas', 'biaya_termin', 'manajemen_tenant', 'pre_handover', 'fitout_checklist_pre', 'fitout_checklist_post'];
             $sections = LooSection::whereIn('section_key', $sectionKeys)
-                ->whereHas('loo', function ($q) use ($branchScoped, $user, $start, $end) {
-                    $q->when($branchScoped, fn ($qq) => $qq->where('branch_id', $user->branch_id))
-                        ->where(function ($qq) use ($start, $end) {
-                            $qq->whereBetween('loo_sections.filled_at', [$start->toDateString(), $end->toDateString()])
-                                ->orWhereBetween('loo_sections.submitted_at', [$start->toDateString(), $end->toDateString()]);
-                        });
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('filled_at', [$start->copy()->startOfDay(), $end->copy()->endOfDay()])
+                        ->orWhereBetween('submitted_at', [$start->copy()->startOfDay(), $end->copy()->endOfDay()]);
                 })
+                ->when($branchScoped, fn ($q) => $q->whereHas('loo', fn ($loo) => $loo->where('branch_id', $user->branch_id)))
                 ->with(['loo:id,loo_number,prospective_tenant_name,status'])
                 ->limit(300)
                 ->get();

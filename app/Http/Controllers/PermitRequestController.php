@@ -14,6 +14,7 @@ use App\Services\PermitRequestService;
 use App\Services\PermitRequestVisibilityService;
 use App\Services\PermitScanWindowService;
 use App\Services\TenantScopeService;
+use App\Support\PermitActivityQuery;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -113,7 +114,7 @@ class PermitRequestController extends Controller
         }
 
         $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
-            ->when($request->activity_type, fn ($q) => $q->where('activity_types', 'like', "%{$request->activity_type}%"))
+            ->when($request->activity_type, fn ($q) => PermitActivityQuery::contains($q, $request->activity_type))
             ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
                 ->where('permit_number', 'like', "%{$request->search}%")
                 ->orWhere('store_name_snapshot', 'like', "%{$request->search}%")))
@@ -170,15 +171,9 @@ class PermitRequestController extends Controller
                 'my_turn' => $myTurnCount,
             ];
         } else {
-            $agg = (clone $base)->reorder()->toBase()->selectRaw("
-                count(*) as total,
-                sum(activity_types like '%pameran%') as pameran,
-                sum(activity_types not like '%pameran%' and (activity_types like '%event%' or activity_types like '%meeting_internal%' or activity_types like '%stock_opname%')) as kegiatan,
-                sum(activity_types like '%langganan_parkir%') as parkir,
-                sum(activity_types like '%customer_form%') as customer,
-                sum(tenant_id is not null and activity_types not like '%pameran%' and activity_types not like '%event%' and activity_types not like '%meeting_internal%' and activity_types not like '%stock_opname%' and activity_types not like '%langganan_parkir%' and activity_types not like '%customer_form%') as tenant,
-                sum(tenant_id is null and activity_types not like '%pameran%' and activity_types not like '%event%' and activity_types not like '%meeting_internal%' and activity_types not like '%stock_opname%' and activity_types not like '%langganan_parkir%' and activity_types not like '%customer_form%') as vendor
-            ")->first();
+            $agg = (clone $base)->reorder()
+                ->selectRaw($this->categoryCountSql())
+                ->first();
 
             $summary = [
                 'total' => (int) ($agg->total ?? 0),
@@ -246,30 +241,43 @@ class PermitRequestController extends Controller
 
     private function applyCategory($query, ?string $category)
     {
-        return match ($category) {
-            'pameran' => $query->where('activity_types', 'like', '%pameran%'),
-            'kegiatan' => $query->where('activity_types', 'not like', '%pameran%')
-                ->where(fn ($q) => $q->where('activity_types', 'like', '%event%')
-                    ->orWhere('activity_types', 'like', '%meeting_internal%')
-                    ->orWhere('activity_types', 'like', '%stock_opname%')),
-            'parkir' => $query->where('activity_types', 'like', '%langganan_parkir%'),
-            'customer' => $query->where('activity_types', 'like', '%customer_form%'),
-            'tenant' => $query->whereNotNull('tenant_id')
-                ->where('activity_types', 'not like', '%pameran%')
-                ->where('activity_types', 'not like', '%event%')
-                ->where('activity_types', 'not like', '%meeting_internal%')
-                ->where('activity_types', 'not like', '%stock_opname%')
-                ->where('activity_types', 'not like', '%langganan_parkir%')
-                ->where('activity_types', 'not like', '%customer_form%'),
-            'vendor' => $query->where('activity_types', 'not like', '%pameran%')
-                ->where('activity_types', 'not like', '%event%')
-                ->where('activity_types', 'not like', '%meeting_internal%')
-                ->where('activity_types', 'not like', '%stock_opname%')
-                ->where('activity_types', 'not like', '%langganan_parkir%')
-                ->where('activity_types', 'not like', '%customer_form%')
-                ->whereNull('tenant_id'),
-            default => $query,
-        };
+        return PermitActivityQuery::category($query, $category);
+    }
+
+    /**
+     * Satu scan untuk enam kartu kategori. MySQL memakai kolom generated;
+     * SQLite memakai json_each supaya "event" tidak ikut "prevent".
+     */
+    private function categoryCountSql(): string
+    {
+        if (PermitActivityQuery::usesGeneratedColumn()) {
+            return "
+                count(*) as total,
+                sum(activity_category = 'pameran') as pameran,
+                sum(activity_category = 'kegiatan') as kegiatan,
+                sum(activity_category = 'parkir') as parkir,
+                sum(activity_category = 'customer') as customer,
+                sum(activity_category = 'tenant') as tenant,
+                sum(activity_category = 'vendor') as vendor
+            ";
+        }
+
+        $has = fn (string $type) => "exists (select 1 from json_each(permit_requests.activity_types) where value = '{$type}')";
+        $pameran = $has('pameran');
+        $kegiatan = $has('event').' or '.$has('meeting_internal').' or '.$has('stock_opname');
+        $special = collect(['pameran', 'event', 'meeting_internal', 'stock_opname', 'langganan_parkir', 'customer_form'])
+            ->map(fn ($type) => 'not '.$has($type))
+            ->implode(' and ');
+
+        return "
+            count(*) as total,
+            sum({$pameran}) as pameran,
+            sum(not {$pameran} and ({$kegiatan})) as kegiatan,
+            sum({$has('langganan_parkir')}) as parkir,
+            sum({$has('customer_form')}) as customer,
+            sum(tenant_id is not null and {$special}) as tenant,
+            sum(tenant_id is null and {$special}) as vendor
+        ";
     }
 
     private function categoryOf(PermitRequest $permit): string

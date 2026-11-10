@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PermitRequest;
 use App\Models\User;
+use App\Support\PermitActivityQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
@@ -62,11 +63,11 @@ class PermitRequestVisibilityService
         }
 
         if ($this->isMarketingLocked($user)) {
-            return $query->where('activity_types', 'like', '%pameran%');
+            return PermitActivityQuery::contains($query, 'pameran');
         }
 
         if (! $this->canViewPameran($user)) {
-            $query->where(fn ($q) => $q->whereNull('activity_types')->orWhere('activity_types', 'not like', '%pameran%'));
+            PermitActivityQuery::missing($query, 'pameran');
         }
 
         return $query;

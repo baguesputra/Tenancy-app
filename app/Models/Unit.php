@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ScannableCode;
 use Illuminate\Support\Str;
 
 class Unit extends Model
@@ -75,13 +74,13 @@ class Unit extends Model
             return true;
         }
 
-        $groups = $this->relationLoaded('group')
-            ? $this->group
-            : $this->group()->with('activeTenancy')->get();
+        if (! $this->relationLoaded('group')) {
+            $this->load('group.activeTenancy');
+        } elseif ($this->group->contains(fn (UnitGroup $group) => ! $group->relationLoaded('activeTenancy'))) {
+            $this->group->load('activeTenancy');
+        }
 
-        return $groups->contains(fn (UnitGroup $group) => $group->relationLoaded('activeTenancy')
-            ? $group->activeTenancy !== null
-            : $group->activeTenancy()->exists());
+        return $this->group->contains(fn (UnitGroup $group) => $group->activeTenancy !== null);
     }
 
     public function isInternal(): bool

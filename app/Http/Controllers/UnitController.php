@@ -6,9 +6,9 @@ use App\Models\Branch;
 use App\Models\Department;
 use App\Models\Unit;
 use App\Models\UnitAssignment;
-use App\Models\UnitGroup;
 use App\Services\BranchScopeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -102,9 +102,9 @@ class UnitController extends Controller
                 ])
                 ->values();
             $unit->scan_url = $unit->scanUrl;
-            // ponytail: QR inline 15x per page, pindah ke endpoint/PDF saat lambat
-            $unit->qr_image = $unit->scanUrl
-                ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($unit->scanUrl))
+            $token = $unit->scannableCode?->token;
+            $unit->qr_image = $token
+                ? Cache::rememberForever('unit-qr.'.$token, fn () => 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(220)->generate($unit->scanUrl)))
                 : null;
 
             return $unit;
