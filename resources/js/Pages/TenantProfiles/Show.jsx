@@ -7,11 +7,7 @@ import EmptyState from '@/Components/EmptyState';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 import initials from '@/utils/initials';
 import {
-    IconBuilding,
-    IconStorefront,
-    IconContract,
     IconClipboard,
-    IconEdit,
     IconExternalLink,
 } from '@/Components/Icons';
 
@@ -61,9 +57,193 @@ function initialTab() {
 
 const PAGE_SIZE = 8;
 
+/* ───────── Inline SVG Icons ───────── */
+const IconPhone = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+    </svg>
+);
+
+const IconMail = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+    </svg>
+);
+
+const IconWhatsApp = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}>
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+);
+
+const IconBuilding = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+    </svg>
+);
+
+const IconDocument = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    </svg>
+);
+
+const IconMapPin = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+    </svg>
+);
+
+const IconCopy = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+    </svg>
+);
+
+const IconCheck = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+);
+
+const IconChevronDown = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+);
+
+const IconQrCode = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h2.25v2.25H13.5V13.5zm3 0h2.25v2.25H16.5V13.5zm-3 3h2.25v2.25H13.5V16.5zm3 0h2.25v2.25H16.5V16.5zm-1.5-3v-2.25h2.25V13.5H15z" />
+    </svg>
+);
+
+const IconEdit = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+);
+
+const IconSearch = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+);
+
+const IconChevronLeft = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+);
+
+const IconChevronRight = (p) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true" {...p}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+);
+
+/* ───────── Numbered Pagination Helper ───────── */
+function NumberedPagination({ page, totalPages, totalItems, pageSize, onPageChange, itemName = 'inspeksi' }) {
+    const startItem = (page - 1) * pageSize + 1;
+    const endItem = Math.min(page * pageSize, totalItems);
+
+    // Generate page numbers with ellipsis
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 7;
+
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+            return pages;
+        }
+
+        // Always show first page
+        pages.push(1);
+
+        let start = Math.max(2, page - 2);
+        let end = Math.min(totalPages - 1, page + 2);
+
+        // Adjust if we're near the edges
+        if (page <= 4) {
+            end = Math.min(totalPages - 1, maxVisible - 1);
+        }
+        if (page >= totalPages - 3) {
+            start = Math.max(2, totalPages - (maxVisible - 2));
+        }
+
+        if (start > 2) pages.push('...');
+        for (let i = start; i <= end; i++) pages.push(i);
+        if (end < totalPages - 1) pages.push('...');
+
+        // Always show last page
+        pages.push(totalPages);
+
+        return pages;
+    };
+
+    return (
+        <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span className="text-xs text-slate-500">
+                Menampilkan{' '}
+                <strong className="text-slate-900 font-mono">{startItem}</strong> –{' '}
+                <strong className="text-slate-900 font-mono">{endItem}</strong>{' '}
+                dari <strong className="text-slate-900 font-mono">{totalItems}</strong>{' '}
+                {itemName}
+            </span>
+
+            <div className="flex items-center gap-1">
+                {/* Prev button */}
+                <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => onPageChange(page - 1)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition-colors hover:bg-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Halaman sebelumnya"
+                >
+                    <IconChevronLeft className="w-4 h-4" />
+                </button>
+
+                {getPageNumbers().map((p, idx) =>
+                    p === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm text-slate-400">
+                            …
+                        </span>
+                    ) : (
+                        <button
+                            key={p}
+                            type="button"
+                            onClick={() => onPageChange(p)}
+                            className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
+                                p === page
+                                    ? 'bg-[#0F1E36] text-white'
+                                    : 'hover:bg-slate-200 text-slate-600'
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
+                )}
+
+                {/* Next button */}
+                <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => onPageChange(page + 1)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition-colors hover:bg-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Halaman selanjutnya"
+                >
+                    <IconChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function Show({ tenant, tenancies = [], inspections = [], permits = [], contactsByType = {}, unitQr, filters = {} }) {
     const [activeTab, setActiveTab] = useState(initialTab);
-    
+
     // Modal Details for Inspections & Permits
     const [modalSidak, setModalSidak] = useState(null);
     const [sidakCache, setSidakCache] = useState({});
@@ -75,11 +255,11 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
 
     // Filter & Pagination States
     const [sidakSearch, setSidakSearch] = useState('');
-    const [sidakFilter, setSidakFilter] = useState('all'); // 'all' | 'flagged' | 'completed'
+    const [sidakFilter, setSidakFilter] = useState('all');
     const [sidakPage, setSidakPage] = useState(1);
 
     const [permitSearch, setPermitSearch] = useState('');
-    const [permitFilter, setPermitFilter] = useState('all'); // 'all' | 'pending' | 'completed' | 'rejected'
+    const [permitFilter, setPermitFilter] = useState('all');
     const [permitPage, setPermitPage] = useState(1);
 
     const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -143,14 +323,27 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
     }, [contactsByType]);
 
     const completenessFields = [
-        { key: 'legal_entity_name', label: 'Badan Hukum' },
-        { key: 'company_phone', label: 'Telepon Perusahaan' },
-        { key: 'company_email', label: 'Email Perusahaan' },
-        { key: 'company_address', label: 'Alamat Kantor' },
-        { key: 'npwp_number', label: 'Nomor NPWP' },
-        { key: 'siup_number', label: 'Nomor SIUP / NIB' },
+        { key: 'legal_entity_name', label: 'Badan Hukum', icon: 'building' },
+        { key: 'company_phone', label: 'Telepon', icon: 'phone' },
+        { key: 'company_email', label: 'Email', icon: 'mail' },
+        { key: 'npwp_number', label: 'NPWP', icon: 'document' },
+        { key: 'siup_number', label: 'SIUP/NIB', icon: 'document' },
+        { key: 'branch_name', label: 'Cabang', icon: 'building' },
+        { key: 'company_address', label: 'Alamat', icon: 'mapPin' },
     ];
-    const completeness = completenessFields.filter((f) => tenant[f.key]).length;
+    const legalFields = [
+        { key: 'legal_entity_name', label: 'Badan Hukum', icon: 'building', copyable: true },
+        { key: 'company_phone', label: 'Telepon', icon: 'phone', isTel: true, copyable: true },
+        { key: 'company_email', label: 'Email', icon: 'mail', isMail: true, copyable: true },
+        { key: 'npwp_number', label: 'NPWP', icon: 'document', mono: true, copyable: true },
+        { key: 'siup_number', label: 'SIUP/NIB', icon: 'document', mono: true, copyable: true },
+        { key: 'branch_value', label: 'Cabang', icon: 'building' },
+        { key: 'company_address', label: 'Alamat', icon: 'mapPin', copyable: true },
+    ];
+    const completeness = legalFields.filter((f) => {
+        const val = f.key === 'branch_value' ? tenant.branch?.name : tenant[f.key];
+        return val;
+    }).length;
 
     // Filtered & Paginated Inspections
     const filteredInspections = useMemo(() => {
@@ -234,10 +427,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
     };
 
     const leaseTone = (days) => {
-        if (days === null || days === undefined) return 'text-gray-900';
-        if (days < 0) return 'text-red-700';
-        if (days <= 90) return 'text-amber-700';
-        return 'text-gray-900';
+        if (days === null || days === undefined) return 'text-white';
+        if (days < 0) return 'text-red-400';
+        if (days <= 90) return 'text-amber-400';
+        return 'text-white';
     };
 
     const tabs = [
@@ -246,313 +439,455 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
         { key: 'permits', label: 'Izin', count: permits.length },
     ];
 
+    /* ───────── Helper: render icon by name ───────── */
+    const renderIcon = (name, className = 'w-[18px] h-[18px]') => {
+        const cls = className;
+        switch (name) {
+            case 'building': return <IconBuilding className={cls} />;
+            case 'phone': return <IconPhone className={cls} />;
+            case 'mail': return <IconMail className={cls} />;
+            case 'document': return <IconDocument className={cls} />;
+            case 'mapPin': return <IconMapPin className={cls} />;
+            default: return <IconDocument className={cls} />;
+        }
+    };
+
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-5 flex-1 max-w-7xl w-full mx-auto">
-                <section className="overflow-hidden rounded-xl border border-[#E2E5EA]">
-                <header className="flex flex-col gap-4 bg-[#0F1E36] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                    <div className="flex min-w-0 items-center gap-4">
-                        {tenant.logo_url ? (
-                            <img
-                                src={tenant.logo_url}
-                                alt={`Logo ${tenant.name}`}
-                                className="h-14 w-14 shrink-0 rounded-lg bg-white object-contain p-1.5"
-                            />
-                        ) : (
-                            <div
-                                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/10 text-lg font-semibold text-white"
-                                aria-hidden="true"
-                            >
-                                {initials(tenant.name)}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex-1 max-w-7xl w-full mx-auto space-y-5">
+
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* SECTION 1: HEADER HERO — White Card with Subtle Depth   */}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                <section className="bg-[#0F1E36] rounded-2xl overflow-hidden shadow-lg">
+                    <div className="p-5 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            {/* Left: Logo + Name + Meta + Quick Actions */}
+                            <div className="flex gap-4 min-w-0">
+                                {/* Logo */}
+                                {tenant.logo_url ? (
+                                    <img
+                                        src={tenant.logo_url}
+                                        alt={`Logo ${tenant.name}`}
+                                        className="w-[120px] h-[120px] shrink-0 rounded-2xl border border-white/20 bg-white p-2.5 object-contain"
+                                    />
+                                ) : (
+                                    <div
+                                        className="flex w-[120px] h-[120px] shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-3xl font-bold text-white"
+                                        aria-hidden="true"
+                                    >
+                                        {initials(tenant.name)}
+                                    </div>
+                                )}
+
+                                <div className="min-w-0 flex-1">
+                                    {/* Name row */}
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        <h1 className="text-2xl font-bold text-white tracking-tight truncate">{tenant.name}</h1>
+                                        <span className="flex items-center gap-1.5 text-xs font-medium">
+                                            <span className={`w-2 h-2 rounded-full ${tenant.is_active ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                                            <span className={tenant.is_active ? 'text-emerald-300' : 'text-slate-400'}>
+                                                {tenant.is_active ? 'Aktif' : 'Nonaktif'}
+                                            </span>
+                                        </span>
+                                    </div>
+
+                                    {/* Meta pill badges */}
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                        {tenant.tenant_category?.name && (
+                                            <span className="bg-white/10 text-white/80 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                {tenant.tenant_category.name}
+                                            </span>
+                                        )}
+                                        {tenant.product_category?.name && (
+                                            <span className="bg-white/10 text-white/80 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                {tenant.product_category.name}
+                                            </span>
+                                        )}
+                                        {tenant.branch?.name && (
+                                            <span className="bg-white/10 text-white/80 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                {tenant.branch.name}
+                                            </span>
+                                        )}
+                                        {tenant.legal_entity_name && (
+                                            <span className="bg-white/10 text-white/80 px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-[200px]">
+                                                {tenant.legal_entity_name}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Action Bar — only if primaryContact exists */}
+                                    {primaryContact && (
+                                        <div className="flex items-center gap-2 mt-3">
+                                            {primaryContact.phone && (
+                                                <a
+                                                    href={`tel:${primaryContact.phone}`}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 hover:text-white text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                                                    title={`Telepon ${primaryContact.phone}`}
+                                                >
+                                                    <IconPhone className="w-[18px] h-[18px]" />
+                                                    <span className="hidden sm:inline">{primaryContact.phone}</span>
+                                                    <span className="sm:hidden">Telepon</span>
+                                                </a>
+                                            )}
+                                            {primaryContact.phone && (() => { const wa = formatWaLink(primaryContact.phone); return wa ? (
+                                                <a
+                                                    href={wa}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-400/20 hover:bg-emerald-400/30 text-emerald-300 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                                                    title="WhatsApp"
+                                                >
+                                                    <IconWhatsApp className="w-[18px] h-[18px]" />
+                                                    <span className="hidden sm:inline">WhatsApp</span>
+                                                </a>
+                                            ) : null; })()}
+                                            {primaryContact.email && (
+                                                <a
+                                                    href={`mailto:${primaryContact.email}`}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 hover:text-white text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                                                    title={`Email ${primaryContact.email}`}
+                                                >
+                                                    <IconMail className="w-[18px] h-[18px]" />
+                                                    <span className="hidden sm:inline">{primaryContact.email}</span>
+                                                    <span className="sm:hidden">Email</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        <div className="min-w-0">
-                            <h1 className="truncate text-xl font-semibold tracking-tight text-white">{tenant.name}</h1>
-                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/70">
-                                <span className={tenant.is_active ? 'text-emerald-300' : 'text-white/50'}>
-                                    {tenant.is_active ? 'Aktif' : 'Nonaktif'}
-                                </span>
-                                {tenant.tenant_category?.name && <span>{tenant.tenant_category.name}</span>}
-                                {tenant.product_category?.name && <span>{tenant.product_category.name}</span>}
-                                {tenant.branch?.name && <span>{tenant.branch.name}</span>}
-                                {tenant.legal_entity_name && <span className="truncate">{tenant.legal_entity_name}</span>}
-                            </p>
+
+                            {/* Right: QR button + Kelola master */}
+                            <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
+                                {unitQr && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQrModalOpen(true)}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-2 focus-visible:outline-white backdrop-blur-sm"
+                                    >
+                                        <IconQrCode className="w-4 h-4" />
+                                        QR Unit
+                                    </button>
+                                )}
+                                <Link
+                                    href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white/90 hover:bg-white/20 transition-colors focus-visible:outline-2 focus-visible:outline-white backdrop-blur-sm"
+                                >
+                                    <IconEdit className="w-3.5 h-3.5" />
+                                    Kelola master
+                                </Link>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
-                        {unitQr && (
-                            <button
-                                type="button"
-                                onClick={() => setQrModalOpen(true)}
-                                className="inline-flex items-center gap-2 rounded-lg bg-white py-1 pl-1 pr-3 text-left transition-colors hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-white"
-                            >
-                                <img src={unitQr} alt={`QR ${unitCode}`} className="h-8 w-8 rounded" loading="lazy" />
-                                <span>
-                                    <span className="block text-xs text-gray-500">QR unit</span>
-                                    <span className="block font-mono text-sm font-semibold text-gray-900">{unitCode}</span>
-                                </span>
-                            </button>
-                        )}
-                        <Link
-                            href={`/tenants?search=${encodeURIComponent(tenant.name)}`}
-                            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/25 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                        >
-                            <IconEdit className="h-3.5 w-3.5" />
-                            Kelola master
-                        </Link>
-                    </div>
-                </header>
+                    {/* Stat Grid — 4 individual stat cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-5 pt-0 sm:px-6 sm:pb-6">
+                        {/* Card 1 — Unit Aktif */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:-translate-y-0.5 hover:bg-white/15 transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <IconBuilding className="w-5 h-5 text-white/50" />
+                                <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Unit aktif</span>
+                            </div>
+                            <p className="text-xl font-bold font-mono tabular-nums text-white">
+                                {activeTenancy?.unit?.unit_code ?? '—'}
+                            </p>
+                        </div>
 
-                <dl className="grid grid-cols-2 gap-px border-t border-white/10 bg-[#E2E5EA] sm:grid-cols-4">
-                    <div className="bg-white px-4 py-3">
-                        <dt className="text-xs text-gray-500">Unit aktif</dt>
-                        <dd className="mt-1 font-mono text-xl font-semibold tabular-nums text-gray-900">{activeTenancy?.unit?.unit_code ?? '—'}</dd>
+                        {/* Card 2 — Sisa Sewa */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:-translate-y-0.5 hover:bg-white/15 transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <svg className="w-5 h-5 text-white/50" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                                </svg>
+                                <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Sisa sewa</span>
+                            </div>
+                            <p className={`text-xl font-bold font-mono tabular-nums ${leaseTone(activeTenancy?.days_remaining).replace('text-slate', 'text').replace('text-red', 'text-red').replace('text-amber', 'text-amber')}`}>
+                                {activeTenancy?.days_remaining !== undefined && activeTenancy?.days_remaining !== null
+                                    ? `${activeTenancy.days_remaining} hari`
+                                    : '—'}
+                            </p>
+                        </div>
+
+                        {/* Card 3 — Sidak */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:-translate-y-0.5 hover:bg-white/15 transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <IconClipboard className="w-5 h-5 text-white/50" />
+                                <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Sidak</span>
+                            </div>
+                            <p className="text-xl font-bold font-mono tabular-nums text-emerald-300">
+                                {completedSidak}<span className="text-sm font-normal text-white/40">/{inspections.length}</span>
+                                {flaggedSidak > 0 && <span className="ml-2 text-sm font-normal text-red-400">{flaggedSidak} temuan</span>}
+                            </p>
+                        </div>
+
+                        {/* Card 4 — Izin */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:-translate-y-0.5 hover:bg-white/15 transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <svg className="w-5 h-5 text-white/50" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                                <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Izin</span>
+                            </div>
+                            <p className={`text-xl font-bold font-mono tabular-nums ${pendingPermits > 0 ? 'text-amber-300' : 'text-blue-300'}`}>
+                                {pendingPermits}<span className="text-sm font-normal text-white/40">/{permits.length}</span>
+                            </p>
+                        </div>
                     </div>
-                    <div className="bg-white px-4 py-3">
-                        <dt className="text-xs text-gray-500">Sisa sewa</dt>
-                        <dd className={`mt-1 text-xl font-semibold tabular-nums ${leaseTone(activeTenancy?.days_remaining)}`}>
-                            {activeTenancy?.days_remaining !== undefined && activeTenancy?.days_remaining !== null
-                                ? `${activeTenancy.days_remaining} hari`
-                                : '—'}
-                        </dd>
-                    </div>
-                    <div className="bg-white px-4 py-3">
-                        <dt className="text-xs text-gray-500">Sidak selesai</dt>
-                        <dd className="mt-1 text-xl font-semibold tabular-nums text-gray-900">
-                            {completedSidak}
-                            <span className="text-sm font-normal text-gray-400"> / {inspections.length}</span>
-                            {flaggedSidak > 0 && <span className="ml-2 text-sm font-normal text-red-700">{flaggedSidak} temuan</span>}
-                        </dd>
-                    </div>
-                    <div className="bg-white px-4 py-3">
-                        <dt className="text-xs text-gray-500">Izin menunggu</dt>
-                        <dd className={`mt-1 text-xl font-semibold tabular-nums ${pendingPermits > 0 ? 'text-amber-700' : 'text-gray-900'}`}>
-                            {pendingPermits}
-                            <span className="text-sm font-normal text-gray-400"> / {permits.length}</span>
-                        </dd>
-                    </div>
-                </dl>
                 </section>
 
-                <div role="tablist" aria-label="Data tenant" className="mt-4 flex gap-1 border-b border-[#E2E5EA]">
-                    {tabs.map((tab) => {
-                        const selected = activeTab === tab.key;
-                        return (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                role="tab"
-                                id={`tab-${tab.key}`}
-                                aria-selected={selected}
-                                aria-controls={`panel-${tab.key}`}
-                                onClick={() => selectTab(tab.key)}
-                                className={`-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                    selected
-                                        ? 'border-[#0F1E36] font-semibold text-gray-900'
-                                        : 'border-transparent text-gray-500 hover:text-gray-900'
-                                }`}
-                            >
-                                {tab.label}
-                                {tab.count !== undefined && <span className="ml-1.5 tabular-nums text-gray-400">{tab.count}</span>}
-                            </button>
-                        );
-                    })}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* SECTION 2: TAB NAVIGATION — Segmented Pill Style         */}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                <div role="tablist" aria-label="Data tenant" className="flex justify-start">
+                    <div className="bg-slate-100 p-1 rounded-xl inline-flex gap-1">
+                        {tabs.map((tab) => {
+                            const selected = activeTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    role="tab"
+                                    id={`tab-${tab.key}`}
+                                    aria-selected={selected}
+                                    aria-controls={`panel-${tab.key}`}
+                                    onClick={() => selectTab(tab.key)}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                        selected
+                                            ? 'bg-white shadow-sm text-[#0F1E36]'
+                                            : 'text-slate-500 hover:text-slate-900'
+                                    }`}
+                                >
+                                    {tab.label}
+                                    {tab.count !== undefined && (
+                                        <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                                            selected ? 'bg-slate-200/70 text-slate-500' : 'bg-slate-200/50 text-slate-400'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* TAB PANELS                                                 */}
+                {/* ═══════════════════════════════════════════════════════════ */}
                 <div className="mt-5">
+                    {/* ─────────── TAB: PROFIL ─────────── */}
                     {activeTab === 'profile' && (
-                        <div role="tabpanel" id="panel-profile" aria-labelledby="tab-profile" className="space-y-4">
-                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
-                                <div className="flex items-baseline justify-between border-b border-[#E2E5EA] px-4 py-3">
-                                    <h2 className="text-sm font-semibold text-gray-900">Legalitas</h2>
-                                    <p className="text-xs text-gray-500">{completeness} dari 6 field terisi</p>
-                                </div>
-                                <dl>
-                                    <CorporateInfoRow label="Badan hukum" value={tenant.legal_entity_name} fieldKey="legal_entity" onCopy={copyText} copiedKey={copiedKey} />
-                                    <CorporateInfoRow label="Telepon" value={tenant.company_phone} fieldKey="phone" onCopy={copyText} copiedKey={copiedKey} isTel />
-                                    <CorporateInfoRow label="Email" value={tenant.company_email} fieldKey="email" onCopy={copyText} copiedKey={copiedKey} isMail />
-                                    <CorporateInfoRow label="NPWP" value={tenant.npwp_number} fieldKey="npwp" onCopy={copyText} copiedKey={copiedKey} mono />
-                                    <CorporateInfoRow label="SIUP / NIB" value={tenant.siup_number} fieldKey="siup" onCopy={copyText} copiedKey={copiedKey} mono />
-                                    <CorporateInfoRow label="Cabang" value={tenant.branch?.name} fieldKey="branch" />
-                                    <CorporateInfoRow label="Alamat" value={tenant.company_address} fieldKey="address" onCopy={copyText} copiedKey={copiedKey} />
-                                </dl>
-                            </section>
+                        <div role="tabpanel" id="panel-profile" aria-labelledby="tab-profile" className="space-y-5">
 
-                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
-                                <div className="border-b border-[#E2E5EA] px-4 py-3">
-                                    <h2 className="text-sm font-semibold text-gray-900">Kontrak</h2>
+                            {/* ---- LEGALITAS SECTION ---- */}
+                            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                {/* Section header with progress bar */}
+                                <div className="p-5 pb-4 space-y-3">
+                                    <div className="flex items-baseline justify-between">
+                                        <h2 className="text-base font-bold text-slate-900">Legalitas</h2>
+                                        <p className="text-xs text-slate-500 font-medium">{completeness} dari 6 field terisi</p>
+                                    </div>
+                                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                        <div
+                                            className="bg-[#0F1E36] h-full rounded-full transition-all duration-500 ease-out"
+                                            style={{ width: `${(completeness / 6) * 100}%` }}
+                                        />
+                                    </div>
                                 </div>
-                                {tenancies.length === 0 ? (
-                                    <EmptyState variant="empty" size="sm" title="Belum ada kontrak" description="Tenant ini belum memiliki perjanjian sewa." />
-                                ) : (
-                                    <table className="w-full text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
-                                                <th className="px-4 py-2.5 font-medium">Unit</th>
-                                                <th className="px-4 py-2.5 font-medium">Lokasi</th>
-                                                <th className="px-4 py-2.5 font-medium">Masa sewa</th>
-                                                <th className="px-4 py-2.5 font-medium">Sisa</th>
-                                                <th className="px-4 py-2.5 text-right font-medium">Nilai sewa</th>
-                                                <th className="px-4 py-2.5 font-medium">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#E2E5EA]">
-                                            {tenancies.map((c) => (
-                                                <ContractRow key={c.id} contract={c} />
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </section>
 
-                            <section className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
-                                <div className="border-b border-[#E2E5EA] px-4 py-3">
-                                    <h2 className="text-sm font-semibold text-gray-900">Narahubung</h2>
-                                </div>
-                                {totalContacts === 0 ? (
-                                    <EmptyState variant="empty" size="sm" title="Belum ada narahubung" description="Belum ada kontak yang didaftarkan untuk tenant ini." />
-                                ) : (
-                                    <table className="w-full text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
-                                                <th className="px-4 py-2.5 font-medium">Nama</th>
-                                                <th className="px-4 py-2.5 font-medium">Jabatan</th>
-                                                <th className="px-4 py-2.5 font-medium">Kelompok</th>
-                                                <th className="px-4 py-2.5 font-medium">Kontak</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#E2E5EA]">
-                                            {Object.entries(contactsByType).flatMap(([type, list]) => list.map((c) => {
-                                                const waLink = formatWaLink(c.phone);
-                                                return (
-                                                    <tr key={c.id}>
-                                                        <td className="px-4 py-2.5 font-medium text-gray-900">
-                                                            {c.name}
-                                                            {c.is_primary && <span className="ml-2 text-xs font-normal text-emerald-700">Utama</span>}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 text-gray-500">{c.title || '—'}</td>
-                                                        <td className="px-4 py-2.5 text-gray-500">{type}</td>
-                                                        <td className="px-4 py-2.5">
-                                                            <span className="flex items-center gap-3">
-                                                                {c.phone && <a href={`tel:${c.phone}`} className="tabular-nums text-gray-900 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">{c.phone}</a>}
-                                                                {waLink && <a href={waLink} target="_blank" rel="noreferrer" className="text-emerald-700 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">WhatsApp</a>}
-                                                                {c.email && <a href={`mailto:${c.email}`} className="text-gray-700 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]">Email</a>}
+                                {/* 2-Column Card Grid */}
+                                <div className="px-5 pb-5">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {legalFields.map((field) => {
+                                            const value = field.key === 'branch_value' ? tenant.branch?.name : tenant[field.key];
+                                            const isEmpty = !value;
+                                            const isCopied = copiedKey === field.key;
+
+                                            return (
+                                                <div
+                                                    key={field.key}
+                                                    className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                        {renderIcon(field.icon)}
+                                                        <span className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold block">
+                                                            {field.label}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {isEmpty ? (
+                                                            <span className="text-slate-300 italic text-sm">Belum diisi</span>
+                                                        ) : field.isTel ? (
+                                                            <a
+                                                                href={`tel:${value}`}
+                                                                className="text-sm font-medium text-[#0F1E36] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                                                            >
+                                                                {value}
+                                                            </a>
+                                                        ) : field.isMail ? (
+                                                            <a
+                                                                href={`mailto:${value}`}
+                                                                className="text-sm font-medium text-[#0F1E36] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] truncate max-w-[220px]"
+                                                            >
+                                                                {value}
+                                                            </a>
+                                                        ) : (
+                                                            <span className={`text-sm font-medium text-slate-900 ${field.mono ? 'font-mono' : ''} ${!field.copyable ? 'truncate block max-w-[220px]' : ''}`}>
+                                                                {value}
                                                             </span>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            }))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                                        )}
+                                                        {value && field.copyable && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyText(value, field.key)}
+                                                                className={`shrink-0 p-1 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                                    isCopied
+                                                                        ? 'text-emerald-600 bg-emerald-50'
+                                                                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                                                                }`}
+                                                                title={isCopied ? 'Tersalin!' : 'Salin'}
+                                                            >
+                                                                {isCopied ? <IconCheck className="w-3.5 h-3.5" /> : <IconCopy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* ---- KONTRAK SECTION ---- */}
+                            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="px-5 py-4 border-b border-slate-100">
+                                    <h2 className="text-base font-bold text-slate-900">Kontrak</h2>
+                                </div>
+                                <div className="p-5 pt-0 divide-y divide-slate-100">
+                                    {tenancies.length === 0 ? (
+                                        <div className="p-8">
+                                            <EmptyState variant="empty" size="sm" title="Belum ada kontrak" description="Tenant ini belum memiliki perjanjian sewa." />
+                                        </div>
+                                    ) : (
+                                        tenancies.map((c) => <ContractCard key={c.id} contract={c} />)
+                                    )}
+                                </div>
+                            </section>
+
+                            {/* ---- NARAHUBUNG SECTION ---- */}
+                            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="px-5 py-4 border-b border-slate-100">
+                                    <h2 className="text-base font-bold text-slate-900">Narahubung</h2>
+                                </div>
+                                <div className="p-5 pt-0">
+                                    {totalContacts === 0 ? (
+                                        <div className="p-8">
+                                            <EmptyState variant="empty" size="sm" title="Belum ada narahubung" description="Belum ada kontak yang didaftarkan untuk tenant ini." />
+                                        </div>
+                                    ) : (
+                                        Object.entries(contactsByType).map(([type, list]) => (
+                                            <div key={type}>
+                                                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-5 first:mt-0 mb-2">
+                                                    {type}
+                                                </h3>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {list.map((contact) => (
+                                                        <ContactCard key={contact.id} contact={contact} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </section>
                         </div>
                     )}
 
-                        {/* ========================================================= */}
-                        {/* VIEW 2: INSPEKSI SIDAK — SINGLE UNIFIED DATA TABLE CARD   */}
-                        {/* ========================================================= */}
-                        {activeTab === 'inspections' && (
-                            <div role="tabpanel" id="panel-inspections" aria-labelledby="tab-inspections" className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
-                                <div className="space-y-3 border-b border-[#E2E5EA] p-4">
-                                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                                        <h2 className="text-sm font-semibold text-gray-900">Inspeksi sidak</h2>
+                    {/* ─────────── TAB: SIDAK ─────────── */}
+                    {activeTab === 'inspections' && (
+                        <div role="tabpanel" id="panel-inspections" aria-labelledby="tab-inspections" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            {/* Header section */}
+                            <div className="p-4 border-b border-slate-200 space-y-3">
+                                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                    <h2 className="text-base font-bold text-slate-900">Inspeksi sidak</h2>
 
-                                        <div className="flex w-fit shrink-0 items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSidakFilter('all');
-                                                    setSidakPage(1);
-                                                }}
-                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    sidakFilter === 'all'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Semua ({inspections.length})
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSidakFilter('flagged');
-                                                    setSidakPage(1);
-                                                }}
-                                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    sidakFilter === 'flagged'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Ada Temuan ({flaggedSidak})
-                                                {flaggedSidak > 0 && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSidakFilter('completed');
-                                                    setSidakPage(1);
-                                                }}
-                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    sidakFilter === 'completed'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Selesai ({completedSidak})
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Integrated Search Bar inside same Card Header */}
-                                    <div className="relative w-full">
-                                        <input
-                                            type="text"
-                                            value={sidakSearch}
-                                            onChange={(e) => {
-                                                setSidakSearch(e.target.value);
-                                                setSidakPage(1);
-                                            }}
-                                            placeholder="Cari berdasarkan nama template, nama petugas, atau status inspeksi..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-colors"
-                                        />
-                                        <svg
-                                            className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
+                                    <div className="flex w-fit shrink-0 items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSidakFilter('all'); setSidakPage(1); }}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                sidakFilter === 'all'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
                                         >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
+                                            Semua ({inspections.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSidakFilter('flagged'); setSidakPage(1); }}
+                                            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                sidakFilter === 'flagged'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Ada Temuan ({flaggedSidak})
+                                            {flaggedSidak > 0 && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSidakFilter('completed'); setSidakPage(1); }}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                sidakFilter === 'completed'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Selesai ({completedSidak})
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Table Body directly attached */}
-                                {filteredInspections.length === 0 ? (
-                                    <div className="p-8">
-                                        <EmptyState
-                                            variant="empty"
-                                            size="sm"
-                                            title="Tidak Ada Data Inspeksi"
-                                            description={
-                                                sidakSearch || sidakFilter !== 'all'
-                                                    ? 'Tidak ditemukan data inspeksi sidak dengan kriteria pencarian ini.'
-                                                    : 'Belum pernah dilakukan inspeksi sidak berkala pada unit tenant ini.'
-                                            }
-                                        />
-                                    </div>
-                                ) : (
+                                {/* Search bar */}
+                                <div className="relative w-full">
+                                    <input
+                                        type="text"
+                                        value={sidakSearch}
+                                        onChange={(e) => { setSidakSearch(e.target.value); setSidakPage(1); }}
+                                        placeholder="Cari berdasarkan nama template, nama petugas, atau status inspeksi..."
+                                        className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-2 focus:ring-[#0F1E36]/10 transition-colors"
+                                    />
+                                    <IconSearch className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                                </div>
+                            </div>
+
+                            {/* Table body */}
+                            {filteredInspections.length === 0 ? (
+                                <div className="p-8">
+                                    <EmptyState
+                                        variant="empty"
+                                        size="sm"
+                                        title="Tidak Ada Data Inspeksi"
+                                        description={
+                                            sidakSearch || sidakFilter !== 'all'
+                                                ? 'Tidak ditemukan data inspeksi sidak dengan kriteria pencarian ini.'
+                                                : 'Belum pernah dilakukan inspeksi sidak berkala pada unit tenant ini.'
+                                        }
+                                    />
+                                </div>
+                            ) : (
+                                <>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs border-collapse">
+                                        <table className="w-full text-left text-sm border-collapse">
                                             <thead>
-                                                <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
-                                                    <th className="py-2.5 px-4 font-medium">Tanggal</th>
-                                                    <th className="py-3 px-4">Template Pemeriksaan</th>
-                                                    <th className="py-3 px-4">Petugas Pemeriksa</th>
-                                                    <th className="py-3 px-4">Hasil Checklist</th>
-                                                    <th className="py-3 px-4">Status</th>
+                                                <tr className="bg-slate-50/80">
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Tanggal</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Template</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Petugas</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Hasil Checklist</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -560,15 +895,17 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     <tr
                                                         key={i.id}
                                                         onClick={() => openSidakModal(i)}
-                                                        className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                                                        className={`py-4 px-4 hover:bg-blue-50/50 transition-colors cursor-pointer group ${
+                                                            i.is_flagged ? 'border-l-2 border-red-400' : ''
+                                                        }`}
                                                         title="Klik baris untuk membuka rincian hasil sidak"
                                                     >
-                                                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono">
+                                                        <td className="py-4 px-4 whitespace-nowrap text-slate-600 font-mono text-xs">
                                                             {i.session_started_at ? formatDateID(i.session_started_at) : '—'}
                                                         </td>
-                                                        <td className="py-3.5 px-4">
+                                                        <td className="py-4 px-4">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-semibold text-slate-900 group-hover:text-[#0F1E36] transition-colors">
+                                                                <span className="font-semibold text-slate-900 group-hover:text-[#0F1E36] transition-colors text-sm">
                                                                     {i.template_name}
                                                                 </span>
                                                                 {i.is_flagged && (
@@ -578,13 +915,13 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
+                                                        <td className="py-4 px-4 whitespace-nowrap text-slate-700 text-sm">
                                                             {i.session_officer || '—'}
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap font-mono text-slate-600">
+                                                        <td className="py-4 px-4 whitespace-nowrap font-mono text-slate-600 text-sm">
                                                             <span className="font-bold text-slate-800">{i.answered}</span>/{i.total} Terjawab
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                                        <td className="py-4 px-4 whitespace-nowrap">
                                                             <Badge
                                                                 color={i.session_status === 'in_progress' ? 'yellow' : sidakColor[i.status] ?? 'gray'}
                                                                 size="sm"
@@ -597,162 +934,118 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                             </tbody>
                                         </table>
                                     </div>
-                                )}
 
-                                {/* Pagination Footer Integrated at bottom of same card */}
-                                {filteredInspections.length > PAGE_SIZE && (
-                                    <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
-                                        <span>
-                                            Menampilkan <strong className="text-slate-900 font-mono">{(sidakPage - 1) * PAGE_SIZE + 1}</strong> -{' '}
-                                            <strong className="text-slate-900 font-mono">
-                                                {Math.min(sidakPage * PAGE_SIZE, filteredInspections.length)}
-                                            </strong>{' '}
-                                            dari <strong className="text-slate-900 font-mono">{filteredInspections.length}</strong> inspeksi
-                                        </span>
-
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                disabled={sidakPage === 1}
-                                                onClick={() => setSidakPage((prev) => Math.max(1, prev - 1))}
-                                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                            >
-                                                ← Sebelumnya
-                                            </button>
-                                            <span className="px-2 text-xs font-mono font-bold text-slate-700">
-                                                Hal {sidakPage} / {sidakTotalPages}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                disabled={sidakPage >= sidakTotalPages}
-                                                onClick={() => setSidakPage((prev) => Math.min(sidakTotalPages, prev + 1))}
-                                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                            >
-                                                Selanjutnya →
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ========================================================= */}
-                        {/* VIEW 3: SURAT IZIN KERJA — SINGLE UNIFIED DATA TABLE CARD */}
-                        {/* ========================================================= */}
-                        {activeTab === 'permits' && (
-                            <div role="tabpanel" id="panel-permits" aria-labelledby="tab-permits" className="overflow-hidden rounded-xl border border-[#E2E5EA] bg-white">
-                                <div className="space-y-3 border-b border-[#E2E5EA] p-4">
-                                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                                        <h2 className="text-sm font-semibold text-gray-900">Surat izin kerja</h2>
-
-                                        <div className="flex w-fit shrink-0 flex-wrap items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPermitFilter('all');
-                                                    setPermitPage(1);
-                                                }}
-                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    permitFilter === 'all'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Semua ({permits.length})
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPermitFilter('pending');
-                                                    setPermitPage(1);
-                                                }}
-                                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    permitFilter === 'pending'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Antre Approval ({pendingPermits})
-                                                {pendingPermits > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPermitFilter('completed');
-                                                    setPermitPage(1);
-                                                }}
-                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    permitFilter === 'completed'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Disetujui
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPermitFilter('rejected');
-                                                    setPermitPage(1);
-                                                }}
-                                                className={`rounded-md px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                                                    permitFilter === 'rejected'
-                                                        ? 'bg-[#0F1E36] font-semibold text-white'
-                                                        : 'text-gray-500 hover:text-gray-900'
-                                                }`}
-                                            >
-                                                Ditolak
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Integrated Search Bar inside same Card Header */}
-                                    <div className="relative w-full">
-                                        <input
-                                            type="text"
-                                            value={permitSearch}
-                                            onChange={(e) => {
-                                                setPermitSearch(e.target.value);
-                                                setPermitPage(1);
-                                            }}
-                                            placeholder="Cari berdasarkan nomor permit, jenis pekerjaan, PIC lapangan, atau vendor..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-1 focus:ring-[#0F1E36] transition-colors"
+                                    {/* Numbered pagination */}
+                                    {filteredInspections.length > PAGE_SIZE && (
+                                        <NumberedPagination
+                                            page={sidakPage}
+                                            totalPages={sidakTotalPages}
+                                            totalItems={filteredInspections.length}
+                                            pageSize={PAGE_SIZE}
+                                            onPageChange={setSidakPage}
+                                            itemName="inspeksi"
                                         />
-                                        <svg
-                                            className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ─────────── TAB: IZIN ─────────── */}
+                    {activeTab === 'permits' && (
+                        <div role="tabpanel" id="panel-permits" aria-labelledby="tab-permits" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            {/* Header section */}
+                            <div className="p-4 border-b border-slate-200 space-y-3">
+                                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                    <h2 className="text-base font-bold text-slate-900">Surat izin kerja</h2>
+
+                                    <div className="flex w-fit shrink-0 flex-wrap items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPermitFilter('all'); setPermitPage(1); }}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                permitFilter === 'all'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
                                         >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
+                                            Semua ({permits.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPermitFilter('pending'); setPermitPage(1); }}
+                                            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                permitFilter === 'pending'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Antre Approval ({pendingPermits})
+                                            {pendingPermits > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPermitFilter('completed'); setPermitPage(1); }}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                permitFilter === 'completed'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Disetujui
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPermitFilter('rejected'); setPermitPage(1); }}
+                                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                                permitFilter === 'rejected'
+                                                    ? 'bg-[#0F1E36] text-white'
+                                                    : 'text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Ditolak
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Table Body directly attached */}
-                                {filteredPermits.length === 0 ? (
-                                    <div className="p-8">
-                                        <EmptyState
-                                            variant="empty"
-                                            size="sm"
-                                            title="Tidak Ada Izin Kerja"
-                                            description={
-                                                permitSearch || permitFilter !== 'all'
-                                                    ? 'Tidak ditemukan surat izin kerja dengan filter pencarian ini.'
-                                                    : 'Belum ada surat izin kerja yang pernah diajukan untuk tenant ini.'
-                                            }
-                                        />
-                                    </div>
-                                ) : (
+                                {/* Search bar */}
+                                <div className="relative w-full">
+                                    <input
+                                        type="text"
+                                        value={permitSearch}
+                                        onChange={(e) => { setPermitSearch(e.target.value); setPermitPage(1); }}
+                                        placeholder="Cari berdasarkan nomor permit, jenis pekerjaan, PIC lapangan, atau vendor..."
+                                        className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0F1E36] focus:ring-2 focus:ring-[#0F1E36]/10 transition-colors"
+                                    />
+                                    <IconSearch className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                                </div>
+                            </div>
+
+                            {/* Table body */}
+                            {filteredPermits.length === 0 ? (
+                                <div className="p-8">
+                                    <EmptyState
+                                        variant="empty"
+                                        size="sm"
+                                        title="Tidak Ada Izin Kerja"
+                                        description={
+                                            permitSearch || permitFilter !== 'all'
+                                                ? 'Tidak ditemukan surat izin kerja dengan filter pencarian ini.'
+                                                : 'Belum ada surat izin kerja yang pernah diajukan untuk tenant ini.'
+                                        }
+                                    />
+                                </div>
+                            ) : (
+                                <>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs border-collapse">
+                                        <table className="w-full text-left text-sm border-collapse">
                                             <thead>
-                                                <tr className="border-b border-[#E2E5EA] bg-gray-50 text-xs text-gray-500">
-                                                    <th className="py-2.5 px-4 font-medium">No. izin</th>
-                                                    <th className="py-3 px-4">Pekerjaan &amp; Vendor</th>
-                                                    <th className="py-3 px-4">Jadwal Pelaksanaan</th>
-                                                    <th className="py-3 px-4">Tenaga Kerja</th>
-                                                    <th className="py-3 px-4">Status</th>
+                                                <tr className="bg-slate-50/80">
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">No. izin</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Pekerjaan &amp; Vendor</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Jadwal</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Tenaga Kerja</th>
+                                                    <th className="py-3 px-4 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -760,25 +1053,27 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                                     <tr
                                                         key={p.id}
                                                         onClick={() => openPermitModal(p)}
-                                                        className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                                                        className={`py-4 px-4 hover:bg-blue-50/50 transition-colors cursor-pointer group ${
+                                                            p.status === 'pending' ? 'border-l-2 border-amber-400' : ''
+                                                        }`}
                                                         title="Klik baris untuk membuka rincian surat izin kerja"
                                                     >
-                                                        <td className="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-slate-900 group-hover:text-[#0F1E36] transition-colors">
+                                                        <td className="py-4 px-4 whitespace-nowrap font-mono font-bold text-slate-900 group-hover:text-[#0F1E36] transition-colors text-sm">
                                                             {p.permit_number}
                                                         </td>
-                                                        <td className="py-3.5 px-4">
-                                                            <div className="font-semibold text-slate-800">{p.job_type || 'Pekerjaan Umum'}</div>
+                                                        <td className="py-4 px-4">
+                                                            <div className="font-semibold text-slate-800 text-sm">{p.job_type || 'Pekerjaan Umum'}</div>
                                                             <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-sm">
                                                                 {p.is_external ? `Vendor: ${p.contractor_company || 'Eksternal'}` : `PIC: ${p.pic_name || 'Internal'}`}
                                                             </div>
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
+                                                        <td className="py-4 px-4 whitespace-nowrap text-slate-600 text-sm">
                                                             {formatDateRange(p.work_start_date, p.work_end_date)}
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap font-mono text-slate-700">
+                                                        <td className="py-4 px-4 whitespace-nowrap font-mono text-slate-700 text-sm">
                                                             {p.workers_total ?? 0} Pekerja
                                                         </td>
-                                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                                        <td className="py-4 px-4 whitespace-nowrap">
                                                             <Badge color={permitColor[p.status] ?? 'gray'} size="sm">
                                                                 {permitLabel[p.status] ?? p.status}
                                                             </Badge>
@@ -788,55 +1083,35 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                             </tbody>
                                         </table>
                                     </div>
-                                )}
 
-                                {/* Pagination Footer Integrated at bottom of same card */}
-                                {filteredPermits.length > PAGE_SIZE && (
-                                    <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
-                                        <span>
-                                            Menampilkan <strong className="text-slate-900 font-mono">{(permitPage - 1) * PAGE_SIZE + 1}</strong> -{' '}
-                                            <strong className="text-slate-900 font-mono">
-                                                {Math.min(permitPage * PAGE_SIZE, filteredPermits.length)}
-                                            </strong>{' '}
-                                            dari <strong className="text-slate-900 font-mono">{filteredPermits.length}</strong> surat izin
-                                        </span>
-
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                disabled={permitPage === 1}
-                                                onClick={() => setPermitPage((prev) => Math.max(1, prev - 1))}
-                                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                            >
-                                                ← Sebelumnya
-                                            </button>
-                                            <span className="px-2 text-xs font-mono font-bold text-slate-700">
-                                                Hal {permitPage} / {permitTotalPages}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                disabled={permitPage >= permitTotalPages}
-                                                onClick={() => setPermitPage((prev) => Math.min(permitTotalPages, prev + 1))}
-                                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                            >
-                                                Selanjutnya →
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    {/* Numbered pagination */}
+                                    {filteredPermits.length > PAGE_SIZE && (
+                                        <NumberedPagination
+                                            page={permitPage}
+                                            totalPages={permitTotalPages}
+                                            totalItems={filteredPermits.length}
+                                            pageSize={PAGE_SIZE}
+                                            onPageChange={setPermitPage}
+                                            itemName="surat izin"
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* MODAL 1: Detail Hasil Inspeksi Sidak */}
+            {/* ═══════════════════════════════════════════════════════════ */}
+            {/* MODAL 1: Detail Hasil Inspeksi Sidak                       */}
+            {/* ═══════════════════════════════════════════════════════════ */}
             {modalSidak && (
                 <Modal
                     open={!!modalSidak}
                     onClose={() => setModalSidak(null)}
                     title={`Hasil Sidak — ${modalSidak.template_name}`}
                     icon={<IconClipboard className="w-4 h-4 text-[#0F1E36]" />}
-                    maxWidth="max-w-2xl"
+                    maxWidth="max-w-3xl"
                 >
                     <div className="p-1 space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
@@ -867,14 +1142,16 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                 </Modal>
             )}
 
-            {/* MODAL 2: Detail Surat Izin Kerja */}
+            {/* ═══════════════════════════════════════════════════════════ */}
+            {/* MODAL 2: Detail Surat Izin Kerja                           */}
+            {/* ═══════════════════════════════════════════════════════════ */}
             {modalPermit && (
                 <Modal
                     open={!!modalPermit}
                     onClose={() => setModalPermit(null)}
                     title={`Surat Izin Kerja — ${modalPermit.permit_number}`}
-                    icon={<IconContract className="w-4 h-4 text-[#0F1E36]" />}
-                    maxWidth="max-w-2xl"
+                    icon={<svg className="w-4 h-4 text-[#0F1E36]" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>}
+                    maxWidth="max-w-3xl"
                 >
                     <div className="p-1 space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
@@ -902,7 +1179,9 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                 </Modal>
             )}
 
-            {/* MODAL 3: Perbesar & Cetak QR Code Unit */}
+            {/* ═══════════════════════════════════════════════════════════ */}
+            {/* MODAL 3: Perbesar & Cetak QR Code Unit                     */}
+            {/* ═══════════════════════════════════════════════════════════ */}
             {unitQr && (
                 <Modal
                     open={qrModalOpen}
@@ -952,42 +1231,10 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
     );
 }
 
-function CorporateInfoRow({ label, value, fieldKey, onCopy, copiedKey, isTel, isMail, mono }) {
-    const isCopied = copiedKey === fieldKey;
-    const valueClass = `text-sm text-gray-900 ${mono ? 'font-mono' : ''}`;
-
-    return (
-        <div className="grid grid-cols-1 gap-0.5 border-b border-[#E2E5EA] px-4 py-2.5 last:border-b-0 sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-4">
-            <dt className="text-sm text-gray-500">{label}</dt>
-            <dd className="flex min-w-0 items-baseline gap-2">
-                {value ? (
-                    isTel ? (
-                        <a href={`tel:${value}`} className={`${valueClass} underline-offset-2 hover:underline`}>{value}</a>
-                    ) : isMail ? (
-                        <a href={`mailto:${value}`} className={`${valueClass} truncate underline-offset-2 hover:underline`}>{value}</a>
-                    ) : (
-                        <span className={valueClass}>{value}</span>
-                    )
-                ) : (
-                    <span className="text-sm text-gray-300">Belum diisi</span>
-                )}
-                {value && onCopy && (
-                    <button
-                        type="button"
-                        onClick={() => onCopy(value, fieldKey)}
-                        className={`shrink-0 rounded text-xs focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
-                            isCopied ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-700'
-                        }`}
-                    >
-                        {isCopied ? 'Tersalin' : 'Salin'}
-                    </button>
-                )}
-            </dd>
-        </div>
-    );
-}
-
-function ContractRow({ contract: c }) {
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* CONTRACT CARD — Replaces old ContractRow table row                  */
+/* ═══════════════════════════════════════════════════════════════════════ */
+function ContractCard({ contract: c }) {
     const isActive = c.status === 'active';
     const progress = getTenancyProgress(c.start_date, c.end_date);
     const [open, setOpen] = useState(isActive);
@@ -1010,74 +1257,165 @@ function ContractRow({ contract: c }) {
 
     const leaseLeft = c.days_remaining;
     const leaseClass = leaseLeft !== null && leaseLeft !== undefined && leaseLeft < 0
-        ? 'text-red-700'
+        ? 'text-red-600'
         : leaseLeft !== null && leaseLeft !== undefined && leaseLeft <= 90
-            ? 'text-amber-700'
-            : 'text-gray-700';
+            ? 'text-amber-600'
+            : 'text-slate-700';
+
+    const progressColor = progress >= 100 ? 'bg-red-500' : progress >= 80 ? 'bg-amber-500' : 'bg-[#0F1E36]';
 
     return (
-        <>
-            <tr
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-sm transition-shadow">
+            {/* Card Header — clickable to expand */}
+            <div
                 onClick={() => setOpen((v) => !v)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((v) => !v); }
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((v) => !v); } }}
                 tabIndex={0}
+                role="button"
                 aria-expanded={open}
-                className="cursor-pointer hover:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0F1E36]"
+                className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
             >
-                <td className="px-4 py-2.5 font-mono font-semibold text-gray-900">{c.unit?.unit_code ?? '—'}</td>
-                <td className="px-4 py-2.5 text-gray-500">{location || '—'}</td>
-                <td className="whitespace-nowrap px-4 py-2.5 text-gray-700">{formatDateRange(c.start_date, c.end_date)}</td>
-                <td className={`whitespace-nowrap px-4 py-2.5 ${leaseClass}`}>{daysLabel(c.days_remaining)}</td>
-                <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-gray-900">
-                    {c.rent_value ? rupiah(c.rent_value) : '—'}
-                    {c.rent_period && <span className="text-gray-400"> / {c.rent_period}</span>}
-                </td>
-                <td className="px-4 py-2.5">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div>
+                        <p className="font-mono font-bold text-lg text-slate-900">{c.unit?.unit_code ?? '—'}</p>
+                        <p className="text-slate-500 text-sm">{location || '—'}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
                     <Badge color={statusColor} size="sm">{statusLabel}</Badge>
-                    {c.is_current && <span className="ml-2 text-xs text-gray-500">Ditempati</span>}
-                </td>
-            </tr>
-            {open && (
-                <tr className="bg-gray-50">
-                    <td colSpan={6} className="px-4 py-3">
-                        {isActive && progress !== null && (
-                            <div className="mb-2 max-w-xs">
-                                <div className="h-1 overflow-hidden rounded-full bg-gray-200">
-                                    <div
-                                        className={`h-1 rounded-full ${progress >= 100 ? 'bg-red-500' : progress >= 80 ? 'bg-amber-500' : 'bg-[#0F1E36]'}`}
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                                <p className="mt-1 text-xs text-gray-400">{progress}% masa sewa berjalan</p>
-                            </div>
-                        )}
-                        <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-                            {facts.map(([label, value]) => (
-                                <div key={label} className="grid grid-cols-[9rem_1fr] gap-3 py-1">
-                                    <dt className="text-sm text-gray-500">{label}</dt>
-                                    <dd className="text-sm text-gray-900">{value}</dd>
-                                </div>
-                            ))}
-                        </dl>
-                        {c.contract_document_path && (
-                            <a
-                                href={`/storage/${c.contract_document_path}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-1 inline-flex items-center gap-1.5 text-sm text-[#0F1E36] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
-                            >
-                                <IconExternalLink className="h-3.5 w-3.5" />
-                                Dokumen perjanjian
-                            </a>
-                        )}
-                    </td>
-                </tr>
+                    <IconChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                </div>
+            </div>
+
+            {/* Progress bar for active contracts */}
+            {isActive && progress !== null && (
+                <div className="px-4 pb-0">
+                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className={`${progressColor} h-full rounded-full transition-all duration-300`} style={{ width: `${progress}%` }} />
+                    </div>
+                </div>
             )}
-        </>
+
+            {/* Summary row below header */}
+            <div className="px-4 pb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+                <span>{formatDateRange(c.start_date, c.end_date)}</span>
+                <span className={leaseClass}>{daysLabel(c.days_remaining)}</span>
+                {c.rent_value && <span className="font-mono">{rupiah(c.rent_value)}{c.rent_period && <span className="text-slate-400 font-sans"> / {c.rent_period}</span>}</span>}
+            </div>
+
+            {/* Expanded detail — collapsible */}
+            <div
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                }`}
+            >
+                <div className="px-4 pb-4 pt-0 border-t border-slate-100 mt-0 pt-3">
+                    {isActive && progress !== null && (
+                        <div className="mb-3">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-slate-500">Progress masa sewa</span>
+                                <span className="text-xs font-mono font-bold text-slate-700">{progress}%</span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                                <div className={`${progressColor} h-full rounded-full`} style={{ width: `${progress}%` }} />
+                            </div>
+                        </div>
+                    )}
+
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                        {facts.map(([label, value]) => (
+                            <div key={label} className="flex justify-between gap-4 py-1.5">
+                                <dt className="text-sm text-slate-500 shrink-0">{label}</dt>
+                                <dd className="text-sm text-slate-900 font-medium text-right">{value}</dd>
+                            </div>
+                        ))}
+                    </dl>
+
+                    {c.contract_document_path && (
+                        <a
+                            href={`/storage/${c.contract_document_path}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center gap-1.5 text-sm text-[#0F1E36] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[#0F1E36] font-medium"
+                        >
+                            <IconExternalLink className="h-3.5 w-3.5" />
+                            Dokumen perjanjian
+                        </a>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* CONTACT CARD — Replaces old table row for contacts                   */
+/* ═══════════════════════════════════════════════════════════════════════ */
+function ContactCard({ contact: c }) {
+    const waLink = formatWaLink(c.phone);
+
+    return (
+        <div className={`bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-all duration-200 relative ${
+            c.is_primary ? 'border-l-[3px] border-l-emerald-500' : ''
+        }`}>
+            {/* Top row: Avatar + Name + Badge */}
+            <div className="flex items-center gap-3">
+                {/* Avatar */}
+                <div className="w-10 h-10 rounded-full bg-[#0F1E36] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {initials(c.name)}
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900 truncate">{c.name}</p>
+                        {c.is_primary && (
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
+                                Utama
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-slate-500 truncate">{c.title || '—'}</p>
+                </div>
+            </div>
+
+            {/* Action buttons row */}
+            <div className="flex gap-2 mt-3">
+                {c.phone && (
+                    <a
+                        href={`tel:${c.phone}`}
+                        className="w-9 h-9 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        title={`Telepon ${c.phone}`}
+                    >
+                        <IconPhone className="w-[18px] h-[18px]" />
+                    </a>
+                )}
+                {waLink && (
+                    <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-9 h-9 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        title="WhatsApp"
+                    >
+                        <IconWhatsApp className="w-[18px] h-[18px]" />
+                    </a>
+                )}
+                {c.email && (
+                    <a
+                        href={`mailto:${c.email}`}
+                        className="w-9 h-9 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        title={`Email ${c.email}`}
+                    >
+                        <IconMail className="w-[18px] h-[18px]" />
+                    </a>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* HELPER COMPONENTS (preserved from original)                          */
+/* ═══════════════════════════════════════════════════════════════════════ */
 
 function SkeletonLines({ rows = 4 }) {
     return (
