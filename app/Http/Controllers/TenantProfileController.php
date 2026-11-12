@@ -6,6 +6,7 @@ use App\Models\Inspection;
 use App\Models\PermitRequest;
 use App\Models\ProductCategory;
 use App\Models\Tenant;
+use App\Models\TenantCategory;
 use App\Services\BranchScopeService;
 use App\Services\PermitRequestVisibilityService;
 use App\Services\TenantScopeService;
@@ -56,6 +57,7 @@ class TenantProfileController extends Controller
                     ->orWhere('tenants.company_phone', 'like', "%{$request->search}%")
                     ->orWhereHas('activeTenancy.unit', fn ($u) => $u->where('unit_code', 'like', "%{$request->search}%"));
             }))
+            ->when($request->tenant_category_id, fn ($q) => $q->where('tenants.tenant_category_id', $request->tenant_category_id))
             ->when($request->product_category_id, fn ($q) => $q->where('tenants.product_category_id', $request->product_category_id))
             ->when($request->status === 'active', fn ($q) => $q->where('tenants.is_active', true))
             ->when($request->status === 'inactive', fn ($q) => $q->where('tenants.is_active', false))
@@ -76,7 +78,8 @@ class TenantProfileController extends Controller
 
         return Inertia::render('TenantProfiles/Index', [
             'tenants' => $query->paginate(15)->withQueryString(),
-            'filters' => $request->only(['search', 'product_category_id', 'status']),
+            'filters' => $request->only(['search', 'tenant_category_id', 'product_category_id', 'status']),
+            'tenantCategories' => TenantCategory::orderBy('name')->get(['id', 'name']),
             'productCategories' => ProductCategory::orderBy('name')->get(['id', 'name']),
             'summary' => [
                 'total' => $total,

@@ -13,6 +13,7 @@ import initials from '@/utils/initials';
 export default function Index({
     tenants,
     filters = {},
+    tenantCategories = [],
     productCategories = [],
     summary = { total: 0, active: 0, inactive: 0, pending_permits: 0 },
 }) {
@@ -35,7 +36,7 @@ export default function Index({
         return () => clearTimeout(timer);
     }, [searchText]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const hasFilter = Boolean(filters.search || filters.product_category_id || filters.status);
+    const hasFilter = Boolean(filters.search || filters.tenant_category_id || filters.product_category_id || filters.status);
 
     const resetFilters = () => {
         setSearchText('');
@@ -83,19 +84,10 @@ export default function Index({
             <div className="px-4 sm:px-8 py-5 sm:py-7 flex-1 max-w-7xl w-full mx-auto space-y-5">
                 {/* Header Title */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Master Data</p>
-                        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
-                            Profil Tenant
-                        </h1>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Direktori profil operasional, status unit aktif, riwayat sidak berkala, dan antrean izin kerja tenant.
-                        </p>
-                    </div>
-                    <div className="text-xs text-slate-500 font-medium">
-                        Menampilkan <span className="text-slate-900 font-semibold">{tenants.data.length}</span> dari{' '}
-                        <span className="text-slate-900 font-semibold">{tenants.total ?? summary.total}</span> tenant
-                    </div>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Profil Tenant</h1>
+                    <p className="text-sm text-slate-500">
+                        <span className="font-medium tabular-nums text-slate-900">{tenants.total ?? summary.total}</span> tenant
+                    </p>
                 </div>
 
                 {/* KPI Summary / Quick Filter */}
@@ -146,7 +138,7 @@ export default function Index({
                                 />
                             </svg>
                             <TextInput
-                                placeholder="Cari nama tenant / badan usaha / unit / telepon..."
+                                placeholder="Cari nama, unit, atau telepon..."
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 className="!pl-9 min-h-[42px]"
@@ -165,29 +157,27 @@ export default function Index({
 
                         <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-row items-center">
                             <SelectInput
-                                value={filters.product_category_id ?? ''}
-                                onChange={(e) => updateFilter('product_category_id', e.target.value)}
-                                className="lg:w-52 min-h-[42px]"
-                                aria-label="Filter kategori produk"
+                                value={filters.tenant_category_id ?? ''}
+                                onChange={(e) => updateFilter('tenant_category_id', e.target.value)}
+                                className="lg:w-44 min-h-[42px]"
+                                aria-label="Filter kategori tenant"
                             >
-                                <option value="">Semua Kategori Produk</option>
-                                {productCategories.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name}
-                                    </option>
+                                <option value="">Semua tipe</option>
+                                {tenantCategories.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </SelectInput>
 
                             <SelectInput
-                                value={filters.status ?? ''}
-                                onChange={(e) => updateFilter('status', e.target.value)}
-                                className="lg:w-48 min-h-[42px]"
-                                aria-label="Filter status tenant"
+                                value={filters.product_category_id ?? ''}
+                                onChange={(e) => updateFilter('product_category_id', e.target.value)}
+                                className="lg:w-44 min-h-[42px]"
+                                aria-label="Filter kategori produk"
                             >
-                                <option value="">Semua Status Operasional</option>
-                                <option value="active">Tenant Aktif</option>
-                                <option value="inactive">Tenant Nonaktif</option>
-                                <option value="has_pending_permit">Ada Antrean Izin Kerja</option>
+                                <option value="">Semua produk</option>
+                                {productCategories.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
                             </SelectInput>
 
                             {hasFilter && (
