@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { ACTIVITY_TYPES } from '@/Constants/permitActivityTypes';
+import { PERMIT_CATEGORY_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 import Badge from '@/Components/Badge';
 import Modal from '@/Components/Modal';
 import GoodPhotoCapture from '@/Components/Security/GoodPhotoCapture';
@@ -13,7 +14,13 @@ import { formatDateID, formatDateRange, formatDateTimeID, formatTimeRange } from
 import useCan from '@/hooks/useCan';
 
 const approvalColor = { pending: 'yellow', approved: 'green', rejected: 'red' };
-const statusColor = { pending: 'yellow', completed: 'green', approved: 'green', rejected: 'red', cancelled: 'gray' };
+const statusColor = {
+    pending: 'yellow',
+    completed: 'green',
+    approved: 'green',
+    rejected: 'red',
+    cancelled: PERMIT_STATUS_META.cancelled.color,
+};
 const statusLabel = { pending: 'Menunggu Persetujuan', completed: 'Selesai', approved: 'Disetujui', rejected: 'Ditolak', cancelled: 'Dibatalkan' };
 const approvalLabel = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
 
@@ -299,16 +306,16 @@ export default function Show({ permit, can_revise, can_cancel, share, docFiles =
     const hasContractor = Boolean(permit.contractor_pic);
     const kegiatanNameLabel = { event: 'Nama Kegiatan / Event', meeting_internal: 'Agenda Rapat Internal', stock_opname: 'Kegiatan Stock Opname' }[permit.activity_types?.[0]] ?? 'Nama Kegiatan';
     const category = (permit.activity_types ?? []).includes('pameran')
-        ? { key: 'pameran', label: 'Pameran / Open Counter', color: 'coral' }
+        ? { key: 'pameran', label: 'Pameran / Open Counter', color: PERMIT_CATEGORY_META.pameran.color }
         : isKegiatan
-        ? { key: 'kegiatan', label: 'Kegiatan Internal', color: 'green' }
+        ? { key: 'kegiatan', label: 'Kegiatan Internal', color: PERMIT_CATEGORY_META.kegiatan.color }
         : isParkir
-        ? { key: 'parkir', label: 'Parkir Berlangganan', color: 'amber' }
+        ? { key: 'parkir', label: 'Parkir Berlangganan', color: PERMIT_CATEGORY_META.parkir.color }
         : isCustomer
-        ? { key: 'customer', label: 'Customer Isi Form', color: 'violet' }
+        ? { key: 'customer', label: 'Customer Isi Form', color: PERMIT_CATEGORY_META.customer.color }
         : permit.tenant_id
-        ? { key: 'tenant', label: 'Tenant', color: 'blue' }
-        : { key: 'vendor', label: 'Vendor Rekanan', color: 'amber' };
+        ? { key: 'tenant', label: 'Tenant', color: PERMIT_CATEGORY_META.tenant.color }
+        : { key: 'vendor', label: 'Vendor Rekanan', color: PERMIT_CATEGORY_META.vendor.color };
     const vehicleTypeLabel = permit.vehicle_type === 'motor' ? 'Sepeda Motor (R2)' : permit.vehicle_type === 'mobil' ? 'Mobil Penumpang (R4)' : '—';
     const locationTitle = permit.tenant?.name
         ?? permit.contractor_company

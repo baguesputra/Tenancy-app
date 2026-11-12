@@ -1242,7 +1242,7 @@ function ContractCard({ contract: c }) {
         .filter(Boolean)
         .join(' · ');
     const statusLabel = isActive ? 'Aktif' : c.status === 'draft' ? 'Draft' : 'Berakhir';
-    const statusColor = isActive ? 'green' : c.status === 'draft' ? 'gray' : 'red';
+    const statusColor = isActive ? 'green' : c.status === 'draft' ? 'gray' : c.status === 'terminated' ? 'red' : 'yellow';
     const facts = [
         ['Masa sewa', formatDateRange(c.start_date, c.end_date)],
         ['Sisa waktu', daysLabel(c.days_remaining)],

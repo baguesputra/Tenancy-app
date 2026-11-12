@@ -6,6 +6,8 @@ import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
 import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
+import Badge from '@/Components/Badge';
+import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 const STATUS_LABELS = {
     draft: 'Draft',
@@ -119,9 +121,9 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 <span className="text-xs text-gray-500 block">Unit: {row.unit_code}</span>
                             </td>
                             <td className="px-5 py-3.5 whitespace-nowrap">
-                                <span className={`text-sm ${row.status === 'cancelled' ? 'font-medium text-red-700' : 'text-slate-700'}`}>
+                                <Badge color={LOO_STATUS_COLORS[row.status] ?? 'gray'} size="sm">
                                     {STATUS_LABELS[row.status] ?? row.status}
-                                </span>
+                                </Badge>
                             </td>
                             <td className="px-5 py-3.5 whitespace-nowrap">
                                 <ChecklistState state={row.checklist_pre} />

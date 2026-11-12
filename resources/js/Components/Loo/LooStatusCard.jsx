@@ -1,6 +1,7 @@
 import Badge from '@/Components/Badge';
 import { IconLock } from '@/Components/Icons';
 import { formatDateTimeShortID } from '@/utils/format';
+import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 const at = (value) => (value ? formatDateTimeShortID(value) : null);
 
@@ -19,16 +20,6 @@ const STATUS_LABELS = {
     setelah_fitout: 'Setelah Fitout',
     completed: 'Completed',
     cancelled: 'Cancelled',
-};
-
-const STATUS_COLORS = {
-    draft: 'gray',
-    pengisian_divisi: 'blue',
-    pengukuran_ulang: 'indigo',
-    sebelum_fitout: 'cyan',
-    setelah_fitout: 'amber',
-    completed: 'green',
-    cancelled: 'red',
 };
 
 const PHASE_STATE = {
@@ -107,7 +98,7 @@ export default function LooStatusCard({ progress, loo = null, sectionBadge = DEF
     const activeIndex = progress.phases.findIndex((p) => p.state === 'active');
     const stepNumber = activeIndex >= 0 ? activeIndex + 1 : total;
     const statusLabel = STATUS_LABELS[progress.status] ?? progress.status;
-    const statusColor = STATUS_COLORS[progress.status] ?? 'gray';
+    const statusColor = LOO_STATUS_COLORS[progress.status] ?? 'gray';
     const nextAction = (progress.summary ?? '').replace(/^Menunggu:\s*/, '');
 
     return (

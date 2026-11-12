@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { ACTIVITY_TYPES, KEGIATAN_TYPES } from '@/Constants/permitActivityTypes';
+import { PERMIT_CATEGORY_META } from '@/Constants/permitMeta';
 import FormSection from '@/Components/Form/FormSection';
 import FormField from '@/Components/Form/FormField';
 import TextInput from '@/Components/Form/TextInput';
@@ -303,9 +304,13 @@ export default function Create({ tenants, departments, isMarketingLocked = false
         ? [selectedTenant.floor, selectedTenant.block, selectedTenant.unit_number].filter(Boolean).join(' / ') || null
         : null;
     const kegiatanMeta = KEGIATAN_TYPES.find((t) => t.value === data.kegiatan_type) ?? null;
+    const categoryKey = isMarketingLocked
+        ? 'pameran'
+        : isKegiatan ? 'kegiatan' : isParkir ? 'parkir' : isCustomer ? 'customer' : locationType === 'tenant' ? 'tenant' : 'vendor';
     const categoryLabel = isMarketingLocked
         ? 'Pameran / Open Counter'
         : isKegiatan ? 'Kegiatan' : isParkir ? 'Parkir' : isCustomer ? 'Customer Isi Form' : locationType === 'tenant' ? 'Tenant' : 'Vendor';
+    const categoryColor = PERMIT_CATEGORY_META[categoryKey].color;
     const locationDetail = isMarketingLocked
         ? [tenantName, data.stand_name].filter(Boolean).join(' — ') || '—'
         : (isKegiatan || isParkir || isCustomer)
@@ -409,7 +414,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {isMarketingLocked && step === 1 && (
                                     <FormSection title="Tenant & Stand" description="Khusus penyewa umum Open Counter">
                                         <div className="mb-4">
-                                            <Badge color="blue">Pameran / Open Counter — terkunci</Badge>
+                                            <Badge color={PERMIT_CATEGORY_META.pameran.color}>Pameran / Open Counter — terkunci</Badge>
                                         </div>
                                         <FormField label="Pilih Tenant Open Counter" error={clientErrors.tenant_id || errors.tenant_id} required>
                                             <SearchableSelect
@@ -439,7 +444,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {isParkir && step === 1 && (
                                     <FormSection title="Tenant & Kendaraan" description="Unit terisi otomatis dari tenancy aktif">
                                         <div className="mb-4">
-                                            <Badge color="blue">Langganan Parkir</Badge>
+                                            <Badge color={PERMIT_CATEGORY_META.parkir.color}>Langganan Parkir</Badge>
                                         </div>
                                         <FormField label="Pilih Tenant" error={clientErrors.tenant_id || errors.tenant_id} required>
                                             <SearchableSelect
@@ -602,7 +607,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <>
                                         <FormSection title="Tenant & Kendaraan" action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Kategori" value={<Badge color="blue">Parkir</Badge>} />
+                                                <ReviewRow label="Kategori" value={<Badge color={PERMIT_CATEGORY_META.parkir.color}>Parkir</Badge>} />
                                                 <ReviewRow label="Tenant" value={tenantName ?? '—'} />
                                                 <ReviewRow label="Unit" value={tenantUnit ?? '—'} />
                                                 <ReviewRow label="NOPOL" value={data.vehicle_plate || '—'} />
@@ -626,7 +631,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                 {isKegiatan && step === 1 && (
                                     <FormSection title="Tenant & Kegiatan" description="Unit terisi otomatis dari master tenant">
                                         <div className="mb-4">
-                                            <Badge color="green">Kegiatan — terkunci</Badge>
+                                            <Badge color={PERMIT_CATEGORY_META.kegiatan.color}>Kegiatan — terkunci</Badge>
                                         </div>
                                         <FormField label="Pilih Tenant" error={clientErrors.tenant_id || errors.tenant_id} required>
                                             <SearchableSelect
@@ -701,7 +706,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <>
                                         <FormSection title="Tenant & Kegiatan" description="Kategori: Kegiatan" action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Kategori" value={<Badge color="green">Kegiatan</Badge>} />
+                                                <ReviewRow label="Kategori" value={<Badge color={PERMIT_CATEGORY_META.kegiatan.color}>Kegiatan</Badge>} />
                                                 <ReviewRow label="Jenis" value={kegiatanMeta ? `${kegiatanMeta.label} (${kegiatanMeta.code})` : '—'} />
                                                 <ReviewRow label="Tenant" value={tenantName ?? '—'} />
                                                 <ReviewRow label="Unit" value={tenantUnit ?? '—'} />
@@ -1068,7 +1073,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <>
                                         <FormSection title="Tenant & Stand" description="Kategori: Pameran / Open Counter" action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Kategori" value={<Badge color="blue">Pameran / Open Counter</Badge>} />
+                                                <ReviewRow label="Kategori" value={<Badge color={PERMIT_CATEGORY_META.pameran.color}>Pameran / Open Counter</Badge>} />
                                                 <ReviewRow label="Tenant" value={tenantName ?? '—'} />
                                                 <ReviewRow label="Nama Stand" value={data.stand_name || '—'} />
                                                 <ReviewRow label="Lokasi Stand" value={[data.floor_snapshot, data.block_snapshot, data.unit_number_snapshot].filter(Boolean).join(' / ') || '—'} />
@@ -1198,7 +1203,7 @@ export default function Create({ tenants, departments, isMarketingLocked = false
                                     <>
                                         <FormSection title="Lokasi" description={`Kategori: ${categoryLabel}`} action={<UbahButton step={1} onJump={goToStep} />}>
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                                                <ReviewRow label="Kategori" value={<Badge color="blue">{categoryLabel}</Badge>} />
+                                                <ReviewRow label="Kategori" value={<Badge color={categoryColor}>{categoryLabel}</Badge>} />
                                                 <ReviewRow label="Lokasi / Nama" value={locationDetail} />
                                                 {locationType === 'vendor' && (
                                                     <>

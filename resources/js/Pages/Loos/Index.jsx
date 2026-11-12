@@ -1,6 +1,7 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
@@ -9,6 +10,7 @@ import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
 import EmptyState from '@/Components/EmptyState';
 import useCan from '@/hooks/useCan';
+import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 const STATUS_LABELS = {
     draft: 'Draft',
@@ -30,9 +32,9 @@ const STAGE_LABELS = {
 
 function StatusMark({ status }) {
     return (
-        <span className="inline-flex items-center rounded-md border border-[#E2E5EA] bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 whitespace-nowrap">
+        <Badge color={LOO_STATUS_COLORS[status] ?? 'gray'} size="sm">
             {STATUS_LABELS[status] ?? status}
-        </span>
+        </Badge>
     );
 }
 

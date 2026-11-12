@@ -68,7 +68,7 @@ export default function Index({ sessions }) {
                                 <td className="px-5 py-4 text-gray-600">{session.branch?.name ?? '—'}</td>
                                 <td className="px-5 py-4 text-gray-600">{session.inspections?.length ?? 0}</td>
                                 <td className="px-5 py-4 text-right">
-                                    <Badge color={session.status === 'completed' ? 'gray' : 'yellow'}>
+                                    <Badge color={session.status === 'completed' ? 'green' : 'blue'}>
                                         {session.status === 'completed' ? 'Selesai' : 'Berlangsung'}
                                     </Badge>
                                 </td>
@@ -117,7 +117,7 @@ export default function Index({ sessions }) {
                                         <div><dt className="sr-only">Jumlah tenant</dt>{session.inspections?.length ?? 0} tenant</div>
                                     </dl>
                                 </div>
-                                <Badge color={session.status === 'completed' ? 'gray' : 'yellow'} size="sm">
+                                <Badge color={session.status === 'completed' ? 'green' : 'blue'} size="sm">
                                     {session.status === 'completed' ? 'Selesai' : 'Berlangsung'}
                                 </Badge>
                             </div>

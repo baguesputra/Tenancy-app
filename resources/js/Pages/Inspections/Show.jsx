@@ -234,7 +234,7 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                                 </div>
                             )}
                         </div>
-                        <Badge color={inspection.status === 'completed' ? 'green' : 'yellow'} size="md">
+                        <Badge color={inspection.status === 'completed' ? 'green' : 'blue'} size="md">
                             {inspection.status === 'completed' ? 'Selesai' : 'Draft'}
                         </Badge>
                         <button

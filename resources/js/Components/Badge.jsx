@@ -8,6 +8,7 @@ const colorMap = {
     indigo: { solid: 'bg-indigo-100 text-indigo-800', outline: 'border-indigo-400 text-indigo-800', soft: 'bg-indigo-50 text-indigo-800' },
     cyan: { solid: 'bg-cyan-100 text-cyan-800', outline: 'border-cyan-400 text-cyan-800', soft: 'bg-cyan-50 text-cyan-800' },
     coral: { solid: 'bg-[#FF6B6B]/15 text-[#D64545]', outline: 'border-[#FF6B6B] text-[#D64545]', soft: 'bg-[#FF6B6B]/10 text-[#D64545]' },
+    violet: { solid: 'bg-violet-100 text-violet-800', outline: 'border-violet-400 text-violet-800', soft: 'bg-violet-50 text-violet-800' },
 };
 
 const sizeMap = {

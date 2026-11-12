@@ -8,6 +8,7 @@ import LooSectionForm from '@/Components/Loo/LooSectionForm';
 import LooStatusCard from '@/Components/Loo/LooStatusCard';
 import FilePreviewModal from '@/Components/Loo/FilePreviewModal';
 import Modal from '@/Components/Modal';
+import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 // Tab form per divisi. Section fitout (pre/post, pre_handover) tidak tampil
 // di sini — dikerjakan lewat halaman khusus Checklist Fit Out.
@@ -61,16 +62,6 @@ const STATUS_LABELS = {
     setelah_fitout: 'Setelah Fitout',
     completed: 'Selesai',
     cancelled: 'Dibatalkan',
-};
-
-const STATUS_COLORS = {
-    draft: 'gray',
-    pengisian_divisi: 'blue',
-    pengukuran_ulang: 'indigo',
-    sebelum_fitout: 'cyan',
-    setelah_fitout: 'amber',
-    completed: 'green',
-    cancelled: 'red',
 };
 
 const ACTION_LABELS = {
@@ -251,7 +242,7 @@ export default function Show({ loo, sectionConfigs = {}, canEditSections = [], v
                             <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 truncate tabular-nums">
                                 {loo.loo_number}
                             </h1>
-                            <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="sm">
+                            <Badge color={LOO_STATUS_COLORS[loo.status] ?? 'gray'} size="sm">
                                 {STATUS_LABELS[loo.status] ?? loo.status}
                             </Badge>
                         </div>

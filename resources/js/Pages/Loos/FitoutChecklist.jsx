@@ -6,6 +6,7 @@ import Button from '@/Components/Form/Button';
 import { IconCheck, IconChevronDown, IconLock } from '@/Components/Icons';
 import LooSectionForm from '@/Components/Loo/LooSectionForm';
 import { formatDateTimeShortID } from '@/utils/format';
+import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 // Tiga langkah operasional yang tampil di halaman ini. Urutan array = urutan
 // gating di `config/loo.php`, jadi langkah sebelumnya adalah prasyaratnya.
@@ -52,16 +53,6 @@ const STATUS_LABELS = {
     setelah_fitout: 'Setelah Fitout',
     completed: 'Selesai',
     cancelled: 'Dibatalkan',
-};
-
-const STATUS_COLORS = {
-    draft: 'gray',
-    pengisian_divisi: 'blue',
-    pengukuran_ulang: 'indigo',
-    sebelum_fitout: 'cyan',
-    setelah_fitout: 'amber',
-    completed: 'green',
-    cancelled: 'red',
 };
 
 const FITOUT_SECTION_KEYS = ['pre_handover', 'fitout_checklist_pre', 'fitout_checklist_post'];
@@ -473,7 +464,7 @@ export default function FitoutChecklist({
                             <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 truncate">
                                 Checklist Operasional
                             </h1>
-                            <Badge color={STATUS_COLORS[loo.status] ?? 'gray'} size="sm">
+                            <Badge color={LOO_STATUS_COLORS[loo.status] ?? 'gray'} size="sm">
                                 {STATUS_LABELS[loo.status] ?? loo.status}
                             </Badge>
                         </div>
