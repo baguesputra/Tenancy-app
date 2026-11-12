@@ -25,7 +25,6 @@ export default function Index({ tenantCategories = [], productCategories = [] })
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const [tab, setTab] = useState(params.get('tab') === 'product' ? 'product' : 'tenant');
     const [search, setSearch] = useState('');
-    const [quickName, setQuickName] = useState('');
     const [panelOpen, setPanelOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
@@ -45,7 +44,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
         );
     }, [categories, search]);
 
-    useEffect(() => { setSearch(''); setQuickName(''); }, [tab]);
+    useEffect(() => { setSearch(''); }, [tab]);
 
     const openCreate = () => {
         if (!canManage) return;
@@ -76,13 +75,6 @@ export default function Index({ tenantCategories = [], productCategories = [] })
         editing ? put(`/${active.prefix}/${editing.id}`, options) : post(`/${active.prefix}`, options);
     };
 
-    const quickAdd = (e) => {
-        e.preventDefault();
-        const name = quickName.trim();
-        if (!name) return;
-        router.post(`/${active.prefix}`, { name }, { preserveScroll: true, onSuccess: () => setQuickName('') });
-    };
-
     const askDelete = (cat) => setConfirmDelete(cat);
 
     const confirmDeleteCategory = () => {
@@ -104,7 +96,7 @@ export default function Index({ tenantCategories = [], productCategories = [] })
 
     return (
         <AppLayout>
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 w-full">
+            <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-8 sm:py-6">
                 <PageHeader
                     title="Kategori"
                     description={`${tenantCategories.length} kategori tenant · ${productCategories.length} kategori produk`}
@@ -117,78 +109,46 @@ export default function Index({ tenantCategories = [], productCategories = [] })
                     }
                 />
 
-                <p id="category-tab-label" className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                    Jenis kategori
-                </p>
-                <div
-                    className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-[#E2E5EA] bg-gray-50 p-1"
-                    role="group"
-                    aria-labelledby="category-tab-label"
-                >
-                    {tabs.map((t) => {
-                        const count = t.key === 'tenant' ? tenantCategories.length : productCategories.length;
-                        const selected = tab === t.key;
-                        return (
-                            <button
-                                key={t.key}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => switchTab(t.key)}
-                                className={`min-h-[44px] rounded-lg px-4 py-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F1E36] ${
-                                    selected
-                                        ? 'bg-white font-semibold text-[#0F1E36] shadow-sm ring-1 ring-[#E2E5EA]'
-                                        : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                            >
-                                {t.label}
-                                <span className={`ml-1.5 text-xs tabular-nums ${selected ? 'text-[#0F1E36]/60' : 'text-slate-400'}`}>{count}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <nav className="mb-4 -mx-1 overflow-x-auto overscroll-x-contain" aria-label="Jenis kategori">
+                    <div className="flex min-w-max items-center gap-1 border-b border-[#E2E5EA] px-1">
+                        {tabs.map((t) => {
+                            const count = t.key === 'tenant' ? tenantCategories.length : productCategories.length;
+                            const selected = tab === t.key;
+                            return (
+                                <button
+                                    key={t.key}
+                                    type="button"
+                                    aria-current={selected ? 'page' : undefined}
+                                    onClick={() => switchTab(t.key)}
+                                    className={`inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${
+                                        selected
+                                            ? 'border-[#0F1E36] text-[#0F1E36]'
+                                            : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#0F1E36]'
+                                    }`}
+                                >
+                                    <span>{t.label}</span>
+                                    <span className={`text-xs tabular-nums ${selected ? 'text-[#0F1E36]/70' : 'text-slate-500'}`}>{count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </nav>
 
-                <div className="mb-4 rounded-xl border border-[#E2E5EA] bg-white p-3 sm:p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-                        <div className="min-w-0 flex-1">
-                            <label htmlFor="search-category" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                                Cari di tab ini
-                            </label>
-                            <div className="relative mt-1.5">
-                                <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <TextInput
-                                    id="search-category"
-                                    placeholder="Nama atau keterangan…"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    aria-label="Cari kategori"
-                                    clearable
-                                    debounceMs={0}
-                                    className="!pl-9"
-                                />
-                            </div>
-                        </div>
-                        <form onSubmit={quickAdd} className="min-w-0 flex-1">
-                            <label htmlFor="quick-add-name" className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
-                                Tambah cepat
-                            </label>
-                            {canManage && (
-                            <div className="mt-1.5 flex gap-2">
-                                <TextInput
-                                    id="quick-add-name"
-                                    placeholder={`Ketik nama ${tab === 'tenant' ? 'kategori tenant' : 'kategori produk'} lalu Enter…`}
-                                    value={quickName}
-                                    onChange={(e) => setQuickName(e.target.value)}
-                                    aria-label="Nama kategori baru"
-                                    className="min-w-0 flex-1"
-                                />
-                                <Button type="submit" disabled={processing || !quickName.trim()} iconLeft={<IconPlus className="w-4 h-4" />} className="shrink-0">
-                                    Tambah
-                                </Button>
-                            </div>
-                            )}
-                        </form>
+                <div className="mb-4 rounded-xl border border-[#E2E5EA] bg-white p-2">
+                    <div className="relative min-w-0">
+                        <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <TextInput
+                            id="search-category"
+                            placeholder="Cari nama atau keterangan..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            aria-label="Cari kategori"
+                            clearable
+                            debounceMs={0}
+                            className="!pl-9"
+                        />
                     </div>
                 </div>
 
