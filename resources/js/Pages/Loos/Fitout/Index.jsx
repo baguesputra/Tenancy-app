@@ -59,7 +59,7 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                         ['Menunggu GM', summary.waiting_gm ?? 0],
                         ['Selesai', summary.completed ?? 0],
                     ].map(([label, value]) => (
-                        <div key={label} className="bg-white px-4 py-3.5">
+                        <div key={label} className="bg-white px-5 py-3.5.5">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
                             <span className="mt-2 block font-mono text-xl font-semibold tabular-nums text-slate-900">{value}</span>
                         </div>
@@ -106,33 +106,33 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                         <tr
                             key={row.id}
                             onClick={() => router.visit(`/loos/${row.id}/fitout`)}
-                            className="cursor-pointer hover:bg-gray-50/80 transition-colors border-b border-gray-100"
+                            className="cursor-pointer transition-colors hover:bg-slate-50"
                         >
-                            <td className="px-4 py-3 min-w-[200px]">
+                            <td className="px-5 py-3.5 min-w-[200px]">
                                 <span className="font-semibold text-[#0F1E36] block truncate">
                                     {row.loo_number}
                                 </span>
                                 <span className="text-xs text-gray-500 block truncate mt-0.5">{row.tenant_name}</span>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
                                 <span className="text-sm font-medium text-gray-800">{row.branch?.code ?? '—'}</span>
                                 <span className="text-xs text-gray-500 block">Unit: {row.unit_code}</span>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
                                 <span className={`text-sm ${row.status === 'cancelled' ? 'font-medium text-red-700' : 'text-slate-700'}`}>
                                     {STATUS_LABELS[row.status] ?? row.status}
                                 </span>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
                                 <ChecklistState state={row.checklist_pre} />
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
                                 <ChecklistState state={row.checklist_post} />
                                 {row.checklist_post.unlocked && row.checklist_post.gm_approved && (
                                     <span className="mt-0.5 block text-[11px] text-slate-500">GM menyetujui</span>
                                 )}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-5 py-3.5 whitespace-nowrap">
                                 <ChecklistState state={row.pre_handover} />
                             </td>
                         </tr>

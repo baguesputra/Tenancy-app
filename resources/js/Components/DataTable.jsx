@@ -1,16 +1,16 @@
 export default function DataTable({ columns, footer, children, caption }) {
     return (
-        <div className="bg-white rounded-2xl border border-[#E2E5EA] shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-[#E2E5EA] bg-white">
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     {caption && <caption className="sr-only">{caption}</caption>}
-                    <thead className="sticky top-0">
-                        <tr className="border-b border-[#E2E5EA] bg-gray-50">
+                    <thead>
+                        <tr className="border-b border-[#E2E5EA]">
                             {columns.map((col) => (
                                 <th
                                     key={col.key}
                                     scope="col"
-                                    className={`text-left font-medium text-gray-500 text-xs uppercase tracking-wide px-5 py-3 whitespace-nowrap ${col.className ?? ''}`}
+                                    className={`whitespace-nowrap px-5 py-3 text-left text-xs font-semibold text-slate-900 ${col.className ?? ''}`}
                                 >
                                     {col.label}
                                 </th>
