@@ -1,7 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
-import Badge from '@/Components/Badge';
 import Button from '@/Components/Form/Button';
 import DataTable from '@/Components/DataTable';
 import Pagination from '@/Components/Pagination';
@@ -18,15 +17,12 @@ const STATUS_LABELS = {
     cancelled: 'Cancelled',
 };
 
-const STATUS_COLORS = {
-    draft: 'gray',
-    pengisian_divisi: 'blue',
-    pengukuran_ulang: 'indigo',
-    sebelum_fitout: 'cyan',
-    setelah_fitout: 'amber',
-    completed: 'green',
-    cancelled: 'red',
-};
+function ChecklistState({ state }) {
+    if (!state.unlocked) return <span className="text-sm text-slate-400">Terkunci</span>;
+    if (state.is_submitted) return <span className="inline-flex items-center gap-1.5 text-sm text-slate-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />Disubmit</span>;
+    if (state.exists) return <span className="inline-flex items-center gap-1.5 text-sm text-slate-700"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />Draft</span>;
+    return <span className="text-sm text-slate-400">Belum diisi</span>;
+}
 
 export default function Index({ loos, summary = {}, branches = [], filters = {} }) {
     const [search, setSearch] = useState(filters.search ?? '');
@@ -53,33 +49,21 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
     return (
         <AppLayout>
             <div className="px-4 sm:px-8 py-4 sm:py-6 flex-1 max-w-7xl w-full mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-5">
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hub Checklist Operasional</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                            Pusat pengelolaan & monitoring checklist operasional tenant (Sebelum/Sesudah Fit Out & Handover)
-                        </p>
-                    </div>
-                </div>
+                <h1 className="mb-5 text-xl font-semibold tracking-tight text-slate-900">Checklist Operasional</h1>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                    <div className="bg-white rounded-xl border border-[#E2E5EA] p-4">
-                        <span className="text-xs text-gray-500 font-medium">Total Terdaftar</span>
-                        <span className="block text-2xl font-bold text-gray-900 mt-1 tabular-nums">{summary.total ?? 0}</span>
-                    </div>
-                    <div className="bg-white rounded-xl border border-[#E2E5EA] p-4">
-                        <span className="text-xs text-blue-600 font-medium">Proses Fit Out</span>
-                        <span className="block text-2xl font-bold text-blue-700 mt-1 tabular-nums">{summary.fitout_active ?? 0}</span>
-                    </div>
-                    <div className="bg-white rounded-xl border border-[#E2E5EA] p-4">
-                        <span className="text-xs text-amber-600 font-medium">Menunggu Approval GM</span>
-                        <span className="block text-2xl font-bold text-amber-700 mt-1 tabular-nums">{summary.waiting_gm ?? 0}</span>
-                    </div>
-                    <div className="bg-white rounded-xl border border-[#E2E5EA] p-4">
-                        <span className="text-xs text-emerald-600 font-medium">Completed / Handover</span>
-                        <span className="block text-2xl font-bold text-emerald-700 mt-1 tabular-nums">{summary.completed ?? 0}</span>
-                    </div>
+                <div className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#E2E5EA] bg-[#E2E5EA] sm:grid-cols-4">
+                    {[
+                        ['Total', summary.total ?? 0],
+                        ['Proses fit out', summary.fitout_active ?? 0],
+                        ['Menunggu GM', summary.waiting_gm ?? 0],
+                        ['Selesai', summary.completed ?? 0],
+                    ].map(([label, value]) => (
+                        <div key={label} className="bg-white px-4 py-3.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
+                            <span className="mt-2 block font-mono text-xl font-semibold tabular-nums text-slate-900">{value}</span>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Filter Bar */}
@@ -135,49 +119,21 @@ export default function Index({ loos, summary = {}, branches = [], filters = {} 
                                 <span className="text-xs text-gray-500 block">Unit: {row.unit_code}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                <Badge color={STATUS_COLORS[row.status] ?? 'gray'} size="sm">
+                                <span className={`text-sm ${row.status === 'cancelled' ? 'font-medium text-red-700' : 'text-slate-700'}`}>
                                     {STATUS_LABELS[row.status] ?? row.status}
-                                </Badge>
+                                </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                {!row.checklist_pre.unlocked ? (
-                                    <Badge color="gray" size="sm">Terkunci</Badge>
-                                ) : row.checklist_pre.is_submitted ? (
-                                    <Badge color="green" size="sm">Disubmit</Badge>
-                                ) : row.checklist_pre.exists ? (
-                                    <Badge color="amber" size="sm">Draft</Badge>
-                                ) : (
-                                    <Badge color="gray" size="sm">Belum diisi</Badge>
+                                <ChecklistState state={row.checklist_pre} />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                                <ChecklistState state={row.checklist_post} />
+                                {row.checklist_post.unlocked && row.checklist_post.gm_approved && (
+                                    <span className="mt-0.5 block text-[11px] text-slate-500">GM menyetujui</span>
                                 )}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                                {!row.checklist_post.unlocked ? (
-                                    <Badge color="gray" size="sm">Terkunci</Badge>
-                                ) : (
-                                    <div className="space-y-1">
-                                        {row.checklist_post.is_submitted ? (
-                                            <Badge color="green" size="sm">Disubmit</Badge>
-                                        ) : row.checklist_post.exists ? (
-                                            <Badge color="amber" size="sm">Draft</Badge>
-                                        ) : (
-                                            <Badge color="gray" size="sm">Belum diisi</Badge>
-                                        )}
-                                        {row.checklist_post.gm_approved && (
-                                            <span className="block text-[10px] font-semibold text-emerald-600">✓ GM Approved</span>
-                                        )}
-                                    </div>
-                                )}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                                {!row.pre_handover.unlocked ? (
-                                    <Badge color="gray" size="sm">Terkunci</Badge>
-                                ) : row.pre_handover.is_submitted ? (
-                                    <Badge color="green" size="sm">Disubmit</Badge>
-                                ) : row.pre_handover.exists ? (
-                                    <Badge color="amber" size="sm">Draft</Badge>
-                                ) : (
-                                    <Badge color="gray" size="sm">Belum diisi</Badge>
-                                )}
+                                <ChecklistState state={row.pre_handover} />
                             </td>
                         </tr>
                     ))}
