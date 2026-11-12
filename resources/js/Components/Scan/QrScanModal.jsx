@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { router, usePage } from '@inertiajs/react';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 function extractToken(raw) {
     const text = (raw ?? '').trim();
@@ -25,7 +26,6 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
     const navigatedRef = useRef(false);
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
-    const [detectorMissing, setDetectorMissing] = useState(false);
     const { errors } = usePage().props;
 
     const stopAll = () => {
@@ -59,7 +59,6 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
         if (!open) return;
         navigatedRef.current = false;
         setError('');
-        setDetectorMissing(false);
 
         const insecure = typeof window !== 'undefined'
             && !window.isSecureContext
@@ -92,21 +91,28 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
                     video.srcObject = stream;
                     try { await video.play(); } catch {}
                 }
-                if (!('BarcodeDetector' in window)) {
-                    // ponytail: native BarcodeDetector saja, tambah html5-qrcode saat butuh iOS/Safari lama.
-                    setDetectorMissing(true);
-                    return;
-                }
-                const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
                 setScanning(true);
-                timerRef.current = setInterval(async () => {
-                    const v = videoRef.current;
-                    if (!v || v.readyState < 2 || navigatedRef.current) return;
-                    try {
-                        const codes = await detector.detect(v);
-                        if (codes?.[0]?.rawValue) goToToken(codes[0].rawValue);
-                    } catch {}
-                }, 350);
+                if ('BarcodeDetector' in window) {
+                    const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                    timerRef.current = setInterval(async () => {
+                        const v = videoRef.current;
+                        if (!v || v.readyState < 2 || navigatedRef.current) return;
+                        try {
+                            const codes = await detector.detect(v);
+                            if (codes?.[0]?.rawValue) goToToken(codes[0].rawValue);
+                        } catch {}
+                    }, 350);
+                } else {
+                    const reader = new BrowserMultiFormatReader();
+                    timerRef.current = setInterval(() => {
+                        const v = videoRef.current;
+                        if (!v || v.readyState < 2 || navigatedRef.current) return;
+                        try {
+                            const result = reader.decode(v);
+                            if (result?.getText()) goToToken(result.getText());
+                        } catch {}
+                    }, 350);
+                }
             } catch (err) {
                 const name = err?.name ?? '';
                 if (name === 'NotAllowedError') setError('Izin kamera ditolak. Klik ikon gembok di address bar lalu Allow kamera.');
@@ -162,11 +168,6 @@ export default function QrScanModal({ open, onClose, sessionId = null, title = '
 
                     {(error || errors?.token) && (
                         <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{errors?.token ?? error}</p>
-                    )}
-                    {detectorMissing && !error && (
-                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            Browser ini tidak bisa baca QR otomatis. Buka di Chrome/Edge terbaru atau gunakan perangkat lain.
-                        </p>
                     )}
                 </div>
             </div>
