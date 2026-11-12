@@ -129,6 +129,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::get('/api-docs', fn () => Inertia::render('ApiDocs/Index'))->name('api-docs');
+
     Route::post('/logout', [LocalLoginController::class, 'destroy'])->name('logout');
     Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change.form');
     Route::put('/password/change', [PasswordChangeController::class, 'update'])->middleware('throttle:password-change')->name('password.change.update');
