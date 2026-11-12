@@ -23,7 +23,7 @@ export default function Index({ sessions }) {
     return (
         <AppLayout>
             <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-                <header className="mb-6 flex flex-col gap-4 border-b border-[#E2E5EA] pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                         <h1 className="text-xl font-semibold tracking-tight text-[#0F1E36] sm:text-2xl">Riwayat Sesi Sidak</h1>
                         <p className="mt-1 text-sm text-gray-500">{sessions.total} sesi tercatat</p>
