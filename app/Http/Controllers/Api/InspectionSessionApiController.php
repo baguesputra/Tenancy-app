@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Inspection;
 use App\Models\InspectionSession;
-use App\Models\ScannableCode;
 use App\Models\Tenant;
-use App\Models\Unit;
 use App\Models\User;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
@@ -131,30 +129,22 @@ class InspectionSessionApiController extends Controller
     {
         $this->authorizeAccess($session, $request);
 
-        $validated = $request->validate(['token' => 'required|string|max:100']);
+        $validated = $request->validate(['token' => 'required|string|max:255']);
+        $tenant = $this->inspectionService->resolveTenantFromScanToken($validated['token']);
 
-        $scannable = ScannableCode::with('scannable')->where('token', trim($validated['token']))->first();
-
-        if (! $scannable || ! $scannable->scannable instanceof Unit) {
-            throw ValidationException::withMessages(['token' => 'QR tidak dikenal. Pastikan QR unit yang dipindai.']);
-        }
-
-        /** @var Unit $unit */
-        $unit = $scannable->scannable;
-        $unit->loadMissing('activeTenancy.tenant');
-
-        if (! $unit->activeTenancy || ! $unit->activeTenancy->tenant) {
-            throw ValidationException::withMessages(['token' => "Unit {$unit->unit_code} kosong, tidak ada tenant aktif."]);
-        }
-
-        $tenant = $unit->activeTenancy->tenant;
         $other = $this->inspectionService->findOtherOngoingInspection($request->user(), $tenant);
         if ($other) {
             $name = $other->session->user->name ?? 'inspector lain';
             throw ValidationException::withMessages(['token' => "Tenant {$tenant->name} sedang disidak {$name}."]);
         }
 
-        $inspection = $this->inspectionService->addInspection($session, $tenant);
+        try {
+            $inspection = $this->inspectionService->addInspection($session, $tenant);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages([
+                'token' => $e->errors()['tenant_id'][0] ?? $e->getMessage(),
+            ]);
+        }
 
         return response()->json(['inspection' => $this->inspectionPayload($inspection)], 201);
     }

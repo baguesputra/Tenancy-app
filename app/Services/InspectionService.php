@@ -8,7 +8,11 @@ use App\Models\Inspection;
 use App\Models\InspectionAnswer;
 use App\Models\InspectionPhoto;
 use App\Models\InspectionSession;
+use App\Models\PermitRequest;
+use App\Models\ScannableCode;
 use App\Models\Tenant;
+use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +22,93 @@ use Illuminate\Validation\ValidationException;
 
 class InspectionService
 {
+    /**
+     * Ekstrak token QR dari string mentah maupun URL `/scan/{token}` agar kompatibel
+     * dengan isi stiker QR (`route('scan.resolve', $token)`).
+     */
+    public function extractScanToken(string $raw): string
+    {
+        $text = trim($raw);
+        if ($text === '') {
+            return '';
+        }
+
+        $path = parse_url($text, PHP_URL_PATH);
+        if (is_string($path) && $path !== '') {
+            $parts = array_values(array_filter(explode('/', $path), fn (string $p): bool => $p !== ''));
+            $scanKeys = array_keys($parts, 'scan', true);
+            if ($scanKeys !== []) {
+                $lastIdx = end($scanKeys);
+                if (isset($parts[$lastIdx + 1])) {
+                    return trim($parts[$lastIdx + 1]);
+                }
+            }
+        }
+
+        if (preg_match('#scan/([A-Za-z0-9_-]+)#', $text, $matches)) {
+            return $matches[1];
+        }
+
+        return $text;
+    }
+
+    /**
+     * Resolusi tenant aktif dari token QR unit atau area gabungan (`UnitGroup`).
+     * Unit anggota grup non-primary ikut mewarisi kontrak aktif dari grupnya.
+     */
+    public function resolveTenantFromScanToken(string $rawToken): Tenant
+    {
+        $token = $this->extractScanToken($rawToken);
+        $scannable = $token !== ''
+            ? ScannableCode::with('scannable')->where('token', $token)->first()
+            : null;
+
+        $model = $scannable?->scannable;
+
+        if ($model instanceof Unit) {
+            $model->loadMissing(['activeTenancy.tenant', 'group.activeTenancy.tenant']);
+            $tenancy = $model->activeTenancy
+                ?? $model->group->first(fn (UnitGroup $g): bool => $g->activeTenancy !== null)?->activeTenancy;
+
+            if (! $tenancy || ! $tenancy->tenant) {
+                throw ValidationException::withMessages([
+                    'token' => "Unit {$model->unit_code} kosong, tidak ada tenant aktif.",
+                ]);
+            }
+
+            return $tenancy->tenant;
+        }
+
+        if ($model instanceof UnitGroup) {
+            $model->loadMissing('activeTenancy.tenant');
+            $tenancy = $model->activeTenancy;
+
+            if (! $tenancy || ! $tenancy->tenant) {
+                throw ValidationException::withMessages([
+                    'token' => "Area gabungan {$model->name} kosong, tidak ada tenant aktif.",
+                ]);
+            }
+
+            return $tenancy->tenant;
+        }
+
+        if ($model instanceof PermitRequest) {
+            throw ValidationException::withMessages([
+                'token' => 'Ini adalah QR Surat Izin, bukan QR unit untuk sidak.',
+            ]);
+        }
+
+        if ($model instanceof Inspection) {
+            throw ValidationException::withMessages([
+                'token' => 'Ini adalah QR Hasil Sidak, bukan QR unit untuk memulai sidak.',
+            ]);
+        }
+
+        throw ValidationException::withMessages([
+            'token' => 'QR tidak dikenal. Pastikan QR unit yang dipindai.',
+        ]);
+    }
+
     public function findOngoingInspection(User $user, Tenant $tenant): ?Inspection
     {
         return Inspection::where('tenant_id', $tenant->id)

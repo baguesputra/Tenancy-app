@@ -11,6 +11,7 @@ use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Models\Unit;
+use App\Models\UnitGroup;
 use App\Models\User;
 use App\Services\InspectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,5 +170,55 @@ class SessionScanTest extends TestCase
         $this->actingAs($staff)
             ->post("/inspection-sessions/{$session->id}/scan", ['token' => $empty->scannableCode->token])
             ->assertSessionHasErrors('token');
+    }
+
+    public function test_scan_full_url_unit_and_unit_group_creates_inspection(): void
+    {
+        $branch = Branch::create(['name' => 'Cabang Scan', 'code' => 'SCN']);
+        $staff = $this->makeStaff($branch);
+        [$unit, $tenant] = $this->seedUnitTenant($branch);
+
+        $primary = Unit::create([
+            'branch_id' => $branch->id, 'floor' => 'GF',
+            'unit_number' => '03', 'unit_code' => 'GF-03', 'is_active' => true,
+        ]);
+        $member = Unit::create([
+            'branch_id' => $branch->id, 'floor' => 'GF',
+            'unit_number' => '04', 'unit_code' => 'GF-04', 'is_active' => true,
+        ]);
+        $group = UnitGroup::create(['branch_id' => $branch->id, 'name' => 'Area Scan']);
+        $group->units()->sync([
+            $primary->id => ['is_primary' => true],
+            $member->id => ['is_primary' => false],
+        ]);
+        $groupTenant = Tenant::create([
+            'name' => 'Toko Area', 'branch_id' => $branch->id,
+            'tenant_category_id' => $tenant->tenant_category_id,
+            'product_category_id' => $tenant->product_category_id,
+            'is_active' => true,
+        ]);
+        Tenancy::create([
+            'unit_id' => $primary->id, 'unit_group_id' => $group->id,
+            'tenant_id' => $groupTenant->id, 'status' => 'active', 'start_date' => '2026-01-01',
+        ]);
+
+        $session = InspectionSession::create([
+            'branch_id' => $branch->id, 'user_id' => $staff->id,
+            'started_at' => now(), 'status' => 'in_progress',
+        ]);
+
+        $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $unit->scanUrl])
+            ->assertRedirect();
+
+        $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $group->scanUrl])
+            ->assertRedirect();
+
+        $this->actingAs($staff)
+            ->post("/inspection-sessions/{$session->id}/scan", ['token' => $member->scanUrl])
+            ->assertRedirect();
+
+        $this->assertSame(2, Inspection::where('inspection_session_id', $session->id)->count());
     }
 }

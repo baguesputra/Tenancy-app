@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Inspection;
 use App\Models\InspectionSession;
-use App\Models\ScannableCode;
 use App\Models\Tenant;
-use App\Models\Unit;
 use App\Models\User;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
@@ -190,26 +188,15 @@ class InspectionSessionController extends Controller
         $this->authorizeAccess($session, $request);
 
         $validated = $request->validate([
-            'token' => 'required|string|max:100',
+            'token' => 'required|string|max:255',
         ]);
 
-        $scannable = ScannableCode::with('scannable')
-            ->where('token', trim($validated['token']))
-            ->first();
-
-        if (! $scannable || ! $scannable->scannable instanceof Unit) {
-            return back()->withErrors(['token' => 'QR tidak dikenal. Pastikan QR unit yang dipindai.']);
+        try {
+            $tenant = $this->inspectionService->resolveTenantFromScanToken($validated['token']);
+        } catch (ValidationException $e) {
+            return back()->withErrors(['token' => $e->errors()['token'][0] ?? 'QR tidak dikenal. Pastikan QR unit yang dipindai.']);
         }
 
-        /** @var Unit $unit */
-        $unit = $scannable->scannable;
-        $unit->loadMissing('activeTenancy.tenant');
-
-        if (! $unit->activeTenancy || ! $unit->activeTenancy->tenant) {
-            return back()->withErrors(['token' => "Unit {$unit->unit_code} kosong, tidak ada tenant aktif."]);
-        }
-
-        $tenant = $unit->activeTenancy->tenant;
         $ongoing = $this->inspectionService->findOngoingInspection($request->user(), $tenant);
         if ($ongoing && $ongoing->inspection_session_id !== $session->id) {
             return redirect()->route('inspections.show', $ongoing->id);
