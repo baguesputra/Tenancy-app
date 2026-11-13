@@ -14,16 +14,28 @@ class AuthTokenController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email' => 'sometimes|string',
+            'no_karyawan' => 'sometimes|string',
+            'employee_number' => 'sometimes|string',
             'password' => 'required|string',
             'device_name' => 'required|string|max:100',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $identifier = $validated['no_karyawan'] ?? $validated['employee_number'] ?? $validated['email'] ?? null;
+
+        if (! $identifier) {
+            throw ValidationException::withMessages([
+                'email' => 'Nomor karyawan atau email wajib diisi.',
+            ]);
+        }
+
+        $user = User::where('employee_number', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
 
         if (! $user || ! $user->is_active || ! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => 'Email atau kata sandi salah.',
+                'email' => 'Nomor karyawan/email atau kata sandi salah.',
             ]);
         }
 
@@ -35,6 +47,8 @@ class AuthTokenController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'employee_number' => $user->employee_number,
+                'branch_id' => $user->branch_id,
             ],
         ]);
     }

@@ -44,6 +44,8 @@ class SsoController extends Controller
             Log::info('SSO Callback', ['sso_id' => $ssoId, 'email' => $email]);
 
             if (! $email) {
+                request()->session()->forget('mobile_sso_relay_state');
+
                 return redirect()->route('sso.gagal')
                     ->with('error', 'Email tidak tersedia dari SSO. Hubungi admin untuk mendaftarkan email Anda.');
             }
@@ -56,6 +58,8 @@ class SsoController extends Controller
                 $kandidat = User::where('email', $email)->first();
                 if ($kandidat) {
                     if (! $this->bolehTaut($kandidat, $ssoId)) {
+                        request()->session()->forget('mobile_sso_relay_state');
+
                         return redirect()->route('sso.gagal')
                             ->with('error', 'Email ini terkait akun login lokal atau SSO lain. Hubungi admin untuk penautan akun.');
                     }
@@ -69,6 +73,8 @@ class SsoController extends Controller
                 $nama = $baris ? trim((string) ($baris['name'] ?? '')) : $name;
 
                 if (! $baris || ! $nik || ! $nama) {
+                    request()->session()->forget('mobile_sso_relay_state');
+
                     return redirect()->route('sso.gagal')
                         ->with('error', 'Akun SSO tidak terdaftar di data karyawan Gate. Hubungi admin untuk sinkronisasi.');
                 }
@@ -76,6 +82,8 @@ class SsoController extends Controller
                 $kandidat = User::where('employee_number', $nik)->first();
                 if ($kandidat) {
                     if (! $this->bolehTaut($kandidat, $ssoId)) {
+                        request()->session()->forget('mobile_sso_relay_state');
+
                         return redirect()->route('sso.gagal')
                             ->with('error', 'Akun dengan NIK ini terkait login lokal atau SSO lain. Hubungi admin.');
                     }
@@ -102,6 +110,8 @@ class SsoController extends Controller
                 }
             } else {
                 if (! $viaNik && $user->email && $user->email !== $email) {
+                    request()->session()->forget('mobile_sso_relay_state');
+
                     return redirect()->route('sso.gagal')
                         ->with('error', 'Email SSO tidak cocok dengan data lokal. Hubungi admin untuk memperbarui data Anda.');
                 }
@@ -130,6 +140,8 @@ class SsoController extends Controller
             $user = $user->fresh();
 
             if (! $user->is_active) {
+                request()->session()->forget('mobile_sso_relay_state');
+
                 return redirect()->route('sso.gagal')
                     ->with('error', 'Akun Anda dinonaktifkan. Hubungi admin untuk mengaktifkan kembali.');
             }
@@ -137,12 +149,17 @@ class SsoController extends Controller
             Auth::guard('web')->login($user);
             request()->session()->regenerate();
 
+            if ($mobileCallback = MobileSsoController::issue(request(), $user)) {
+                return redirect()->away($mobileCallback);
+            }
+
             if ($token = session()->pull('scan_redirect_token')) {
                 return redirect()->route('scan.resolve', $token);
             }
 
             return redirect()->route('dashboard');
         } catch (\Throwable $e) {
+            request()->session()->forget('mobile_sso_relay_state');
             report($e);
 
             return redirect()->route('sso.gagal')

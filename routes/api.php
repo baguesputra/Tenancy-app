@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\HcisEmployeeSyncController;
 use App\Http\Controllers\Api\InspectionApiController;
 use App\Http\Controllers\Api\InspectionSessionApiController;
 use App\Http\Controllers\Api\SecurityPermitApiController;
+use App\Http\Controllers\Auth\MobileSsoController;
 use App\Http\Middleware\VerifyHcisSignature;
+use App\Http\Resources\SessionUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
+    return response()->json((new SessionUserResource($request->user()))->resolve($request));
 })->middleware('auth:sanctum');
 
 Route::post('/v1/ingest/employee-sync', HcisEmployeeSyncController::class)
@@ -18,6 +20,7 @@ Route::post('/v1/ingest/employee-sync', HcisEmployeeSyncController::class)
     ->name('hcis.employee-sync');
 
 Route::post('/v1/auth/login', [AuthTokenController::class, 'store'])->name('api.auth.login');
+Route::post('/v1/sso/mobile/exchange', [MobileSsoController::class, 'exchange'])->name('api.sso.mobile.exchange');
 
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/auth/logout', [AuthTokenController::class, 'destroy'])->name('api.auth.logout');
@@ -25,14 +28,21 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::middleware('can:sidak.manage')->group(function () {
         Route::get('/inspection-sessions/current', [InspectionSessionApiController::class, 'current'])->name('api.sessions.current');
         Route::post('/inspection-sessions', [InspectionSessionApiController::class, 'store'])->name('api.sessions.store');
-        Route::get('/inspection-sessions/{session}', [InspectionSessionApiController::class, 'show'])->name('api.sessions.show');
+        Route::patch('/inspection-sessions/{session}/participants', [InspectionSessionApiController::class, 'updateParticipants'])->name('api.sessions.updateParticipants');
         Route::post('/inspection-sessions/{session}/scan', [InspectionSessionApiController::class, 'scan'])->name('api.sessions.scan');
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionApiController::class, 'addTenant'])->name('api.sessions.addTenant');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionApiController::class, 'complete'])->name('api.sessions.complete');
+        Route::get('/staff-options', [InspectionSessionApiController::class, 'staffOptions'])->name('api.staff.options');
+        Route::get('/tenants', [InspectionSessionApiController::class, 'tenants'])->name('api.tenants.index');
+    });
+
+    Route::middleware('can:sidak.view')->group(function () {
+        Route::get('/inspection-sessions', [InspectionSessionApiController::class, 'index'])->name('api.sessions.index');
+        Route::get('/inspection-sessions/{session}', [InspectionSessionApiController::class, 'show'])->name('api.sessions.show');
+        Route::get('/inspections/{inspection}', [InspectionApiController::class, 'show'])->name('api.inspections.show');
     });
 
     Route::middleware('can:sidak.answer')->group(function () {
-        Route::get('/inspections/{inspection}', [InspectionApiController::class, 'show'])->name('api.inspections.show');
         Route::post('/inspections/{inspection}/answers', [InspectionApiController::class, 'saveAnswer'])->name('api.inspections.saveAnswer');
         Route::delete('/inspection-photos/{photo}', [InspectionApiController::class, 'destroyAnswerPhoto'])->name('api.inspections.destroyAnswerPhoto');
         Route::post('/inspections/{inspection}/extra-photos', [InspectionApiController::class, 'storeExtraPhoto'])->name('api.inspections.storeExtraPhoto');

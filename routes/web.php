@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\LocalLoginController;
+use App\Http\Controllers\Auth\MobileSsoController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\CategoryController;
@@ -109,6 +110,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/auth/sso/redirect', [SsoController::class, 'redirect'])->name('sso.redirect');
+Route::get('/auth/sso/mobile', [MobileSsoController::class, 'redirect'])->name('sso.mobile.redirect');
 Route::match(['get', 'post'], '/auth/sso/callback', [SsoController::class, 'callback'])
     ->name('sso.callback')
     ->middleware('throttle:sso-callback');

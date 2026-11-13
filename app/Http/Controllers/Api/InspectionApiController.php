@@ -20,21 +20,43 @@ class InspectionApiController extends Controller
     {
         $this->authorizeAccess($inspection, $request);
 
-        $inspection->load(['tenant:id,name', 'answers.photos', 'extraPhotos', 'session:id,status']);
+        $inspection->load([
+            'tenant:id,name,logo_path,product_category_id,pic_name,pic_position,pic_phone',
+            'tenant.productCategory:id,name',
+            'tenant.activeTenancy:id,tenant_id,unit_id',
+            'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number',
+            'answers.photos',
+            'extraPhotos',
+            'session',
+            'session.user:id,name,photo_url',
+            'session.participants.user:id,photo_url',
+        ]);
         $answers = $inspection->answers->keyBy('checklist_item_id');
 
-        $snapshot = $inspection->checklist_snapshot;
+        $snapshot = $inspection->checklist_snapshot ?? ['template_name' => '', 'sections' => []];
         foreach ($snapshot['sections'] as &$section) {
+            $sectionName = $section['name'] ?? $section['title'] ?? '';
+            $section['name'] = $sectionName;
+            $section['title'] = $sectionName;
             foreach ($section['items'] as &$item) {
                 $answer = $answers->get($item['id']);
                 $item['answer'] = $answer ? [
                     'id' => $answer->id,
+                    'checklist_item_id' => $item['id'],
                     'value' => $answer->value,
                     'note' => $answer->note,
                     'photos' => $answer->photos->map(fn ($p) => ['id' => $p->id, 'url' => $p->url()])->values(),
                 ] : null;
             }
         }
+        unset($section, $item);
+
+        $unit = $inspection->tenant?->activeTenancy?->unit;
+        $location = $unit ? trim(collect([
+            $unit->floor ? "Lantai {$unit->floor}" : null,
+            $unit->block ? "Blok {$unit->block}" : null,
+            $unit->unit_number ? "No. {$unit->unit_number}" : null,
+        ])->filter()->implode(' · ')) ?: null : null;
 
         return response()->json([
             'inspection' => [
@@ -46,9 +68,37 @@ class InspectionApiController extends Controller
                 'other_notes' => $inspection->other_notes,
                 'session_id' => $inspection->inspection_session_id,
                 'session_status' => $inspection->session->status,
-                'tenant' => ['id' => $inspection->tenant_id, 'name' => $inspection->tenant?->name],
+                'tenant' => [
+                    'id' => $inspection->tenant_id,
+                    'name' => $inspection->tenant?->name,
+                    'logo_url' => $inspection->tenant?->logo_url,
+                    'unit_code' => $unit?->unit_code,
+                    'product_category' => $inspection->tenant?->productCategory ? [
+                        'id' => $inspection->tenant->productCategory->id,
+                        'name' => $inspection->tenant->productCategory->name,
+                    ] : null,
+                    'pic_name' => $inspection->tenant?->pic_name,
+                    'pic_position' => $inspection->tenant?->pic_position,
+                    'pic_phone' => $inspection->tenant?->pic_phone,
+                ],
             ],
             'checklist' => $snapshot,
+            'formHeader' => [
+                'inspected_at' => $inspection->session->started_at?->toISOString(),
+                'location' => $location,
+                'tenant_pic' => [
+                    'name' => $inspection->tenant?->pic_name,
+                    'position' => $inspection->tenant?->pic_position,
+                    'phone' => $inspection->tenant?->pic_phone,
+                ],
+                'officers' => $inspection->session->participants->map(fn ($p) => [
+                    'name' => $p->name_snapshot,
+                    'department' => $p->department_name_snapshot,
+                    'photo_url' => $p->user?->photo_url,
+                ])->values(),
+                'pic' => $inspection->session->pic_name,
+                'pic_photo_url' => $inspection->session->user?->photo_url,
+            ],
             'extra_photos' => $inspection->extraPhotos->map(fn ($p) => [
                 'id' => $p->id,
                 'url' => $p->url(),

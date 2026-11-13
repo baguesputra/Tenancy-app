@@ -230,4 +230,20 @@ class SsoCallbackTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect();
     }
+
+    public function test_sso_callback_rate_limit_mengarah_ke_sso_gagal(): void
+    {
+        config(['auth.mode' => 'sso']);
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->mockSsoUser(['email' => null]);
+            $this->get(route('sso.callback'))->assertRedirect(route('sso.gagal'));
+        }
+
+        $this->withSession(['mobile_sso_relay_state' => 'state-harus-dihapus'])
+            ->get(route('sso.callback'))
+            ->assertRedirect(route('sso.gagal'))
+            ->assertSessionHas('error', 'Terlalu banyak percobaan. Coba lagi nanti.')
+            ->assertSessionMissing('mobile_sso_relay_state');
+    }
 }

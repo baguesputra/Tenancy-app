@@ -40,8 +40,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('sso-callback', function (Request $request) {
-            return Limit::perMinute(10)->by($request->ip())->response(function () {
-                return redirect()->route('login')->with('error', 'Terlalu banyak percobaan. Coba lagi nanti.');
+            return Limit::perMinute(10)->by($request->ip())->response(function () use ($request) {
+                if ($request->hasSession()) {
+                    $request->session()->forget('mobile_sso_relay_state');
+                }
+
+                return redirect()->route('sso.gagal')->with('error', 'Terlalu banyak percobaan. Coba lagi nanti.');
             });
         });
 
