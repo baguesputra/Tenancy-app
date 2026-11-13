@@ -713,9 +713,9 @@ export default function EventCalendar({
     return (
         <section
             aria-label="Kalender operasional"
-            className="mt-4 bg-white rounded-lg border border-[#E2E5EA]"
+            className="mt-4 bg-white rounded-lg border border-[#E2E5EA] shadow-sm"
         >
-            <div className="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center gap-2.5">
+            <div className="px-4 py-4 sm:px-5 border-b border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-3">
                 <div className="min-w-0 mr-auto">
                     <div className="flex items-center gap-2">
                         <div className="inline-flex items-center rounded-lg border border-[#E2E5EA] bg-white">
@@ -872,7 +872,7 @@ export default function EventCalendar({
                             />
                         )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 mt-2">
                         {view === "month"
                             ? `${events.length} agenda · klik tanggal untuk detail`
                             : `${events.length} agenda · dikelompokkan per jenis`}
@@ -1030,9 +1030,9 @@ export default function EventCalendar({
                         else if (dx > 60) goMonth(-1);
                     }}
                 >
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+                    <div className="grid gap-4 pt-2 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
                         <div className="min-w-0">
-                            <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400 py-2">
+                            <div className="grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 py-2.5">
                                 {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(
                                     (d, i) => (
                                         <span key={d} className={i >= 5 ? "text-slate-500" : ""}>{d}</span>
@@ -1043,7 +1043,7 @@ export default function EventCalendar({
                                 {weeks.map((week, weekIndex) => {
                                     const { segments, overflow } = weekSegments[weekIndex];
                                     return (
-                                        <div key={weekIndex} className="relative grid grid-cols-7 min-h-[84px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
+                                        <div key={weekIndex} className="relative grid grid-cols-7 min-h-[72px] sm:min-h-[116px] border-b border-slate-200 last:border-b-0">
                                             {week.map((d, dayIndex) => {
                                                 const k = dayKey(d);
                                                 const inMonth = d.getMonth() === monthIdx;
@@ -1052,12 +1052,15 @@ export default function EventCalendar({
                                                 const isSelected = k === selected;
                                                 const weekend = dayIndex >= 5;
                                                 return (
-                                                    <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 p-1 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-[#0F1E36] ${isSelected ? "bg-[#0F1E36]/[0.03]" : "hover:bg-slate-50/60"} ${inMonth ? "" : "bg-slate-50/60 opacity-50"} ${weekend && inMonth ? (dayIndex === 6 ? "bg-slate-100/60" : "bg-slate-50/40") : ""}`}>
-                                                        <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className={`relative z-10 inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full tabular-nums focus-visible:outline-2 focus-visible:outline-[#0F1E36] ${isToday ? "bg-[#0F1E36] text-white" : weekend ? "text-slate-500" : "text-slate-700"}`}>{d.getDate()}</button>
+                                                    <div key={k} onClick={() => handleCellClick(k, d)} className={`relative min-w-0 border-r border-slate-200 last:border-r-0 sm:p-1.5 cursor-pointer transition-colors focus-within:outline-2 focus-within:outline-inset focus-within:outline-[#0F1E36] ${isSelected ? "bg-sky-50 ring-2 ring-inset ring-sky-700/50" : !inMonth ? "bg-slate-50 text-slate-400" : weekend ? "bg-slate-50/70 hover:bg-slate-100" : "hover:bg-slate-50"}`}>
+                                                        <button ref={(el) => (cellRefs.current[weekIndex * 7 + dayIndex] = el)} tabIndex={weekIndex * 7 + dayIndex === rovingIdx ? 0 : -1} onClick={(e) => { e.stopPropagation(); handleCellClick(k, d); }} onKeyDown={(e) => onCellKeyDown(e, weekIndex * 7 + dayIndex)} aria-pressed={isSelected} aria-current={isToday ? "date" : undefined} aria-label={`${cellAriaLabels[weekIndex * 7 + dayIndex]}, ${dayEvents.length} agenda`} className="relative z-10 flex h-full min-h-[71px] w-full flex-col items-center justify-start gap-1 pt-2 text-xs font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#0F1E36] sm:inline-flex sm:h-6 sm:min-h-0 sm:w-6 sm:justify-center sm:p-0">
+                                                            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${isToday ? "bg-[#0F1E36] text-white" : inMonth ? "text-slate-700" : "text-slate-400"}`}>{d.getDate()}</span>
+                                                            {dayEvents.length > 0 && <span aria-hidden="true" className="rounded-full bg-[#0F1E36]/10 px-1.5 py-0.5 text-[10px] font-semibold leading-4 text-[#0F1E36] sm:hidden">{dayEvents.length}</span>}
+                                                        </button>
                                                     </div>
                                                 );
                                             })}
-                                            <div className="pointer-events-none absolute inset-x-0 top-9 sm:top-10 grid grid-cols-7 grid-rows-[repeat(3,auto)] gap-y-1 px-0.5 sm:px-1">
+                                            <div className="pointer-events-none absolute inset-x-0 top-10 hidden grid-cols-7 grid-rows-[repeat(3,auto)] gap-y-1 px-1 sm:grid">
                                                 {segments.map(({ e, startIndex, endIndex, lane, continuedLeft, continuedRight }) => {
                                                     const meta = TYPE_META[e.type] ?? TYPE_META.permit;
                                                     const rangeTitle = `${e.title}${e.end && e.end !== e.start ? ` (${e.start} s/d ${e.end})` : ""}`;
