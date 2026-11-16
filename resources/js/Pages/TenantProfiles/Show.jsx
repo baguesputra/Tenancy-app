@@ -970,7 +970,7 @@ export default function Show({ tenant, tenancies = [], inspections = [], finding
                                         {openCapaCount} temuan masih terbuka dari {findings.length} total temuan sidak
                                     </p>
                                 </div>
-                                <Link href="/inspection-findings" className="text-xs font-semibold text-[#0F1E36] hover:underline">
+                                <Link href="/inspection-sessions?tab=capa" className="text-xs font-semibold text-[#0F1E36] hover:underline">
                                     Lihat Hub CAPA
                                 </Link>
                             </div>

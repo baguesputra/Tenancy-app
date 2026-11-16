@@ -523,7 +523,7 @@ export default function Show({ inspection, checklistSnapshot, findings = [], sha
                                         </p>
                                     </div>
                                     <Link
-                                        href="/inspection-findings"
+                                        href="/inspection-sessions?tab=capa"
                                         className="text-xs font-semibold text-[#0F1E36] hover:underline shrink-0"
                                     >
                                         Semua CAPA

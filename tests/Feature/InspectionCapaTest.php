@@ -267,11 +267,17 @@ class InspectionCapaTest extends TestCase
 
         $this->actingAs($ctx['staff'])
             ->get('/inspection-findings')
+            ->assertRedirect('/inspection-sessions?tab=capa');
+
+        $this->actingAs($ctx['staff'])
+            ->get('/inspection-sessions?tab=capa')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->component('InspectionFindings/Index')
-                ->where('summary.total', 2)
-                ->where('summary.open', 2)
+                ->component('InspectionSessions/Index')
+                ->where('tab', 'capa')
+                ->where('openCapaCount', 2)
+                ->where('capaSummary.total', 2)
+                ->where('capaSummary.open', 2)
             );
 
         $this->actingAs($ctx['staff'])

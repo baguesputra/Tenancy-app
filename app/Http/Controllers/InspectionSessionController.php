@@ -9,6 +9,7 @@ use App\Models\InspectionSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BranchScopeService;
+use App\Services\InspectionFindingService;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use App\Services\TenantScopeService;
@@ -24,15 +25,37 @@ class InspectionSessionController extends Controller
         private InspectionService $inspectionService,
         private BranchScopeService $branchScope,
         private TenantScopeService $tenantScope,
+        private InspectionFindingService $findingService,
     ) {}
 
     public function index(Request $request)
     {
+        $user = $request->user();
+        $tab = $request->input('tab') === 'capa' ? 'capa' : 'sessions';
+        $openCapaCount = $this->findingService->openCountForUser($user);
+
+        if ($tab === 'capa') {
+            $capa = $this->findingService->listForHub($request, $user);
+
+            return Inertia::render('InspectionSessions/Index', [
+                'tab' => 'capa',
+                'sessions' => null,
+                'findings' => $capa['findings'],
+                'capaSummary' => $capa['summary'],
+                'openCapaCount' => $openCapaCount,
+                'filters' => $request->only(['search', 'status', 'severity']),
+            ]);
+        }
+
         $filters = $request->only(['status', 'date_from', 'date_to']);
-        $sessions = $this->sessionService->getSessionsForUser($request->user(), $filters);
+        $sessions = $this->sessionService->getSessionsForUser($user, $filters);
 
         return Inertia::render('InspectionSessions/Index', [
+            'tab' => 'sessions',
             'sessions' => $sessions,
+            'findings' => null,
+            'capaSummary' => null,
+            'openCapaCount' => $openCapaCount,
             'filters' => $filters,
         ]);
     }

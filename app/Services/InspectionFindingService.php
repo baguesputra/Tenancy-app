@@ -6,6 +6,8 @@ use App\Models\Inspection;
 use App\Models\InspectionAnswer;
 use App\Models\InspectionFinding;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +15,100 @@ use Illuminate\Validation\ValidationException;
 
 class InspectionFindingService
 {
+    public function __construct(
+        private ?BranchScopeService $branchScope = null,
+        private ?TenantScopeService $tenantScope = null,
+    ) {
+        $this->branchScope ??= app(BranchScopeService::class);
+        $this->tenantScope ??= app(TenantScopeService::class);
+    }
+
+    public function scopedBaseQuery(User $user): Builder
+    {
+        $query = InspectionFinding::query();
+        $this->branchScope->apply($query, $user, 'inspection_findings.branch_id');
+
+        if ($this->tenantScope->hasAnyScope($user)) {
+            $query->whereHas('tenant', fn ($t) => $this->tenantScope->applyView($t, $user));
+        }
+
+        return $query;
+    }
+
+    public function openCountForUser(User $user): int
+    {
+        return $this->scopedBaseQuery($user)
+            ->where('status', '!=', 'verified')
+            ->count();
+    }
+
+    /**
+     * Data daftar CAPA dan ringkasan KPI untuk hub Sidak (`?tab=capa`).
+     *
+     * @return array{findings: mixed, summary: array<string, int>}
+     */
+    public function listForHub(Request $request, User $user): array
+    {
+        $today = now()->toDateString();
+        $base = $this->scopedBaseQuery($user);
+
+        $agg = (clone $base)->toBase()->selectRaw("
+            count(*) as total,
+            sum(status = 'open') as open_count,
+            sum(status = 'submitted') as submitted_count,
+            sum(status = 'verified') as verified_count,
+            sum(status = 'rejected') as rejected_count,
+            sum(status != 'verified' and due_date is not null and due_date < ?) as overdue_count
+        ", [$today])->first();
+
+        $findings = (clone $base)
+            ->with([
+                'tenant:id,name',
+                'tenant.activeTenancy:id,tenant_id,unit_id',
+                'tenant.activeTenancy.unit:id,unit_code',
+                'branch:id,name',
+                'verifier:id,name',
+                'inspection:id,inspection_session_id,completed_at',
+            ])
+            ->when($request->search, fn ($q) => $q->where(function ($w) use ($request) {
+                $term = "%{$request->search}%";
+                $w->where('item_label', 'like', $term)
+                    ->orWhere('section_name', 'like', $term)
+                    ->orWhereHas('tenant', fn ($t) => $t->where('name', 'like', $term));
+            }))
+            ->when($request->severity, fn ($q) => $q->where('severity', $request->severity))
+            ->when($request->status === 'overdue', fn ($q) => $q->where('status', '!=', 'verified')
+                ->whereNotNull('due_date')
+                ->whereDate('due_date', '<', $today))
+            ->when($request->status && $request->status !== 'overdue', fn ($q) => $q->where('status', $request->status))
+            ->orderByRaw("case when status = 'submitted' then 0 when status = 'rejected' then 1 when status = 'open' then 2 else 3 end")
+            ->orderByRaw('case when due_date is null then 1 else 0 end')
+            ->orderBy('due_date')
+            ->latest('created_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (InspectionFinding $finding) => array_merge($this->serialize($finding), [
+                'tenant_name' => $finding->tenant?->name ?? '—',
+                'tenant_id' => $finding->tenant_id,
+                'unit_code' => $finding->tenant?->activeTenancy?->unit?->unit_code,
+                'branch_name' => $finding->branch?->name,
+                'inspection_url' => "/inspections/{$finding->inspection_id}",
+                'created_at' => $finding->created_at?->toISOString(),
+            ]));
+
+        return [
+            'findings' => $findings,
+            'summary' => [
+                'total' => (int) ($agg->total ?? 0),
+                'open' => (int) ($agg->open_count ?? 0),
+                'submitted' => (int) ($agg->submitted_count ?? 0),
+                'overdue' => (int) ($agg->overdue_count ?? 0),
+                'verified' => (int) ($agg->verified_count ?? 0),
+                'rejected' => (int) ($agg->rejected_count ?? 0),
+            ],
+        ];
+    }
+
     public static function defaultDueDays(string $severity): int
     {
         return $severity === 'critical' ? 3 : 7;

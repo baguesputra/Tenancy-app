@@ -202,7 +202,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
         Route::get('/inspection-sessions/export', [InspectionSessionController::class, 'export'])->name('sessions.export');
         Route::get('/inspection-sessions/{session}/export', [InspectionSessionController::class, 'exportSession'])->name('sessions.export.single');
-        Route::get('/inspection-findings', [InspectionFindingController::class, 'index'])->name('findings.index');
+        Route::get('/inspection-findings', fn (Request $request) => redirect()->route(
+            'sessions.index',
+            array_merge(['tab' => 'capa'], $request->only(['search', 'status', 'severity', 'page'])),
+            301
+        ))->name('findings.index');
         Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
     });
 
