@@ -147,6 +147,11 @@ class Tenant extends Model
         return $this->hasMany(Inspection::class);
     }
 
+    public function findings()
+    {
+        return $this->hasMany(InspectionFinding::class);
+    }
+
     /**
      * Template checklist relevan via product_category_id.
      * ponytail: query helper, bukan Relation — jangan pakai with().

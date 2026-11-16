@@ -9,10 +9,12 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FloorPlanController;
 use App\Http\Controllers\InspectionController;
+use App\Http\Controllers\InspectionFindingController;
 use App\Http\Controllers\InspectionSessionController;
 use App\Http\Controllers\PermitCheckController;
 use App\Http\Controllers\PermitRequestController;
 use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\PublicFindingController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\Settings\AccessControlController;
 use App\Http\Controllers\Settings\GateSyncController;
@@ -177,6 +179,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:tenancies.view')->get('/tenancies', [TenancyController::class, 'index'])->name('tenancies.index');
+    Route::middleware('can:tenancies.view')->get('/tenancies/export', [TenancyController::class, 'export'])->name('tenancies.export');
     // Master Tenancy — output dari LOO `completed`, tidak bisa dibuat manual
     Route::middleware('can:tenancies.edit')->post('/tenancies/{id}', [TenancyController::class, 'update'])->name('tenancies.update'); // pakai POST karena ada file upload + method spoofing
     Route::middleware('can:tenancies.delete')->delete('/tenancies/{id}', [TenancyController::class, 'destroy'])->name('tenancies.delete');
@@ -197,6 +200,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:sidak.view')->group(function () {
         Route::get('/inspection-sessions', [InspectionSessionController::class, 'index'])->name('sessions.index');
+        Route::get('/inspection-sessions/export', [InspectionSessionController::class, 'export'])->name('sessions.export');
+        Route::get('/inspection-sessions/{session}/export', [InspectionSessionController::class, 'exportSession'])->name('sessions.export.single');
+        Route::get('/inspection-findings', [InspectionFindingController::class, 'index'])->name('findings.index');
         Route::get('/inspections/{inspection}', [InspectionController::class, 'show'])->name('inspections.show');
     });
 
@@ -209,6 +215,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/inspection-sessions/{session}/tenants', [InspectionSessionController::class, 'addTenant'])->name('sessions.addTenant');
         Route::post('/inspection-sessions/{session}/scan', [InspectionSessionController::class, 'scan'])->name('sessions.scan');
         Route::post('/inspection-sessions/{session}/complete', [InspectionSessionController::class, 'complete'])->name('sessions.complete');
+
+        Route::patch('/inspection-findings/{finding}', [InspectionFindingController::class, 'update'])->name('findings.update');
+        Route::post('/inspection-findings/{finding}/verify', [InspectionFindingController::class, 'verify'])->name('findings.verify');
+        Route::post('/inspection-findings/{finding}/reject', [InspectionFindingController::class, 'reject'])->name('findings.reject');
     });
 
     Route::middleware('can:sidak.answer')->group(function () {
@@ -218,6 +228,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/inspection-extra-photos/{photo}', [InspectionController::class, 'destroyExtraPhoto'])->name('inspections.destroyExtraPhoto');
         Route::patch('/inspections/{inspection}/notes', [InspectionController::class, 'updateNotes'])->name('inspections.updateNotes');
         Route::post('/inspections/{inspection}/complete', [InspectionController::class, 'complete'])->name('inspections.complete');
+
+        Route::post('/inspection-findings/{finding}/resolve', [InspectionFindingController::class, 'resolve'])->name('findings.resolve');
     });
 
     Route::middleware('can:sidak.view')->group(function () {
@@ -226,6 +238,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:permits.view')->get('/permit-requests', [PermitRequestController::class, 'index'])->name('permit-requests.index');
+    Route::middleware('can:permits.view')->get('/permit-requests/export', [PermitRequestController::class, 'export'])->name('permit-requests.export');
 
     Route::middleware('can:permits.create')->group(function () {
         // PENTING: taruh SEBELUM route wildcard {permitRequest}
@@ -270,6 +283,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:loos.view')->prefix('loos')->name('loos.')->group(function () {
         Route::get('/', [LooController::class, 'index'])->name('index');
+        Route::get('/export', [LooController::class, 'export'])->name('export');
         Route::get('/{loo}', [LooController::class, 'show'])->name('show');
         Route::get('/{loo}/files/{key}', [LooController::class, 'file'])->name('file');
         Route::get('/{loo}/sections/{section}/file', [LooController::class, 'sectionFile'])->name('section-file');
@@ -306,3 +320,4 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('throttle:30,1')->get('/scan/{token}', ScanController::class)->name('scan.resolve');
+Route::middleware('throttle:10,1')->post('/scan/{token}/findings/{finding}/submit', [PublicFindingController::class, 'submit'])->name('scan.findings.submit');

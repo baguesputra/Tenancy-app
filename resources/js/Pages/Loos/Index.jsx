@@ -9,7 +9,9 @@ import { FilterReset } from '@/Components/FilterBar';
 import SelectInput from '@/Components/Form/SelectInput';
 import TextInput from '@/Components/Form/TextInput';
 import EmptyState from '@/Components/EmptyState';
+import { IconDownload } from '@/Components/Icons';
 import useCan from '@/hooks/useCan';
+import { buildExportUrl } from '@/utils/exportUrl';
 import { LOO_STATUS_COLORS } from '@/Constants/looMeta';
 
 const STATUS_LABELS = {
@@ -109,11 +111,20 @@ export default function Index({ loos, summary = {}, filters = {}, statusOptions 
                         <h1 className="text-xl font-semibold text-slate-900 tracking-tight">LOO</h1>
                         <p className="text-sm text-slate-500 mt-0.5">{summary.total ?? 0} LOO terdaftar</p>
                     </div>
-                    {canCreate && (
-                        <Link href="/loos/create">
-                            <Button>+ Buat LOO</Button>
-                        </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <a
+                            href={buildExportUrl('/loos/export', filters)}
+                            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            <IconDownload className="w-4 h-4 text-slate-500" aria-hidden="true" />
+                            <span>Export Excel</span>
+                        </a>
+                        {canCreate && (
+                            <Link href="/loos/create">
+                                <Button>+ Buat LOO</Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-lg border border-[#E2E5EA] overflow-hidden mb-4">

@@ -2,24 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TenanciesExport;
 use App\Models\Tenancy;
 use App\Models\Tenant;
 use App\Models\Unit;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TenancyController extends Controller
 {
     public function index(Request $request)
     {
-        $base = Tenancy::with(['unit.branch', 'tenant'])
-            ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
-                $qq->whereHas('tenant', fn ($t) => $t->where('name', 'like', "%{$request->search}%"))
-                    ->orWhereHas('unit', fn ($u) => $u->where('unit_code', 'like', "%{$request->search}%"))
-                    ->orWhere('contract_number', 'like', "%{$request->search}%");
-            }));
-
-        $this->applyBranchScope($base, $request->user());
+        $base = $this->filteredBaseQuery($request);
 
         $agg = (clone $base)->toBase()->selectRaw("count(*) as total, sum(status = 'active') as active, sum(status = 'draft') as draft, sum(status = 'ended') as ended, sum(status = 'terminated') as `terminated`")->first();
         $total = (int) ($agg->total ?? 0);
@@ -28,9 +24,7 @@ class TenancyController extends Controller
         $ended = (int) ($agg->ended ?? 0);
         $terminated = (int) ($agg->terminated ?? 0);
 
-        $query = (clone $base)
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->latest('start_date');
+        $query = $this->applyStatusAndExpiryFilters(clone $base, $request)->latest('start_date');
 
         $unitQuery = Unit::query()->where('is_active', true);
         $this->applyBranchScopeToUnits($unitQuery, $request->user());
@@ -49,11 +43,51 @@ class TenancyController extends Controller
                 'ended' => $ended,
                 'terminated' => $terminated,
             ],
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'expiring_in_days']),
             // ponytail: cap 500, async select2 saat data besar
             'units' => $unitQuery->orderBy('unit_code')->limit(500)->get(['id', 'unit_code', 'branch_id']),
             'tenants' => $tenantQuery->orderBy('name')->limit(500)->get(['id', 'name']),
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        $query = $this->applyStatusAndExpiryFilters($this->filteredBaseQuery($request), $request)
+            ->latest('start_date');
+
+        return Excel::download(
+            new TenanciesExport($query),
+            'rekap-kontrak-tenancy-'.now()->format('Y-m-d').'.xlsx'
+        );
+    }
+
+    private function filteredBaseQuery(Request $request): Builder
+    {
+        $base = Tenancy::with(['unit.branch', 'tenant'])
+            ->when($request->search, fn ($q) => $q->where(function ($qq) use ($request) {
+                $qq->whereHas('tenant', fn ($t) => $t->where('name', 'like', "%{$request->search}%"))
+                    ->orWhereHas('unit', fn ($u) => $u->where('unit_code', 'like', "%{$request->search}%"))
+                    ->orWhere('contract_number', 'like', "%{$request->search}%");
+            }));
+
+        $this->applyBranchScope($base, $request->user());
+
+        return $base;
+    }
+
+    private function applyStatusAndExpiryFilters(Builder $query, Request $request): Builder
+    {
+        $days = is_numeric($request->expiring_in_days) ? (int) $request->expiring_in_days : 0;
+
+        return $query
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($days > 0 && $days <= 3650, function ($q) use ($days) {
+                $today = now()->toDateString();
+                $until = now()->addDays($days)->toDateString();
+                $q->where('status', 'active')
+                    ->whereNotNull('end_date')
+                    ->whereBetween('end_date', [$today, $until]);
+            });
     }
 
     /**

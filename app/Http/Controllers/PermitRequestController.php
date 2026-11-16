@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\PermitRequestsExport;
 use App\Http\Requests\RevisePermitRequestRequest;
 use App\Http\Requests\StorePermitRequestRequest;
 use App\Models\Department;
@@ -16,11 +17,13 @@ use App\Services\PermitScanWindowService;
 use App\Services\TenantScopeService;
 use App\Support\PermitActivityQuery;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Spatie\Permission\Models\Role;
 
@@ -100,27 +103,7 @@ class PermitRequestController extends Controller
         $user = $request->user();
         $isMarketing = $this->visibility->isMarketingLocked($user);
         $hiddenCategories = $this->visibility->hiddenCategories($user);
-
-        if ($isMarketing) {
-            $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
-        }
-
-        if ($request->filled('category') && in_array($request->category, $hiddenCategories, true)) {
-            $request->merge(['category' => null]);
-        }
-
-        if ($request->filled('activity_type') && $request->activity_type === 'pameran' && ! $this->visibility->canViewPameran($user)) {
-            $request->merge(['activity_type' => null]);
-        }
-
-        $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
-            ->when($request->activity_type, fn ($q) => PermitActivityQuery::contains($q, $request->activity_type))
-            ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
-                ->where('permit_number', 'like', "%{$request->search}%")
-                ->orWhere('store_name_snapshot', 'like', "%{$request->search}%")))
-            ->latest();
-
-        $this->visibility->applyView($base, $user);
+        $base = $this->filteredBaseQuery($request, $user);
 
         $filtered = (clone $base)->when($request->status, fn ($q) => $q->where('status', $request->status));
         $summaryQuery = $this->applyCategory(clone $base, $isMarketing ? 'pameran' : $request->category);
@@ -226,7 +209,7 @@ class PermitRequestController extends Controller
         return Inertia::render('PermitRequests/Index', [
             'permits' => $permits,
             'filters' => array_merge(
-                $request->only(['status', 'category', 'activity_type', 'search']),
+                $request->only(['status', 'category', 'activity_type', 'search', 'date_from', 'date_to']),
                 $isMarketing ? ['category' => 'pameran'] : []
             ),
             'activityTypes' => collect(self::ACTIVITY_TYPES)
@@ -237,6 +220,61 @@ class PermitRequestController extends Controller
             'categoryLocked' => $isMarketing ? 'pameran' : null,
             'hiddenCategories' => $hiddenCategories,
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+        $isMarketing = $this->visibility->isMarketingLocked($user);
+        $query = $this->filteredBaseQuery($request, $user)
+            ->when($request->status, fn ($q) => $q->where('status', $request->status));
+        $query = $this->applyCategory($query, $isMarketing ? 'pameran' : $request->category);
+
+        $activityLabels = collect(self::ACTIVITY_TYPES)->pluck('label', 'value')->all();
+        $categoryLabels = [
+            'pameran' => 'Pameran / Open Counter',
+            'kegiatan' => 'Kegiatan Internal',
+            'parkir' => 'Parkir Berlangganan',
+            'customer' => 'Customer Isi Form',
+            'tenant' => 'Tenant',
+            'vendor' => 'Vendor Rekanan',
+        ];
+
+        return Excel::download(
+            new PermitRequestsExport($query, $activityLabels, $categoryLabels),
+            'rekap-surat-izin-'.now()->format('Y-m-d').'.xlsx'
+        );
+    }
+
+    private function filteredBaseQuery(Request $request, User $user): Builder
+    {
+        $isMarketing = $this->visibility->isMarketingLocked($user);
+        $hiddenCategories = $this->visibility->hiddenCategories($user);
+
+        if ($isMarketing) {
+            $request->merge(['category' => 'pameran', 'activity_type' => 'pameran']);
+        }
+
+        if ($request->filled('category') && in_array($request->category, $hiddenCategories, true)) {
+            $request->merge(['category' => null]);
+        }
+
+        if ($request->filled('activity_type') && $request->activity_type === 'pameran' && ! $this->visibility->canViewPameran($user)) {
+            $request->merge(['activity_type' => null]);
+        }
+
+        $base = PermitRequest::with(['approvals' => fn ($q) => $q->orderBy('order'), 'requestedBy'])
+            ->when($request->activity_type, fn ($q) => PermitActivityQuery::contains($q, $request->activity_type))
+            ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
+                ->where('permit_number', 'like', "%{$request->search}%")
+                ->orWhere('store_name_snapshot', 'like', "%{$request->search}%")))
+            ->when($request->filled('date_from'), fn ($q) => $q->whereDate('request_date', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn ($q) => $q->whereDate('request_date', '<=', $request->date_to))
+            ->latest();
+
+        $this->visibility->applyView($base, $user);
+
+        return $base;
     }
 
     private function applyCategory($query, ?string $category)

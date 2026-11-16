@@ -30,6 +30,7 @@ class BreadcrumbService
             'loos.fitout' => [$webHome, self::item('LOO', '/loos'), self::item(self::looLabel($request)), self::item('Checklist Operasional')],
             'categories.index' => [$webHome, self::item('Kategori', '/categories')],
             'sessions.index' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions')],
+            'findings.index' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item('Temuan CAPA')],
             'sessions.current' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item('Sesi Berjalan')],
             'sessions.show' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), self::item(self::sessionLabel($request))],
             'inspections.show' => [$webHome, self::item('Sesi Sidak', '/inspection-sessions'), ...self::inspectionParents($request), self::item(self::inspectionLabel($request))],

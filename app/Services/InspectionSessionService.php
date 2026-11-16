@@ -48,6 +48,12 @@ class InspectionSessionService
             'ended_at' => now(),
         ]);
 
+        $findingService = app(InspectionFindingService::class);
+        $session->load('inspections');
+        foreach ($session->inspections as $inspection) {
+            $findingService->syncFromInspection($inspection);
+        }
+
         return $session;
     }
 
@@ -112,11 +118,14 @@ class InspectionSessionService
         });
     }
 
-    public function getSessionsForUser(User $user)
+    public function getSessionsForUser(User $user, array $filters = [])
     {
         $query = InspectionSession::with(['branch', 'user', 'participants', 'inspections.tenant'])
+            ->when(! empty($filters['status']), fn ($q) => $q->where('status', $filters['status']))
+            ->when(! empty($filters['date_from']), fn ($q) => $q->whereDate('started_at', '>=', $filters['date_from']))
+            ->when(! empty($filters['date_to']), fn ($q) => $q->whereDate('started_at', '<=', $filters['date_to']))
             ->latest('started_at');
 
-        return $this->branchScope->apply($query, $user)->paginate(20);
+        return $this->branchScope->apply($query, $user)->paginate(20)->withQueryString();
     }
 }

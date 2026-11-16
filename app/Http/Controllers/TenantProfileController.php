@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Tenant;
 use App\Models\TenantCategory;
 use App\Services\BranchScopeService;
+use App\Services\InspectionFindingService;
 use App\Services\PermitRequestVisibilityService;
 use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class TenantProfileController extends Controller
         private BranchScopeService $branchScope,
         private TenantScopeService $tenantScope,
         private PermitRequestVisibilityService $permitVisibility,
+        private InspectionFindingService $findingService,
     ) {}
 
     public function index(Request $request)
@@ -183,6 +185,7 @@ class TenantProfileController extends Controller
             'activeTenancy.unit.scannableCode:scannable_type,scannable_id,token',
             'tenancies' => fn ($q) => $q->with(['unit:id,unit_code,size,floor,block', 'unit.scannableCode:scannable_type,scannable_id,token'])->latest('start_date')->take(30),
             'inspections' => fn ($q) => $q->select(['id', 'tenant_id', 'inspection_session_id', 'checklist_snapshot', 'status', 'is_flagged', 'synced_at'])->with('session.user:id,name')->withCount(['answers as answered_count' => fn ($aq) => $aq->whereNotNull('value')->where('value', '!=', '')])->latest()->take(30),
+            'findings' => fn ($q) => $q->with(['verifier:id,name', 'inspection:id,completed_at'])->latest('created_at')->take(50),
             'permitRequests' => fn ($q) => $this->permitVisibility->applyView($q->with(['workers:permit_request_id,name,is_present,mismatch_note', 'ktpPhotos:permit_request_id', 'goods:permit_request_id,description,quantity_note,photo_path,is_verified,mismatch_note', 'approvals.approvedBy:id,name']), $request->user())->latest()->take(30),
         ]);
 
@@ -287,10 +290,23 @@ class TenantProfileController extends Controller
             + ['product_category' => $tenant->productCategory?->only(['name'])]
             + ['branch' => $tenant->branch?->only(['name'])];
 
+        $repeatCounts = $this->findingService->repeatCountsForTenant(
+            $tenant->id,
+            $tenant->findings->pluck('checklist_item_id')->all()
+        );
+        $findings = $tenant->findings->map(fn ($f) => array_merge(
+            $this->findingService->serialize($f, $repeatCounts[$f->checklist_item_id] ?? 1),
+            [
+                'inspection_url' => "/inspections/{$f->inspection_id}",
+                'created_at' => $f->created_at?->toISOString(),
+            ]
+        ))->values();
+
         return Inertia::render('TenantProfiles/Show', [
             'tenant' => $tenantArr,
             'tenancies' => $tenancies,
             'inspections' => $inspections,
+            'findings' => $findings,
             'permits' => $permits,
             'contactsByType' => $contactsByType,
             'unitQr' => $unitQr,

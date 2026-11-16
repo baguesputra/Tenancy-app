@@ -2,30 +2,106 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\InspectionSessionsExport;
 use App\Models\Inspection;
+use App\Models\InspectionFinding;
 use App\Models\InspectionSession;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
+use App\Services\TenantScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InspectionSessionController extends Controller
 {
     public function __construct(
         private InspectionSessionService $sessionService,
         private InspectionService $inspectionService,
+        private BranchScopeService $branchScope,
+        private TenantScopeService $tenantScope,
     ) {}
 
     public function index(Request $request)
     {
-        $sessions = $this->sessionService->getSessionsForUser($request->user());
+        $filters = $request->only(['status', 'date_from', 'date_to']);
+        $sessions = $this->sessionService->getSessionsForUser($request->user(), $filters);
 
         return Inertia::render('InspectionSessions/Index', [
             'sessions' => $sessions,
+            'filters' => $filters,
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+
+        $inspectionsQuery = Inspection::query()
+            ->whereHas('session', function ($q) use ($request, $user) {
+                $this->branchScope->apply($q, $user, 'inspection_sessions.branch_id');
+                $q->when($request->filled('status'), fn ($sq) => $sq->where('status', $request->status))
+                    ->when($request->filled('date_from'), fn ($sq) => $sq->whereDate('started_at', '>=', $request->date_from))
+                    ->when($request->filled('date_to'), fn ($sq) => $sq->whereDate('started_at', '<=', $request->date_to));
+            });
+
+        if ($this->tenantScope->hasAnyScope($user)) {
+            $inspectionsQuery->whereHas('tenant', fn ($t) => $this->tenantScope->applyView($t, $user));
+        }
+
+        $inspectionsQuery->latest('created_at');
+
+        $findingsQuery = InspectionFinding::query()
+            ->whereHas('inspection.session', function ($q) use ($request, $user) {
+                $this->branchScope->apply($q, $user, 'inspection_sessions.branch_id');
+                $q->when($request->filled('status'), fn ($sq) => $sq->where('status', $request->status))
+                    ->when($request->filled('date_from'), fn ($sq) => $sq->whereDate('started_at', '>=', $request->date_from))
+                    ->when($request->filled('date_to'), fn ($sq) => $sq->whereDate('started_at', '<=', $request->date_to));
+            });
+
+        if ($this->tenantScope->hasAnyScope($user)) {
+            $findingsQuery->whereHas('tenant', fn ($t) => $this->tenantScope->applyView($t, $user));
+        }
+
+        $findingsQuery->latest('created_at');
+
+        return Excel::download(
+            new InspectionSessionsExport($inspectionsQuery, $findingsQuery),
+            'rekap-sidak-'.now()->format('Y-m-d').'.xlsx'
+        );
+    }
+
+    public function exportSession(InspectionSession $session, Request $request)
+    {
+        $user = $request->user();
+        abort_unless(
+            $session->user_id === $user->id
+                || $user->canViewAllBranches()
+                || ((int) $session->branch_id === (int) $user->branch_id && $user->can('sidak.view')),
+            403
+        );
+
+        $inspectionsQuery = Inspection::query()->where('inspection_session_id', $session->id);
+        $findingsQuery = InspectionFinding::query()->whereHas(
+            'inspection',
+            fn ($q) => $q->where('inspection_session_id', $session->id)
+        );
+
+        if ($this->tenantScope->hasAnyScope($user)) {
+            $inspectionsQuery->whereHas('tenant', fn ($t) => $this->tenantScope->applyView($t, $user));
+            $findingsQuery->whereHas('tenant', fn ($t) => $this->tenantScope->applyView($t, $user));
+        }
+
+        $dateLabel = $session->started_at?->timezone('Asia/Makassar')->format('Y-m-d') ?? now()->format('Y-m-d');
+
+        return Excel::download(
+            new InspectionSessionsExport($inspectionsQuery->latest('created_at'), $findingsQuery->latest('created_at')),
+            "rekap-sidak-sesi-{$dateLabel}.xlsx"
+        );
     }
 
     public function current(Request $request)

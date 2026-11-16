@@ -7,6 +7,7 @@ use App\Models\ChecklistItem;
 use App\Models\Inspection;
 use App\Models\InspectionExtraPhoto;
 use App\Models\InspectionPhoto;
+use App\Services\InspectionFindingService;
 use App\Services\InspectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ use Illuminate\Support\Facades\Storage;
 
 class InspectionApiController extends Controller
 {
-    public function __construct(private InspectionService $inspectionService) {}
+    public function __construct(
+        private InspectionService $inspectionService,
+        private InspectionFindingService $findingService,
+    ) {}
 
     public function show(Inspection $inspection, Request $request): JsonResponse
     {
@@ -27,6 +31,7 @@ class InspectionApiController extends Controller
             'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number',
             'answers.photos',
             'extraPhotos',
+            'findings.verifier:id,name',
             'session',
             'session.user:id,name,photo_url',
             'session.participants.user:id,photo_url',
@@ -104,6 +109,7 @@ class InspectionApiController extends Controller
                 'url' => $p->url(),
                 'description' => $p->description,
             ])->values(),
+            'findings' => $inspection->findings->map(fn ($f) => $this->findingService->serialize($f))->values(),
         ]);
     }
 

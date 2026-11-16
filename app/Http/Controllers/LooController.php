@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\LoosExport;
 use App\Models\Branch;
 use App\Models\Loo;
 use App\Models\LooAttachment;
@@ -17,11 +18,13 @@ use App\Services\LooSectionService;
 use App\Services\LooStateService;
 use App\Services\NotificationService;
 use App\Services\UnitPackageService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LooController extends Controller
 {
@@ -62,14 +65,8 @@ class LooController extends Controller
 
     public function index(Request $request)
     {
-        $query = Loo::with(['branch:id,name', 'tenant:id,name', 'tenantCategory:id,name', 'marketing:id,name', 'sections:id,loo_id,section_key,is_submitted,data,filled_at,submitted_at'])
-            ->when($request->search, fn ($q) => $q->where('loo_number', 'like', "%{$request->search}%")
-                ->orWhere('prospective_tenant_name', 'like', "%{$request->search}%"))
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->current_stage, fn ($q) => $q->where('current_stage', $request->current_stage))
-            ->latest();
-
-        $this->branchScope->apply($query, $request->user());
+        $query = $this->filteredQuery($request)
+            ->with(['branch:id,name', 'tenant:id,name', 'tenantCategory:id,name', 'marketing:id,name', 'sections:id,loo_id,section_key,is_submitted,data,filled_at,submitted_at']);
 
         $summary = (clone $query)
             ->selectRaw('count(*) as total')
@@ -96,6 +93,33 @@ class LooController extends Controller
             'statusOptions' => $this->options(self::STATUSES),
             'stageOptions' => $this->options(self::STAGES),
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+        $hideFinancial = $user->hasAnyRole(self::COVER_ONLY_ROLES)
+            || ($this->isTenantRole($user) && ! $user->can('loos.accounting_edit'));
+
+        return Excel::download(
+            new LoosExport($this->filteredQuery($request), $hideFinancial),
+            'rekap-loo-'.now()->format('Y-m-d').'.xlsx'
+        );
+    }
+
+    private function filteredQuery(Request $request): Builder
+    {
+        $query = Loo::query()
+            ->when($request->search, fn ($q) => $q->where(fn ($w) => $w
+                ->where('loo_number', 'like', "%{$request->search}%")
+                ->orWhere('prospective_tenant_name', 'like', "%{$request->search}%")))
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->current_stage, fn ($q) => $q->where('current_stage', $request->current_stage))
+            ->latest();
+
+        $this->branchScope->apply($query, $request->user());
+
+        return $query;
     }
 
     public function create(Request $request)

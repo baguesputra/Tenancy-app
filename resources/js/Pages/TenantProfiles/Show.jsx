@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import Badge from '@/Components/Badge';
 import Modal from '@/Components/Modal';
 import EmptyState from '@/Components/EmptyState';
+import CapaFindingsPanel from '@/Components/Sidak/CapaFindingsPanel';
+import useCan from '@/hooks/useCan';
 import { formatDateID, formatDateRange, formatTimeRange } from '@/utils/format';
 import initials from '@/utils/initials';
 import {
@@ -43,7 +45,7 @@ function formatWaLink(phone) {
     return `https://wa.me/${normalized}`;
 }
 
-const validTabs = ['profile', 'inspections', 'permits'];
+const validTabs = ['profile', 'inspections', 'capa', 'permits'];
 
 function initialTab() {
     if (typeof window === 'undefined') return 'profile';
@@ -241,7 +243,8 @@ function NumberedPagination({ page, totalPages, totalItems, pageSize, onPageChan
     );
 }
 
-export default function Show({ tenant, tenancies = [], inspections = [], permits = [], contactsByType = {}, unitQr, filters = {} }) {
+export default function Show({ tenant, tenancies = [], inspections = [], findings = [], permits = [], contactsByType = {}, unitQr, filters = {} }) {
+    const { can } = useCan();
     const [activeTab, setActiveTab] = useState(initialTab);
 
     // Modal Details for Inspections & Permits
@@ -433,9 +436,12 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
         return 'text-white';
     };
 
+    const openCapaCount = findings.filter((f) => f.status !== 'verified').length;
+
     const tabs = [
         { key: 'profile', label: 'Profil' },
         { key: 'inspections', label: 'Sidak', count: inspections.length },
+        { key: 'capa', label: 'CAPA', count: findings.length },
         { key: 'permits', label: 'Izin', count: permits.length },
     ];
 
@@ -665,6 +671,9 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                         }`}>
                                             {tab.count}
                                         </span>
+                                    )}
+                                    {tab.key === 'capa' && openCapaCount > 0 && (
+                                        <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-rose-500" aria-hidden="true" />
                                     )}
                                 </button>
                             );
@@ -948,6 +957,30 @@ export default function Show({ tenant, tenancies = [], inspections = [], permits
                                     )}
                                 </>
                             )}
+                        </div>
+                    )}
+
+                    {/* ─────────── TAB: CAPA ─────────── */}
+                    {activeTab === 'capa' && (
+                        <div role="tabpanel" id="panel-capa" aria-labelledby="tab-capa" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <h2 className="text-base font-bold text-slate-900">Temuan &amp; Tindak Lanjut (CAPA)</h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {openCapaCount} temuan masih terbuka dari {findings.length} total temuan sidak
+                                    </p>
+                                </div>
+                                <Link href="/inspection-findings" className="text-xs font-semibold text-[#0F1E36] hover:underline">
+                                    Lihat Hub CAPA
+                                </Link>
+                            </div>
+                            <CapaFindingsPanel
+                                findings={findings}
+                                canManage={can('sidak.manage')}
+                                canAnswer={can('sidak.answer')}
+                                emptyTitle="Belum Ada Temuan CAPA"
+                                emptyDescription="Tenant ini belum memiliki temuan negatif yang perlu ditindaklanjuti."
+                            />
                         </div>
                     )}
 

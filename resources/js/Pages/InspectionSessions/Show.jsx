@@ -7,6 +7,7 @@ import Button from '@/Components/Form/Button';
 import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import QrScanModal from '@/Components/Scan/QrScanModal';
+import { IconDownload } from '@/Components/Icons';
 import useCan from '@/hooks/useCan';
 import initials from '@/utils/initials';
 import { formatDateTimeShortID, formatDurationID } from '@/utils/format';
@@ -111,6 +112,13 @@ export default function Show({ session, availableTenants, staffByDepartment = {}
                                     <span className="text-sm text-white/70">Mulai {formatDateTimeShortID(session.started_at)}</span>
                                     <span className="text-sm text-white/70">· Selesai {session.ended_at ? formatDateTimeShortID(session.ended_at) : '—'}</span>
                                     <span className="text-sm text-white/70">· Durasi {formatDurationID(session.started_at, session.ended_at)}</span>
+                                    <a
+                                        href={`/inspection-sessions/${session.id}/export`}
+                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white hover:bg-white/20 transition-colors"
+                                    >
+                                        <IconDownload className="h-3.5 w-3.5" aria-hidden="true" />
+                                        <span>Export Excel</span>
+                                    </a>
                                 </div>
                                 <h1 className="max-w-2xl text-2xl font-semibold tracking-tight text-white sm:text-3xl">Sesi sidak tenant</h1>
                                 <p className="mt-2 text-sm leading-6 text-white/80">

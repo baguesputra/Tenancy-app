@@ -11,9 +11,10 @@ import Pagination from '@/Components/Pagination';
 import StepProgressMini from '@/Components/StepProgressMini';
 import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import EmptyState from '@/Components/EmptyState';
-import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding, IconCar, IconChevronDown } from '@/Components/Icons';
+import { IconStorefront, IconCalendarEvent, IconWrench, IconBuilding, IconCar, IconChevronDown, IconDownload } from '@/Components/Icons';
 import { PERMIT_CATEGORY_META, PERMIT_STATUS_META } from '@/Constants/permitMeta';
 import { formatRelativeID, formatDateID } from '@/utils/format';
+import { buildExportUrl } from '@/utils/exportUrl';
 
 const CATEGORY_ICON = {
     storefront: IconStorefront,
@@ -48,7 +49,7 @@ function StatTile({ label, value, className = '' }) {
 
 export default function Index({ permits, filters = {}, activityTypes = [], summary = { total: 0, counts: {} }, categoryLocked = null, hiddenCategories = [] }) {
     const [searchText, setSearchText] = useState(filters.search ?? '');
-    const [advancedOpen, setAdvancedOpen] = useState(Boolean(filters.activity_type));
+    const [advancedOpen, setAdvancedOpen] = useState(Boolean(filters.activity_type || filters.date_from || filters.date_to));
     const { can } = useCan();
     const canCreate = can('permits.create');
     const locked = !!categoryLocked;
@@ -77,11 +78,13 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
     };
 
     const myTurnCount = summary.my_turn ?? 0;
-    const hasFilter = locked ? (filters.search || filters.status) : (filters.search || filters.category || filters.activity_type || filters.status);
+    const hasFilter = locked
+        ? (filters.search || filters.status || filters.date_from || filters.date_to)
+        : (filters.search || filters.category || filters.activity_type || filters.status || filters.date_from || filters.date_to);
     const counts = summary.counts ?? {};
     const activeCategory = filters.category ?? '';
     const activeActivityLabel = activityTypes.find((t) => t.value === filters.activity_type)?.label;
-    const advancedFilterCount = filters.activity_type ? 1 : 0;
+    const advancedFilterCount = (filters.activity_type ? 1 : 0) + (filters.date_from ? 1 : 0) + (filters.date_to ? 1 : 0);
 
     const categoryFilters = [
         { key: '', label: 'Semua', value: summary.total ?? 0 },
@@ -122,6 +125,13 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                 Tindakan saya <span className="tabular-nums font-semibold">{myTurnCount}</span>
                             </span>
                         )}
+                        <a
+                            href={buildExportUrl('/permit-requests/export', filters)}
+                            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            <IconDownload className="w-4 h-4 text-slate-500" aria-hidden="true" />
+                            <span>Export Excel</span>
+                        </a>
                         {canCreate && (
                             <Link href="/permit-requests/create">
                                 <Button className="min-h-[44px]">{locked ? '+ Ajukan Pameran' : '+ Ajukan Atas Nama Tenant'}</Button>
@@ -248,12 +258,11 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                         )}
 
                         {!locked && advancedOpen && (
-                            <div id="permit-activity-filter" className="border-t border-[#E2E5EA] pt-2.5">
+                            <div id="permit-activity-filter" className="border-t border-[#E2E5EA] pt-2.5 flex flex-wrap gap-2 items-center">
                                 <SelectInput
                                     value={filters.activity_type ?? ''}
                                     onChange={(e) => {
                                         updateFilter('activity_type', e.target.value);
-                                        if (!e.target.value) setAdvancedOpen(false);
                                     }}
                                     className="!min-h-[44px] !rounded-lg sm:max-w-xs"
                                     aria-label="Filter tipe aktivitas"
@@ -261,6 +270,20 @@ export default function Index({ permits, filters = {}, activityTypes = [], summa
                                     <option value="">Semua Aktivitas</option>
                                     {activityTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                                 </SelectInput>
+                                <input
+                                    type="date"
+                                    value={filters.date_from ?? ''}
+                                    onChange={(e) => updateFilter('date_from', e.target.value)}
+                                    aria-label="Dari tanggal pengajuan"
+                                    className="min-h-[44px] rounded-lg border border-gray-300 px-3 text-sm text-gray-700"
+                                />
+                                <input
+                                    type="date"
+                                    value={filters.date_to ?? ''}
+                                    onChange={(e) => updateFilter('date_to', e.target.value)}
+                                    aria-label="Sampai tanggal pengajuan"
+                                    className="min-h-[44px] rounded-lg border border-gray-300 px-3 text-sm text-gray-700"
+                                />
                             </div>
                         )}
                     </div>

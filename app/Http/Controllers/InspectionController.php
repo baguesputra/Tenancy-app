@@ -7,6 +7,7 @@ use App\Models\Inspection;
 use App\Models\InspectionExtraPhoto;
 use App\Models\InspectionPhoto;
 use App\Models\ScannableCode;
+use App\Services\InspectionFindingService;
 use App\Services\InspectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,10 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class InspectionController extends Controller
 {
-    public function __construct(private InspectionService $inspectionService) {}
+    public function __construct(
+        private InspectionService $inspectionService,
+        private InspectionFindingService $findingService,
+    ) {}
 
     public function show(Inspection $inspection, Request $request)
     {
@@ -28,6 +32,7 @@ class InspectionController extends Controller
             'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number',
             'session', 'session.user:id,name,photo_url', 'session.participants.user:id,photo_url',
             'answers.photos', 'extraPhotos',
+            'findings.verifier:id,name',
         ]);
 
         // Gabungkan snapshot checklist dengan jawaban yang sudah ada,
@@ -51,6 +56,14 @@ class InspectionController extends Controller
         }
 
         $unit = $inspection->tenant->activeTenancy?->unit;
+        $repeatCounts = $this->findingService->repeatCountsForTenant(
+            $inspection->tenant_id,
+            $inspection->findings->pluck('checklist_item_id')->all()
+        );
+        $findings = $inspection->findings->map(fn ($f) => $this->findingService->serialize(
+            $f,
+            $repeatCounts[$f->checklist_item_id] ?? 1
+        ))->values();
 
         return Inertia::render('Inspections/Show', [
             'inspection' => [
@@ -85,6 +98,7 @@ class InspectionController extends Controller
                 'pic_photo_url' => $inspection->session->user?->photo_url,
             ],
             'checklistSnapshot' => $snapshot,
+            'findings' => $findings,
             'share' => $this->publicShare($inspection),
             'extraPhotos' => $inspection->extraPhotos->map(fn ($p) => [
                 'id' => $p->id,

@@ -7,6 +7,7 @@ use App\Models\PermitRequest;
 use App\Models\ScannableCode;
 use App\Models\Unit;
 use App\Models\UnitGroup;
+use App\Services\InspectionFindingService;
 use App\Services\InspectionService;
 use App\Services\InspectionSessionService;
 use App\Services\PermitScanWindowService;
@@ -21,6 +22,7 @@ class ScanController extends Controller
         InspectionSessionService $sessions,
         InspectionService $inspections,
         PermitScanWindowService $scanWindow,
+        InspectionFindingService $findingService,
     ) {
         $scannable = ScannableCode::with('scannable')
             ->where('token', $token)
@@ -36,7 +38,7 @@ class ScanController extends Controller
         return match (get_class($model)) {
             // Dokumen publik: bisa dibuka siapa pun pemegang QR, tanpa login.
             PermitRequest::class => $this->handlePermit($model, $scanWindow),
-            Inspection::class => $this->handleInspection($model),
+            Inspection::class => $this->handleInspection($model, $token, $findingService),
             Unit::class => $this->handleUnit($model, $webUser, $request, $sessions, $inspections),
             UnitGroup::class => $this->handleUnitGroup($model, $webUser, $request, $sessions, $inspections),
             default => abort(400, 'Unsupported scannable type'),
@@ -95,9 +97,9 @@ class ScanController extends Controller
         ]);
     }
 
-    private function handleInspection(Inspection $inspection)
+    private function handleInspection(Inspection $inspection, string $token, InspectionFindingService $findingService)
     {
-        $inspection->load(['tenant:id,name', 'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number', 'session', 'answers.photos']);
+        $inspection->load(['tenant:id,name', 'tenant.activeTenancy.unit:id,unit_code,floor,block,unit_number', 'session', 'answers.photos', 'findings']);
 
         // Hasil sidak hanya boleh dilihat publik setelah selesai.
         $done = $inspection->status === 'completed'
@@ -127,7 +129,12 @@ class ScanController extends Controller
             }
         }
 
+        $findings = $inspection->findings
+            ->map(fn ($f) => $findingService->serialize($f, 1, true))
+            ->values();
+
         return Inertia::render('Scan/InspectionStatus', [
+            'token' => $token,
             'inspection' => [
                 'id' => $inspection->id,
                 'store_name' => $inspection->tenant?->name ?? '—',
@@ -144,6 +151,7 @@ class ScanController extends Controller
                     : null,
             ],
             'checklistSnapshot' => $snapshot,
+            'findings' => $findings,
             'progress' => ['answered' => $answered, 'total' => $total],
         ]);
     }

@@ -266,6 +266,8 @@ class InspectionService
             'completed_at' => $inspection->completed_at ?? now(),
         ]);
 
+        app(InspectionFindingService::class)->syncFromInspection($inspection);
+
         return $inspection;
     }
 

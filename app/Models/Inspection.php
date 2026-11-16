@@ -61,6 +61,11 @@ class Inspection extends Model
         return $this->hasMany(InspectionExtraPhoto::class)->orderBy('created_at');
     }
 
+    public function findings()
+    {
+        return $this->hasMany(InspectionFinding::class);
+    }
+
     public function scannableCode()
     {
         return $this->morphOne(ScannableCode::class, 'scannable');

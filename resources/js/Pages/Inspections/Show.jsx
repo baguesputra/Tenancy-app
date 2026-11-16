@@ -6,6 +6,8 @@ import Badge from '@/Components/Badge';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
 import RealtimePhotoCapture from '@/Components/Sidak/RealtimePhotoCapture';
 import PhotoPreviewModal from '@/Components/Sidak/PhotoPreviewModal';
+import CapaFindingsPanel from '@/Components/Sidak/CapaFindingsPanel';
+import useCan from '@/hooks/useCan';
 
 import initials from '@/utils/initials';
 import { formatDateTimeShortID } from '@/utils/format';
@@ -19,7 +21,8 @@ const formatTanggalSidak = (value) => {
     return new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(d);
 };
 
-export default function Show({ inspection, checklistSnapshot, share, extraPhotos = [], formHeader = {} }) {
+export default function Show({ inspection, checklistSnapshot, findings = [], share, extraPhotos = [], formHeader = {} }) {
+    const { can } = useCan();
     const [snapshot, setSnapshot] = useState(checklistSnapshot);
     const [savingItemId, setSavingItemId] = useState(null);
     const [itemError, setItemError] = useState({});
@@ -505,6 +508,36 @@ export default function Show({ inspection, checklistSnapshot, share, extraPhotos
                             locked={isLocked}
                             initialPhotos={extraPhotos}
                         />
+
+                        {(findings.length > 0 || inspection.status === 'completed' || isLocked) && (
+                            <section id="capa-findings" className="bg-white rounded-2xl border border-[#E2E5EA] mb-3.5 shadow-sm overflow-hidden print:hidden">
+                                <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-gray-100">
+                                    <div>
+                                        <h2 className="text-sm sm:text-[15px] font-semibold text-[#0F1E36]">
+                                            Temuan &amp; Tindak Lanjut (CAPA)
+                                        </h2>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            {findings.length > 0
+                                                ? `${findings.filter((f) => f.status !== 'verified').length} terbuka dari ${findings.length} temuan`
+                                                : 'Tidak ada jawaban negatif yang perlu tindak lanjut.'}
+                                        </p>
+                                    </div>
+                                    <Link
+                                        href="/inspection-findings"
+                                        className="text-xs font-semibold text-[#0F1E36] hover:underline shrink-0"
+                                    >
+                                        Semua CAPA
+                                    </Link>
+                                </div>
+                                <CapaFindingsPanel
+                                    findings={findings}
+                                    canManage={can('sidak.manage')}
+                                    canAnswer={can('sidak.answer')}
+                                    emptyTitle="Tidak Ada Temuan CAPA"
+                                    emptyDescription="Seluruh item checklist tidak memiliki temuan negatif."
+                                />
+                            </section>
+                        )}
                     </div>
 
                     <aside className="hidden lg:block sticky top-24 space-y-4 print:hidden">

@@ -18,7 +18,8 @@ import Pagination from '@/Components/Pagination';
 import StatFilter from '@/Components/StatFilter';
 import FilterBar, { FilterReset } from '@/Components/FilterBar';
 import ConfirmModal, { ConfirmRow } from '@/Components/ConfirmModal';
-import { IconPlus, IconEdit, IconTrash } from '@/Components/Icons';
+import { IconPlus, IconEdit, IconTrash, IconDownload } from '@/Components/Icons';
+import { buildExportUrl } from '@/utils/exportUrl';
 import { formatDateID } from '@/utils/format';
 
 const statusColor = { draft: 'gray', active: 'green', ended: 'yellow', terminated: 'red' };
@@ -100,7 +101,7 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
         return () => clearTimeout(t);
     }, [searchText]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const hasFilter = filters.search || filters.status;
+    const hasFilter = filters.search || filters.status || filters.expiring_in_days;
     const resetFilters = () => {
         setSearchText('');
         router.get('/tenancies', {}, { preserveScroll: true, replace: true });
@@ -145,12 +146,22 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                         <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Kontrak / Tenancy</h1>
                         <p className="text-sm text-gray-500 mt-0.5">{summary.total} kontrak tercatat · {summary.active} aktif</p>
                     </div>
-                    <p className="text-xs text-gray-400">Kontrak dibuat otomatis dari LOO yang selesai</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs text-gray-400">Kontrak dibuat otomatis dari LOO yang selesai</p>
+                        <a
+                            href={buildExportUrl('/tenancies/export', filters)}
+                            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-2 focus-visible:outline-[#0F1E36]"
+                        >
+                            <IconDownload className="w-4 h-4 text-slate-500" aria-hidden="true" />
+                            <span>Export Excel</span>
+                        </a>
+                    </div>
                 </div>
 
                 <StatFilter stats={stats} activeKey={filters.status ?? ''} onSelect={(key) => updateFilter('status', key)} columns="grid-cols-2 sm:grid-cols-5" />
 
                 <FilterBar>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
                         <div className="relative flex-1">
                             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
@@ -163,7 +174,20 @@ export default function Index({ tenancies, summary = { total: 0, active: 0, draf
                                 aria-label="Cari tenancy"
                             />
                         </div>
+                        <SelectInput
+                            value={filters.expiring_in_days ?? ''}
+                            onChange={(e) => updateFilter('expiring_in_days', e.target.value)}
+                            className="sm:w-52"
+                            aria-label="Filter kontrak akan berakhir"
+                        >
+                            <option value="">Semua Masa Sewa</option>
+                            <option value="30">Berakhir ≤ 30 hari</option>
+                            <option value="60">Berakhir ≤ 60 hari</option>
+                            <option value="90">Berakhir ≤ 90 hari</option>
+                            <option value="180">Berakhir ≤ 180 hari</option>
+                        </SelectInput>
                         {hasFilter && <FilterReset onClick={resetFilters} />}
+                    </div>
                 </FilterBar>
 
                 <div className="hidden sm:block">
